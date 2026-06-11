@@ -1,1 +1,26 @@
-#
+# Dependencies
+node_modules/
+
+# Builds
+dist/
+.next/
+out/
+*.tsbuildinfo
+
+# Env & secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Generated outputs (images, html snapshots)
+outputs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/

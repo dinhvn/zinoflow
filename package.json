@@ -1,0 +1,20 @@
+{
+  "name": "zinoflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ZinoFlow - local-first AI Content Tool for affiliate websites",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @zinoflow/api --filter @zinoflow/web dev",
+    "dev:api": "pnpm --filter @zinoflow/api dev",
+    "dev:web": "pnpm --filter @zinoflow/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "migration:run": "pnpm --filter @zinoflow/api migration:run",
+    "migration:generate": "pnpm --filter @zinoflow/api migration:generate"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@8.11.0"
+}
