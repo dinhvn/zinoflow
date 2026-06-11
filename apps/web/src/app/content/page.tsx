@@ -75,7 +75,7 @@ export default function ContentPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedProvider || !selectedModel) {
-      setFormError("Chua co AI provider kha dung - kiem tra Settings va API key");
+      setFormError("Chưa có AI provider khả dụng — kiểm tra Settings và API key");
       return;
     }
     createJob.mutate({
@@ -101,7 +101,7 @@ export default function ContentPage() {
         onSubmit={handleSubmit}
         className="space-y-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
       >
-        <h3 className="font-medium">Tao bai viet moi</h3>
+        <h3 className="font-medium">Tạo bài viết mới</h3>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block text-sm">
@@ -111,8 +111,8 @@ export default function ContentPage() {
               onChange={(e) => setSiteCode(e.target.value)}
               className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
             >
-              <option value="laruki">laruki.com (thoi trang)</option>
-              <option value="dochoi3s">dochoi3s.com (do choi)</option>
+              <option value="laruki">laruki.com (thời trang)</option>
+              <option value="dochoi3s">dochoi3s.com (đồ chơi)</option>
             </select>
           </label>
 
@@ -152,11 +152,11 @@ export default function ContentPage() {
         </div>
 
         <label className="block text-sm">
-          <span className="mb-1 block text-zinc-500">Chu de bai viet</span>
+          <span className="mb-1 block text-zinc-500">Chủ đề bài viết</span>
           <input
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            placeholder="vd: Top 5 tui xach nu da that duoi 2 trieu"
+            placeholder="VD: Top 5 túi xách nữ da thật dưới 2 triệu"
             required
             minLength={5}
             className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
@@ -164,11 +164,11 @@ export default function ContentPage() {
         </label>
 
         <label className="block text-sm">
-          <span className="mb-1 block text-zinc-500">Tu khoa SEO (phan cach bang dau phay)</span>
+          <span className="mb-1 block text-zinc-500">Từ khóa SEO (phân cách bằng dấu phẩy)</span>
           <input
             value={keywords}
             onChange={(e) => setKeywords(e.target.value)}
-            placeholder="vd: tui xach nu, tui da that"
+            placeholder="VD: túi xách nữ, túi da thật"
             className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
           />
         </label>
@@ -180,18 +180,18 @@ export default function ContentPage() {
           disabled={createJob.isPending || !selectedProvider}
           className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
         >
-          {createJob.isPending ? "Dang tao..." : "Tao bai viet"}
+          {createJob.isPending ? "Đang tạo..." : "Tạo bài viết"}
         </button>
       </form>
 
       {/* Danh sach jobs */}
       <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
         <h3 className="border-b border-zinc-200 p-4 font-medium dark:border-zinc-800">
-          Danh sach bai viet
+          Danh sách bài viết
         </h3>
-        {jobsQuery.isLoading && <p className="p-4 text-sm text-zinc-500">Dang tai...</p>}
+        {jobsQuery.isLoading && <p className="p-4 text-sm text-zinc-500">Đang tải...</p>}
         {jobsQuery.isError && (
-          <p className="p-4 text-sm text-red-600">Khong tai duoc danh sach: {String(jobsQuery.error)}</p>
+          <p className="p-4 text-sm text-red-600">Không tải được danh sách: {String(jobsQuery.error)}</p>
         )}
         <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
           {(jobsQuery.data ?? []).map((job) => (
@@ -217,7 +217,7 @@ export default function ContentPage() {
           ))}
         </ul>
         {jobsQuery.data?.length === 0 && (
-          <p className="p-4 text-sm text-zinc-500">Chua co bai viet nao.</p>
+          <p className="p-4 text-sm text-zinc-500">Chưa có bài viết nào.</p>
         )}
       </div>
     </div>

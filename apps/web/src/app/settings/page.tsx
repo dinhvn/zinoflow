@@ -26,12 +26,12 @@ export default function SettingsPage() {
         <div className="border-b border-zinc-200 p-4 dark:border-zinc-800">
           <h3 className="font-medium">AI Providers</h3>
           <p className="mt-1 text-sm text-zinc-500">
-            Tat provider de an khoi dropdown tao bai va chan tao job moi.
-            API key cau hinh trong <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">apps/api/.env</code> (can restart API sau khi doi).
+            Tắt provider để ẩn khỏi dropdown tạo bài và chặn tạo job mới.
+            API key cấu hình trong <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">apps/api/.env</code> (cần restart API sau khi đổi).
           </p>
         </div>
 
-        {providersQuery.isLoading && <p className="p-4 text-sm text-zinc-500">Dang tai...</p>}
+        {providersQuery.isLoading && <p className="p-4 text-sm text-zinc-500">Đang tải...</p>}
 
         <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
           {(providersQuery.data?.providers ?? []).map((p) => (
@@ -41,17 +41,17 @@ export default function SettingsPage() {
                 <div className="mt-1 flex gap-2 text-xs">
                   {p.isConfigured ? (
                     <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-700 dark:bg-green-950 dark:text-green-300">
-                      Co API key
+                      Có API key
                     </span>
                   ) : (
                     <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-500 dark:bg-zinc-800">
-                      Chua co API key
+                      Chưa có API key
                     </span>
                   )}
                   {p.models.length > 0 ? (
                     <span className="text-zinc-400">{p.models.length} models</span>
                   ) : (
-                    <span className="text-zinc-400">Adapter chua implement</span>
+                    <span className="text-zinc-400">Adapter chưa implement</span>
                   )}
                 </div>
               </div>

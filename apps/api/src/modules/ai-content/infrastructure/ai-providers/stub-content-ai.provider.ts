@@ -24,16 +24,16 @@ export class StubContentAiProvider implements ContentAiProvider {
     input: GenerateOutlineInput,
   ): Promise<{ outline: ArticleOutline; usage: AiCallUsage }> {
     const outline: ArticleOutline = {
-      title: `${input.topic} — danh gia chi tiet 2026`,
-      sectionHeadings: ["Tieu chi xep hang", "Goi y chon nhanh theo nhu cau"],
+      title: `${input.topic} — đánh giá chi tiết 2026`,
+      sectionHeadings: ["Tiêu chí xếp hạng", "Gợi ý chọn nhanh theo nhu cầu"],
       plannedProducts:
         input.products.length > 0
           ? input.products.map((p) => p.name)
-          : ["San pham mau A1", "San pham mau B2"],
+          : ["Sản phẩm mẫu A1", "Sản phẩm mẫu B2"],
       plannedFaqQuestions: [
-        "Nen chon loai nao cho nguoi moi bat dau?",
-        "Muc gia nao la hop ly?",
-        "Mua o dau de co bao hanh tot?",
+        "Nên chọn loại nào cho người mới bắt đầu?",
+        "Mức giá nào là hợp lý?",
+        "Mua ở đâu để có bảo hành tốt?",
       ],
     };
     return { outline, usage: this.zeroUsage() };
@@ -46,30 +46,30 @@ export class StubContentAiProvider implements ContentAiProvider {
       input.products.length > 0
         ? input.products
         : [
-            { name: "San pham mau A1", url: "https://example.com/a1", price: "890.000d", description: null },
-            { name: "San pham mau B2", url: "https://example.com/b2", price: "690.000d", description: null },
+            { name: "Sản phẩm mẫu A1", url: "https://example.com/a1", price: "890.000d", description: null },
+            { name: "Sản phẩm mẫu B2", url: "https://example.com/b2", price: "690.000d", description: null },
           ];
 
     const filler =
-      "Noi dung nay duoc sinh boi stub provider de test pipeline. " +
-      "Khi chay voi provider that, doan nay se la noi dung do AI viet dua tren du lieu san pham.";
+      "Nội dung này được sinh bởi stub provider để test pipeline. " +
+      "Khi chạy với provider thật, đoạn này sẽ là nội dung do AI viết dựa trên dữ liệu sản phẩm.";
 
     const article: Article = {
       hero: {
         title: input.outline.title,
-        subtitle: `Tong hop danh gia cho chu de: ${input.topic}.`,
+        subtitle: `Tổng hợp đánh giá cho chủ đề: ${input.topic}.`,
         affiliateDisclosure:
-          "Bai viet co chua lien ket tiep thi lien ket. Khi ban mua qua lien ket, chung toi co the nhan hoa hong ma khong lam tang gia cua ban.",
+          "Bài viết có chứa liên kết tiếp thị liên kết. Khi bạn mua qua liên kết, chúng tôi có thể nhận hoa hồng mà không làm tăng giá của bạn.",
       },
       intent: {
-        forWho: `Danh cho nguoi dang tim hieu ve ${input.topic}.`,
-        problem: "Kho chon san pham phu hop trong tam gia khi mua online.",
+        forWho: `Dành cho người đang tìm hiểu về ${input.topic}.`,
+        problem: "Khó chọn sản phẩm phù hợp trong tầm giá khi mua online.",
       },
       quickAnswer: {
         bullets: [
-          "Uu tien san pham co thong tin chat lieu ro rang.",
-          "So sanh gia giua cac nha cung cap truoc khi mua.",
-          "Doc ky chinh sach doi tra va bao hanh.",
+          "Ưu tiên sản phẩm có thông tin chất liệu rõ ràng.",
+          "So sánh giá giữa các nhà cung cấp trước khi mua.",
+          "Đọc kỹ chính sách đổi trả và bảo hành.",
         ],
       },
       sections: input.outline.sectionHeadings.map((heading) => ({
@@ -78,24 +78,24 @@ export class StubContentAiProvider implements ContentAiProvider {
       })),
       productRecommendations: products.map((p) => ({
         name: p.name,
-        whyInList: "Duoc chon dua tren du lieu san pham co san trong he thong.",
-        pros: ["Thong tin ro rang", "Gia hop ly"],
-        cons: ["Can kiem tra ton kho truoc khi dat"],
-        priceRange: p.price ?? "Lien he",
-        bestFor: "Nguoi mua lan dau trong tam gia pho thong",
+        whyInList: "Được chọn dựa trên dữ liệu sản phẩm có sẵn trong hệ thống.",
+        pros: ["Thông tin rõ ràng", "Giá hợp lý"],
+        cons: ["Cần kiểm tra tồn kho trước khi đặt"],
+        priceRange: p.price ?? "Liên hệ",
+        bestFor: "Người mua lần đầu trong tầm giá phổ thông",
         productUrl: p.url,
       })),
       faq: input.outline.plannedFaqQuestions.slice(0, 6).map((question) => ({
         question,
-        answer: `Tra loi mau (stub): ${filler}`,
+        answer: `Trả lời mẫu (stub): ${filler}`,
       })),
       finalCta: {
-        text: "Xem gia moi nhat truoc khi chot mua de chon dung phien ban ban thich.",
-        action: "Xem san pham goi y",
+        text: "Xem giá mới nhất trước khi chốt mua để chọn đúng phiên bản bạn thích.",
+        action: "Xem sản phẩm gợi ý",
       },
       metadata: {
         metaTitle: input.outline.title.slice(0, 70),
-        metaDescription: `Danh gia va goi y lua chon cho ${input.topic}.`.slice(0, 170),
+        metaDescription: `Đánh giá và gợi ý lựa chọn cho ${input.topic}.`.slice(0, 170),
         slug: this.toSlug(input.outline.title),
         internalLinkSuggestions: ["/bai-viet-lien-quan-1", "/bai-viet-lien-quan-2"],
       },

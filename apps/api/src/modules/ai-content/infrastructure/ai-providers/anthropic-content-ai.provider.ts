@@ -44,18 +44,20 @@ export class AnthropicContentAiProvider implements ContentAiProvider {
     input: GenerateOutlineInput,
   ): Promise<{ outline: ArticleOutline; usage: AiCallUsage }> {
     const prompt = [
-      `Tao OUTLINE cho bai viet affiliate tieng Viet.`,
-      `Chu de: ${input.topic}`,
-      `Tu khoa chinh: ${input.keywordSeed.join(", ") || "(tu suy ra tu chu de)"}`,
+      `Tạo OUTLINE cho bài viết affiliate tiếng Việt.`,
+      `Chủ đề: ${input.topic}`,
+      `Từ khóa chính: ${input.keywordSeed.join(", ") || "(tự suy ra từ chủ đề)"}`,
       `Website: ${input.siteCode}`,
-      input.toneProfile ? `Tone: ${input.toneProfile}` : null,
-      `Du lieu san pham (JSON): ${JSON.stringify(input.products)}`,
+      input.toneProfile ? `Giọng văn: ${input.toneProfile}` : null,
+      `Dữ liệu sản phẩm (JSON): ${JSON.stringify(input.products)}`,
       ``,
-      `Yeu cau:`,
-      `- title: 50-70 ky tu, chua tu khoa chinh tu nhien.`,
-      `- sectionHeadings: 3-5 muc H2 (vd: tieu chi xep hang, huong dan chon theo nhu cau).`,
-      `- plannedProducts: chon tu du lieu san pham; neu danh sach rong thi de mang rong.`,
-      `- plannedFaqQuestions: 3-6 cau hoi theo search intent thuc te cua nguoi mua.`,
+      `Yêu cầu:`,
+      `- BẮT BUỘC viết tiếng Việt có dấu đầy đủ. Nếu chủ đề đầu vào không dấu,`,
+      `  hãy chuẩn hóa lại thành tiếng Việt có dấu trong title và mọi nội dung.`,
+      `- title: 50-70 ký tự, chứa từ khóa chính một cách tự nhiên.`,
+      `- sectionHeadings: 3-5 mục H2 (ví dụ: tiêu chí xếp hạng, hướng dẫn chọn theo nhu cầu).`,
+      `- plannedProducts: chọn từ dữ liệu sản phẩm; nếu danh sách rỗng thì để mảng rỗng.`,
+      `- plannedFaqQuestions: 3-6 câu hỏi theo search intent thực tế của người mua.`,
     ]
       .filter((line): line is string => line !== null)
       .join("\n");
@@ -74,23 +76,26 @@ export class AnthropicContentAiProvider implements ContentAiProvider {
     input: GenerateArticleInput,
   ): Promise<{ article: Article; usage: AiCallUsage }> {
     const prompt = [
-      `Viet bai viet affiliate tieng Viet HOAN CHINH theo outline va du lieu duoi day.`,
+      `Viết bài viết affiliate tiếng Việt HOÀN CHỈNH theo outline và dữ liệu dưới đây.`,
       `Outline (JSON): ${JSON.stringify(input.outline)}`,
       `Website: ${input.siteCode}`,
-      `Tu khoa chinh: ${input.keywordSeed.join(", ") || "(tu suy ra tu chu de)"}`,
-      input.toneProfile ? `Tone: ${input.toneProfile}` : null,
-      `Du lieu san pham (JSON): ${JSON.stringify(input.products)}`,
+      `Từ khóa chính: ${input.keywordSeed.join(", ") || "(tự suy ra từ chủ đề)"}`,
+      input.toneProfile ? `Giọng văn: ${input.toneProfile}` : null,
+      `Dữ liệu sản phẩm (JSON): ${JSON.stringify(input.products)}`,
       ``,
-      `Yeu cau noi dung (bat buoc):`,
-      `- hero.affiliateDisclosure: cau khai bao tiep thi lien ket ro rang.`,
-      `- Moi section 120-250 tu, giong tu nhien nhu nguoi viet that, khong khoa truong.`,
-      `- productRecommendations: CHI dung san pham trong du lieu; neu du lieu rong,`,
-      `  tao goi y chung chung voi productUrl la "https://example.com/placeholder"`,
-      `  va ghi ro trong whyInList rang can bo sung du lieu san pham that.`,
-      `- KHONG tu che thong so, gia, khuyen mai khong co trong du lieu.`,
-      `- KHONG claim qua da ("tot nhat thi truong", "cam ket 100%", claim y khoa...).`,
-      `- metadata.metaTitle <= 70 ky tu, metaDescription <= 170 ky tu,`,
-      `  internalLinkSuggestions: 2 duong dan noi bo dang "/ten-bai-viet".`,
+      `Yêu cầu nội dung (bắt buộc):`,
+      `- BẮT BUỘC viết tiếng Việt có dấu đầy đủ trong TOÀN BỘ nội dung (title,`,
+      `  heading, đoạn văn, FAQ...). Nếu outline hoặc chủ đề có chỗ không dấu,`,
+      `  hãy chuẩn hóa lại thành có dấu.`,
+      `- hero.affiliateDisclosure: câu khai báo tiếp thị liên kết rõ ràng.`,
+      `- Mỗi section 120-250 từ, giọng tự nhiên như người viết thật, không khoa trương.`,
+      `- productRecommendations: CHỈ dùng sản phẩm trong dữ liệu; nếu dữ liệu rỗng,`,
+      `  tạo gợi ý chung chung với productUrl là "https://example.com/placeholder"`,
+      `  và ghi rõ trong whyInList rằng cần bổ sung dữ liệu sản phẩm thật.`,
+      `- KHÔNG tự chế thông số, giá, khuyến mãi không có trong dữ liệu.`,
+      `- KHÔNG claim quá đà ("tốt nhất thị trường", "cam kết 100%", claim y khoa...).`,
+      `- metadata.metaTitle <= 70 ký tự, metaDescription <= 170 ký tự,`,
+      `  internalLinkSuggestions: 2 đường dẫn nội bộ dạng "/ten-bai-viet" (slug không dấu).`,
     ]
       .filter((line): line is string => line !== null)
       .join("\n");
@@ -117,8 +122,9 @@ export class AnthropicContentAiProvider implements ContentAiProvider {
         max_tokens: maxTokens,
         thinking: { type: "adaptive" },
         system:
-          "Ban la chuyen gia viet content affiliate tieng Viet cho website thuong mai. " +
-          "Ban viet trung thuc, chi dung du lieu duoc cung cap, tuan thu schema output nghiem ngat.",
+          "Bạn là chuyên gia viết content affiliate tiếng Việt cho website thương mại. " +
+          "Bạn LUÔN viết tiếng Việt có dấu đầy đủ, viết trung thực, chỉ dùng dữ liệu được cung cấp, " +
+          "tuân thủ schema output nghiêm ngặt.",
         messages: [{ role: "user", content: prompt }],
         output_config: { format: zodOutputFormat(schema) },
       });

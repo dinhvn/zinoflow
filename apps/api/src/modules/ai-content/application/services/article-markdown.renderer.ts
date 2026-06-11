@@ -13,12 +13,12 @@ export function renderArticleMarkdown(article: Article): string {
   lines.push(`> ${article.hero.affiliateDisclosure}`, "");
 
   // Block 2 — Intent
-  lines.push("## Bai viet nay danh cho ai?", "");
+  lines.push("## Bài viết này dành cho ai?", "");
   lines.push(article.intent.forWho, "");
   lines.push(article.intent.problem, "");
 
   // Block 3 — Quick answer
-  lines.push("## Tra loi nhanh", "");
+  lines.push("## Trả lời nhanh", "");
   for (const bullet of article.quickAnswer.bullets) {
     lines.push(`- ${bullet}`);
   }
@@ -31,26 +31,26 @@ export function renderArticleMarkdown(article: Article): string {
   }
 
   // Block 5 — Product recommendations
-  lines.push("## Top san pham noi bat", "");
+  lines.push("## Top sản phẩm nổi bật", "");
   article.productRecommendations.forEach((p, index) => {
     lines.push(`### ${index + 1}) ${p.name}`);
-    lines.push(`- **Vi sao co trong danh sach:** ${p.whyInList}`);
-    lines.push(`- **Uu diem:** ${p.pros.join(", ")}`);
-    lines.push(`- **Han che:** ${p.cons.join(", ")}`);
-    lines.push(`- **Gia tham khao:** ${p.priceRange}`);
-    lines.push(`- **Phu hop voi:** ${p.bestFor}`);
-    lines.push(`- [Xem san pham](${p.productUrl})`, "");
+    lines.push(`- **Vì sao có trong danh sách:** ${p.whyInList}`);
+    lines.push(`- **Ưu điểm:** ${p.pros.join(", ")}`);
+    lines.push(`- **Hạn chế:** ${p.cons.join(", ")}`);
+    lines.push(`- **Giá tham khảo:** ${p.priceRange}`);
+    lines.push(`- **Phù hợp với:** ${p.bestFor}`);
+    lines.push(`- [Xem sản phẩm](${p.productUrl})`, "");
   });
 
   // Block 6 — FAQ
-  lines.push("## Cau hoi thuong gap", "");
+  lines.push("## Câu hỏi thường gặp", "");
   for (const item of article.faq) {
     lines.push(`### ${item.question}`);
     lines.push(item.answer, "");
   }
 
   // Block 7 — Final CTA
-  lines.push("## Ket luan", "");
+  lines.push("## Kết luận", "");
   lines.push(article.finalCta.text, "");
   lines.push(`**${article.finalCta.action}**`, "");
 

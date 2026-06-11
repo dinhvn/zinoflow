@@ -45,11 +45,11 @@ describe("StubContentAiProvider", () => {
     const markdown = renderArticleMarkdown(article);
 
     expect(markdown).toContain(`# ${article.hero.title}`); // H1 duy nhat
-    expect(markdown).toContain("## Bai viet nay danh cho ai?");
-    expect(markdown).toContain("## Tra loi nhanh");
-    expect(markdown).toContain("## Top san pham noi bat");
-    expect(markdown).toContain("## Cau hoi thuong gap");
-    expect(markdown).toContain("## Ket luan");
+    expect(markdown).toContain("## Bài viết này dành cho ai?");
+    expect(markdown).toContain("## Trả lời nhanh");
+    expect(markdown).toContain("## Top sản phẩm nổi bật");
+    expect(markdown).toContain("## Câu hỏi thường gặp");
+    expect(markdown).toContain("## Kết luận");
     expect(markdown).toContain(article.hero.affiliateDisclosure); // policy gate can disclosure
   });
 });

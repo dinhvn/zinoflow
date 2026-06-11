@@ -43,7 +43,7 @@ export class CreateContentJobUseCase {
     // Provider bi tat tu Settings -> tu choi tao job (business rule)
     if (!(await this.providerSettings.isEnabled(aiProvider))) {
       throw new DomainRuleError(`AI provider "${aiProvider}" is disabled`, [
-        "Bat lai provider nay trong trang Settings truoc khi tao job",
+        "Bật lại provider này trong trang Settings trước khi tạo job",
       ]);
     }
     const job = ContentJob.create({

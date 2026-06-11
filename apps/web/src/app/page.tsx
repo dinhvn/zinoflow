@@ -23,7 +23,7 @@ export default async function DashboardPage() {
       <h2 className="mb-4 text-2xl font-semibold">Dashboard</h2>
 
       <div className="max-w-md rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-        <h3 className="mb-2 font-medium">System status</h3>
+        <h3 className="mb-2 font-medium">Trạng thái hệ thống</h3>
         {health ? (
           <ul className="space-y-1 text-sm">
             <li>
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
           </ul>
         ) : (
           <p className="text-sm text-red-600 dark:text-red-400">
-            Khong ket noi duoc API: {errorMessage}
+            Không kết nối được API: {errorMessage}
           </p>
         )}
       </div>

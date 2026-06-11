@@ -57,6 +57,16 @@ Other hard rules:
 
 **Readable first.** Optimize for the next reader, not for cleverness.
 
+Language rules (MANDATORY — user explicitly requires this):
+- ALL user-facing text MUST be Vietnamese WITH full diacritics (tiếng Việt có dấu):
+  UI labels, placeholders, buttons, toasts, user-visible error messages,
+  AI prompts, and AI-generated article content (titles, sections, FAQ...).
+- NEVER write unaccented Vietnamese ("tieng Viet khong dau") in user-facing strings.
+- AI prompts must explicitly instruct: "viết tiếng Việt có dấu đầy đủ" and
+  "nếu chủ đề đầu vào không dấu thì chuẩn hóa thành có dấu" — input topics may
+  arrive unaccented but output must always be accented.
+- Code comments and technical docs may stay unaccented (existing repo convention).
+
 Naming:
 - Intention-revealing names: `generateOutlineForJob()` not `genOl()`; `isQualityGatePassed` not `flag`.
 - Files: kebab-case (`create-content-job.usecase.ts`). Classes: PascalCase. Functions/vars: camelCase.

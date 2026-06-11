@@ -41,10 +41,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   return (
     <div className="max-w-4xl space-y-6">
       <a href="/content" className="text-sm text-zinc-500 hover:underline">
-        ← Quay lai danh sach
+        ← Quay lại danh sách
       </a>
 
-      {jobQuery.isLoading && <p className="text-sm text-zinc-500">Dang tai...</p>}
+      {jobQuery.isLoading && <p className="text-sm text-zinc-500">Đang tải...</p>}
 
       {job && (
         <div className="rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
@@ -53,16 +53,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             <span>Status: <strong className="text-zinc-900 dark:text-zinc-100">{job.status}</strong></span>
             <span>Site: {job.siteCode}</span>
             <span>AI: {job.aiProvider}/{job.aiModel}</span>
-            <span>Tao: {new Date(job.createdAt).toLocaleString("vi-VN")}</span>
+            <span>Tạo: {new Date(job.createdAt).toLocaleString("vi-VN")}</span>
           </div>
           {job.status === "GeneratingOutline" && (
             <p className="mt-2 animate-pulse text-blue-600 dark:text-blue-400">
-              AI dang viet bai... (tu dong cap nhat)
+              AI đang viết bài... (tự động cập nhật)
             </p>
           )}
           {job.status === "Failed" && (
             <p className="mt-2 text-red-600 dark:text-red-400">
-              Generate that bai — he thong se tu retry, hoac kiem tra log API.
+              Tạo bài thất bại — hệ thống sẽ tự thử lại, hoặc kiểm tra log API.
             </p>
           )}
         </div>
@@ -77,7 +77,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           </div>
           {/* M3 se render HTML + editor; hien tai xem markdown tho */}
           <pre className="overflow-x-auto whitespace-pre-wrap p-4 font-mono text-sm leading-relaxed">
-            {draftQuery.data.draftMarkdown ?? "(chua co noi dung)"}
+            {draftQuery.data.draftMarkdown ?? "(chưa có nội dung)"}
           </pre>
         </div>
       )}
