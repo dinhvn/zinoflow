@@ -6,8 +6,16 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
   const logger = new Logger("Bootstrap");
+
+  if (!process.env.DATABASE_URL) {
+    logger.error(
+      "DATABASE_URL is required. Copy apps/api/.env.example -> .env, dien password Postgres va tao database: CREATE DATABASE zinoflow;",
+    );
+    process.exit(1);
+  }
+
+  const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix("api");
   // Validation: dung Zod schema tu @zinoflow/contracts qua custom pipe (Day 2),
