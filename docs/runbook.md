@@ -1,6 +1,6 @@
 # ZinoFlow Runbook
 
-Muc tieu: setup tu dau va chay duoc trong 30 phut. Cap nhat 11/06/2026 (het M1).
+Muc tieu: setup tu dau va chay duoc trong 30 phut. Cap nhat 11/06/2026 (M2).
 
 ## 1) Yeu cau may
 
@@ -74,8 +74,20 @@ Chua co apps/api/.env hoac thieu dong DATABASE_URL — xem muc 2 buoc 3.
 
 ### Job mai o trang thai Failed
 - Xem log api: loi AiProviderError thuong do API key sai/het quota.
-- pg-boss tu retry 3 lan (backoff tu 30s). Sau 3 lan van Failed thi sua nguyen nhan
-  roi tao job moi (hoac doi M2 co nut retry tren UI).
+- Tung section fail duoc retry rieng 3 lan; sau do pg-boss retry ca job 3 lan (backoff tu 30s).
+- Van Failed: sua nguyen nhan roi bam nut **Thu lai** tren trang /content
+  (hoac POST /api/content/jobs/{id}/retry).
+
+### Gemini free tier hay fail 429 (RESOURCE_EXHAUSTED)
+Free tier gioi han ~10 request/phut/model. Pipeline M2 goi 1 job = outline + tung section
++ frame (~5-8 request), nen 2 job lien tiep hoac retry don dap se cham limit.
+Cho ~1 phut roi bam Thu lai, hoac nang len paid tier / dung model khac.
+
+### Doi prompt khong thay tac dung
+Prompt doc tu bang prompt_templates (version active moi nhat). Doi prompt = INSERT version
+moi + UPDATE is_active (false cho version cu) — KHONG sua content version cu.
+Neu bang khong co row cho key do, he thong fallback ve prompt mac dinh trong code
+(apps/api/src/modules/ai-content/application/services/default-prompts.ts).
 
 ### Doi API key ma khong co tac dung
 Restart api — env chi doc luc khoi dong.

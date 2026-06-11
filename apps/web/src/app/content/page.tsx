@@ -6,6 +6,7 @@ import { z } from "zod/v4";
 import {
   contentJobSchema,
   listAiProvidersResponseSchema,
+  type ArticleType,
   type ContentJobStatus,
   type CreateContentJobRequest,
 } from "@zinoflow/contracts";
@@ -30,6 +31,7 @@ export default function ContentPage() {
   const queryClient = useQueryClient();
   const [topic, setTopic] = useState("");
   const [siteCode, setSiteCode] = useState("laruki");
+  const [articleType, setArticleType] = useState<ArticleType>("toplist");
   const [keywords, setKeywords] = useState("");
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
@@ -57,6 +59,11 @@ export default function ContentPage() {
   const selectedModel =
     selectedProvider?.models.find((m) => m.id === model) ?? selectedProvider?.models[0] ?? null;
 
+  const retryJob = useMutation({
+    mutationFn: (jobId: string) => apiSend("POST", `/content/jobs/${jobId}/retry`, {}),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["content-jobs"] }),
+  });
+
   const createJob = useMutation({
     mutationFn: (request: CreateContentJobRequest) => apiSend("POST", "/content/jobs", request),
     onSuccess: () => {
@@ -83,6 +90,7 @@ export default function ContentPage() {
       sourceType: "Topic",
       sourceRef: "manual",
       topic,
+      articleType,
       keywordSeed: keywords
         .split(",")
         .map((k) => k.trim())
@@ -113,6 +121,18 @@ export default function ContentPage() {
             >
               <option value="laruki">laruki.com (thời trang)</option>
               <option value="dochoi3s">dochoi3s.com (đồ chơi)</option>
+            </select>
+          </label>
+
+          <label className="block text-sm">
+            <span className="mb-1 block text-zinc-500">Loại bài viết</span>
+            <select
+              value={articleType}
+              onChange={(e) => setArticleType(e.target.value as ArticleType)}
+              className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+            >
+              <option value="toplist">Top-list (danh sách sản phẩm tốt nhất)</option>
+              <option value="review">Review một sản phẩm</option>
             </select>
           </label>
 
@@ -208,11 +228,23 @@ export default function ContentPage() {
                   {new Date(job.createdAt).toLocaleString("vi-VN")}
                 </p>
               </div>
-              <span
-                className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[job.status] ?? ""}`}
-              >
-                {job.status}
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                {job.status === "Failed" && (
+                  <button
+                    type="button"
+                    onClick={() => retryJob.mutate(job.id)}
+                    disabled={retryJob.isPending}
+                    className="rounded border border-zinc-300 px-2 py-0.5 text-xs hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                  >
+                    {retryJob.isPending ? "Đang gửi..." : "Thử lại"}
+                  </button>
+                )}
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[job.status] ?? ""}`}
+                >
+                  {job.status}
+                </span>
+              </div>
             </li>
           ))}
         </ul>

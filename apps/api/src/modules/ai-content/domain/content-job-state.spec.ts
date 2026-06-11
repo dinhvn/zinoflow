@@ -1,3 +1,4 @@
+import type { ContentJobStatus } from "@zinoflow/contracts";
 import { assertTransition, canTransition } from "./content-job-state";
 import { DomainRuleError } from "../../shared/errors/app-error";
 
@@ -29,6 +30,35 @@ describe("ContentJob state machine (spec §5)", () => {
     it("allows re-generating before review (DraftReady -> GeneratingOutline)", () => {
       expect(canTransition("DraftReady", "GeneratingOutline")).toBe(true);
     });
+  });
+
+  describe("full transition matrix (gate M2: moi transition co test)", () => {
+    const ALL: ContentJobStatus[] = [
+      "Created",
+      "GeneratingOutline",
+      "DraftReady",
+      "InReview",
+      "Approved",
+      "Rejected",
+      "Failed",
+    ];
+    // Bang ky vong doc lap voi implementation — sua state machine thi PHAI sua bang nay co y thuc
+    const EXPECTED_ALLOWED: Record<ContentJobStatus, ContentJobStatus[]> = {
+      Created: ["GeneratingOutline", "Failed"],
+      GeneratingOutline: ["DraftReady", "Failed"],
+      DraftReady: ["InReview", "GeneratingOutline"],
+      InReview: ["Approved", "Rejected"],
+      Approved: ["InReview"],
+      Rejected: [],
+      Failed: ["GeneratingOutline"],
+    };
+
+    it.each(ALL.flatMap((from) => ALL.map((to) => [from, to] as const)))(
+      "%s -> %s matches spec §5",
+      (from, to) => {
+        expect(canTransition(from, to)).toBe(EXPECTED_ALLOWED[from].includes(to));
+      },
+    );
   });
 
   describe("invalid transitions", () => {

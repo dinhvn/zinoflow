@@ -1,16 +1,19 @@
 import { Injectable } from "@nestjs/common";
-import { articleSchema, type Article, type ArticleOutline } from "@zinoflow/contracts";
+import type { ArticleFrame, ArticleOutline, ContentSection } from "@zinoflow/contracts";
+import type { ZodType, z } from "zod/v4";
 import type {
   AiCallUsage,
   ContentAiProvider,
-  GenerateArticleInput,
-  GenerateOutlineInput,
+  StructuredGenerationRequest,
 } from "../../application/ports/content-ai-provider.port";
+import type { ProductContext } from "../../application/ports/product-catalog.port";
+import { AiProviderError } from "../../../shared/errors/app-error";
 
 /**
- * Stub provider — sinh bai viet deterministic, KHONG goi API that.
+ * Stub provider — sinh output deterministic, KHONG goi API that.
  * Dung de: (1) test pipeline khong ton tien, (2) fallback khi provider chua co key.
- * Output luon pass articleSchema (co test bao ve dieu nay).
+ * Doc du lieu tu request.vars (topic, sectionHeading...) — provider that khong dung vars.
+ * Output luon duoc validate bang chinh schema duoc truyen vao (co test bao ve).
  */
 @Injectable()
 export class StubContentAiProvider implements ContentAiProvider {
@@ -20,49 +23,77 @@ export class StubContentAiProvider implements ContentAiProvider {
     return true; // stub luon san sang
   }
 
-  async generateOutline(
-    input: GenerateOutlineInput,
-  ): Promise<{ outline: ArticleOutline; usage: AiCallUsage }> {
-    const outline: ArticleOutline = {
-      title: `${input.topic} — đánh giá chi tiết 2026`,
-      sectionHeadings: ["Tiêu chí xếp hạng", "Gợi ý chọn nhanh theo nhu cầu"],
+  async generateStructured<TSchema extends ZodType>(
+    request: StructuredGenerationRequest,
+    schema: TSchema,
+  ): Promise<{ output: z.infer<TSchema>; usage: AiCallUsage }> {
+    const raw = this.buildByOperation(request);
+    return {
+      // Tu kiem tra output truoc khi tra ve — moi provider deu phai dam bao dieu nay
+      output: schema.parse(raw) as z.infer<TSchema>,
+      usage: { inputTokens: 0, outputTokens: 0, costUsd: 0, latencyMs: 0 },
+    };
+  }
+
+  private buildByOperation(request: StructuredGenerationRequest): unknown {
+    switch (request.operation) {
+      case "outline":
+        return this.buildOutline(request.vars);
+      case "section":
+        return this.buildSection(request.vars);
+      case "frame":
+        return this.buildFrame(request.vars);
+      default:
+        throw new AiProviderError(`Stub provider: unknown operation "${request.operation}"`);
+    }
+  }
+
+  private buildOutline(vars: Readonly<Record<string, unknown>>): ArticleOutline {
+    const topic = String(vars["topic"] ?? "chủ đề thử nghiệm");
+    const products = this.productsFrom(vars);
+    return {
+      title: `${topic} — đánh giá chi tiết 2026`,
+      sectionHeadings: ["Tiêu chí xếp hạng", "Cách chọn mua theo ngân sách"],
       plannedProducts:
-        input.products.length > 0
-          ? input.products.map((p) => p.name)
-          : ["Sản phẩm mẫu A1", "Sản phẩm mẫu B2"],
+        products.length > 0 ? products.map((p) => p.name) : ["Sản phẩm mẫu A1", "Sản phẩm mẫu B2"],
       plannedFaqQuestions: [
         "Nên chọn loại nào cho người mới bắt đầu?",
         "Mức giá nào là hợp lý?",
         "Mua ở đâu để có bảo hành tốt?",
       ],
     };
-    return { outline, usage: this.zeroUsage() };
   }
 
-  async generateArticle(
-    input: GenerateArticleInput,
-  ): Promise<{ article: Article; usage: AiCallUsage }> {
+  private buildSection(vars: Readonly<Record<string, unknown>>): ContentSection {
+    const heading = String(vars["sectionHeading"] ?? "Nội dung");
+    return {
+      heading,
+      content:
+        `${heading}: Nội dung này được sinh bởi stub provider để test pipeline. ` +
+        "Khi chạy với provider thật, đoạn này sẽ là nội dung do AI viết dựa trên dữ liệu sản phẩm.",
+    };
+  }
+
+  private buildFrame(vars: Readonly<Record<string, unknown>>): ArticleFrame {
+    const topic = String(vars["topic"] ?? "chủ đề thử nghiệm");
+    const title = String(vars["title"] ?? `${topic} — đánh giá chi tiết 2026`);
     const products =
-      input.products.length > 0
-        ? input.products
+      this.productsFrom(vars).length > 0
+        ? this.productsFrom(vars)
         : [
-            { name: "Sản phẩm mẫu A1", url: "https://example.com/a1", price: "890.000d", description: null },
-            { name: "Sản phẩm mẫu B2", url: "https://example.com/b2", price: "690.000d", description: null },
+            { name: "Sản phẩm mẫu A1", url: "https://example.com/a1", price: "890.000đ", description: null },
+            { name: "Sản phẩm mẫu B2", url: "https://example.com/b2", price: "690.000đ", description: null },
           ];
 
-    const filler =
-      "Nội dung này được sinh bởi stub provider để test pipeline. " +
-      "Khi chạy với provider thật, đoạn này sẽ là nội dung do AI viết dựa trên dữ liệu sản phẩm.";
-
-    const article: Article = {
+    return {
       hero: {
-        title: input.outline.title,
-        subtitle: `Tổng hợp đánh giá cho chủ đề: ${input.topic}.`,
+        title,
+        subtitle: `Tổng hợp đánh giá cho chủ đề: ${topic}.`,
         affiliateDisclosure:
           "Bài viết có chứa liên kết tiếp thị liên kết. Khi bạn mua qua liên kết, chúng tôi có thể nhận hoa hồng mà không làm tăng giá của bạn.",
       },
       intent: {
-        forWho: `Dành cho người đang tìm hiểu về ${input.topic}.`,
+        forWho: `Dành cho người đang tìm hiểu về ${topic}.`,
         problem: "Khó chọn sản phẩm phù hợp trong tầm giá khi mua online.",
       },
       quickAnswer: {
@@ -72,10 +103,6 @@ export class StubContentAiProvider implements ContentAiProvider {
           "Đọc kỹ chính sách đổi trả và bảo hành.",
         ],
       },
-      sections: input.outline.sectionHeadings.map((heading) => ({
-        heading,
-        content: `${heading}: ${filler}`,
-      })),
       productRecommendations: products.map((p) => ({
         name: p.name,
         whyInList: "Được chọn dựa trên dữ liệu sản phẩm có sẵn trong hệ thống.",
@@ -85,28 +112,30 @@ export class StubContentAiProvider implements ContentAiProvider {
         bestFor: "Người mua lần đầu trong tầm giá phổ thông",
         productUrl: p.url,
       })),
-      faq: input.outline.plannedFaqQuestions.slice(0, 6).map((question) => ({
+      faq: [
+        "Nên chọn loại nào cho người mới bắt đầu?",
+        "Mức giá nào là hợp lý?",
+        "Mua ở đâu để có bảo hành tốt?",
+      ].map((question) => ({
         question,
-        answer: `Trả lời mẫu (stub): ${filler}`,
+        answer: "Trả lời mẫu (stub): khi chạy provider thật, AI sẽ trả lời dựa trên dữ liệu sản phẩm.",
       })),
       finalCta: {
         text: "Xem giá mới nhất trước khi chốt mua để chọn đúng phiên bản bạn thích.",
         action: "Xem sản phẩm gợi ý",
       },
       metadata: {
-        metaTitle: input.outline.title.slice(0, 70),
-        metaDescription: `Đánh giá và gợi ý lựa chọn cho ${input.topic}.`.slice(0, 170),
-        slug: this.toSlug(input.outline.title),
+        metaTitle: title.slice(0, 70),
+        metaDescription: `Đánh giá và gợi ý lựa chọn cho ${topic}.`.slice(0, 170),
+        slug: this.toSlug(title),
         internalLinkSuggestions: ["/bai-viet-lien-quan-1", "/bai-viet-lien-quan-2"],
       },
     };
-
-    // Tu kiem tra output truoc khi tra ve — moi provider deu phai dam bao dieu nay
-    return { article: articleSchema.parse(article), usage: this.zeroUsage() };
   }
 
-  private zeroUsage(): AiCallUsage {
-    return { inputTokens: 0, outputTokens: 0, costUsd: 0, latencyMs: 0 };
+  private productsFrom(vars: Readonly<Record<string, unknown>>): ProductContext[] {
+    const products = vars["products"];
+    return Array.isArray(products) ? (products as ProductContext[]) : [];
   }
 
   private toSlug(title: string): string {
@@ -114,7 +143,6 @@ export class StubContentAiProvider implements ContentAiProvider {
       .toLowerCase()
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "") // bo dau tieng Viet
-      .replace(/dđ/g, "d")
       .replace(/đ/g, "d")
       .replace(/[^a-z0-9\s-]/g, "")
       .trim()

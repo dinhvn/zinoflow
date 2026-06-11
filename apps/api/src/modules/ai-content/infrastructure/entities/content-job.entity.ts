@@ -1,5 +1,10 @@
 import { Column, Entity, Index, PrimaryColumn } from "typeorm";
-import type { AiProviderKey, ContentJobStatus, ContentSourceType } from "@zinoflow/contracts";
+import type {
+  AiProviderKey,
+  ArticleType,
+  ContentJobStatus,
+  ContentSourceType,
+} from "@zinoflow/contracts";
 
 /**
  * Bang content_jobs — persistence cho ContentJob domain entity.
@@ -24,6 +29,9 @@ export class ContentJobEntity {
 
   @Column({ type: "text" })
   topic!: string;
+
+  @Column({ name: "article_type", type: "varchar", length: 20, default: "toplist" })
+  articleType!: ArticleType;
 
   @Column({ name: "keyword_seed", type: "jsonb", default: () => "'[]'" })
   keywordSeed!: string[];

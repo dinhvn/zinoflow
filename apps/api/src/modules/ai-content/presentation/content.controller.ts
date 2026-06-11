@@ -13,6 +13,7 @@ import {
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { CreateContentJobUseCase } from "../application/use-cases/create-content-job.usecase";
+import { RetryContentJobUseCase } from "../application/use-cases/retry-content-job.usecase";
 import {
   CONTENT_JOB_REPOSITORY,
   type ContentJobRepository,
@@ -65,6 +66,7 @@ const PROVIDER_CATALOG: Array<Omit<AiProviderInfo, "isConfigured" | "isEnabled">
 export class ContentController {
   constructor(
     private readonly createContentJob: CreateContentJobUseCase,
+    private readonly retryContentJob: RetryContentJobUseCase,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly repository: ContentJobRepository,
     @Inject(CONTENT_DRAFT_REPOSITORY) private readonly drafts: ContentDraftRepository,
     @Inject(AI_PROVIDER_SETTINGS) private readonly providerSettings: AiProviderSettings,
@@ -76,6 +78,12 @@ export class ContentController {
     request: CreateContentJobRequest,
   ): Promise<CreateContentJobResponse> {
     return this.createContentJob.execute(request);
+  }
+
+  /** Retry job Failed / generate lai job DraftReady — trang thai khac bi 422 (state machine). */
+  @Post("jobs/:id/retry")
+  async retry(@Param("id") id: string): Promise<{ jobId: string; status: string }> {
+    return this.retryContentJob.execute(id);
   }
 
   @Get("jobs")
@@ -134,6 +142,7 @@ export class ContentController {
       sourceType: s.sourceType,
       sourceRef: s.sourceRef,
       topic: s.topic,
+      articleType: s.articleType,
       status: s.status,
       aiProvider: s.aiProvider,
       aiModel: s.aiModel,

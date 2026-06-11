@@ -38,6 +38,7 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
     entity.sourceType = s.sourceType;
     entity.sourceRef = s.sourceRef;
     entity.topic = s.topic;
+    entity.articleType = s.articleType;
     entity.keywordSeed = s.keywordSeed;
     entity.toneProfile = s.toneProfile;
     entity.status = s.status;
@@ -55,6 +56,7 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
       sourceType: entity.sourceType,
       sourceRef: entity.sourceRef,
       topic: entity.topic,
+      articleType: entity.articleType,
       keywordSeed: entity.keywordSeed,
       toneProfile: entity.toneProfile,
       status: entity.status,

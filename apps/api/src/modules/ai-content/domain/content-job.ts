@@ -1,4 +1,9 @@
-import type { AiProviderKey, ContentJobStatus, ContentSourceType } from "@zinoflow/contracts";
+import type {
+  AiProviderKey,
+  ArticleType,
+  ContentJobStatus,
+  ContentSourceType,
+} from "@zinoflow/contracts";
 import { assertTransition } from "./content-job-state";
 
 export interface ContentJobProps {
@@ -7,6 +12,7 @@ export interface ContentJobProps {
   sourceType: ContentSourceType;
   sourceRef: string;
   topic: string;
+  articleType: ArticleType;
   keywordSeed: string[];
   toneProfile: string | null;
   status: ContentJobStatus;

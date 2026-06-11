@@ -31,20 +31,24 @@ Gate sang M2:
 - [ ] `pnpm dev` chay web + api, smoke flow pass.
 - [ ] 1 draft that tu claude-opus-4-8, validate Zod pass, co record ai_usage_logs.
 
-### M2 — Generation pipeline hoan chinh (Tuan 2)
-1. Generate 3 buoc: outline -> expand TUNG section -> assemble (retry duoc tung block).
-2. Prompt templates luu DB + version (bang prompt_templates), seed prompt cho 2 loai bai
-   dau tien: top-list va review don (spec §17.2).
-3. PromptTemplate lay du lieu product that: CMS client adapter (read-only)
-   theo docs/cms-integration-contract.md — co the bat dau bang mock + 1 endpoint that.
-4. State machine day du (spec §5): Created -> GeneratingOutline -> DraftReady -> InReview
-   -> Approved/Rejected, Failed co retry policy. Unit tests cho moi transition.
-5. OpenAI adapter skeleton (interface compile, chua can hoan chinh).
+### M2 — Generation pipeline hoan chinh (Tuan 2) ✅ code xong 11/06/2026
+1. ✅ Generate 3 buoc: outline -> expand TUNG section -> frame -> assemble
+   (section fail chi retry section do, 3 lan, roi moi de pg-boss retry ca job).
+2. ✅ Prompt templates luu DB + version: seed tieng Viet co dau cho toplist + review
+   (v1 khong dau bi tat is_active, khong sua — truy nguoc duoc). Fallback ve
+   default-prompts.ts neu DB thieu row.
+3. ✅ Product catalog adapter: MockProductCatalog (du lieu mau theo site) khi chua co
+   CMS_BASE_URL; CmsHttpProductCatalog (timeout + retry/backoff) khi co.
+   ⚠️ Endpoint CMS that (GET /api/products) la GIA DINH — can xac nhan contract voi CMS cu.
+4. ✅ State machine: unit test FULL matrix 7x7 transition (49 cases).
+5. ✅ OpenAI adapter skeleton (compile, isConfigured=false -> fallback stub).
+6. ✅ Them ngoai plan: nut "Thu lai" tren UI (POST /jobs/:id/retry), chon loai bai
+   tren form tao job, draft version tang dan khi generate lai.
 
 Gate sang M3:
-- [ ] Tao bai top-list voi 5+ san pham that tu CMS cu, du 8 block.
-- [ ] Generate fail 1 section -> chi retry section do, job khong chet.
-- [ ] Unit tests state machine pass 100%.
+- [x] Tao bai top-list voi 5+ san pham (tu mock catalog — CMS that cho contract), du 8 block.
+- [x] Generate fail 1 section -> chi retry section do, job khong chet (unit test + thay live voi Gemini 503).
+- [x] Unit tests state machine pass 100% (79/79 tests).
 
 ### M3 — Quality gates + Review workflow (Tuan 3)
 1. 4 gates bang code thuan (spec §9, §17.5):

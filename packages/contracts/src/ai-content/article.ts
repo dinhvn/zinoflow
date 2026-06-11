@@ -29,6 +29,7 @@ export const contentSectionSchema = z.object({
   heading: z.string(),
   content: z.string().min(50),
 });
+export type ContentSection = z.infer<typeof contentSectionSchema>;
 
 /** Block 5 — Product recommendation item (uu/nhuoc diem, gia, doi tuong phu hop). */
 export const productRecommendationSchema = z.object({
@@ -77,6 +78,14 @@ export const articleSchema = z.object({
   metadata: articleMetadataSchema,
 });
 export type Article = z.infer<typeof articleSchema>;
+
+/**
+ * Frame: bai viet TRU phan sections — buoc 3 cua generation 3 buoc (M2).
+ * Buoc 1 outline -> buoc 2 expand tung section -> buoc 3 frame (hero, FAQ, metadata...)
+ * roi assemble = frame + sections, validate lai bang articleSchema.
+ */
+export const articleFrameSchema = articleSchema.omit({ sections: true });
+export type ArticleFrame = z.infer<typeof articleFrameSchema>;
 
 /** Outline: buoc 1 cua generation — khung bai truoc khi expand tung section. */
 export const articleOutlineSchema = z.object({

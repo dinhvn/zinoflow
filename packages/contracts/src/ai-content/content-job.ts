@@ -19,12 +19,21 @@ export type ContentJobStatus = z.infer<typeof contentJobStatusSchema>;
 export const contentSourceTypeSchema = z.enum(["Topic", "Campaign", "ProductSet"]);
 export type ContentSourceType = z.infer<typeof contentSourceTypeSchema>;
 
+/**
+ * Loai bai viet — quyet dinh prompt pack su dung (spec §17.2).
+ * M2 ho tro 2 loai dau tien: top-list va review don. Comparison/Deal them sau.
+ */
+export const articleTypeSchema = z.enum(["toplist", "review"]);
+export type ArticleType = z.infer<typeof articleTypeSchema>;
+
 /** Request tao content job — spec §7.1. */
 export const createContentJobRequestSchema = z.object({
   siteCode: z.string().min(1), // vd: "laruki" | "dochoi3s"
   sourceType: contentSourceTypeSchema,
   sourceRef: z.string(),
   topic: z.string().min(5),
+  /** Optional — default "toplist" de tuong thich voi client cu. */
+  articleType: articleTypeSchema.default("toplist"),
   keywordSeed: z.array(z.string()).default([]),
   toneProfile: z.string().optional(),
   /** Optional — default theo SiteProfile neu khong truyen. */
@@ -39,6 +48,7 @@ export const contentJobSchema = z.object({
   sourceType: contentSourceTypeSchema,
   sourceRef: z.string(),
   topic: z.string(),
+  articleType: articleTypeSchema,
   status: contentJobStatusSchema,
   aiProvider: aiProviderKeySchema,
   aiModel: z.string(),

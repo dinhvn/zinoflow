@@ -3,6 +3,14 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { ContentController } from "./presentation/content.controller";
 import { CreateContentJobUseCase } from "./application/use-cases/create-content-job.usecase";
 import { GenerateContentUseCase } from "./application/use-cases/generate-content.usecase";
+import { RetryContentJobUseCase } from "./application/use-cases/retry-content-job.usecase";
+import { PromptBuilder } from "./application/services/prompt-builder";
+import { PROMPT_TEMPLATE_REPOSITORY } from "./application/ports/prompt-template.repository";
+import { PRODUCT_CATALOG } from "./application/ports/product-catalog.port";
+import { TypeOrmPromptTemplateRepository } from "./infrastructure/repositories/typeorm-prompt-template.repository";
+import { MockProductCatalog } from "./infrastructure/product-catalog/mock-product-catalog";
+import { CmsHttpProductCatalog } from "./infrastructure/product-catalog/cms-http-product-catalog";
+import { OpenAiContentAiProvider } from "./infrastructure/ai-providers/openai-content-ai.provider";
 import { CONTENT_JOB_REPOSITORY } from "./application/ports/content-job.repository";
 import { CONTENT_DRAFT_REPOSITORY } from "./application/ports/content-draft.repository";
 import { AI_USAGE_RECORDER } from "./application/ports/ai-usage-recorder.port";
@@ -41,28 +49,48 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
   providers: [
     CreateContentJobUseCase,
     GenerateContentUseCase,
+    RetryContentJobUseCase,
+    PromptBuilder,
     ContentGenerateWorker,
     StubContentAiProvider,
     AnthropicContentAiProvider,
     GeminiContentAiProvider,
+    OpenAiContentAiProvider,
     DefaultAiProviderRegistry,
+    MockProductCatalog,
+    CmsHttpProductCatalog,
     { provide: CONTENT_JOB_REPOSITORY, useClass: TypeOrmContentJobRepository },
     { provide: CONTENT_DRAFT_REPOSITORY, useClass: TypeOrmContentDraftRepository },
     { provide: AI_USAGE_RECORDER, useClass: TypeOrmAiUsageRecorder },
     { provide: AI_PROVIDER_SETTINGS, useClass: TypeOrmAiProviderSettings },
+    { provide: PROMPT_TEMPLATE_REPOSITORY, useClass: TypeOrmPromptTemplateRepository },
+    {
+      provide: PRODUCT_CATALOG,
+      // CMS_BASE_URL co gia tri -> goi CMS that; chua co -> mock (du lieu mau theo site)
+      useFactory: (mock: MockProductCatalog, cms: CmsHttpProductCatalog) =>
+        process.env.CMS_BASE_URL ? cms : mock,
+      inject: [MockProductCatalog, CmsHttpProductCatalog],
+    },
     {
       provide: AI_PROVIDER_REGISTRY,
-      // Provider that dang ky tai day — them OpenAI adapter thi inject them
+      // Provider that dang ky tai day — them adapter moi thi inject them
       useFactory: (
         registry: DefaultAiProviderRegistry,
         anthropic: AnthropicContentAiProvider,
         gemini: GeminiContentAiProvider,
+        openai: OpenAiContentAiProvider,
       ) => {
         registry.register(anthropic);
         registry.register(gemini);
+        registry.register(openai);
         return registry;
       },
-      inject: [DefaultAiProviderRegistry, AnthropicContentAiProvider, GeminiContentAiProvider],
+      inject: [
+        DefaultAiProviderRegistry,
+        AnthropicContentAiProvider,
+        GeminiContentAiProvider,
+        OpenAiContentAiProvider,
+      ],
     },
   ],
 })
