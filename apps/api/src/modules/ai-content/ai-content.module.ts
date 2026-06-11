@@ -12,6 +12,7 @@ import { TypeOrmContentDraftRepository } from "./infrastructure/repositories/typ
 import { TypeOrmAiUsageRecorder } from "./infrastructure/repositories/typeorm-ai-usage-recorder";
 import { StubContentAiProvider } from "./infrastructure/ai-providers/stub-content-ai.provider";
 import { AnthropicContentAiProvider } from "./infrastructure/ai-providers/anthropic-content-ai.provider";
+import { GeminiContentAiProvider } from "./infrastructure/ai-providers/gemini-content-ai.provider";
 import { DefaultAiProviderRegistry } from "./infrastructure/ai-providers/ai-provider.registry";
 import { ContentGenerateWorker } from "./infrastructure/workers/content-generate.worker";
 import { ContentJobEntity } from "./infrastructure/entities/content-job.entity";
@@ -20,6 +21,9 @@ import { ContentReviewRecordEntity } from "./infrastructure/entities/content-rev
 import { PromptTemplateEntity } from "./infrastructure/entities/prompt-template.entity";
 import { ContentQualityResultEntity } from "./infrastructure/entities/content-quality-result.entity";
 import { AiUsageLogEntity } from "./infrastructure/entities/ai-usage-log.entity";
+import { AiProviderSettingEntity } from "./infrastructure/entities/ai-provider-setting.entity";
+import { AI_PROVIDER_SETTINGS } from "./application/ports/ai-provider-settings.port";
+import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm-ai-provider-settings";
 
 @Module({
   imports: [
@@ -30,6 +34,7 @@ import { AiUsageLogEntity } from "./infrastructure/entities/ai-usage-log.entity"
       PromptTemplateEntity,
       ContentQualityResultEntity,
       AiUsageLogEntity,
+      AiProviderSettingEntity,
     ]),
   ],
   controllers: [ContentController],
@@ -39,18 +44,25 @@ import { AiUsageLogEntity } from "./infrastructure/entities/ai-usage-log.entity"
     ContentGenerateWorker,
     StubContentAiProvider,
     AnthropicContentAiProvider,
+    GeminiContentAiProvider,
     DefaultAiProviderRegistry,
     { provide: CONTENT_JOB_REPOSITORY, useClass: TypeOrmContentJobRepository },
     { provide: CONTENT_DRAFT_REPOSITORY, useClass: TypeOrmContentDraftRepository },
     { provide: AI_USAGE_RECORDER, useClass: TypeOrmAiUsageRecorder },
+    { provide: AI_PROVIDER_SETTINGS, useClass: TypeOrmAiProviderSettings },
     {
       provide: AI_PROVIDER_REGISTRY,
-      // Provider that dang ky tai day — them OpenAI/Gemini adapter thi inject them
-      useFactory: (registry: DefaultAiProviderRegistry, anthropic: AnthropicContentAiProvider) => {
+      // Provider that dang ky tai day — them OpenAI adapter thi inject them
+      useFactory: (
+        registry: DefaultAiProviderRegistry,
+        anthropic: AnthropicContentAiProvider,
+        gemini: GeminiContentAiProvider,
+      ) => {
         registry.register(anthropic);
+        registry.register(gemini);
         return registry;
       },
-      inject: [DefaultAiProviderRegistry, AnthropicContentAiProvider],
+      inject: [DefaultAiProviderRegistry, AnthropicContentAiProvider, GeminiContentAiProvider],
     },
   ],
 })

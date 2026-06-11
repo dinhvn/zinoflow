@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { QueryProvider } from "@/shared/query-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,21 +15,25 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           attribute vao <body> truoc khi React hydrate -> mismatch gia.
           Chi ap dung cho attribute cua chinh <body>, khong an hydration bug that o children. */}
       <body className="min-h-screen antialiased" suppressHydrationWarning>
-        <div className="flex min-h-screen">
-          {/* Sidebar — se thay bang shadcn/ui navigation o Day 6 */}
-          <aside className="w-56 shrink-0 border-r border-zinc-200 p-4 dark:border-zinc-800">
-            <h1 className="mb-6 text-lg font-bold">ZinoFlow</h1>
-            <nav className="space-y-2 text-sm">
-              <a href="/" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
-                Dashboard
-              </a>
-              <a href="/content" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
-                AI Content
-              </a>
-            </nav>
-          </aside>
-          <main className="flex-1 p-6">{children}</main>
-        </div>
+        <QueryProvider>
+          <div className="flex min-h-screen">
+            <aside className="w-56 shrink-0 border-r border-zinc-200 p-4 dark:border-zinc-800">
+              <h1 className="mb-6 text-lg font-bold">ZinoFlow</h1>
+              <nav className="space-y-2 text-sm">
+                <a href="/" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
+                  Dashboard
+                </a>
+                <a href="/content" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
+                  AI Content
+                </a>
+                <a href="/settings" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
+                  Settings
+                </a>
+              </nav>
+            </aside>
+            <main className="flex-1 p-6">{children}</main>
+          </div>
+        </QueryProvider>
       </body>
     </html>
   );

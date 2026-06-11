@@ -11,19 +11,43 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** Error envelope tu API (neu parse duoc) — chua details + traceId. */
+    readonly details: string[] = [],
   ) {
     super(message);
     this.name = "ApiError";
   }
 }
 
-export async function apiGet<TSchema extends z.ZodTypeAny>(
+async function toApiError(res: Response, fallback: string): Promise<ApiError> {
+  try {
+    const body = (await res.json()) as { message?: string; details?: string[] };
+    return new ApiError(res.status, body.message ?? fallback, body.details ?? []);
+  } catch {
+    return new ApiError(res.status, fallback);
+  }
+}
+
+export async function apiGet<TSchema extends z.ZodType>(
   path: string,
   schema: TSchema,
 ): Promise<z.infer<TSchema>> {
   const res = await fetch(`${API_BASE_URL}/api${path}`, { cache: "no-store" });
-  if (!res.ok) {
-    throw new ApiError(res.status, `GET ${path} failed: ${res.status}`);
-  }
+  if (!res.ok) throw await toApiError(res, `GET ${path} failed: ${res.status}`);
   return schema.parse(await res.json());
+}
+
+/** POST/PATCH voi JSON body. Tra ve response da parse (unknown neu khong can schema). */
+export async function apiSend(
+  method: "POST" | "PATCH",
+  path: string,
+  body: unknown,
+): Promise<unknown> {
+  const res = await fetch(`${API_BASE_URL}/api${path}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw await toApiError(res, `${method} ${path} failed: ${res.status}`);
+  return res.json();
 }

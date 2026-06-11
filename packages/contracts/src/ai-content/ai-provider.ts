@@ -23,6 +23,8 @@ export const aiProviderInfoSchema = z.object({
   models: z.array(aiModelInfoSchema),
   /** Provider co san API key trong env hay khong (UI disable neu false). */
   isConfigured: z.boolean(),
+  /** Bat/tat tu trang Settings — tat thi khong tao job moi voi provider nay. */
+  isEnabled: z.boolean(),
 });
 export type AiProviderInfo = z.infer<typeof aiProviderInfoSchema>;
 
@@ -30,3 +32,9 @@ export const listAiProvidersResponseSchema = z.object({
   providers: z.array(aiProviderInfoSchema),
 });
 export type ListAiProvidersResponse = z.infer<typeof listAiProvidersResponseSchema>;
+
+/** PATCH /content/ai-providers/:key */
+export const updateAiProviderSettingRequestSchema = z.object({
+  isEnabled: z.boolean(),
+});
+export type UpdateAiProviderSettingRequest = z.infer<typeof updateAiProviderSettingRequestSchema>;

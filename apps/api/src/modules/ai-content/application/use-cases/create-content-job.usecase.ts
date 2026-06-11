@@ -6,7 +6,12 @@ import {
   CONTENT_JOB_REPOSITORY,
   type ContentJobRepository,
 } from "../ports/content-job.repository";
+import {
+  AI_PROVIDER_SETTINGS,
+  type AiProviderSettings,
+} from "../ports/ai-provider-settings.port";
 import { JOB_QUEUE, QUEUE_NAMES, type JobQueue } from "../../../shared/jobs/job-queue.port";
+import { DomainRuleError } from "../../../shared/errors/app-error";
 
 /**
  * Use case: tao content job va day vao queue de generate async.
@@ -17,16 +22,30 @@ import { JOB_QUEUE, QUEUE_NAMES, type JobQueue } from "../../../shared/jobs/job-
 export class CreateContentJobUseCase {
   private readonly logger = new Logger(CreateContentJobUseCase.name);
 
-  // Default khi request khong chi dinh — sau nay doc tu SiteProfile (M4)
+  // Default khi request khong chi dinh — sau nay doc tu SiteProfile (M4).
+  // Model default phai di theo provider duoc chon (khong duoc ghep cheo).
   private static readonly DEFAULT_PROVIDER = "anthropic" as const;
-  private static readonly DEFAULT_MODEL = "claude-opus-4-8";
+  private static readonly DEFAULT_MODELS: Record<string, string> = {
+    anthropic: "claude-opus-4-8",
+    gemini: "gemini-2.5-pro",
+    openai: "gpt-default", // thay khi implement OpenAI adapter
+  };
 
   constructor(
     @Inject(CONTENT_JOB_REPOSITORY) private readonly repository: ContentJobRepository,
     @Inject(JOB_QUEUE) private readonly jobQueue: JobQueue,
+    @Inject(AI_PROVIDER_SETTINGS) private readonly providerSettings: AiProviderSettings,
   ) {}
 
   async execute(request: CreateContentJobRequest): Promise<CreateContentJobResponse> {
+    const aiProvider = request.aiProvider ?? CreateContentJobUseCase.DEFAULT_PROVIDER;
+
+    // Provider bi tat tu Settings -> tu choi tao job (business rule)
+    if (!(await this.providerSettings.isEnabled(aiProvider))) {
+      throw new DomainRuleError(`AI provider "${aiProvider}" is disabled`, [
+        "Bat lai provider nay trong trang Settings truoc khi tao job",
+      ]);
+    }
     const job = ContentJob.create({
       id: randomUUID(),
       siteCode: request.siteCode,
@@ -35,8 +54,11 @@ export class CreateContentJobUseCase {
       topic: request.topic,
       keywordSeed: request.keywordSeed,
       toneProfile: request.toneProfile ?? null,
-      aiProvider: request.aiProvider ?? CreateContentJobUseCase.DEFAULT_PROVIDER,
-      aiModel: request.aiModel ?? CreateContentJobUseCase.DEFAULT_MODEL,
+      aiProvider,
+      aiModel:
+        request.aiModel ??
+        CreateContentJobUseCase.DEFAULT_MODELS[aiProvider] ??
+        CreateContentJobUseCase.DEFAULT_MODELS["anthropic"]!,
     });
 
     await this.repository.save(job);

@@ -1,10 +1,15 @@
-import { Body, Controller, Get, NotFoundException, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Patch, Post } from "@nestjs/common";
 import {
+  aiProviderKeySchema,
   createContentJobRequestSchema,
+  updateAiProviderSettingRequestSchema,
+  type AiProviderInfo,
+  type AiProviderKey,
   type ContentJob as ContentJobDto,
   type CreateContentJobRequest,
   type CreateContentJobResponse,
   type ListAiProvidersResponse,
+  type UpdateAiProviderSettingRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { CreateContentJobUseCase } from "../application/use-cases/create-content-job.usecase";
@@ -17,7 +22,44 @@ import {
   type ContentDraftRepository,
   type DraftRecord,
 } from "../application/ports/content-draft.repository";
+import {
+  AI_PROVIDER_SETTINGS,
+  type AiProviderSettings,
+} from "../application/ports/ai-provider-settings.port";
 import { Inject } from "@nestjs/common";
+
+/**
+ * Catalog provider/model cho UI — isConfigured doc tu env, isEnabled doc tu DB.
+ * Them provider moi: them entry o day + adapter + registry.
+ */
+const PROVIDER_CATALOG: Array<Omit<AiProviderInfo, "isConfigured" | "isEnabled"> & { envKey: string }> = [
+  {
+    key: "anthropic",
+    displayName: "Anthropic (Claude)",
+    envKey: "ANTHROPIC_API_KEY",
+    models: [
+      { id: "claude-opus-4-8", displayName: "Claude Opus 4.8", tier: "quality", costNote: "$5/$25 per 1M tokens" },
+      { id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6", tier: "balanced", costNote: "$3/$15 per 1M tokens" },
+      { id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5", tier: "light", costNote: "$1/$5 per 1M tokens" },
+    ],
+  },
+  {
+    key: "openai",
+    displayName: "OpenAI (ChatGPT)",
+    envKey: "OPENAI_API_KEY",
+    models: [],
+  },
+  {
+    key: "gemini",
+    displayName: "Google (Gemini)",
+    envKey: "GEMINI_API_KEY",
+    models: [
+      { id: "gemini-2.5-pro", displayName: "Gemini 2.5 Pro", tier: "quality", costNote: "$1.25/$10 per 1M tokens" },
+      { id: "gemini-2.5-flash", displayName: "Gemini 2.5 Flash", tier: "balanced", costNote: "$0.30/$2.50 per 1M tokens" },
+      { id: "gemini-2.5-flash-lite", displayName: "Gemini 2.5 Flash Lite", tier: "light", costNote: "$0.10/$0.40 per 1M tokens" },
+    ],
+  },
+];
 
 @Controller("content")
 export class ContentController {
@@ -25,6 +67,7 @@ export class ContentController {
     private readonly createContentJob: CreateContentJobUseCase,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly repository: ContentJobRepository,
     @Inject(CONTENT_DRAFT_REPOSITORY) private readonly drafts: ContentDraftRepository,
+    @Inject(AI_PROVIDER_SETTINGS) private readonly providerSettings: AiProviderSettings,
   ) {}
 
   @Post("jobs")
@@ -57,39 +100,30 @@ export class ContentController {
   }
 
   /**
-   * Danh sach provider/model cho UI dropdown (spec §7.1b).
-   * isConfigured doc tu env de UI disable provider chua co key.
+   * Danh sach provider/model cho UI dropdown + Settings page (spec §7.1b).
+   * isConfigured tu env, isEnabled tu DB (Settings).
    */
   @Get("ai-providers")
-  listAiProviders(): ListAiProvidersResponse {
+  async listAiProviders(): Promise<ListAiProvidersResponse> {
+    const enabledMap = await this.providerSettings.getAll(PROVIDER_CATALOG.map((p) => p.key));
     return {
-      providers: [
-        {
-          key: "anthropic",
-          displayName: "Anthropic (Claude)",
-          isConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
-          models: [
-            { id: "claude-opus-4-8", displayName: "Claude Opus 4.8", tier: "quality", costNote: "$5/$25 per 1M tokens" },
-            { id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6", tier: "balanced", costNote: "$3/$15 per 1M tokens" },
-            { id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5", tier: "light", costNote: "$1/$5 per 1M tokens" },
-          ],
-        },
-        {
-          key: "openai",
-          displayName: "OpenAI (ChatGPT)",
-          isConfigured: Boolean(process.env.OPENAI_API_KEY),
-          models: [],
-        },
-        {
-          key: "gemini",
-          displayName: "Google (Gemini)",
-          isConfigured: Boolean(process.env.GEMINI_API_KEY),
-          // Models dien khi implement GeminiContentAiProvider (tra cuu model id
-          // moi nhat tu docs Google tai thoi diem do)
-          models: [],
-        },
-      ],
+      providers: PROVIDER_CATALOG.map(({ envKey, ...provider }) => ({
+        ...provider,
+        isConfigured: Boolean(process.env[envKey]),
+        isEnabled: enabledMap[provider.key] ?? true,
+      })),
     };
+  }
+
+  /** Bat/tat provider tu Settings page. */
+  @Patch("ai-providers/:key")
+  async updateAiProviderSetting(
+    @Param("key", new ZodValidationPipe(aiProviderKeySchema)) key: AiProviderKey,
+    @Body(new ZodValidationPipe(updateAiProviderSettingRequestSchema))
+    request: UpdateAiProviderSettingRequest,
+  ): Promise<{ key: AiProviderKey; isEnabled: boolean }> {
+    await this.providerSettings.setEnabled(key, request.isEnabled);
+    return { key, isEnabled: request.isEnabled };
   }
 
   private toDto(job: import("../domain/content-job").ContentJob): ContentJobDto {
