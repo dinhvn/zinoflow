@@ -152,7 +152,11 @@ export class GeminiContentAiProvider implements ContentAiProvider {
   /** Lazy init de app boot duoc khi chua co key (registry da fallback stub). */
   private getClient(): GoogleGenAI {
     if (!this.client) {
-      this.client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      this.client = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+        // 2 phut la du cho bai dai nhat; qua thi de pg-boss retry
+        httpOptions: { timeout: 120_000 },
+      });
     }
     return this.client;
   }

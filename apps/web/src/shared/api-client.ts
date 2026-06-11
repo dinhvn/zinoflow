@@ -7,6 +7,13 @@ import type { z } from "zod/v4";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
+/** Token khop voi API_TOKEN phia api (auth gate). Local dev co the de trong. */
+const API_TOKEN = process.env.NEXT_PUBLIC_API_TOKEN;
+
+function authHeaders(): Record<string, string> {
+  return API_TOKEN ? { "x-api-token": API_TOKEN } : {};
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -32,7 +39,10 @@ export async function apiGet<TSchema extends z.ZodType>(
   path: string,
   schema: TSchema,
 ): Promise<z.infer<TSchema>> {
-  const res = await fetch(`${API_BASE_URL}/api${path}`, { cache: "no-store" });
+  const res = await fetch(`${API_BASE_URL}/api${path}`, {
+    cache: "no-store",
+    headers: authHeaders(),
+  });
   if (!res.ok) throw await toApiError(res, `GET ${path} failed: ${res.status}`);
   return schema.parse(await res.json());
 }
@@ -45,7 +55,7 @@ export async function apiSend(
 ): Promise<unknown> {
   const res = await fetch(`${API_BASE_URL}/api${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw await toApiError(res, `${method} ${path} failed: ${res.status}`);

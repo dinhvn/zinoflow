@@ -169,7 +169,11 @@ export class AnthropicContentAiProvider implements ContentAiProvider {
   /** Lazy init de app boot duoc khi chua co key (registry da fallback stub). */
   private getClient(): Anthropic {
     if (!this.client) {
-      this.client = new Anthropic(); // doc ANTHROPIC_API_KEY tu env
+      this.client = new Anthropic({
+        // doc ANTHROPIC_API_KEY tu env
+        timeout: 120_000, // bai dai nhat ~60s, 2 phut la du; qua thi de pg-boss retry
+        maxRetries: 2, // SDK tu retry 429/5xx
+      });
     }
     return this.client;
   }

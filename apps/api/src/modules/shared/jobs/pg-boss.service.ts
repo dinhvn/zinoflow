@@ -73,11 +73,21 @@ export class PgBossService implements JobQueue, OnModuleInit, OnModuleDestroy {
     this.logger.log(`Worker registered for queue "${queueName}"`);
   }
 
-  /** pg-boss v10 yeu cau queue duoc tao truoc khi send/work. Idempotent. */
+  /**
+   * pg-boss v10 yeu cau queue duoc tao truoc khi send/work. Idempotent.
+   * Retry policy ro rang (reliability gate): 3 lan, backoff tu 30s,
+   * job het han sau 15 phut (AI generation khong duoc treo vo han).
+   */
   private async ensureQueue(queueName: string): Promise<void> {
     if (!this.boss) return;
     try {
-      await this.boss.createQueue(queueName);
+      await this.boss.createQueue(queueName, {
+        name: queueName,
+        retryLimit: 3,
+        retryDelay: 30,
+        retryBackoff: true,
+        expireInSeconds: 15 * 60,
+      });
     } catch {
       // Queue da ton tai — bo qua
     }
