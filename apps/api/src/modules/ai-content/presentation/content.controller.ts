@@ -12,6 +12,11 @@ import {
   CONTENT_JOB_REPOSITORY,
   type ContentJobRepository,
 } from "../application/ports/content-job.repository";
+import {
+  CONTENT_DRAFT_REPOSITORY,
+  type ContentDraftRepository,
+  type DraftRecord,
+} from "../application/ports/content-draft.repository";
 import { Inject } from "@nestjs/common";
 
 @Controller("content")
@@ -19,6 +24,7 @@ export class ContentController {
   constructor(
     private readonly createContentJob: CreateContentJobUseCase,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly repository: ContentJobRepository,
+    @Inject(CONTENT_DRAFT_REPOSITORY) private readonly drafts: ContentDraftRepository,
   ) {}
 
   @Post("jobs")
@@ -40,6 +46,14 @@ export class ContentController {
     const job = await this.repository.findById(id);
     if (!job) throw new NotFoundException(`Content job ${id} not found`);
     return this.toDto(job);
+  }
+
+  /** Draft moi nhat cua job — UI dung de hien preview markdown + article blocks. */
+  @Get("jobs/:id/draft")
+  async getLatestDraft(@Param("id") id: string): Promise<DraftRecord> {
+    const draft = await this.drafts.findLatestByJobId(id);
+    if (!draft) throw new NotFoundException(`No draft found for job ${id}`);
+    return draft;
   }
 
   /**
@@ -64,6 +78,14 @@ export class ContentController {
           key: "openai",
           displayName: "OpenAI (ChatGPT)",
           isConfigured: Boolean(process.env.OPENAI_API_KEY),
+          models: [],
+        },
+        {
+          key: "gemini",
+          displayName: "Google (Gemini)",
+          isConfigured: Boolean(process.env.GEMINI_API_KEY),
+          // Models dien khi implement GeminiContentAiProvider (tra cuu model id
+          // moi nhat tu docs Google tai thoi diem do)
           models: [],
         },
       ],

@@ -24,7 +24,9 @@ Key docs (read before making design decisions):
 - Queue: pg-boss (runs on Postgres — NO Redis/BullMQ)
 - Frontend: Next.js App Router + Tailwind CSS + shadcn/ui + TanStack Query
 - Validation: Zod schemas in `packages/contracts` (single source of truth for BE + FE + AI output)
-- AI: multi-provider behind `IContentAIProvider`; primary provider is the **Anthropic API**
+- AI: multi-provider behind `IContentAIProvider`; primary provider is the **Anthropic API**.
+  Provider keys: `anthropic` | `openai` | `gemini` (enum in `packages/contracts`).
+  Env vars: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`.
 
 ## 3. Architecture rules (mandatory)
 

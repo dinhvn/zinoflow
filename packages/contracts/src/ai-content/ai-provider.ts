@@ -4,7 +4,7 @@ import { z } from "zod";
  * Cac AI provider he thong ho tro. Them provider moi = them key o day
  * + 1 adapter o apps/api infrastructure (khong sua core flow).
  */
-export const aiProviderKeySchema = z.enum(["anthropic", "openai"]);
+export const aiProviderKeySchema = z.enum(["anthropic", "openai", "gemini"]);
 export type AiProviderKey = z.infer<typeof aiProviderKeySchema>;
 
 /** Thong tin 1 model de UI render dropdown chon model khi tao content. */

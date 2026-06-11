@@ -78,6 +78,11 @@ interface IContentAIProvider {
 - Structured output qua response_format JSON schema (tuong duong).
 - Model cu the chon khi implement (tra cuu docs OpenAI tai thoi diem do).
 
+### 4.3b Provider: Google (Gemini)
+- SDK chinh thuc cua Google (tra cuu package + model id moi nhat khi implement).
+- Structured output qua responseSchema (tuong duong).
+- Env var: GEMINI_API_KEY.
+
 ### 4.4 Quy tac chung
 - API key qua env vars (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`), khong hardcode.
 - Log token usage + cost + latency cho MOI request AI (bang `ai_usage_logs`).

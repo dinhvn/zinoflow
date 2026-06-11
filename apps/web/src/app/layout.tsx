@@ -10,7 +10,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="vi">
-      <body className="min-h-screen antialiased">
+      {/* suppressHydrationWarning: extension trinh duyet (Grammarly, ...) chen
+          attribute vao <body> truoc khi React hydrate -> mismatch gia.
+          Chi ap dung cho attribute cua chinh <body>, khong an hydration bug that o children. */}
+      <body className="min-h-screen antialiased" suppressHydrationWarning>
         <div className="flex min-h-screen">
           {/* Sidebar — se thay bang shadcn/ui navigation o Day 6 */}
           <aside className="w-56 shrink-0 border-r border-zinc-200 p-4 dark:border-zinc-800">
