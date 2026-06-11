@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 /**
  * Error groups theo spec docs/specs/ai-content-technical-spec.md §12.

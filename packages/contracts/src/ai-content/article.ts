@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 /**
  * Article 8-block framework — spec docs/specs/ai-content-technical-spec.md §17.

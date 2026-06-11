@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 /**
  * Cac AI provider he thong ho tro. Them provider moi = them key o day

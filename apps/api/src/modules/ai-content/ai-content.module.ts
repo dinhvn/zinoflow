@@ -11,6 +11,7 @@ import { TypeOrmContentJobRepository } from "./infrastructure/repositories/typeo
 import { TypeOrmContentDraftRepository } from "./infrastructure/repositories/typeorm-content-draft.repository";
 import { TypeOrmAiUsageRecorder } from "./infrastructure/repositories/typeorm-ai-usage-recorder";
 import { StubContentAiProvider } from "./infrastructure/ai-providers/stub-content-ai.provider";
+import { AnthropicContentAiProvider } from "./infrastructure/ai-providers/anthropic-content-ai.provider";
 import { DefaultAiProviderRegistry } from "./infrastructure/ai-providers/ai-provider.registry";
 import { ContentGenerateWorker } from "./infrastructure/workers/content-generate.worker";
 import { ContentJobEntity } from "./infrastructure/entities/content-job.entity";
@@ -37,12 +38,20 @@ import { AiUsageLogEntity } from "./infrastructure/entities/ai-usage-log.entity"
     GenerateContentUseCase,
     ContentGenerateWorker,
     StubContentAiProvider,
+    AnthropicContentAiProvider,
     DefaultAiProviderRegistry,
     { provide: CONTENT_JOB_REPOSITORY, useClass: TypeOrmContentJobRepository },
     { provide: CONTENT_DRAFT_REPOSITORY, useClass: TypeOrmContentDraftRepository },
     { provide: AI_USAGE_RECORDER, useClass: TypeOrmAiUsageRecorder },
-    // Day 5: dang ky AnthropicContentAiProvider vao registry tai day
-    { provide: AI_PROVIDER_REGISTRY, useExisting: DefaultAiProviderRegistry },
+    {
+      provide: AI_PROVIDER_REGISTRY,
+      // Provider that dang ky tai day — them OpenAI/Gemini adapter thi inject them
+      useFactory: (registry: DefaultAiProviderRegistry, anthropic: AnthropicContentAiProvider) => {
+        registry.register(anthropic);
+        return registry;
+      },
+      inject: [DefaultAiProviderRegistry, AnthropicContentAiProvider],
+    },
   ],
 })
 export class AiContentModule {}

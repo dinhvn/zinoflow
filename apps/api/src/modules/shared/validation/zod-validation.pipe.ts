@@ -1,5 +1,6 @@
 import { Injectable, PipeTransform } from "@nestjs/common";
-import type { ZodTypeAny, z } from "zod";
+// zod/v4: cung version voi schemas trong @zinoflow/contracts (SDK Anthropic yeu cau v4)
+import type { ZodType, z } from "zod/v4";
 import { ValidationError } from "../errors/app-error";
 
 /**
@@ -9,7 +10,7 @@ import { ValidationError } from "../errors/app-error";
  * Cach dung: @Body(new ZodValidationPipe(createContentJobRequestSchema))
  */
 @Injectable()
-export class ZodValidationPipe<TSchema extends ZodTypeAny> implements PipeTransform {
+export class ZodValidationPipe<TSchema extends ZodType> implements PipeTransform {
   constructor(private readonly schema: TSchema) {}
 
   transform(value: unknown): z.infer<TSchema> {

@@ -3,7 +3,7 @@
  * tu @zinoflow/contracts truoc khi tra ve component — loi schema phat hien som
  * thay vi render sai. Dung chung cho server component va client component.
  */
-import type { z } from "zod";
+import type { z } from "zod/v4";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 

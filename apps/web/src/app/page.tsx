@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { apiGet } from "@/shared/api-client";
 
 const healthSchema = z.object({
