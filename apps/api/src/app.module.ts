@@ -1,7 +1,12 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
+import { APP_FILTER } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { HealthModule } from "./modules/shared/health/health.module";
+import { JobsModule } from "./modules/shared/jobs/jobs.module";
+import { AiContentModule } from "./modules/ai-content/ai-content.module";
+import { AppExceptionFilter } from "./modules/shared/errors/app-exception.filter";
+import { TraceMiddleware } from "./modules/shared/observability/trace.middleware";
 
 /**
  * TypeORM chi duoc bat khi DATABASE_URL co trong env.
@@ -28,7 +33,17 @@ const conditionalImports = databaseUrl
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ...conditionalImports,
+    JobsModule,
     HealthModule,
+    AiContentModule,
+  ],
+  providers: [
+    // Global: moi loi deu tra ve error envelope chuan kem traceId (spec §12)
+    { provide: APP_FILTER, useClass: AppExceptionFilter },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(TraceMiddleware).forRoutes("*");
+  }
+}

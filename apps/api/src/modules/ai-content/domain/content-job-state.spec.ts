@@ -1,0 +1,57 @@
+import { assertTransition, canTransition } from "./content-job-state";
+import { DomainRuleError } from "../../shared/errors/app-error";
+
+describe("ContentJob state machine (spec §5)", () => {
+  describe("happy path", () => {
+    it("allows full flow Created -> GeneratingOutline -> DraftReady -> InReview -> Approved", () => {
+      expect(canTransition("Created", "GeneratingOutline")).toBe(true);
+      expect(canTransition("GeneratingOutline", "DraftReady")).toBe(true);
+      expect(canTransition("DraftReady", "InReview")).toBe(true);
+      expect(canTransition("InReview", "Approved")).toBe(true);
+    });
+
+    it("allows rejecting from InReview", () => {
+      expect(canTransition("InReview", "Rejected")).toBe(true);
+    });
+  });
+
+  describe("re-review rule", () => {
+    it("editing an approved draft sends it back to InReview", () => {
+      expect(canTransition("Approved", "InReview")).toBe(true);
+    });
+  });
+
+  describe("retry rules", () => {
+    it("allows retry from Failed back to GeneratingOutline", () => {
+      expect(canTransition("Failed", "GeneratingOutline")).toBe(true);
+    });
+
+    it("allows re-generating before review (DraftReady -> GeneratingOutline)", () => {
+      expect(canTransition("DraftReady", "GeneratingOutline")).toBe(true);
+    });
+  });
+
+  describe("invalid transitions", () => {
+    it("blocks skipping review (DraftReady -> Approved)", () => {
+      expect(canTransition("DraftReady", "Approved")).toBe(false);
+    });
+
+    it("blocks approving directly from Created", () => {
+      expect(canTransition("Created", "Approved")).toBe(false);
+    });
+
+    it("Rejected is terminal", () => {
+      expect(canTransition("Rejected", "InReview")).toBe(false);
+      expect(canTransition("Rejected", "GeneratingOutline")).toBe(false);
+    });
+
+    it("assertTransition throws DomainRuleError with allowed transitions in details", () => {
+      expect(() => assertTransition("Created", "Approved")).toThrow(DomainRuleError);
+      try {
+        assertTransition("Created", "Approved");
+      } catch (error) {
+        expect((error as DomainRuleError).details[0]).toContain("GeneratingOutline");
+      }
+    });
+  });
+});
