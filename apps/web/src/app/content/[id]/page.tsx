@@ -6,7 +6,9 @@ import { z } from "zod/v4";
 import {
   contentJobSchema,
   draftArticleSchema,
+  publishDestinationResultSchema,
   runQualityChecksResponseSchema,
+  type PublishDestinationResult,
   type ReviewAction,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
@@ -172,6 +174,21 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     onError: (error) => setActionError(toActionError(error)),
   });
 
+  const [publishResult, setPublishResult] = useState<PublishDestinationResult | null>(null);
+  // Gate thu cong thu 2 (Approve ≠ Publish): day bai da duyet xuong SQL Server dichoithoi
+  const publishDichoithoi = useMutation({
+    mutationFn: async () =>
+      publishDestinationResultSchema.parse(
+        await apiSend("POST", `/destinations/${job!.sourceRef}/publish`, {}),
+      ),
+    onSuccess: (result) => {
+      setActionError(null);
+      setPublishResult(result);
+      invalidateAll();
+    },
+    onError: (error) => setActionError(toActionError(error)),
+  });
+
   const isDirty = draft?.draftMarkdown != null && editorText !== draft.draftMarkdown;
   const checks = checksQuery.data?.checks ?? [];
 
@@ -261,6 +278,32 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     className="min-w-64 flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
                   />
                 </>
+              )}
+              {job.status === "Approved" && job.articleType === "guide-diem-den" && (
+                <button
+                  onClick={() => publishDichoithoi.mutate()}
+                  disabled={publishDichoithoi.isPending}
+                  className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {publishDichoithoi.isPending
+                    ? "Đang đăng..."
+                    : "Đăng lên dichoithoi"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {publishResult && (
+            <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+              <p className="font-medium">
+                ✅ Đã đăng bài “{publishResult.slug}” lên dichoithoi (
+                {(publishResult.durationMs / 1000).toFixed(1)}s) — cập nhật khối liên quan cho{" "}
+                {publishResult.relatedRecomputed} điểm đến.
+              </p>
+              {publishResult.addedLinks.length > 0 && (
+                <p className="mt-1">
+                  Link nội bộ đã chèn: {publishResult.addedLinks.map((l) => l.targetName).join(", ")}
+                </p>
               )}
             </div>
           )}

@@ -103,6 +103,59 @@ export const createDestinationJobResponseSchema = z.object({
 });
 export type CreateDestinationJobResponse = z.infer<typeof createDestinationJobResponseSchema>;
 
+/** 1 link noi bo vua duoc chen vao bai (engine auto-link) */
+export const addedLinkSchema = z.object({
+  targetSlug: z.string(),
+  targetName: z.string(),
+});
+export type AddedLink = z.infer<typeof addedLinkSchema>;
+
+/** Ket qua publish 1 bai diem den xuong SQL Server (Phase C) */
+export const publishDestinationResultSchema = z.object({
+  slug: z.string(),
+  jobId: z.string(),
+  /** Link noi bo engine auto-link da chen vao than bai */
+  addedLinks: z.array(addedLinkSchema),
+  /** So diem den duoc tinh lai khoi lien quan (RelatedJson) sau publish */
+  relatedRecomputed: z.number().int(),
+  durationMs: z.number().int(),
+});
+export type PublishDestinationResult = z.infer<typeof publishDestinationResultSchema>;
+
+/** Request re-link toan bo (spec §12.2) — dryRun = xem truoc, khong ghi */
+export const relinkAllRequestSchema = z.object({
+  dryRun: z.boolean().default(true),
+});
+export type RelinkAllRequest = z.infer<typeof relinkAllRequestSchema>;
+
+export const relinkArticleChangeSchema = z.object({
+  slug: z.string(),
+  addedLinks: z.array(addedLinkSchema),
+  /** Link da chuan hoa theo SlugRedirect: "cu -> moi" */
+  normalizedLinks: z.array(z.string()),
+});
+
+/** Bao cao re-link toan bo (spec §12.2 buoc 6) */
+export const relinkAllReportSchema = z.object({
+  dryRun: z.boolean(),
+  scanned: z.number().int(),
+  changed: z.number().int(),
+  linksAdded: z.number().int(),
+  linksNormalized: z.number().int(),
+  details: z.array(relinkArticleChangeSchema),
+  durationMs: z.number().int(),
+});
+export type RelinkAllReport = z.infer<typeof relinkAllReportSchema>;
+
+/** Bao cao recompute related toan bo (spec §12.3) */
+export const recomputeRelatedReportSchema = z.object({
+  scanned: z.number().int(),
+  /** Chi dem bai co RelatedJson THAY DOI (so sanh truoc khi ghi — spec §12.3) */
+  updated: z.number().int(),
+  durationMs: z.number().int(),
+});
+export type RecomputeRelatedReport = z.infer<typeof recomputeRelatedReportSchema>;
+
 /** Taxonomy cho form/filter */
 export const destinationTaxonomySchema = z.object({
   provinces: z.array(

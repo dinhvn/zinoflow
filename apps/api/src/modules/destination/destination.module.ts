@@ -6,10 +6,17 @@ import { ListDestinationsUseCase } from "./application/use-cases/list-destinatio
 import { SyncDestinationsUseCase } from "./application/use-cases/sync-destinations.usecase";
 import { GetDestinationTaxonomyUseCase } from "./application/use-cases/get-destination-taxonomy.usecase";
 import { CreateDestinationJobUseCase } from "./application/use-cases/create-destination-job.usecase";
+import { PublishDestinationUseCase } from "./application/use-cases/publish-destination.usecase";
+import { RelinkAllUseCase } from "./application/use-cases/relink-all.usecase";
+import { RecomputeRelatedService } from "./application/services/recompute-related.service";
 import { DICHOITHOI_SITE_DB } from "./application/ports/dichoithoi-site-db.port";
-import { DESTINATION_MIRROR_REPOSITORY } from "./application/ports/destination-mirror.repository";
+import {
+  DESTINATION_MIRROR_REPOSITORY,
+  DESTINATION_RELATION_REPOSITORY,
+} from "./application/ports/destination-mirror.repository";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
+import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
 import { DestinationMirrorEntity } from "./infrastructure/entities/destination-mirror.entity";
 import { DestinationRelationEntity } from "./infrastructure/entities/destination-relation.entity";
 import {
@@ -41,8 +48,12 @@ import {
     SyncDestinationsUseCase,
     GetDestinationTaxonomyUseCase,
     CreateDestinationJobUseCase,
+    PublishDestinationUseCase,
+    RelinkAllUseCase,
+    RecomputeRelatedService,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: DESTINATION_MIRROR_REPOSITORY, useClass: TypeOrmDestinationMirrorRepository },
+    { provide: DESTINATION_RELATION_REPOSITORY, useClass: TypeOrmDestinationRelationRepository },
   ],
   exports: [DICHOITHOI_SITE_DB],
 })

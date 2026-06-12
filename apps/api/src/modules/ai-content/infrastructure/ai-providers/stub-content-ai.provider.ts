@@ -136,11 +136,17 @@ export class StubContentAiProvider implements ContentAiProvider {
 
   private buildSection(vars: Readonly<Record<string, unknown>>): ContentSection {
     const heading = String(vars["sectionHeading"] ?? "Nội dung");
+    // Du 60+ tu de qua gate structure — cho phep test tron flow approve/publish
+    // bang stub ma khong ton tien provider that.
     return {
       heading,
       content:
-        `${heading}: Nội dung này được sinh bởi stub provider để test pipeline. ` +
-        "Khi chạy với provider thật, đoạn này sẽ là nội dung do AI viết dựa trên dữ liệu sản phẩm.",
+        `${heading}: Nội dung này được sinh bởi stub provider để kiểm tra trọn vẹn pipeline ` +
+        "từ lúc tạo bài cho đến khi duyệt và xuất bản mà không gọi API thật, không tốn chi phí. " +
+        "Khi chạy với provider thật, đoạn này sẽ là nội dung do AI viết dựa trên dữ liệu nguồn " +
+        "được cung cấp trong ngữ cảnh của job, bám sát giọng văn đã cấu hình cho từng site. " +
+        "Đoạn văn mẫu này được cố ý viết đủ dài và bằng tiếng Việt có dấu đầy đủ để vượt qua " +
+        "ngưỡng kiểm tra độ dài tối thiểu của từng phần trong cổng chất lượng cấu trúc bài viết.",
     };
   }
 

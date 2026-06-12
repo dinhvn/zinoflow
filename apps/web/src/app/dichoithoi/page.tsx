@@ -6,9 +6,13 @@ import {
   createDestinationJobResponseSchema,
   destinationTaxonomySchema,
   listDestinationsResponseSchema,
+  recomputeRelatedReportSchema,
+  relinkAllReportSchema,
   syncDestinationsResultSchema,
   type DestinationContentState,
   type DestinationKind,
+  type RecomputeRelatedReport,
+  type RelinkAllReport,
   type SyncDestinationsResult,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend } from "@/shared/api-client";
@@ -99,6 +103,34 @@ export default function DichoithoiPage() {
     },
   });
 
+  // Cong cu van hanh (spec §12.2, §12.3): re-link xem truoc -> xac nhan ghi; recompute related
+  const [relinkReport, setRelinkReport] = useState<RelinkAllReport | null>(null);
+  const [relatedReport, setRelatedReport] = useState<RecomputeRelatedReport | null>(null);
+  const relinkMutation = useMutation({
+    mutationFn: async (dryRun: boolean) =>
+      relinkAllReportSchema.parse(await apiSend("POST", "/destinations/relink", { dryRun })),
+    onSuccess: (report) => {
+      setRelinkReport(report);
+      setSyncError(null);
+      if (!report.dryRun) {
+        void queryClient.invalidateQueries({ queryKey: ["dichoithoi-destinations"] });
+      }
+    },
+    onError: (err) => setSyncError(err instanceof Error ? err.message : "Re-link thất bại"),
+  });
+  const recomputeMutation = useMutation({
+    mutationFn: async () =>
+      recomputeRelatedReportSchema.parse(
+        await apiSend("POST", "/destinations/recompute-related", {}),
+      ),
+    onSuccess: (report) => {
+      setRelatedReport(report);
+      setSyncError(null);
+    },
+    onError: (err) =>
+      setSyncError(err instanceof Error ? err.message : "Tính lại khối liên quan thất bại"),
+  });
+
   const data = listQuery.data;
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
 
@@ -143,6 +175,66 @@ export default function DichoithoiPage() {
           )}
         </div>
       )}
+
+      {/* Cong cu van hanh (spec §7.6): chay sau khi publish diem den moi */}
+      <div className="rounded border border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-medium">Công cụ:</span>
+          <button
+            onClick={() => relinkMutation.mutate(true)}
+            disabled={relinkMutation.isPending}
+            className="rounded border border-zinc-300 px-3 py-1 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            {relinkMutation.isPending ? "Đang quét..." : "Re-link toàn bộ (xem trước)"}
+          </button>
+          {relinkReport?.dryRun && relinkReport.changed > 0 && (
+            <button
+              onClick={() => relinkMutation.mutate(false)}
+              disabled={relinkMutation.isPending}
+              className="rounded bg-blue-600 px-3 py-1 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              Áp dụng {relinkReport.linksAdded} link vào website
+            </button>
+          )}
+          <button
+            onClick={() => recomputeMutation.mutate()}
+            disabled={recomputeMutation.isPending}
+            className="rounded border border-zinc-300 px-3 py-1 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            {recomputeMutation.isPending ? "Đang tính..." : "Tính lại khối liên quan"}
+          </button>
+        </div>
+
+        {relinkReport && (
+          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <p>
+              {relinkReport.dryRun ? "🔍 Xem trước" : "✅ Đã ghi"}: quét {relinkReport.scanned} bài,{" "}
+              {relinkReport.changed} bài thay đổi, thêm {relinkReport.linksAdded} link nội bộ,
+              chuẩn hóa {relinkReport.linksNormalized} link cũ (
+              {(relinkReport.durationMs / 1000).toFixed(1)}s).
+            </p>
+            {relinkReport.details.length > 0 && (
+              <ul className="mt-1 max-h-48 list-inside list-disc overflow-y-auto text-xs">
+                {relinkReport.details.map((d) => (
+                  <li key={d.slug}>
+                    <span className="font-mono">{d.slug}</span>
+                    {d.addedLinks.length > 0 &&
+                      ` — thêm link: ${d.addedLinks.map((l) => l.targetName).join(", ")}`}
+                    {d.normalizedLinks.length > 0 &&
+                      ` — chuẩn hóa: ${d.normalizedLinks.join("; ")}`}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        {relatedReport && (
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            ✅ Khối liên quan: quét {relatedReport.scanned} bài, cập nhật {relatedReport.updated}{" "}
+            bài ({(relatedReport.durationMs / 1000).toFixed(1)}s).
+          </p>
+        )}
+      </div>
 
       <div className="flex flex-wrap gap-2">
         <input

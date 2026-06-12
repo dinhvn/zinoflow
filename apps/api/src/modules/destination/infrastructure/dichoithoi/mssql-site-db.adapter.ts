@@ -18,6 +18,8 @@ function loadMssqlDriver(host: string): typeof sql {
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
 import type {
   DichoithoiSiteDb,
+  PublishDestinationInput,
+  SiteContentRow,
   SiteDestinationContent,
   SiteTypeRow,
 } from "../../application/ports/dichoithoi-site-db.port";
@@ -107,6 +109,156 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     return rows.map((r) => ({ id: r.Id, slug: r.Slug, name: r.Name }));
   }
 
+  /**
+   * Publish bai AI vao SQL Server — 1 batch co BEGIN TRAN/COMMIT + ROLLBACK khi loi
+   * (tranh quirks transaction object giua tedious va msnodesqlv8). KHONG wipe:
+   * update dong Destination co san + upsert DestinationContent theo DestinationId.
+   */
+  async publishDestination(input: PublishDestinationInput): Promise<{ contentHash: string }> {
+    const targets = [...new Set(input.mentionedTargetSiteIds)].filter((id) => id !== input.siteId);
+    const insertRelations = targets
+      .map(
+        (_, i) =>
+          `INSERT INTO v2.DestinationRelation (SourceId, TargetId, RelationType, Weight, IsAuto)
+           SELECT @siteId, @target${i}, 3, 0, 1
+           WHERE EXISTS (SELECT 1 FROM v2.Destination WHERE Id = @target${i});`,
+      )
+      .join("\n");
+
+    const rows = await this.runWithRetry<Array<{ ContentHash: string }>>(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", input.siteId);
+      request.input("shortDescription", input.shortDescription);
+      request.input("searchKeyword", input.searchKeyword);
+      request.input("contentHtml", input.contentHtml);
+      request.input("openingTime", input.openingTime);
+      request.input("ticketPrice", input.ticketPrice);
+      request.input("transport", input.transport);
+      request.input("food", input.food);
+      request.input("hotel", input.hotel);
+      request.input("tip", input.tip);
+      request.input("faqJson", input.faqJson);
+      request.input("metaTitle", input.metaTitle);
+      request.input("metaDescription", input.metaDescription);
+      targets.forEach((id, i) => request.input(`target${i}`, id));
+
+      const result = await request.query<{ ContentHash: string }>(`
+        SET XACT_ABORT ON;
+        BEGIN TRAN;
+
+        UPDATE v2.Destination SET
+          ShortDescription = @shortDescription,
+          SearchKeyword    = @searchKeyword,
+          ContentSource    = 1,
+          UpdatedAt        = SYSUTCDATETIME()
+        WHERE Id = @siteId;
+
+        UPDATE v2.DestinationContent SET
+          ContentHtml = @contentHtml, OpeningTime = @openingTime, TicketPrice = @ticketPrice,
+          Transport = @transport, Food = @food, HotelText = @hotel, Tip = @tip,
+          FaqJson = @faqJson, MetaTitle = @metaTitle, MetaDescription = @metaDescription
+        WHERE DestinationId = @siteId;
+        IF @@ROWCOUNT = 0
+          INSERT INTO v2.DestinationContent
+            (DestinationId, ContentHtml, OpeningTime, TicketPrice, Transport, Food, HotelText,
+             Tip, FaqJson, MetaTitle, MetaDescription)
+          VALUES
+            (@siteId, @contentHtml, @openingTime, @ticketPrice, @transport, @food, @hotel,
+             @tip, @faqJson, @metaTitle, @metaDescription);
+
+        -- Quan he mentioned tu auto-link: thay toan bo dong auto cu cua nguon nay
+        DELETE FROM v2.DestinationRelation
+        WHERE SourceId = @siteId AND RelationType = 3 AND IsAuto = 1;
+        ${insertRelations}
+
+        COMMIT;
+
+        SELECT CONVERT(varchar(64),
+          HASHBYTES('SHA2_256', CAST(ContentHtml AS nvarchar(max))), 2) AS ContentHash
+        FROM v2.DestinationContent WHERE DestinationId = @siteId;
+      `);
+      return result.recordset;
+    });
+
+    const contentHash = rows[0]?.ContentHash;
+    if (!contentHash) {
+      throw new UpstreamApiError(
+        `Publish điểm đến siteId=${input.siteId} không ghi được nội dung (không thấy dòng DestinationContent sau khi ghi)`,
+      );
+    }
+    return { contentHash };
+  }
+
+  async fetchAllContentRows(): Promise<SiteContentRow[]> {
+    const rows = await this.queryWithRetry<{ Id: number; Slug: string; ContentHtml: string }>(`
+      SELECT d.Id, d.Slug, c.ContentHtml
+      FROM v2.DestinationContent c
+      JOIN v2.Destination d ON d.Id = c.DestinationId
+      WHERE d.Status = 1
+    `);
+    return rows.map((r) => ({ siteId: r.Id, slug: r.Slug, contentHtml: r.ContentHtml ?? "" }));
+  }
+
+  async updateContentHtml(siteId: number, contentHtml: string): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("contentHtml", contentHtml);
+      return request.query(
+        `UPDATE v2.DestinationContent SET ContentHtml = @contentHtml WHERE DestinationId = @siteId`,
+      );
+    });
+  }
+
+  async addMentionedRelations(
+    sourceSiteId: number,
+    targetSiteIds: readonly number[],
+  ): Promise<void> {
+    const targets = [...new Set(targetSiteIds)].filter((id) => id !== sourceSiteId);
+    if (targets.length === 0) return;
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("sourceId", sourceSiteId);
+      targets.forEach((id, i) => request.input(`target${i}`, id));
+      const statements = targets
+        .map(
+          (_, i) =>
+            `INSERT INTO v2.DestinationRelation (SourceId, TargetId, RelationType, Weight, IsAuto)
+             SELECT @sourceId, @target${i}, 3, 0, 1
+             WHERE NOT EXISTS (
+               SELECT 1 FROM v2.DestinationRelation
+               WHERE SourceId = @sourceId AND TargetId = @target${i} AND RelationType = 3
+             );`,
+        )
+        .join("\n");
+      return request.query(statements);
+    });
+  }
+
+  async fetchSlugRedirects(): Promise<Map<string, string>> {
+    const rows = await this.queryWithRetry<{ OldSlug: string; Slug: string }>(`
+      SELECT r.OldSlug, d.Slug
+      FROM v2.SlugRedirect r
+      JOIN v2.Destination d ON d.Id = r.DestinationId
+    `);
+    return new Map(rows.map((r) => [r.OldSlug, r.Slug]));
+  }
+
+  async updateRelatedJson(siteId: number, relatedJson: string): Promise<boolean> {
+    return this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("relatedJson", relatedJson);
+      // Chi ghi khi gia tri doi — tranh write + invalidate cache vo ich (spec §12.3)
+      const result = await request.query(`
+        UPDATE v2.DestinationContent SET RelatedJson = @relatedJson
+        WHERE DestinationId = @siteId
+          AND (RelatedJson IS NULL OR RelatedJson <> @relatedJson)
+      `);
+      return (result.rowsAffected[0] ?? 0) > 0;
+    });
+  }
+
   async onModuleDestroy(): Promise<void> {
     if (this.pool) {
       await this.pool.close();
@@ -150,16 +302,20 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     return this.pool;
   }
 
-  /** Retry 2 lan voi backoff 1s/3s cho loi mang/timeout (khong retry loi cu phap) */
   private async queryWithRetry<T>(queryText: string): Promise<T[]> {
+    const result = await this.runWithRetry((pool) => pool.request().query<T>(queryText));
+    return result.recordset;
+  }
+
+  /** Retry 2 lan voi backoff 1s/3s cho loi mang/timeout (khong retry loi cu phap) */
+  private async runWithRetry<T>(fn: (pool: sql.ConnectionPool) => Promise<T>): Promise<T> {
     const delays = [0, 1_000, 3_000];
     let lastError: Error | null = null;
     for (const delay of delays) {
       if (delay > 0) await new Promise((r) => setTimeout(r, delay));
       try {
         const pool = await this.getPool();
-        const result = await pool.request().query<T>(queryText);
-        return result.recordset;
+        return await fn(pool);
       } catch (err) {
         const error = err as Error & { code?: string; number?: number };
         lastError = error;

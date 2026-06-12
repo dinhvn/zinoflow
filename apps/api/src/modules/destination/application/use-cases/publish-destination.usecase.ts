@@ -1,0 +1,147 @@
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import {
+  destinationArticleSchema,
+  type PublishDestinationResult,
+} from "@zinoflow/contracts";
+import { DomainRuleError } from "../../../shared/errors/app-error";
+import {
+  CONTENT_JOB_REPOSITORY,
+  type ContentJobRepository,
+} from "../../../ai-content/application/ports/content-job.repository";
+import {
+  CONTENT_DRAFT_REPOSITORY,
+  type ContentDraftRepository,
+} from "../../../ai-content/application/ports/content-draft.repository";
+import {
+  DESTINATION_MIRROR_REPOSITORY,
+  DESTINATION_RELATION_REPOSITORY,
+  type DestinationMirrorRepository,
+  type DestinationRelationRepository,
+} from "../ports/destination-mirror.repository";
+import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+import { autoLinkContent, type LinkTarget } from "../../domain/auto-link";
+import {
+  buildFaqJson,
+  renderDestinationBodyHtml,
+} from "../services/destination-publish-html.renderer";
+import { RecomputeRelatedService } from "../services/recompute-related.service";
+
+/**
+ * Publish bai diem den DA DUYET xuong SQL Server dichoithoi (Phase C — spec §3.3, §3.4).
+ * Day la gate thu cong thu 2 (Approve ≠ Publish — system overview §2.1):
+ * 1. Job phai o trang thai Approved (gates da pass luc duyet).
+ * 2. Render than bai -> HTML sach -> auto-link toi diem published khac.
+ * 3. UPSERT 1 transaction (KHONG wipe): Destination + DestinationContent + mentioned.
+ * 4. Ghi quan he mentioned ben Postgres (nguon su that — spec §3.7).
+ * 5. Tinh lai RelatedJson cho cac diem bi anh huong.
+ * 6. Mirror: contentSource=1 + contentHash moi + clear activeContentJobId.
+ */
+@Injectable()
+export class PublishDestinationUseCase {
+  private readonly logger = new Logger(PublishDestinationUseCase.name);
+
+  constructor(
+    @Inject(DESTINATION_MIRROR_REPOSITORY)
+    private readonly mirrorRepo: DestinationMirrorRepository,
+    @Inject(DESTINATION_RELATION_REPOSITORY)
+    private readonly relationRepo: DestinationRelationRepository,
+    @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
+    @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
+    @Inject(CONTENT_DRAFT_REPOSITORY) private readonly draftRepo: ContentDraftRepository,
+    private readonly recomputeRelated: RecomputeRelatedService,
+  ) {}
+
+  async execute(slug: string): Promise<PublishDestinationResult> {
+    const startedAt = Date.now();
+    const all = await this.mirrorRepo.findAll();
+    const destination = all.find((d) => d.slug === slug);
+    if (!destination) {
+      throw new DomainRuleError(`Không tìm thấy điểm đến "${slug}" trong mirror`, [
+        "Bấm Đồng bộ từ website rồi thử lại",
+      ]);
+    }
+    if (destination.siteId === null) {
+      // MVP Phase C: chi publish diem DA ton tai tren site (271 diem migrate).
+      // Tao diem den moi hoan toan tu AI tool = buoc sau (can taxonomy + thumbnail).
+      throw new DomainRuleError(
+        `Điểm đến "${slug}" chưa tồn tại trên website — phiên bản này chỉ publish điểm đã có`,
+      );
+    }
+    const jobId = destination.activeContentJobId;
+    if (!jobId) {
+      throw new DomainRuleError(`Điểm đến "${destination.name}" không có bài đang chờ publish`, [
+        "Tạo bài AI và duyệt bài trước khi publish",
+      ]);
+    }
+
+    const job = await this.jobRepo.findById(jobId);
+    if (!job) throw new DomainRuleError(`Không tìm thấy job ${jobId}`);
+    const snapshot = job.toSnapshot();
+    if (snapshot.status !== "Approved") {
+      // Gate 2 (publish) chi mo sau gate 1 (approve) — system overview §2.1
+      throw new DomainRuleError(
+        `Bài đang ở trạng thái ${snapshot.status} — chỉ publish được bài đã duyệt (Approved)`,
+      );
+    }
+    if (snapshot.articleType !== "guide-diem-den") {
+      throw new DomainRuleError("Job này không phải bài điểm đến (guide-diem-den)");
+    }
+
+    const draft = await this.draftRepo.findLatestByJobId(jobId);
+    if (!draft?.article) throw new DomainRuleError("Draft đã duyệt không có nội dung bài viết");
+    const article = destinationArticleSchema.parse(draft.article);
+
+    // Render HTML sach roi auto-link toi moi diem published khac (spec §3.4 thoi diem 1)
+    const bodyHtml = await renderDestinationBodyHtml(article);
+    const targets: LinkTarget[] = all
+      .filter((d) => d.siteStatus === 1 && d.siteId !== null)
+      .map((d) => ({ slug: d.slug, name: d.name }));
+    const { html: linkedHtml, addedLinks } = autoLinkContent(bodyHtml, targets, slug);
+
+    const siteIdBySlug = new Map(
+      all.filter((d) => d.siteId !== null).map((d) => [d.slug, d.siteId!]),
+    );
+    const { contentHash } = await this.siteDb.publishDestination({
+      siteId: destination.siteId,
+      shortDescription: article.metadata.description,
+      searchKeyword: article.metadata.searchKeyword ?? null,
+      contentHtml: linkedHtml,
+      openingTime: article.quickFacts.openingTime,
+      ticketPrice: article.quickFacts.ticketPrice,
+      transport: article.quickFacts.transport,
+      food: article.quickFacts.food,
+      hotel: article.quickFacts.hotel,
+      tip: article.quickFacts.tip,
+      faqJson: buildFaqJson(article),
+      metaTitle: article.metadata.metaTitle,
+      metaDescription: article.metadata.metaDescription,
+      mentionedTargetSiteIds: addedLinks
+        .map((l) => siteIdBySlug.get(l.targetSlug))
+        .filter((id): id is number => id !== undefined),
+    });
+
+    // Nguon su that quan he o Postgres (spec §3.7) — publish ghi de bo mentioned auto
+    await this.relationRepo.replaceMentioned(
+      slug,
+      addedLinks.map((l) => l.targetSlug),
+    );
+
+    await this.mirrorRepo.markPublished(slug, contentHash);
+
+    // Recompute hep: chi cac diem bi anh huong (spec §12.3) — chay sau khi mirror
+    // da cap nhat de RelatedJson nhin thay trang thai moi nhat
+    const affected = await this.recomputeRelated.affectedSlugsFor(slug);
+    const { updated: relatedRecomputed } = await this.recomputeRelated.recomputeFor(affected);
+
+    this.logger.log(
+      `Publish ${slug} xong: ${addedLinks.length} link noi bo, ${relatedRecomputed} RelatedJson cap nhat`,
+    );
+    return {
+      slug,
+      jobId,
+      addedLinks,
+      relatedRecomputed,
+      durationMs: Date.now() - startedAt,
+    };
+  }
+}

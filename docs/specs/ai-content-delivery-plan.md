@@ -124,26 +124,51 @@ SANDBOX LocalDB (12/06/2026) — dev KHONG dung production:
   neu thieu); mssql tedious khong noi duoc LocalDB -> adapter tu chon driver
   msnodesqlv8 khi host la (localdb).
 
-Phase B — Generate + review (4-5 ngay):
-1. Contracts: schema destinationArticle (Zod) — map thang sang cot DestinationDetail.
-2. Prompt pack `guide-diem-den` (tieng Viet co dau, giong nguoi di thuc te);
-   job gan siteCode='dichoithoi', chay tren pipeline ai-content san co.
-3. Bo quality gates travel (structure/SEO/policy/data theo spec §6) + unit tests.
-4. Reference fetcher: lay gia ve / gio mo cua tu URL tham khao (haiku extract,
-   nguoi dung xac nhan truoc khi generate).
-5. Man review: tai dung editor M3 + panel kiem tra tay gia ve / gio mo cua / bookingUrl.
-6. Anh (luong tay o M4 — spec §14): o nhap Thumbnail path + nut kiem tra anh ton tai;
-   data gate check co thumbnail. (Upload tich hop + remark anh: giai doan 2.)
+Phase B — Generate + review (4-5 ngay) — ✅ CODE XONG PHAN LOI 12/06/2026:
+1. ✅ Contracts destinationArticle (intro/quickFacts/faq/updateNotice/metadata,
+   gioi han khop cot SQL) + ArticleTypeRegistry (spec §19.3) — them loai bai
+   = them 1 profile, khong sua core flow.
+2. ✅ Prompt pack guide-diem-den (3 prompt tieng Viet co dau) + seed migration;
+   sourceContext tren content job (facts mirror + diem lien quan cung tinh
+   + content cu khi mode update).
+3. ✅ 4 gates travel + 9 unit tests (updateNotice thang/nam, gia kem luu y,
+   cam claim tuyet doi, slug khong trung).
+4. ⏳ Reference fetcher (URL gia ve/gio mo cua, haiku extract) — CHUA lam,
+   tam dung userNotes trong request tao job.
+5. ✅ Man review: panel quick-facts (vien cam, kiem tra tay) + label loai bai;
+   nut Tao bai AI / Cap nhat bai / Xem bai dang soan tren /dichoithoi.
+6. ⏳ Anh (o Thumbnail path + check ton tai) — don sang Phase C cung publish.
++ E2E sandbox pass voi stub provider: tao job -> DraftReady -> gates travel dung bo.
++ Con thieu de ket thuc Phase B: chay thu voi PROVIDER THAT (Gemini/Claude) 1 bai.
 
-Phase C — Publish + auto-link (3-4 ngay):
-1. Engine auto-link (port tu CMS C#, longest-first, escape regex, khong link trong
-   tag <a> co san) + unit tests + bang destination_relations (Postgres)
-   + dong bo sang DestinationRelation (SQL Server).
-2. Publish: render HTML sach -> upsert Destination + DestinationDetail + relations
-   (transaction, KHONG wipe, ghi ContentSource=1 + ContentUpdatedAt)
-   -> verify mo duoc /diem-den/{slug} tren web that.
-3. Nut "Cap nhat bai" (mode update, content cu lam ngu canh) + nut "Re-link toan bo"
-   (pg-boss job).
+Phase C — Publish + auto-link (3-4 ngay) — ✅ CODE XONG 12/06/2026:
+1. ✅ Engine auto-link (port tu CMS C#: longest-first, first-occurrence, escape regex,
+   CHI text node — khong dung <a>/heading/code, idempotent theo href) + chuan hoa
+   SlugRedirect + 9 unit tests. Builder RelatedJson (haversine nearby 30km/top10,
+   quy tac tron con->curated->nearby->anh em->cung tinh, cat 8) + 6 unit tests.
+2. ✅ Publish: nut "Dang len dichoithoi" tren man review (chi hien khi Approved —
+   gate thu cong thu 2): render HTML sach (sanitize, khong H1/quick-facts/FAQ —
+   do vao cot rieng) -> auto-link -> 1 transaction UPSERT Destination +
+   DestinationContent + relations mentioned (KHONG wipe, ContentSource=1, UpdatedAt)
+   -> mirror markPublished (hash tu SQL nen sync lai khong bao edited-outside)
+   -> recompute RelatedJson cac diem BI ANH HUONG.
+3. ✅ Man Cong cu tren /dichoithoi: "Re-link toan bo" co dry-run xem truoc ->
+   xac nhan ghi (kem chuan hoa SlugRedirect, ghi mentioned ca 2 DB);
+   "Tinh lai khoi lien quan" toan bo. E2E sandbox: publish nha-tho-da-sapa
+   (1 link noi bo, 12 related, 0.7s); re-link 271 bai -> 14 link thieu, chay lai = 0
+   (idempotent); recompute 271 -> 259 RelatedJson. Stub section nang len 60+ tu
+   de test tron flow approve/publish khong ton tien.
+   Khac thiet ke goc (ghi nhan chu dong):
+   - Re-link chay DONG BO qua HTTP thay vi pg-boss (dry-run/confirm can phan hoi
+     ngay; 271 bai <1s — chuyen pg-boss khi du lieu lon hon nhieu).
+   - Quy tac "cung loai chinh" trong RelatedJson tam thay bang "cung tinh"
+     (mirror chua co type map).
+   - Quan he nearby KHONG luu bang DestinationRelation (tinh on-the-fly khi build
+     RelatedJson); chi mentioned duoc luu (ca Postgres + SQL Server).
+   Con lai cua M4 (lam tiep):
+   - Chay thu voi PROVIDER THAT 1 bai (can API key) — chua co.
+   - Thumbnail field + check ton tai; reference fetcher (URL gia ve -> haiku).
+   - Tao diem den MOI hoan toan tu AI tool (hien chi publish diem da ton tai).
 
 Song song (ben repo dichoithoi, khong chan pipeline AI): website render AddressOld /
 ContactWebsite / nut "Mua ve online" / "Cap nhat thang X" / diem lien quan tu bang

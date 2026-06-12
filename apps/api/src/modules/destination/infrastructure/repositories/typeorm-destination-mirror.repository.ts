@@ -120,6 +120,19 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     await this.repo.update({ slug }, { activeContentJobId: jobId });
   }
 
+  async markPublished(slug: string, contentHash: string): Promise<void> {
+    await this.repo.update(
+      { slug },
+      {
+        contentSource: 1,
+        contentHash,
+        activeContentJobId: null,
+        hasLocalChanges: false,
+        syncFlags: [],
+      },
+    );
+  }
+
   async listProvinces(): Promise<ProvinceOption[]> {
     const provinces = await this.provinceRepo.find({ order: { name: "ASC" } });
     return provinces.map((p) => ({
