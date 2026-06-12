@@ -26,6 +26,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <a href="/content" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
                   AI Content
                 </a>
+                {/* Khu Dichoithoi (spec dichoithoi-destination-spec §7.1) —
+                    Taxonomy / Review khach / Cong cu se hien khi sang giai doan 2 */}
+                <div className="pt-2">
+                  <div className="px-2 pb-1 text-xs font-semibold uppercase text-zinc-400">
+                    Dichoithoi
+                  </div>
+                  <a
+                    href="/dichoithoi"
+                    className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                  >
+                    Điểm đến
+                  </a>
+                </div>
                 <a href="/settings" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
                   Settings
                 </a>

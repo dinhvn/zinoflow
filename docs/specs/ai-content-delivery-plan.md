@@ -97,15 +97,32 @@ Dieu kien tien quyet:
 Luu y pham vi: viec viet lai WEBSITE hien thi theo schema moi la cong viec ben repo
 dichoithoi (nguoi dung tu lam, song song) — KHONG tinh vao timeline zinoflow.
 
-Phase A — Doc va mirror (3-4 ngay):
-0. Seed 3 bang hanh chinh (admin_provinces, admin_wards, admin_ward_mappings)
-   tu dataset dvhcvn vao Postgres — dung cho form dia chi + migration dia chi
-   cu→moi (spec §13).
-1. TypeORM DataSource thu 2 (mssql, lazy connect) + adapter sau IDestinationPublisher.
-2. Bang mirror `destinations` (Postgres, gom cot moi §11.3) + sync 1 lan tu SQL Server
-   + nut dong bo lai.
-3. UI menu "Diem den": danh sach + loc + trang thai bai (chua co / bai tay / bai AI).
-4. Test som: ghi thu 1 record tieng Viet vao DB that (kiem tra encoding nvarchar).
+Phase A — Doc va mirror (3-4 ngay) — ✅ CODE XONG 12/06/2026:
+0. ✅ Seed 3 bang hanh chinh tu dvhcvn (34 tinh / 3.321 phuong xa / 10.039 mapping)
+   — converter scripts/convert-dvhcvn.ts + seeder pnpm seed:dvhcvn (idempotent).
+1. ✅ Adapter mssql (lazy connect, timeout 15s, retry 2 lan backoff, loi 208 ->
+   bao "chua chay migration") sau port DICHOITHOI_SITE_DB.
+2. ✅ Bang mirror dichoithoi_destinations + relations (Postgres) + use case sync
+   (insert/update/edited-outside/conflict/orphan, unit tests) + POST /api/destinations/sync.
+3. ✅ UI /dichoithoi: bang + loc tinh/cap/trang thai bai + tim khong dau + nut
+   "Dong bo tu website" hien report.
+4. ✅ Test ket noi + DOC tieng Viet co dau tu DB that OK (271 diem den, 26 bang).
+   ⏳ Test GHI tieng Viet: lam khi chay xong migration v2 (buoc tiep theo).
++ Da sinh scripts/dichoithoi-sqlserver/01-create-new-schema.sql (schema [v2],
+  khong dung bang cu) va 02-migrate-data.sql (generate tu dvhcvn, transaction,
+  guard chay 1 lan, kem cau kiem tra sau migration).
+
+SANDBOX LocalDB (12/06/2026) — dev KHONG dung production:
+- pnpm clone:dichoithoi: copy 271 diem + detail + review tu production (CHI DOC)
+  vao (localdb)\\MSSQLLocalDB / dichoithoi_dev.
+- Da chay 01+02 tren sandbox: 271/271 diem, 0 dong thieu tinh, 0 tinh trung
+  (map Binh Thuan->Lam Dong, Kien Giang->An Giang... tu dong; kien-giang
+  tu demote thanh cluster). Sync mirror that: 271 dong trong 1.8s.
+- .env dang tro sandbox; khi go-live doi DICHOITHOI_DB_* ve production
+  va chay lai dung 2 script nay (sau khi backup).
+- Bai hoc ky thuat: script SQL PHAI co UTF-8 BOM (sqlcmd doc sai tieng Viet
+  neu thieu); mssql tedious khong noi duoc LocalDB -> adapter tu chon driver
+  msnodesqlv8 khi host la (localdb).
 
 Phase B — Generate + review (4-5 ngay):
 1. Contracts: schema destinationArticle (Zod) — map thang sang cot DestinationDetail.

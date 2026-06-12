@@ -1,6 +1,9 @@
 // Common
 export * from "./common/error";
 
+// Dichoithoi (M4)
+export * from "./dichoithoi/destination";
+
 // AI Content
 export * from "./ai-content/ai-provider";
 export * from "./ai-content/article";

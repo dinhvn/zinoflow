@@ -24,3 +24,6 @@ outputs/
 .DS_Store
 Thumbs.db
 .idea/
+
+# dvhcvn raw SQL dumps (tai lai bang scripts/convert-dvhcvn.ts khi can; chi commit JSON)
+apps/api/seed-data/dvhcvn/*.sql

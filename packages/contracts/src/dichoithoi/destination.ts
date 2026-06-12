@@ -1,0 +1,94 @@
+import { z } from "zod/v4";
+
+/**
+ * Contracts cho khu Dichoithoi (M4) — mirror diem den + sync.
+ * Schema DB dich (SQL Server) xem docs/specs/dichoithoi-database-redesign.md;
+ * mirror Postgres phan chieu metadata de UI list/filter + auto-link.
+ */
+
+/** Cap trong cay du lich: tinh -> cum/quan the -> diem (redesign §3.1) */
+export const destinationKindSchema = z.enum(["province", "cluster", "poi"]);
+export type DestinationKind = z.infer<typeof destinationKindSchema>;
+
+/** Trang thai noi dung cua 1 diem den trong AI tool (UI cot quan trong nhat — spec §7.2) */
+export const destinationContentStateSchema = z.enum([
+  "chua-co-bai", // chua co noi dung
+  "bai-tay", // co noi dung viet tay (ContentSource=0), chua qua AI tool
+  "dang-soan", // co content job dang chay/cho duyet
+  "da-publish", // bai AI da publish (ContentSource=1)
+]);
+export type DestinationContentState = z.infer<typeof destinationContentStateSchema>;
+
+/** Co canh bao tu job dong bo mirror (spec §12.1) */
+export const destinationSyncFlagSchema = z.enum(["edited-outside", "conflict", "orphan"]);
+export type DestinationSyncFlag = z.infer<typeof destinationSyncFlagSchema>;
+
+/** 1 dong mirror diem den (Postgres) tra ve cho UI */
+export const destinationMirrorSchema = z.object({
+  /** Id int ben SQL Server (null khi diem tao moi trong AI tool, chua publish lan nao) */
+  siteId: z.number().int().nullable(),
+  slug: z.string().min(1).max(64),
+  kind: destinationKindSchema,
+  parentSlug: z.string().nullable(),
+  provinceCode: z.string().nullable(),
+  provinceName: z.string().nullable(),
+  name: z.string().min(1).max(128),
+  shortDescription: z.string().nullable(),
+  thumbnail: z.string().nullable(),
+  lat: z.number().nullable(),
+  lng: z.number().nullable(),
+  addressNew: z.string().nullable(),
+  addressOld: z.string().nullable(),
+  contactPhone: z.string().nullable(),
+  contactWebsite: z.string().nullable(),
+  bookingUrl: z.string().nullable(),
+  hotelGroupId: z.string().nullable(),
+  isFeatured: z.boolean(),
+  /** 0 draft, 1 published, 2 hidden — theo cot Status SQL Server */
+  siteStatus: z.number().int().min(0).max(2).nullable(),
+  contentState: destinationContentStateSchema,
+  syncFlags: z.array(destinationSyncFlagSchema),
+  siteUpdatedAt: z.string().nullable(),
+  syncedAt: z.string().nullable(),
+});
+export type DestinationMirror = z.infer<typeof destinationMirrorSchema>;
+
+/** Query list diem den */
+export const listDestinationsQuerySchema = z.object({
+  q: z.string().optional(),
+  provinceCode: z.string().optional(),
+  kind: destinationKindSchema.optional(),
+  contentState: destinationContentStateSchema.optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
+export type ListDestinationsQuery = z.infer<typeof listDestinationsQuerySchema>;
+
+export const listDestinationsResponseSchema = z.object({
+  items: z.array(destinationMirrorSchema),
+  total: z.number().int(),
+  page: z.number().int(),
+  limit: z.number().int(),
+});
+export type ListDestinationsResponse = z.infer<typeof listDestinationsResponseSchema>;
+
+/** Ket qua job dong bo mirror (spec §12.1) */
+export const syncDestinationsResultSchema = z.object({
+  added: z.number().int(),
+  updated: z.number().int(),
+  unchanged: z.number().int(),
+  editedOutside: z.array(z.string()),
+  conflicts: z.array(z.string()),
+  orphans: z.array(z.string()),
+  durationMs: z.number().int(),
+});
+export type SyncDestinationsResult = z.infer<typeof syncDestinationsResultSchema>;
+
+/** Taxonomy cho form/filter */
+export const destinationTaxonomySchema = z.object({
+  provinces: z.array(
+    z.object({ provinceCode: z.string(), name: z.string(), shortName: z.string() }),
+  ),
+  types: z.array(z.object({ id: z.number().int(), slug: z.string(), name: z.string() })),
+});
+export type DestinationTaxonomy = z.infer<typeof destinationTaxonomySchema>;
