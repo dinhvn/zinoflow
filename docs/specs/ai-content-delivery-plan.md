@@ -3,7 +3,10 @@
 Muc tieu: hoan thanh AI Content Tool den muc DUNG THAT — tao bai bang Claude,
 qua quality gates, review tay, publish len laruki.com / dochoi3s.com.
 
-Gia dinh: solo dev, code voi AI agent, ~2-3h/ngay. Tong thoi luong du kien: **5 tuan**.
+Gia dinh: solo dev, code voi AI agent, ~2-3h/ngay. Tong thoi luong du kien: **7 tuan**.
+
+Thay doi 12/06/2026: them tinh nang dichoithoi destination content (spec rieng) va
+UU TIEN no lam M4 — truoc WordPress publish (M5) va hardening (M6).
 
 ## Pham vi
 
@@ -73,27 +76,92 @@ Gate sang M4:
 - [x] Sua draft da approve -> tu dong tao version moi + quay ve InReview (verify E2E).
 - [x] Review history hien day du actor + note + thoi gian (verify E2E).
 
-### M4 — Publish WordPress + SiteProfile (Tuan 4)
+### M4 — Dichoithoi destination content (Tuan 4-5) — UU TIEN LEN TRUOC (12/06/2026)
+Spec rieng: `docs/specs/dichoithoi-destination-spec.md`. Tao + cap nhat bai diem den
+du lich bang AI, publish TRUC TIEP vao SQL Server cua dichoithoi.com (bo CMS import).
+
+Ly do lam truoc WordPress: gia tri kinh doanh uu tien (dichoithoi can content),
+va M1-M3 da du nen tang (pipeline generate + gates + review + export HTML) —
+KHONG phu thuoc publisher WordPress hay SiteProfile day du (prompt pack dichoithoi
+dung prompt_templates DB san co; SiteProfile tong quat lui ve M5).
+
+Dieu kien tien quyet:
+- [x] Ket noi duoc SQL Server site4now.net tu may local — XAC NHAN 12/06/2026.
+- [ ] Backup toan bo DB dichoithoi.
+- [ ] DAI TU schema theo `docs/specs/dichoithoi-database-redesign.md` (12/06/2026):
+      tao bang moi + migration data (script ben repo dichoithoi) — publisher/mirror
+      cua AI tool build theo schema MOI ngay tu dau.
+- [ ] Chot 3 viec o redesign doc §9: map tinh cu→34 tinh moi, bo DestinationType
+      chuan, quy tac tron khoi "lien quan".
+
+Luu y pham vi: viec viet lai WEBSITE hien thi theo schema moi la cong viec ben repo
+dichoithoi (nguoi dung tu lam, song song) — KHONG tinh vao timeline zinoflow.
+
+Phase A — Doc va mirror (3-4 ngay):
+0. Seed 3 bang hanh chinh (admin_provinces, admin_wards, admin_ward_mappings)
+   tu dataset dvhcvn vao Postgres — dung cho form dia chi + migration dia chi
+   cu→moi (spec §13).
+1. TypeORM DataSource thu 2 (mssql, lazy connect) + adapter sau IDestinationPublisher.
+2. Bang mirror `destinations` (Postgres, gom cot moi §11.3) + sync 1 lan tu SQL Server
+   + nut dong bo lai.
+3. UI menu "Diem den": danh sach + loc + trang thai bai (chua co / bai tay / bai AI).
+4. Test som: ghi thu 1 record tieng Viet vao DB that (kiem tra encoding nvarchar).
+
+Phase B — Generate + review (4-5 ngay):
+1. Contracts: schema destinationArticle (Zod) — map thang sang cot DestinationDetail.
+2. Prompt pack `guide-diem-den` (tieng Viet co dau, giong nguoi di thuc te);
+   job gan siteCode='dichoithoi', chay tren pipeline ai-content san co.
+3. Bo quality gates travel (structure/SEO/policy/data theo spec §6) + unit tests.
+4. Reference fetcher: lay gia ve / gio mo cua tu URL tham khao (haiku extract,
+   nguoi dung xac nhan truoc khi generate).
+5. Man review: tai dung editor M3 + panel kiem tra tay gia ve / gio mo cua / bookingUrl.
+6. Anh (luong tay o M4 — spec §14): o nhap Thumbnail path + nut kiem tra anh ton tai;
+   data gate check co thumbnail. (Upload tich hop + remark anh: giai doan 2.)
+
+Phase C — Publish + auto-link (3-4 ngay):
+1. Engine auto-link (port tu CMS C#, longest-first, escape regex, khong link trong
+   tag <a> co san) + unit tests + bang destination_relations (Postgres)
+   + dong bo sang DestinationRelation (SQL Server).
+2. Publish: render HTML sach -> upsert Destination + DestinationDetail + relations
+   (transaction, KHONG wipe, ghi ContentSource=1 + ContentUpdatedAt)
+   -> verify mo duoc /diem-den/{slug} tren web that.
+3. Nut "Cap nhat bai" (mode update, content cu lam ngu canh) + nut "Re-link toan bo"
+   (pg-boss job).
+
+Song song (ben repo dichoithoi, khong chan pipeline AI): website render AddressOld /
+ContactWebsite / nut "Mua ve online" / "Cap nhat thang X" / diem lien quan tu bang
+DestinationRelation (fallback theo group khi bang trong).
+
+Gate ket thuc M4:
+- [ ] 1 diem den MOI: tao bang AI -> review -> publish -> hien thi dung tren dichoithoi.com,
+      co link noi bo toi diem den khac.
+- [ ] 1 diem den CU: bam "Cap nhat bai" -> draft moi -> approve -> publish de len ban cu
+      (khong mat taxonomy/lat/lng).
+- [ ] Re-link toan bo chay xong khong pha hong link/HTML co san (spot-check 5 bai).
+- [ ] Ngung su dung nut import destination tren CMS cu (ghi vao runbook).
+
+### M5 — Publish WordPress + SiteProfile (Tuan 6)
 1. Publisher module (4 lop rieng): WordPress REST client adapter,
    publish dang **draft** tren WP truoc (chua publish that), luu PublishRecord
    (externalPostId, status, responseRaw), idempotency + retry.
 2. SiteProfile (spec §19): bang site_profiles, content job bat buoc gan siteCode,
    prompt pack + gate rules doc theo site (laruki: fashion/beauty rules,
-   dochoi3s: kids/toy rules).
+   dochoi3s: kids/toy rules, dichoithoi: travel rules — hop thuc hoa cau hinh M4).
 3. UI: chon site khi tao job, settings page quan ly SiteProfile + prompt templates.
 4. Bai dau tien len WP that: publish draft -> kiem tra tren wp-admin -> bam publish that.
 
-Gate sang M5:
+Gate sang M6:
 - [ ] 1 bai approve xong publish thanh cong len laruki (draft mode), giu nguyen format.
 - [ ] Publish lai cung draft khong tao bai trung (idempotent).
-- [ ] 2 SiteProfile hoat dong voi prompt pack rieng.
+- [ ] 3 SiteProfile hoat dong voi prompt pack rieng (laruki, dochoi3s, dichoithoi).
 
-### M5 — Hardening + dung that (Tuan 5)
+### M6 — Hardening + dung that (Tuan 7)
 1. Error handling ra soat: moi external call co timeout + retry/backoff + error classification;
    khong co silent failure.
 2. Dashboard: job status theo ngay, cost theo bai/theo model, approval rate.
-3. Runbook: setup tu dau, xu ly loi thuong gap, backup DB local (pg_dump script).
-4. **Dung that 1 tuan**: muc tieu 5-10 bai len 2 site, ghi nhan:
+3. Runbook: setup tu dau, xu ly loi thuong gap, backup DB local (pg_dump script)
+   + backup 2 bang dichoithoi truoc dot publish lon.
+4. **Dung that 1 tuan**: muc tieu 5-10 bai len 3 site (laruki, dochoi3s, dichoithoi), ghi nhan:
    - thoi gian idea -> published / bai
    - approval rate vong 1
    - cost / bai
@@ -110,7 +178,7 @@ Gate sang M5:
    "xong backend roi moi lam UI".
 2. Khong sang scope ngoai (Image Tool, crawl, scheduler) du tien tay.
 3. Moi milestone fail gate -> sua truoc khi sang milestone sau, khong no don.
-4. Prompt quality la viec tinh chinh lien tuc o M5+, dung cau toan o M2.
+4. Prompt quality la viec tinh chinh lien tuc o M6+, dung cau toan o M2.
 
 ## Thu tu build trong tung task (cho AI agent)
 1. Contracts (Zod) truoc -> 2. Domain + unit test -> 3. Use case -> 4. Adapter ->

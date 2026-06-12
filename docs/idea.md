@@ -134,3 +134,75 @@ Tai lieu chi tiet: docs/tech-recommendation-web-mvp.md va docs/specs/
 
 Luu y: docs/blueprint-local-first.md (huong .NET) da LOI THOI, chi giu de tham khao.
 
+## Dinh huong mo rong (12/06/2026) — dichoithoi.com (diem den du lich)
+
+Boi canh: website thu 3 — https://dichoithoi.com/ — chuyen ve diem du lich Viet Nam
+(.NET + SQL Server tren site4now.net, source: `D:\Gits\mmo\dichoithoi`).
+Hien tai diem den viet tay trong Google Sheet → CMS import (xoa toan bo + insert lai)
+→ website hien thi tai `/diem-den/{slug}`. CMS luc import tu dong replace ten diem den
+trong bai thanh link noi bo (bai A nhac diem B → B thanh link).
+
+Quyet dinh:
+1. Them tinh nang trong AI Content Tool: tao bai diem den bang AI theo format chuan SEO,
+   giong nguoi viet that — menu rieng vi luong data khac bai affiliate.
+2. Ngoai tao moi, co nut "Cap nhat bai" cho diem den da co (thu cong truoc,
+   tu dong de giai doan sau).
+3. AI tool tro thanh noi quan ly TOAN BO bai viet dichoithoi; duyet xong ghi
+   TRUC TIEP vao SQL Server cua website — bo qua Google Sheet va CMS import.
+   He qua: sau go-live phai ngung dung nut import tren CMS cu (import la wipe-all,
+   se xoa mat bai do AI tool tao).
+4. Giu va port co che auto-link quan he diem den sang AI tool (chay luc publish
+   + job re-link toan bo). Quan he diem den luu tuong minh trong AI tool
+   (bang destination_relations), KHONG doi schema website o MVP.
+
+Input cho 1 bai diem den (nguoi dung cung cap, AI viet them tu kien thuc nen):
+- Ten; dia chi (ca dia chi cu VA moi sau sap nhap tinh/thanh); vi tri + khoang cach
+  toi trung tam; lien he (dien thoai, website); gio mo cua; gia ve;
+  thong tin tong quat; diem den lien quan.
+- Gia ve / gio mo cua: tu nhap HOAC dua URL website tham khao de tool tu lay
+  (moi truong co the co nguon tham khao rieng).
+
+Khung noi dung "ai cung can" (phan tich chi tiet o spec §2.2): tong quan, vi tri &
+di chuyen, gio mo cua & gia ve, trai nghiem/choi gi, mon an/dac san, thoi diem dep,
+luu tru, meo & luu y, FAQ, diem den gan do.
+
+Kiem tien tren bai diem den:
+- Khach san: website da co module hotel theo HotelGroupId (MyTour) — bai AI gan dung
+  HotelGroupId, muc "Luu tru" dan nguoi doc xuong khu khach san.
+- Ve online/tour: nhap link affiliate (bookingUrl) → bai chen CTA "Mua ve online"
+  canh muc gia ve.
+
+Cap nhat 12/06/2026 (chot sau phan tich):
+- UU TIEN lam tinh nang nay TRUOC WordPress publish → milestone M4
+  trong `docs/specs/ai-content-delivery-plan.md` (WordPress lui ve M5, hardening M6).
+- DAI TU website dichoithoi: thiet ke lai database tu dau (uu tien toc do render),
+  nguoi dung se viet lai website hien thi theo schema moi —
+  chi tiet `docs/specs/dichoithoi-database-redesign.md`.
+  (Phuong an additive trong spec §11 da bi thay the boi quyet dinh dai tu nay.)
+- Da xac nhan ket noi duoc SQL Server site4now.net tu may local.
+
+Cap nhat tiep 12/06/2026:
+- Website van la .NET cu (chi sua tang doc theo schema moi).
+- AI tool dam nhan vai tro CMS cho noi dung diem den; CMS cu chi con cac module
+  chua migrate (Hotel/Tour/Sim/Phuot/Post), module Destination tat vinh vien.
+
+Cac quyet dinh chi tiet da chot trong cung ngay (chi tiet o specs):
+- UI AI tool: khu "Dichoithoi" rieng tren sidebar (Diem den / Taxonomy / Review /
+  Cong cu), man review tai dung pipeline ai-content — destination-spec §7.
+- Co che 2 database: Postgres = xuong soan thao (draft/version/review),
+  SQL Server = read-model production chi chua ban da duyet; publish co 2 chot
+  TAY rieng biet (Approve nội dung ≠ Publish len web) — system-overview §2.1.
+- 3 job van hanh (re-link, recompute related, dong bo mirror): idempotent,
+  pg-boss, co dry-run + phat hien sua ngoai luong bang content hash —
+  destination-spec §12.
+- Dia chi cu + moi sau sap nhap: website hien thi CA HAI; seed dataset dvhcvn
+  (admin_provinces/admin_wards/admin_ward_mappings) vao Postgres de map
+  tu dong — destination-spec §13.
+- Anh diem den: tach khoi deploy source (FTP rieng), DB luu path tuong doi,
+  folder theo slug 3 co anh (hero/thumb/in-bai), Cloudflare free cache edge;
+  giai doan 2: tab "Anh" upload + AI goi y danh sach anh/alt text;
+  LAM SAU: remark tren anh (watermark/caption) — destination-spec §14.
+
+Tai lieu vao cua: `docs/specs/dichoithoi-system-overview.md` (kien truc 3 thanh phan,
+lo trinh) → `dichoithoi-database-redesign.md` (schema moi) →
+`dichoithoi-destination-spec.md` (tinh nang trong AI tool).
