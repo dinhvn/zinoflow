@@ -50,22 +50,28 @@ Gate sang M3:
 - [x] Generate fail 1 section -> chi retry section do, job khong chet (unit test + thay live voi Gemini 503).
 - [x] Unit tests state machine pass 100% (79/79 tests).
 
-### M3 — Quality gates + Review workflow (Tuan 3)
-1. 4 gates bang code thuan (spec §9, §17.5):
-   - Structure gate: du 8 block, 1 H1, do dai intro/section theo rule §17.3.
-   - SEO gate: primary keyword trong H1+intro, metaTitle/metaDescription, >=2 internal links.
-   - Policy gate: co affiliate disclosure, scan tu cam theo niche.
-   - Data gate: product URL hop le (validate qua CMS API), khong empty block.
-2. Review workflow: SubmitForReview, Approve (chan khi gate fail), Reject (bat buoc reason),
-   RequestChange; luu ReviewRecord day du; sua draft sau approve -> version moi -> ve InReview.
-3. UI review: preview 2 cot (editor | HTML render), checklist gates pass/fail,
-   review history, diff giua versions.
-4. Export HTML sach (sanitize) tu draft markdown.
+### M3 — Quality gates + Review workflow (Tuan 3) ✅ code xong 12/06/2026
+1. ✅ 4 gates bang code thuan (domain/quality-gates/, khong goi AI, co unit tests):
+   - Structure: 1 H1 duy nhat, >=2 section, moi section >=60 tu, title 10-100 ky tu.
+   - SEO: primary keyword trong H1 + mo bai (so khop KHONG phan biet dau),
+     metaTitle/metaDescription, >=2 internal links.
+   - Policy: affiliate disclosure >=10 ky tu, scan 9 cum claim cam (khong phan biet dau).
+   - Data: product URL hop le + chan placeholder example.com, FAQ >=3 co cau tra loi, co CTA.
+   (URL validate qua CMS API: doi contract CMS that — hien chi check format + placeholder)
+2. ✅ Review workflow: submit-review (DraftReady->InReview), Approve CHAY LAI gates ngay
+   luc duyet (fail -> 422 kem chi tiet), Reject bat buoc ly do, RequestChange -> DraftReady.
+   ReviewRecord luu du actor/note/version. Sua draft (PUT) -> version moi;
+   sua bai Approved -> tu dong ve InReview.
+3. ✅ UI review: editor markdown | preview HTML 2 cot, checklist 4 gates + chi tiet loi,
+   nut Gui duyet / Duyet / Yeu cau sua / Tu choi, lich su review, danh sach version.
+   (diff text giua version: don gian hoa thanh danh sach version — diff chi tiet de M5 neu can)
+4. ✅ Export HTML sach: marked + sanitize-html (whitelist tag, chi http/https,
+   link tu dong nofollow + target _blank).
 
 Gate sang M4:
-- [ ] Approve bi block khi bat ky gate nao fail (test tu UI).
-- [ ] Sua draft da approve -> tu dong tao version moi + quay ve InReview.
-- [ ] Review history hien day du actor + note + thoi gian.
+- [x] Approve bi block khi gate fail (verify: bai stub bi 422 kem ly do tung section).
+- [x] Sua draft da approve -> tu dong tao version moi + quay ve InReview (verify E2E).
+- [x] Review history hien day du actor + note + thoi gian (verify E2E).
 
 ### M4 — Publish WordPress + SiteProfile (Tuan 4)
 1. Publisher module (4 lop rieng): WordPress REST client adapter,

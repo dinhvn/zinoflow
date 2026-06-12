@@ -1,19 +1,37 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Put } from "@nestjs/common";
 import {
   aiProviderKeySchema,
   createContentJobRequestSchema,
+  reviewDraftRequestSchema,
   updateAiProviderSettingRequestSchema,
+  updateDraftRequestSchema,
   type AiProviderInfo,
   type AiProviderKey,
   type ContentJob as ContentJobDto,
   type CreateContentJobRequest,
   type CreateContentJobResponse,
   type ListAiProvidersResponse,
+  type ReviewDraftRequest,
+  type RunQualityChecksResponse,
   type UpdateAiProviderSettingRequest,
+  type UpdateDraftRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { CreateContentJobUseCase } from "../application/use-cases/create-content-job.usecase";
 import { RetryContentJobUseCase } from "../application/use-cases/retry-content-job.usecase";
+import { RunQualityChecksUseCase } from "../application/use-cases/run-quality-checks.usecase";
+import { SubmitForReviewUseCase } from "../application/use-cases/submit-for-review.usecase";
+import { ReviewDraftUseCase } from "../application/use-cases/review-draft.usecase";
+import { UpdateDraftUseCase } from "../application/use-cases/update-draft.usecase";
+import { ExportDraftHtmlUseCase } from "../application/use-cases/export-draft-html.usecase";
+import {
+  QUALITY_RESULT_REPOSITORY,
+  type QualityResultRepository,
+} from "../application/ports/quality-result.repository";
+import {
+  REVIEW_RECORD_REPOSITORY,
+  type ReviewRecordRepository,
+} from "../application/ports/review-record.repository";
 import {
   CONTENT_JOB_REPOSITORY,
   type ContentJobRepository,
@@ -67,6 +85,13 @@ export class ContentController {
   constructor(
     private readonly createContentJob: CreateContentJobUseCase,
     private readonly retryContentJob: RetryContentJobUseCase,
+    private readonly runQualityChecks: RunQualityChecksUseCase,
+    private readonly submitForReview: SubmitForReviewUseCase,
+    private readonly reviewDraft: ReviewDraftUseCase,
+    private readonly updateDraft: UpdateDraftUseCase,
+    private readonly exportDraftHtml: ExportDraftHtmlUseCase,
+    @Inject(QUALITY_RESULT_REPOSITORY) private readonly qualityResults: QualityResultRepository,
+    @Inject(REVIEW_RECORD_REPOSITORY) private readonly reviewRecords: ReviewRecordRepository,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly repository: ContentJobRepository,
     @Inject(CONTENT_DRAFT_REPOSITORY) private readonly drafts: ContentDraftRepository,
     @Inject(AI_PROVIDER_SETTINGS) private readonly providerSettings: AiProviderSettings,
@@ -105,6 +130,67 @@ export class ContentController {
     const draft = await this.drafts.findLatestByJobId(id);
     if (!draft) throw new NotFoundException(`No draft found for job ${id}`);
     return draft;
+  }
+
+  /** Gui draft vao review: DraftReady -> InReview. */
+  @Post("jobs/:id/submit-review")
+  async submitReview(@Param("id") id: string): Promise<{ jobId: string; status: string }> {
+    return this.submitForReview.execute(id);
+  }
+
+  /** Tat ca version draft cua job (moi nhat truoc) — UI xem lich su version. */
+  @Get("jobs/:id/drafts")
+  async listDrafts(@Param("id") id: string) {
+    const drafts = await this.drafts.listByJobId(id);
+    return drafts.map((d) => ({
+      id: d.id,
+      version: d.version,
+      title: d.title,
+      createdAt: d.createdAt,
+    }));
+  }
+
+  /** Lich su review cua job (moi version) — spec §7.6. */
+  @Get("jobs/:id/reviews")
+  async listReviews(@Param("id") id: string) {
+    return this.reviewRecords.listByJobId(id);
+  }
+
+  /** Chay 4 quality gates va luu ket qua — spec §7.4. */
+  @Post("drafts/:draftId/quality-checks")
+  async runChecks(@Param("draftId") draftId: string): Promise<RunQualityChecksResponse> {
+    return this.runQualityChecks.execute(draftId);
+  }
+
+  /** Ket qua checks da luu cua draft (UI load lan dau, khong can chay lai). */
+  @Get("drafts/:draftId/quality-checks")
+  async getChecks(@Param("draftId") draftId: string) {
+    const checks = await this.qualityResults.findByDraftId(draftId);
+    return { draftId, checks, allPassed: checks.length > 0 && checks.every((c) => c.passed) };
+  }
+
+  /** Review action: Approve (chan khi gate fail) / RequestChange / Reject (can ly do). */
+  @Post("drafts/:draftId/review")
+  async review(
+    @Param("draftId") draftId: string,
+    @Body(new ZodValidationPipe(reviewDraftRequestSchema)) request: ReviewDraftRequest,
+  ): Promise<{ newStatus: string }> {
+    return this.reviewDraft.execute(draftId, request);
+  }
+
+  /** Sua noi dung draft -> version moi; sua bai Approved -> job ve InReview. */
+  @Put("drafts/:draftId")
+  async update(
+    @Param("draftId") draftId: string,
+    @Body(new ZodValidationPipe(updateDraftRequestSchema)) request: UpdateDraftRequest,
+  ): Promise<DraftRecord> {
+    return this.updateDraft.execute(draftId, request);
+  }
+
+  /** Export HTML sach (sanitize chong XSS) tu draft markdown. */
+  @Get("drafts/:draftId/html")
+  async exportHtml(@Param("draftId") draftId: string): Promise<{ draftId: string; html: string }> {
+    return this.exportDraftHtml.execute(draftId);
   }
 
   /**

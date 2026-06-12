@@ -30,12 +30,25 @@ export class TypeOrmContentDraftRepository implements ContentDraftRepository {
     await this.repo.save(entity);
   }
 
+  async findById(id: string): Promise<DraftRecord | null> {
+    const entity = await this.repo.findOneBy({ id });
+    return entity ? this.toRecord(entity) : null;
+  }
+
   async findLatestByJobId(jobId: string): Promise<DraftRecord | null> {
     const entity = await this.repo.findOne({
       where: { jobId },
       order: { version: "DESC" },
     });
-    if (!entity) return null;
+    return entity ? this.toRecord(entity) : null;
+  }
+
+  async listByJobId(jobId: string): Promise<DraftRecord[]> {
+    const entities = await this.repo.find({ where: { jobId }, order: { version: "DESC" } });
+    return entities.map((entity) => this.toRecord(entity));
+  }
+
+  private toRecord(entity: ContentDraftEntity): DraftRecord {
     return {
       id: entity.id,
       jobId: entity.jobId,

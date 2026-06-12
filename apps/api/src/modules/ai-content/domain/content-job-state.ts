@@ -13,7 +13,7 @@ const ALLOWED_TRANSITIONS: Record<ContentJobStatus, readonly ContentJobStatus[]>
   Created: ["GeneratingOutline", "Failed"],
   GeneratingOutline: ["DraftReady", "Failed"],
   DraftReady: ["InReview", "GeneratingOutline"], // cho phep generate lai truoc khi review
-  InReview: ["Approved", "Rejected"],
+  InReview: ["Approved", "Rejected", "DraftReady"], // DraftReady = RequestChange (yeu cau sua)
   Approved: ["InReview"],
   Rejected: [], // terminal — muon lam lai thi tao job moi
   Failed: ["GeneratingOutline"], // retry

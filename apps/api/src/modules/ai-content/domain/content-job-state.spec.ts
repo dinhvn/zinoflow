@@ -47,7 +47,7 @@ describe("ContentJob state machine (spec §5)", () => {
       Created: ["GeneratingOutline", "Failed"],
       GeneratingOutline: ["DraftReady", "Failed"],
       DraftReady: ["InReview", "GeneratingOutline"],
-      InReview: ["Approved", "Rejected"],
+      InReview: ["Approved", "Rejected", "DraftReady"], // DraftReady = RequestChange
       Approved: ["InReview"],
       Rejected: [],
       Failed: ["GeneratingOutline"],

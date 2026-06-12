@@ -4,6 +4,15 @@ import { ContentController } from "./presentation/content.controller";
 import { CreateContentJobUseCase } from "./application/use-cases/create-content-job.usecase";
 import { GenerateContentUseCase } from "./application/use-cases/generate-content.usecase";
 import { RetryContentJobUseCase } from "./application/use-cases/retry-content-job.usecase";
+import { RunQualityChecksUseCase } from "./application/use-cases/run-quality-checks.usecase";
+import { SubmitForReviewUseCase } from "./application/use-cases/submit-for-review.usecase";
+import { ReviewDraftUseCase } from "./application/use-cases/review-draft.usecase";
+import { UpdateDraftUseCase } from "./application/use-cases/update-draft.usecase";
+import { ExportDraftHtmlUseCase } from "./application/use-cases/export-draft-html.usecase";
+import { QUALITY_RESULT_REPOSITORY } from "./application/ports/quality-result.repository";
+import { REVIEW_RECORD_REPOSITORY } from "./application/ports/review-record.repository";
+import { TypeOrmQualityResultRepository } from "./infrastructure/repositories/typeorm-quality-result.repository";
+import { TypeOrmReviewRecordRepository } from "./infrastructure/repositories/typeorm-review-record.repository";
 import { PromptBuilder } from "./application/services/prompt-builder";
 import { PROMPT_TEMPLATE_REPOSITORY } from "./application/ports/prompt-template.repository";
 import { PRODUCT_CATALOG } from "./application/ports/product-catalog.port";
@@ -50,6 +59,11 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     CreateContentJobUseCase,
     GenerateContentUseCase,
     RetryContentJobUseCase,
+    RunQualityChecksUseCase,
+    SubmitForReviewUseCase,
+    ReviewDraftUseCase,
+    UpdateDraftUseCase,
+    ExportDraftHtmlUseCase,
     PromptBuilder,
     ContentGenerateWorker,
     StubContentAiProvider,
@@ -64,6 +78,8 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     { provide: AI_USAGE_RECORDER, useClass: TypeOrmAiUsageRecorder },
     { provide: AI_PROVIDER_SETTINGS, useClass: TypeOrmAiProviderSettings },
     { provide: PROMPT_TEMPLATE_REPOSITORY, useClass: TypeOrmPromptTemplateRepository },
+    { provide: QUALITY_RESULT_REPOSITORY, useClass: TypeOrmQualityResultRepository },
+    { provide: REVIEW_RECORD_REPOSITORY, useClass: TypeOrmReviewRecordRepository },
     {
       provide: PRODUCT_CATALOG,
       // CMS_BASE_URL co gia tri -> goi CMS that; chua co -> mock (du lieu mau theo site)

@@ -20,5 +20,8 @@ export interface DraftRecord {
 
 export interface ContentDraftRepository {
   save(draft: DraftRecord): Promise<void>;
+  findById(id: string): Promise<DraftRecord | null>;
   findLatestByJobId(jobId: string): Promise<DraftRecord | null>;
+  /** Tat ca version cua job, moi nhat truoc — cho UI xem lich su version. */
+  listByJobId(jobId: string): Promise<DraftRecord[]>;
 }

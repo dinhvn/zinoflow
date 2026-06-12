@@ -1,6 +1,6 @@
 # ZinoFlow Runbook
 
-Muc tieu: setup tu dau va chay duoc trong 30 phut. Cap nhat 11/06/2026 (M2).
+Muc tieu: setup tu dau va chay duoc trong 30 phut. Cap nhat 12/06/2026 (M3).
 
 ## 1) Yeu cau may
 
@@ -95,6 +95,13 @@ Restart api — env chi doc luc khoi dong.
 ### Tieng Viet bi mojibake (â€"...) khi sua file bang script PowerShell
 PS 5.1 doc UTF-8 khong BOM sai. Dung [System.IO.File]::ReadAllText/WriteAllText
 voi UTF8Encoding($false), KHONG dung Get-Content/Set-Content cho file co tieng Viet.
+
+### Approve bi 422 "con quality gate chua dat"
+Day la hanh vi dung: bai chi duyet duoc khi ca 4 gate pass. Chi tiet loi hien
+trong response/UI (vd section qua ngan, URL placeholder, thieu disclosure).
+Sua noi dung trong editor -> Luu -> Chay kiem tra lai -> Duyet.
+Luu y: bai tu stub provider luon fail structure gate (section qua ngan) — by design,
+chi bai AI that moi du dieu kien duyet.
 
 ## 6) Backup database local
 

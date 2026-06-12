@@ -24,9 +24,14 @@ class InMemoryDraftRepository implements ContentDraftRepository {
   async save(draft: DraftRecord): Promise<void> {
     this.saved.push(draft);
   }
+  async findById(id: string): Promise<DraftRecord | null> {
+    return this.saved.find((d) => d.id === id) ?? null;
+  }
   async findLatestByJobId(jobId: string): Promise<DraftRecord | null> {
-    const drafts = this.saved.filter((d) => d.jobId === jobId);
-    return drafts.sort((a, b) => b.version - a.version)[0] ?? null;
+    return (await this.listByJobId(jobId))[0] ?? null;
+  }
+  async listByJobId(jobId: string): Promise<DraftRecord[]> {
+    return this.saved.filter((d) => d.jobId === jobId).sort((a, b) => b.version - a.version);
   }
 }
 

@@ -47,9 +47,9 @@ export async function apiGet<TSchema extends z.ZodType>(
   return schema.parse(await res.json());
 }
 
-/** POST/PATCH voi JSON body. Tra ve response da parse (unknown neu khong can schema). */
+/** POST/PATCH/PUT voi JSON body. Tra ve response da parse (unknown neu khong can schema). */
 export async function apiSend(
-  method: "POST" | "PATCH",
+  method: "POST" | "PATCH" | "PUT",
   path: string,
   body: unknown,
 ): Promise<unknown> {
