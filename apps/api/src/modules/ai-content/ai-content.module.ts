@@ -109,5 +109,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
       ],
     },
   ],
+  // DestinationModule tao job diem den qua use case nay (khong goi AI truc tiep)
+  exports: [CreateContentJobUseCase],
 })
 export class AiContentModule {}

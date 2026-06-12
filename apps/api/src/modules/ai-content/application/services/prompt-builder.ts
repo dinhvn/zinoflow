@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import type { ArticleOutline, ArticleType, ContentSection } from "@zinoflow/contracts";
+import type { ArticleType, ContentSection } from "@zinoflow/contracts";
+import type { OutlineLike } from "./article-type-profiles";
 import type { StructuredGenerationRequest } from "../ports/content-ai-provider.port";
 import type { ProductContext } from "../ports/product-catalog.port";
 import {
@@ -25,6 +26,8 @@ export interface PromptJobContext {
   siteCode: string;
   keywordSeed: readonly string[];
   toneProfile: string | null;
+  /** Ngu canh nguon (du lieu diem den, content cu khi update...) — null voi bai thuong */
+  sourceContext: string | null;
   products: readonly ProductContext[];
 }
 
@@ -57,7 +60,7 @@ export class PromptBuilder {
 
   async buildSection(
     ctx: PromptJobContext,
-    outline: ArticleOutline,
+    outline: OutlineLike,
     sectionHeading: string,
   ): Promise<StructuredGenerationRequest> {
     const vars = {
@@ -81,7 +84,7 @@ export class PromptBuilder {
 
   async buildFrame(
     ctx: PromptJobContext,
-    outline: ArticleOutline,
+    outline: OutlineLike,
     sections: readonly ContentSection[],
   ): Promise<StructuredGenerationRequest> {
     const vars = {
@@ -109,10 +112,13 @@ export class PromptBuilder {
 
   private baseVars(ctx: PromptJobContext): Record<string, unknown> {
     return {
+      // articleType khong dung trong template — stub provider can de chon shape output
+      articleType: ctx.articleType,
       topic: ctx.topic,
       keywords: ctx.keywordSeed.join(", ") || "(tự suy ra từ chủ đề)",
       siteCode: ctx.siteCode,
       toneProfile: ctx.toneProfile ?? "tự nhiên, gần gũi, trung thực",
+      sourceContext: ctx.sourceContext ?? "(không có — dùng kiến thức nền, ghi rõ chỗ cần kiểm chứng)",
       products: ctx.products,
     };
   }

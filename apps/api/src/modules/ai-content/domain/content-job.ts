@@ -15,6 +15,8 @@ export interface ContentJobProps {
   articleType: ArticleType;
   keywordSeed: string[];
   toneProfile: string | null;
+  /** Ngu canh nguon cho prompt (du lieu diem den, content cu...) — null voi bai thuong */
+  sourceContext: string | null;
   status: ContentJobStatus;
   aiProvider: AiProviderKey;
   aiModel: string;

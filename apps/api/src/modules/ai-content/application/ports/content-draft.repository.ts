@@ -1,4 +1,5 @@
-import type { Article, ArticleOutline } from "@zinoflow/contracts";
+import type { DraftArticle } from "@zinoflow/contracts";
+import type { OutlineLike } from "../services/article-type-profiles";
 
 /**
  * Port persistence cho content draft.
@@ -12,8 +13,10 @@ export interface DraftRecord {
   jobId: string;
   version: number;
   title: string | null;
-  outline: ArticleOutline | null;
-  article: Article | null;
+  /** Outline buoc 1 — shape theo articleType, toi thieu co title + sectionHeadings */
+  outline: (OutlineLike & Record<string, unknown>) | null;
+  /** Bai viet structured — 8-block hoac destination article (theo job.articleType) */
+  article: DraftArticle | null;
   draftMarkdown: string | null;
   createdAt: Date;
 }

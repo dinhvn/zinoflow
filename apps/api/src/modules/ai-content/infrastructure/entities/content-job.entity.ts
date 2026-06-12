@@ -39,6 +39,10 @@ export class ContentJobEntity {
   @Column({ name: "tone_profile", type: "varchar", length: 100, nullable: true })
   toneProfile!: string | null;
 
+  /** Ngu canh nguon cho prompt (du lieu diem den, content cu...) — M4 Phase B */
+  @Column({ name: "source_context", type: "text", nullable: true })
+  sourceContext!: string | null;
+
   @Index()
   @Column({ type: "varchar", length: 30 })
   status!: ContentJobStatus;

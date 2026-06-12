@@ -95,6 +95,7 @@ function createJob(): ContentJob {
     articleType: "toplist",
     keywordSeed: ["túi xách nữ"],
     toneProfile: null,
+    sourceContext: null,
     aiProvider: "anthropic",
     aiModel: "stub-model",
   });

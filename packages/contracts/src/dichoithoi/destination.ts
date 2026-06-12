@@ -47,6 +47,8 @@ export const destinationMirrorSchema = z.object({
   /** 0 draft, 1 published, 2 hidden — theo cot Status SQL Server */
   siteStatus: z.number().int().min(0).max(2).nullable(),
   contentState: destinationContentStateSchema,
+  /** Job ai-content dang soan cho diem nay — UI link sang man review */
+  activeContentJobId: z.string().nullable(),
   syncFlags: z.array(destinationSyncFlagSchema),
   siteUpdatedAt: z.string().nullable(),
   syncedAt: z.string().nullable(),
@@ -83,6 +85,23 @@ export const syncDestinationsResultSchema = z.object({
   durationMs: z.number().int(),
 });
 export type SyncDestinationsResult = z.infer<typeof syncDestinationsResultSchema>;
+
+/** Request tao content job cho 1 diem den (spec §5.1) */
+export const createDestinationJobRequestSchema = z.object({
+  /** create = diem chua co bai AI; update = viet lai dua tren content hien tai */
+  mode: z.enum(["create", "update"]),
+  /** Ghi chu/du lieu bo sung nguoi dung cung cap (gia ve, gio mo cua...) — tuy chon */
+  userNotes: z.string().max(10_000).optional(),
+  aiProvider: z.string().optional(),
+  aiModel: z.string().optional(),
+});
+export type CreateDestinationJobRequest = z.infer<typeof createDestinationJobRequestSchema>;
+
+export const createDestinationJobResponseSchema = z.object({
+  jobId: z.string(),
+  status: z.string(),
+});
+export type CreateDestinationJobResponse = z.infer<typeof createDestinationJobResponseSchema>;
 
 /** Taxonomy cho form/filter */
 export const destinationTaxonomySchema = z.object({

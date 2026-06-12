@@ -1,12 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import {
-  articleFrameSchema,
-  articleOutlineSchema,
-  articleSchema,
-  contentSectionSchema,
-  type ContentSection,
-} from "@zinoflow/contracts";
+import { type ContentSection } from "@zinoflow/contracts";
+import { getArticleTypeProfile } from "../services/article-type-profiles";
 import {
   CONTENT_JOB_REPOSITORY,
   type ContentJobRepository,
@@ -24,7 +19,6 @@ import {
 import { PRODUCT_CATALOG, type ProductCatalog } from "../ports/product-catalog.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../ports/ai-usage-recorder.port";
 import { PromptBuilder, type PromptJobContext } from "../services/prompt-builder";
-import { renderArticleMarkdown } from "../services/article-markdown.renderer";
 
 /**
  * Use case: generate noi dung cho 1 content job (chay trong pg-boss worker) — M2: 3 buoc.
@@ -78,11 +72,15 @@ export class GenerateContentUseCase {
 
     try {
       const provider = this.providers.resolve(snapshot.aiProvider);
-      const products = await this.catalog.findProducts({
-        siteCode: snapshot.siteCode,
-        topic: snapshot.topic,
-        keywords: snapshot.keywordSeed,
-      });
+      // Profile theo loai bai (spec §19.3): schema + assemble + render rieng tung loai
+      const profile = getArticleTypeProfile(snapshot.articleType);
+      const products = profile.usesProductCatalog
+        ? await this.catalog.findProducts({
+            siteCode: snapshot.siteCode,
+            topic: snapshot.topic,
+            keywords: snapshot.keywordSeed,
+          })
+        : [];
       const ctx: PromptJobContext = {
         model: snapshot.aiModel,
         articleType: snapshot.articleType,
@@ -90,13 +88,14 @@ export class GenerateContentUseCase {
         siteCode: snapshot.siteCode,
         keywordSeed: snapshot.keywordSeed,
         toneProfile: snapshot.toneProfile,
+        sourceContext: snapshot.sourceContext,
         products,
       };
 
       // Buoc 1 — outline
       const { output: outline, usage: outlineUsage } = await provider.generateStructured(
         await this.prompts.buildOutline(ctx),
-        articleOutlineSchema,
+        profile.outlineSchema,
       );
       await this.recordUsage(job.id, provider, snapshot.aiModel, "outline", outlineUsage);
 
@@ -111,7 +110,7 @@ export class GenerateContentUseCase {
           async () =>
             provider.generateStructured(
               await this.prompts.buildSection(ctx, outline, heading),
-              contentSectionSchema,
+              profile.sectionSchema,
             ),
         );
         sections.push(section);
@@ -120,22 +119,22 @@ export class GenerateContentUseCase {
       // Buoc 3 — frame (moi block tru sections) + assemble
       const { output: frame, usage: frameUsage } = await provider.generateStructured(
         await this.prompts.buildFrame(ctx, outline, sections),
-        articleFrameSchema,
+        profile.frameSchema,
       );
       await this.recordUsage(job.id, provider, snapshot.aiModel, "frame", frameUsage);
 
-      // Assemble + validate lai toan bai — articleSchema la nguon su that cuoi cung
-      const article = articleSchema.parse({ ...frame, sections });
+      // Assemble + validate lai toan bai — schema toan bai la nguon su that cuoi cung
+      const article = profile.assemble(frame, sections);
 
       const latest = await this.drafts.findLatestByJobId(job.id);
       await this.drafts.save({
         id: randomUUID(),
         jobId: job.id,
         version: (latest?.version ?? 0) + 1, // generate lai -> version moi, khong de unique conflict
-        title: article.hero.title,
-        outline,
+        title: profile.extractTitle(article),
+        outline: outline as { title: string; sectionHeadings: string[] } & Record<string, unknown>,
         article,
-        draftMarkdown: renderArticleMarkdown(article),
+        draftMarkdown: profile.renderMarkdown(article),
         createdAt: new Date(),
       });
 

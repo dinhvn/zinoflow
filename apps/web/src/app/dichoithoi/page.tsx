@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  createDestinationJobResponseSchema,
   destinationTaxonomySchema,
   listDestinationsResponseSchema,
   syncDestinationsResultSchema,
@@ -66,6 +67,21 @@ export default function DichoithoiPage() {
       if (kind) params.set("kind", kind);
       if (contentState) params.set("contentState", contentState);
       return apiGet(`/destinations?${params}`, listDestinationsResponseSchema);
+    },
+  });
+
+  const createJobMutation = useMutation({
+    mutationFn: async ({ slug, mode }: { slug: string; mode: "create" | "update" }) =>
+      createDestinationJobResponseSchema.parse(
+        await apiSend("POST", `/destinations/${slug}/jobs`, { mode }),
+      ),
+    onSuccess: (result) => {
+      // Job da vao queue — chuyen thang sang man theo doi/review draft
+      window.location.href = `/content/${result.jobId}`;
+    },
+    onError: (err) => {
+      setSyncResult(null);
+      setSyncError(err instanceof Error ? err.message : "Tạo bài thất bại");
     },
   });
 
@@ -246,16 +262,36 @@ export default function DichoithoiPage() {
                             </span>
                           ))}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="space-x-2 whitespace-nowrap px-3 py-2 text-xs">
+                      {d.contentState === "dang-soan" && d.activeContentJobId ? (
+                        <a
+                          href={`/content/${d.activeContentJobId}`}
+                          className="rounded bg-amber-100 px-2 py-1 text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300"
+                        >
+                          Xem bài đang soạn
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            createJobMutation.mutate({
+                              slug: d.slug,
+                              mode: d.contentState === "chua-co-bai" ? "create" : "update",
+                            })
+                          }
+                          disabled={createJobMutation.isPending}
+                          className="rounded bg-zinc-900 px-2 py-1 text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+                        >
+                          {d.contentState === "chua-co-bai" ? "Tạo bài AI" : "Cập nhật bài"}
+                        </button>
+                      )}
                       <a
                         href={`${SITE_BASE_URL}/diem-den/${d.slug}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+                        className="text-blue-600 hover:underline dark:text-blue-400"
                       >
-                        Mở trên web ↗
+                        Mở web ↗
                       </a>
-                      {/* Phase B: nút "Tạo bài AI" / "Cập nhật bài" sẽ thêm ở đây */}
                     </td>
                   </tr>
                 ))}

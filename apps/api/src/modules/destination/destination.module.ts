@@ -1,9 +1,11 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { AiContentModule } from "../ai-content/ai-content.module";
 import { DestinationsController } from "./presentation/destinations.controller";
 import { ListDestinationsUseCase } from "./application/use-cases/list-destinations.usecase";
 import { SyncDestinationsUseCase } from "./application/use-cases/sync-destinations.usecase";
 import { GetDestinationTaxonomyUseCase } from "./application/use-cases/get-destination-taxonomy.usecase";
+import { CreateDestinationJobUseCase } from "./application/use-cases/create-destination-job.usecase";
 import { DICHOITHOI_SITE_DB } from "./application/ports/dichoithoi-site-db.port";
 import { DESTINATION_MIRROR_REPOSITORY } from "./application/ports/destination-mirror.repository";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
@@ -24,6 +26,7 @@ import {
  */
 @Module({
   imports: [
+    AiContentModule,
     TypeOrmModule.forFeature([
       DestinationMirrorEntity,
       DestinationRelationEntity,
@@ -37,6 +40,7 @@ import {
     ListDestinationsUseCase,
     SyncDestinationsUseCase,
     GetDestinationTaxonomyUseCase,
+    CreateDestinationJobUseCase,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: DESTINATION_MIRROR_REPOSITORY, useClass: TypeOrmDestinationMirrorRepository },
   ],

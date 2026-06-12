@@ -20,10 +20,11 @@ export const contentSourceTypeSchema = z.enum(["Topic", "Campaign", "ProductSet"
 export type ContentSourceType = z.infer<typeof contentSourceTypeSchema>;
 
 /**
- * Loai bai viet — quyet dinh prompt pack su dung (spec §17.2).
- * M2 ho tro 2 loai dau tien: top-list va review don. Comparison/Deal them sau.
+ * Loai bai viet — quyet dinh prompt pack + output schema su dung (spec §17.2 + §19.3).
+ * toplist/review: bai affiliate 8-block. guide-diem-den: bai diem den dichoithoi
+ * (schema rieng — dichoithoi/destination-article.ts).
  */
-export const articleTypeSchema = z.enum(["toplist", "review"]);
+export const articleTypeSchema = z.enum(["toplist", "review", "guide-diem-den"]);
 export type ArticleType = z.infer<typeof articleTypeSchema>;
 
 /** Request tao content job — spec §7.1. */
@@ -36,6 +37,11 @@ export const createContentJobRequestSchema = z.object({
   articleType: articleTypeSchema.default("toplist"),
   keywordSeed: z.array(z.string()).default([]),
   toneProfile: z.string().optional(),
+  /**
+   * Ngu canh nguon cho prompt (du lieu diem den, content cu khi update...).
+   * AI CHI duoc dung thong tin trong day + kien thuc nen, khong tu che so lieu.
+   */
+  sourceContext: z.string().max(60_000).optional(),
   /** Optional — default theo SiteProfile neu khong truyen. */
   aiProvider: aiProviderKeySchema.optional(),
   aiModel: z.string().optional(),

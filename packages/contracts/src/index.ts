@@ -3,6 +3,7 @@ export * from "./common/error";
 
 // Dichoithoi (M4)
 export * from "./dichoithoi/destination";
+export * from "./dichoithoi/destination-article";
 
 // AI Content
 export * from "./ai-content/ai-provider";

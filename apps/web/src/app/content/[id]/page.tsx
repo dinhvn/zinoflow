@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
 import {
   contentJobSchema,
+  draftArticleSchema,
   runQualityChecksResponseSchema,
   type ReviewAction,
 } from "@zinoflow/contracts";
@@ -17,6 +18,8 @@ const draftSchema = z.object({
   version: z.number(),
   title: z.string().nullable(),
   draftMarkdown: z.string().nullable(),
+  /** Bai structured — dung cho panel quick-facts bai diem den */
+  article: draftArticleSchema.nullable().catch(null),
 });
 
 const htmlSchema = z.object({ draftId: z.string(), html: z.string() });
@@ -188,7 +191,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               Trạng thái: <strong className="text-zinc-900 dark:text-zinc-100">{job.status}</strong>
             </span>
             <span>Site: {job.siteCode}</span>
-            <span>Loại bài: {job.articleType === "toplist" ? "Top-list" : "Review đơn"}</span>
+            <span>
+              Loại bài:{" "}
+              {job.articleType === "toplist"
+                ? "Top-list"
+                : job.articleType === "review"
+                  ? "Review đơn"
+                  : "Điểm đến (dichoithoi)"}
+            </span>
             <span>AI: {job.aiProvider}/{job.aiModel}</span>
             {draft && <span>Version: v{draft.version}</span>}
           </div>
@@ -269,6 +279,43 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           )}
         </div>
       )}
+
+      {/* Quick facts — bai diem den: phan du lieu de sai nhat, can duyet tay ky
+          (dichoithoi-destination-spec §7.5). Khi publish se do vao cot rieng tren web. */}
+      {job?.articleType === "guide-diem-den" &&
+        draft?.article &&
+        "quickFacts" in draft.article && (
+          <div className="rounded-lg border-2 border-amber-300 p-4 dark:border-amber-700">
+            <h3 className="mb-2 font-medium text-amber-700 dark:text-amber-300">
+              ⚠️ Thông tin nhanh — kiểm tra tay trước khi duyệt (giá vé, giờ mở cửa dễ sai)
+            </h3>
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm md:grid-cols-2">
+              {(
+                [
+                  ["Giờ mở cửa", draft.article.quickFacts.openingTime],
+                  ["Giá vé", draft.article.quickFacts.ticketPrice],
+                  ["Di chuyển", draft.article.quickFacts.transport],
+                  ["Ăn uống", draft.article.quickFacts.food],
+                  ["Lưu trú", draft.article.quickFacts.hotel],
+                  ["Mẹo & lưu ý", draft.article.quickFacts.tip],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label}>
+                  <dt className="font-medium text-zinc-500">{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+              <div>
+                <dt className="font-medium text-zinc-500">Dòng cập nhật</dt>
+                <dd>{draft.article.updateNotice}</dd>
+              </div>
+              <div>
+                <dt className="font-medium text-zinc-500">Slug gợi ý</dt>
+                <dd className="font-mono">{draft.article.metadata.slugSuggestion}</dd>
+              </div>
+            </dl>
+          </div>
+        )}
 
       {/* Quality gates */}
       {hasDraft && draft && (

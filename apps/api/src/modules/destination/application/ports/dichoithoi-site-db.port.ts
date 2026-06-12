@@ -13,6 +13,17 @@ export interface SiteTypeRow {
   name: string;
 }
 
+/** Noi dung hien tai cua 1 diem den tren site — ngu canh cho mode update */
+export interface SiteDestinationContent {
+  contentHtml: string;
+  openingTime: string | null;
+  ticketPrice: string | null;
+  transport: string | null;
+  food: string | null;
+  hotel: string | null;
+  tip: string | null;
+}
+
 export interface DichoithoiSiteDb {
   /** false khi thieu DICHOITHOI_DB_* trong env — UI hien huong dan cau hinh */
   isConfigured(): boolean;
@@ -20,4 +31,6 @@ export interface DichoithoiSiteDb {
   fetchAllDestinations(): Promise<SiteDestinationRow[]>;
   /** Danh sach loai diem den (cho taxonomy form/filter) */
   fetchTypes(): Promise<SiteTypeRow[]>;
+  /** Noi dung hien tai cua 1 diem den (null neu chua co bai) — cho mode update */
+  fetchDestinationContent(siteId: number): Promise<SiteDestinationContent | null>;
 }

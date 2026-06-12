@@ -36,16 +36,86 @@ export class StubContentAiProvider implements ContentAiProvider {
   }
 
   private buildByOperation(request: StructuredGenerationRequest): unknown {
+    const isDestination = request.vars["articleType"] === "guide-diem-den";
     switch (request.operation) {
       case "outline":
-        return this.buildOutline(request.vars);
+        return isDestination
+          ? this.buildDestinationOutline(request.vars)
+          : this.buildOutline(request.vars);
       case "section":
         return this.buildSection(request.vars);
       case "frame":
-        return this.buildFrame(request.vars);
+        return isDestination
+          ? this.buildDestinationFrame(request.vars)
+          : this.buildFrame(request.vars);
       default:
         throw new AiProviderError(`Stub provider: unknown operation "${request.operation}"`);
     }
+  }
+
+  /** Outline bai diem den (guide-diem-den) — >=3 heading theo destinationOutlineSchema. */
+  private buildDestinationOutline(vars: Readonly<Record<string, unknown>>): unknown {
+    const topic = String(vars["topic"] ?? "điểm đến thử nghiệm");
+    return {
+      title: `${topic}: kinh nghiệm tham quan, giá vé, ăn gì 2026`,
+      sectionHeadings: [
+        "Giới thiệu tổng quan",
+        `Chơi gì ở ${topic}`,
+        "Thời điểm đẹp nhất để đi",
+        "Món ăn và đặc sản gần đó",
+      ],
+      plannedFaqQuestions: [
+        `Đi ${topic} mùa nào đẹp nhất?`,
+        "Tham quan mất bao lâu?",
+        "Có cần mua vé trước không?",
+      ],
+    };
+  }
+
+  /** Frame bai diem den — theo destinationArticleFrameSchema. */
+  private buildDestinationFrame(vars: Readonly<Record<string, unknown>>): unknown {
+    const topic = String(vars["topic"] ?? "điểm đến thử nghiệm");
+    const title = String(vars["title"] ?? `${topic}: kinh nghiệm tham quan, giá vé, ăn gì 2026`);
+    return {
+      title,
+      intro:
+        `${topic} là một trong những điểm dừng chân được nhiều du khách quan tâm khi lên lịch trình. ` +
+        "Bài viết này do stub provider sinh ra để kiểm tra pipeline; khi chạy provider thật, " +
+        "phần mở bài sẽ được AI viết dựa trên dữ liệu điểm đến được cung cấp, nêu cả địa chỉ mới " +
+        "và địa chỉ cũ trước sáp nhập nếu dữ liệu có đủ thông tin cho cả hai trường này.",
+      quickFacts: {
+        openingTime: "Cần kiểm tra lại",
+        ticketPrice: "Cần kiểm tra lại (có thể thay đổi)",
+        transport: "Stub: cách di chuyển sẽ do AI viết từ dữ liệu điểm đến.",
+        food: "Stub: gợi ý ăn uống sẽ do AI viết từ dữ liệu điểm đến.",
+        hotel: "Stub: gợi ý khu lưu trú sẽ do AI viết từ dữ liệu điểm đến.",
+        tip: "Stub: mẹo tham quan sẽ do AI viết từ dữ liệu điểm đến.",
+      },
+      faq: [
+        `Đi ${topic} mùa nào đẹp nhất?`,
+        "Tham quan mất bao lâu?",
+        "Có cần mua vé trước không?",
+      ].map((question) => ({
+        question,
+        answer: "Trả lời mẫu (stub): provider thật sẽ trả lời theo dữ liệu điểm đến.",
+      })),
+      updateNotice:
+        `Thông tin trong bài cập nhật tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}, ` +
+        "giá vé và giờ mở cửa có thể thay đổi.",
+      metadata: {
+        name: topic,
+        slugSuggestion: this.toSlug(topic),
+        metaTitle: title.slice(0, 140),
+        metaDescription:
+          `Kinh nghiệm tham quan ${topic}: giá vé, thời điểm đẹp, ăn gì, ở đâu — tổng hợp cho chuyến đi đầu tiên của bạn.`.slice(
+            0,
+            290,
+          ),
+        description:
+          `${topic} là điểm đến đáng chú ý trong khu vực, phù hợp cho cả chuyến đi ngắn lẫn lịch trình dài ngày.`,
+        searchKeyword: `${topic}, du lịch ${topic}, kinh nghiệm ${topic}`.toLowerCase().slice(0, 250),
+      },
+    };
   }
 
   private buildOutline(vars: Readonly<Record<string, unknown>>): ArticleOutline {

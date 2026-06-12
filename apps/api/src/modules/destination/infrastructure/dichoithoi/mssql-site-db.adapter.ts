@@ -16,7 +16,11 @@ function loadMssqlDriver(host: string): typeof sql {
   return isLocalDbHost(host) ? require("mssql/msnodesqlv8") : require("mssql");
 }
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
-import type { DichoithoiSiteDb, SiteTypeRow } from "../../application/ports/dichoithoi-site-db.port";
+import type {
+  DichoithoiSiteDb,
+  SiteDestinationContent,
+  SiteTypeRow,
+} from "../../application/ports/dichoithoi-site-db.port";
 
 const KIND_BY_NUMBER: Record<number, SiteDestinationRow["kind"]> = {
   1: "province",
@@ -76,6 +80,24 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       contentHash: (r.ContentHash as string | null) ?? null,
       siteUpdatedAt: r.UpdatedAt ? new Date(r.UpdatedAt as string) : null,
     }));
+  }
+
+  async fetchDestinationContent(siteId: number): Promise<SiteDestinationContent | null> {
+    const rows = await this.queryWithRetry<Record<string, unknown>>(
+      `SELECT ContentHtml, OpeningTime, TicketPrice, Transport, Food, HotelText, Tip
+       FROM v2.DestinationContent WHERE DestinationId = ${Number(siteId)}`,
+    );
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      contentHtml: (r.ContentHtml as string) ?? "",
+      openingTime: (r.OpeningTime as string | null) ?? null,
+      ticketPrice: (r.TicketPrice as string | null) ?? null,
+      transport: (r.Transport as string | null) ?? null,
+      food: (r.Food as string | null) ?? null,
+      hotel: (r.HotelText as string | null) ?? null,
+      tip: (r.Tip as string | null) ?? null,
+    };
   }
 
   async fetchTypes(): Promise<SiteTypeRow[]> {

@@ -56,6 +56,7 @@ export class ListDestinationsUseCase {
         contentSource: e.contentSource,
         contentHash: e.contentHash,
       }),
+      activeContentJobId: e.activeContentJobId,
       syncFlags: e.syncFlags as DestinationMirror["syncFlags"],
       siteUpdatedAt: e.siteUpdatedAt?.toISOString() ?? null,
       syncedAt: e.syncedAt?.toISOString() ?? null,

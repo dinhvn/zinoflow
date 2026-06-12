@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { RunQualityChecksResponse } from "@zinoflow/contracts";
-import { evaluateAllGates } from "../../domain/quality-gates/quality-gates";
+import { evaluateGatesForArticle } from "../../domain/quality-gates/gate-dispatcher";
 import {
   CONTENT_DRAFT_REPOSITORY,
   type ContentDraftRepository,
@@ -41,7 +41,8 @@ export class RunQualityChecksUseCase {
     const job = await this.jobs.findById(draft.jobId);
     const keywordSeed = job ? job.toSnapshot().keywordSeed : [];
 
-    const { checks, allPassed } = evaluateAllGates({
+    const { checks, allPassed } = evaluateGatesForArticle({
+      articleType: job ? job.toSnapshot().articleType : "toplist",
       article: draft.article,
       draftMarkdown: draft.draftMarkdown,
       keywordSeed,
