@@ -33,19 +33,7 @@ export class GeminiContentAiProvider implements ContentAiProvider {
   ): Promise<{ output: z.infer<TSchema>; usage: AiCallUsage }> {
     const startedAt = Date.now();
     try {
-      const response = await this.getClient().models.generateContent({
-        model: request.model,
-        contents: request.prompt,
-        config: {
-          systemInstruction: request.system,
-          responseMimeType: "application/json",
-          // JSON Schema sinh tu chinh Zod schema trong contracts — 1 nguon su that
-          responseJsonSchema: z.toJSONSchema(schema),
-          // KHONG set maxOutputTokens: Gemini 2.5 tinh ca thinking tokens vao limit
-          // -> de SDK default, request.maxTokens chi ap dung cho Anthropic
-        },
-      });
-
+      const response = await this.callWithRetry(request, schema);
       const text = response.text;
       if (!text) {
         throw new AiProviderError(`Gemini ${request.operation}: empty response`, [
@@ -76,6 +64,45 @@ export class GeminiContentAiProvider implements ContentAiProvider {
     }
   }
 
+  /**
+   * Goi Gemini voi retry 429/5xx (rule: moi external call co retry/backoff o adapter).
+   * 429 free tier (5 req/phut voi flash) la binh thuong khi pipeline goi 6+ lan lien
+   * tiep — ton trong retryDelay tu RetryInfo cua API (cap 60s), toi da 3 lan retry.
+   */
+  private async callWithRetry<TSchema extends ZodType>(
+    request: StructuredGenerationRequest,
+    schema: TSchema,
+  ) {
+    const MAX_RETRIES = 3;
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.getClient().models.generateContent({
+          model: request.model,
+          contents: request.prompt,
+          config: {
+            systemInstruction: request.system,
+            responseMimeType: "application/json",
+            // JSON Schema sinh tu chinh Zod schema trong contracts — 1 nguon su that
+            responseJsonSchema: z.toJSONSchema(schema),
+            // KHONG set maxOutputTokens: Gemini 2.5 tinh ca thinking tokens vao limit
+            // -> de SDK default, request.maxTokens chi ap dung cho Anthropic
+          },
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const retriable = /"code"\s*:\s*(429|500|503)|RESOURCE_EXHAUSTED|UNAVAILABLE/.test(
+          message,
+        );
+        if (!retriable || attempt >= MAX_RETRIES) throw error;
+        const delayMs = parseRetryDelayMs(message) ?? 15_000 * (attempt + 1);
+        this.logger.warn(
+          `Gemini ${request.operation} bi gioi han (lan ${attempt + 1}/${MAX_RETRIES}) - cho ${Math.round(delayMs / 1000)}s roi thu lai`,
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+  }
+
   /** Lazy init de app boot duoc khi chua co key (registry da fallback stub). */
   private getClient(): GoogleGenAI {
     if (!this.client) {
@@ -87,4 +114,12 @@ export class GeminiContentAiProvider implements ContentAiProvider {
     }
     return this.client;
   }
+}
+
+/** Doc retryDelay tu RetryInfo trong message loi 429 ("retryDelay":"35s"), cap 60s */
+function parseRetryDelayMs(message: string): number | null {
+  const match = /"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(message);
+  if (!match) return null;
+  const seconds = Number(match[1]);
+  return Math.min(Math.ceil(seconds) + 1, 60) * 1000;
 }

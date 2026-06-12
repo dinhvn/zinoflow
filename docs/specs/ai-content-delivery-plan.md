@@ -165,10 +165,21 @@ Phase C — Publish + auto-link (3-4 ngay) — ✅ CODE XONG 12/06/2026:
      (mirror chua co type map).
    - Quan he nearby KHONG luu bang DestinationRelation (tinh on-the-fly khi build
      RelatedJson); chi mentioned duoc luu (ca Postgres + SQL Server).
+   ✅ PROVIDER THAT da chay (12/06/2026): bai "Nui Ham Rong Sapa" bang
+   gemini-2.5-flash — 4/4 gates pass ngay lan dau, tieng Viet co dau chuan,
+   gia ve kem luu y; cost ghi nhan 9.8k in / 12.6k out tokens (~$0.035 neu tinh phi).
+   Sua trong qua trinh test:
+   - Gemini adapter retry 429/5xx theo RetryInfo (free tier flash 5 req/phut,
+     pipeline goi 6+ lan — truoc do fail thang). LUU Y: free tier con quota
+     NGAY (20 req/ngay voi flash) — du ~2 bai/ngay; dung that nen mua paid tier.
+   - Job Failed/Rejected khong con khoa diem den (cho tao job moi thay the).
+   - updateNotice: model tu suy "06/2024" theo kien thuc nen -> them bien
+     {{currentDate}} vao prompt frame (migration v2, pattern version cu giu nguyen).
+     ⏳ Chua kiem chung lai bang provider that (het quota ngay) — bai sau se ro.
    Con lai cua M4 (lam tiep):
-   - Chay thu voi PROVIDER THAT 1 bai (can API key) — chua co.
    - Thumbnail field + check ton tai; reference fetcher (URL gia ve -> haiku).
    - Tao diem den MOI hoan toan tu AI tool (hien chi publish diem da ton tai).
+   - Review tay + publish 1 bai THAT (job Nui Ham Rong dang DraftReady cho duyet).
 
 Song song (ben repo dichoithoi, khong chan pipeline AI): website render AddressOld /
 ContactWebsite / nut "Mua ve online" / "Cap nhat thang X" / diem lien quan tu bang

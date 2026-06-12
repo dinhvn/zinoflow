@@ -6,6 +6,10 @@ import {
 } from "@zinoflow/contracts";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 import { CreateContentJobUseCase } from "../../../ai-content/application/use-cases/create-content-job.usecase";
+import {
+  CONTENT_JOB_REPOSITORY,
+  type ContentJobRepository,
+} from "../../../ai-content/application/ports/content-job.repository";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 import {
   DESTINATION_MIRROR_REPOSITORY,
@@ -34,6 +38,7 @@ export class CreateDestinationJobUseCase {
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly mirrorRepo: DestinationMirrorRepository,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
+    @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
     private readonly createContentJob: CreateContentJobUseCase,
   ) {}
 
@@ -49,10 +54,16 @@ export class CreateDestinationJobUseCase {
       ]);
     }
     if (destination.activeContentJobId) {
-      throw new DomainRuleError(
-        `Điểm đến "${destination.name}" đang có bài soạn/duyệt dở`,
-        ["Hoàn tất hoặc hủy job hiện tại trước khi tạo job mới"],
-      );
+      // Job Failed/Rejected la ngo cut (terminal hoac can lam lai) — cho phep
+      // tao job moi thay the de diem den khong bi ket vinh vien
+      const activeJob = await this.jobRepo.findById(destination.activeContentJobId);
+      const stuckStatus = activeJob?.toSnapshot().status;
+      if (activeJob && stuckStatus !== "Failed" && stuckStatus !== "Rejected") {
+        throw new DomainRuleError(
+          `Điểm đến "${destination.name}" đang có bài soạn/duyệt dở`,
+          ["Hoàn tất hoặc hủy job hiện tại trước khi tạo job mới"],
+        );
+      }
     }
 
     const sourceContext = await this.buildSourceContext(destination, all, request);
