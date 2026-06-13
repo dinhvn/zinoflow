@@ -45,6 +45,20 @@ export class CreateDestinationJobUseCase {
     private readonly createContentJob: CreateContentJobUseCase,
   ) {}
 
+  /** Luu thong tin cung cap cho AI ma KHONG tao bai (nut "Luu thong tin"). */
+  async saveInputs(
+    slug: string,
+    notes: string | null,
+    referenceUrls: Array<{ label: string; url: string }>,
+  ): Promise<void> {
+    const existing = await this.mirrorRepo.findBySlug(slug);
+    if (!existing) {
+      throw new DomainRuleError(`Không tìm thấy điểm đến "${slug}" trong mirror`);
+    }
+    await this.mirrorRepo.saveAiInputs(slug, notes?.trim() ? notes.trim() : null, referenceUrls);
+    this.logger.log(`Luu thong tin AI cho diem den ${slug}`);
+  }
+
   async execute(
     slug: string,
     request: CreateDestinationJobRequest,
@@ -68,6 +82,14 @@ export class CreateDestinationJobUseCase {
         );
       }
     }
+
+    // Luu lai thong tin nguoi dung cung cap (ghi chu + URL nguon) tren diem den
+    // de tu dien lai + tai dung khi viet lai bai sau nay.
+    await this.mirrorRepo.saveAiInputs(
+      destination.slug,
+      request.userNotes?.trim() ? request.userNotes.trim() : null,
+      request.referenceUrls ?? [],
+    );
 
     const sourceContext = await this.buildSourceContext(destination, all, request);
 

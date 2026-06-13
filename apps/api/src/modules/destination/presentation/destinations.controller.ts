@@ -3,6 +3,7 @@ import {
   checkImageRequestSchema,
   createDestinationJobRequestSchema,
   listDestinationsQuerySchema,
+  saveAiInputsRequestSchema,
   relinkAllRequestSchema,
   updateThumbnailRequestSchema,
   upsertDestinationRequestSchema,
@@ -18,6 +19,7 @@ import {
   type RecomputeRelatedReport,
   type RelinkAllRequest,
   type RelinkAllReport,
+  type SaveAiInputsRequest,
   type SyncDestinationsResult,
   type UpdateThumbnailRequest,
   type UpsertDestinationRequest,
@@ -110,6 +112,16 @@ export class DestinationsController {
     request: CreateDestinationJobRequest,
   ): Promise<CreateDestinationJobResponse> {
     return this.createJob.execute(slug, request);
+  }
+
+  /** Luu thong tin cung cap cho AI (ghi chu + URL nguon) ma KHONG tao bai */
+  @Post(":slug/ai-inputs")
+  async saveAiInputs(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(saveAiInputsRequestSchema)) request: SaveAiInputsRequest,
+  ): Promise<{ ok: true }> {
+    await this.createJob.saveInputs(slug, request.userNotes ?? null, request.referenceUrls ?? []);
+    return { ok: true };
   }
 
   /**

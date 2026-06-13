@@ -107,6 +107,13 @@ export const createDestinationJobRequestSchema = z.object({
 });
 export type CreateDestinationJobRequest = z.infer<typeof createDestinationJobRequestSchema>;
 
+/** Luu thong tin cung cap cho AI ma KHONG tao bai (nut "Luu thong tin") */
+export const saveAiInputsRequestSchema = z.object({
+  userNotes: z.string().max(10_000).nullable().optional(),
+  referenceUrls: z.array(referenceUrlSchema).max(5).optional(),
+});
+export type SaveAiInputsRequest = z.infer<typeof saveAiInputsRequestSchema>;
+
 export const createDestinationJobResponseSchema = z.object({
   jobId: z.string(),
   status: z.string(),
@@ -201,6 +208,9 @@ export const destinationDetailSchema = destinationMirrorSchema.extend({
   activeJobStatus: z.string().nullable(),
   /** Noi dung hien tai tren web — null khi chua co bai hoac chua ket noi SQL Server */
   content: destinationSiteContentSchema.nullable(),
+  /** Thong tin nguoi dung da luu cho AI (tu dien lai form viet bai) */
+  aiNotes: z.string().nullable(),
+  aiReferenceUrls: z.array(referenceUrlSchema),
   /** Cay: cha truc tiep + con truc tiep */
   parent: relatedDestinationRefSchema.nullable(),
   children: z.array(relatedDestinationRefSchema),

@@ -56,6 +56,12 @@ export interface DestinationMirrorRepository {
   setSiteId(slug: string, siteId: number): Promise<void>;
   /** Cap nhat duong dan thumbnail (spec §14.3) */
   setThumbnail(slug: string, thumbnail: string | null): Promise<void>;
+  /** Luu thong tin nguoi dung cung cap cho AI (ghi chu + URL nguon) — tai dung lan sau */
+  saveAiInputs(
+    slug: string,
+    notes: string | null,
+    referenceUrls: Array<{ label: string; url: string }>,
+  ): Promise<void>;
   /**
    * Ghi nhan publish thanh cong: contentSource=1, contentHash moi (de lan sync
    * sau khong bao edited-outside), clear activeContentJobId + hasLocalChanges.

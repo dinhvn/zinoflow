@@ -82,6 +82,14 @@ export class DestinationMirrorEntity {
   @Column({ name: "active_content_job_id", type: "uuid", nullable: true })
   activeContentJobId!: string | null;
 
+  /** Ghi chu nguoi dung cung cap cho AI (luu lai, tu dien lai + tai dung khi viet lai) */
+  @Column({ name: "ai_notes", type: "text", nullable: true })
+  aiNotes!: string | null;
+
+  /** URL nguon tham khao theo truong [{label,url}] — luu lai cho lan viet sau */
+  @Column({ name: "ai_reference_urls", type: "jsonb", default: () => "'[]'" })
+  aiReferenceUrls!: Array<{ label: string; url: string }>;
+
   /** Co canh bao sync: edited-outside | conflict | orphan (mang rong = sach) */
   @Column({ name: "sync_flags", type: "jsonb", default: () => "'[]'" })
   syncFlags!: string[];

@@ -174,6 +174,14 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     await this.repo.update({ slug }, { thumbnail });
   }
 
+  async saveAiInputs(
+    slug: string,
+    notes: string | null,
+    referenceUrls: Array<{ label: string; url: string }>,
+  ): Promise<void> {
+    await this.repo.update({ slug }, { aiNotes: notes, aiReferenceUrls: referenceUrls });
+  }
+
   async markPublished(slug: string, contentHash: string): Promise<void> {
     await this.repo.update(
       { slug },

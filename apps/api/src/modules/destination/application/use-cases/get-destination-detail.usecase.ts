@@ -125,6 +125,8 @@ export class GetDestinationDetailUseCase {
       imageUrl: this.imageChecker.buildUrl(entity.thumbnail),
       activeJobStatus,
       content,
+      aiNotes: entity.aiNotes ?? null,
+      aiReferenceUrls: entity.aiReferenceUrls ?? [],
       parent,
       children,
       nearby,

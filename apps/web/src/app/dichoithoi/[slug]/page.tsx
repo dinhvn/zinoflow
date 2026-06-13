@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createDestinationJobResponseSchema,
@@ -96,14 +96,46 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     { label: "Giá vé", url: "" },
     { label: "Giờ mở cửa", url: "" },
   ]);
+  const [inputsSaved, setInputsSaved] = useState(false);
+  // Tu dien lai thong tin AI da luu khi mo trang (chay 1 lan khi co data)
+  useEffect(() => {
+    if (!d) return;
+    setUserNotes(d.aiNotes ?? "");
+    setRefUrls(
+      d.aiReferenceUrls.length > 0
+        ? d.aiReferenceUrls
+        : [
+            { label: "Giá vé", url: "" },
+            { label: "Giờ mở cửa", url: "" },
+          ],
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d?.slug]);
+
+  const aiInputsBody = () => ({
+    userNotes: userNotes.trim() || undefined,
+    referenceUrls: refUrls.filter((r) => r.url.trim() && r.label.trim()),
+  });
+
+  // Luu thong tin cho AI ma chua tao bai
+  const saveInputs = useMutation({
+    mutationFn: () => apiSend("POST", `/destinations/${slug}/ai-inputs`, aiInputsBody()),
+    onSuccess: () => {
+      setActionError(null);
+      setInputsSaved(true);
+      invalidate();
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+
   const createJob = useMutation({
     mutationFn: async () => {
-      const refs = refUrls.filter((r) => r.url.trim() && r.label.trim());
+      const body = aiInputsBody();
       return createDestinationJobResponseSchema.parse(
         await apiSend("POST", `/destinations/${slug}/jobs`, {
           mode: d?.contentState === "chua-co-bai" ? "create" : "update",
-          userNotes: userNotes.trim() || undefined,
-          referenceUrls: refs.length ? refs : undefined,
+          userNotes: body.userNotes,
+          referenceUrls: body.referenceUrls.length ? body.referenceUrls : undefined,
         }),
       );
     },
@@ -322,17 +354,31 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               )}
             </div>
 
-            <button
-              onClick={() => createJob.mutate()}
-              disabled={createJob.isPending}
-              className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              {createJob.isPending
-                ? "Đang tạo bài..."
-                : d.contentState === "chua-co-bai"
-                  ? "Tạo bài AI"
-                  : "Viết lại / cập nhật bài"}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => createJob.mutate()}
+                disabled={createJob.isPending}
+                className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+              >
+                {createJob.isPending
+                  ? "Đang tạo bài..."
+                  : d.contentState === "chua-co-bai"
+                    ? "Tạo bài AI"
+                    : "Viết lại / cập nhật bài"}
+              </button>
+              <button
+                onClick={() => saveInputs.mutate()}
+                disabled={saveInputs.isPending}
+                className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              >
+                {saveInputs.isPending ? "Đang lưu..." : "Lưu thông tin (chưa tạo bài)"}
+              </button>
+              {inputsSaved && !saveInputs.isPending && (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                  ✅ Đã lưu — sẽ tự điền lại lần sau
+                </span>
+              )}
+            </div>
           </div>
         )}
       </Group>
