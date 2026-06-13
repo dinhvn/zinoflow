@@ -22,6 +22,7 @@ type NavItem = {
 const MAIN_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: IconDashboard, exact: true },
   { href: "/content", label: "AI Content", icon: IconSparkles },
+  { href: "/prompts", label: "Prompt mẫu", icon: IconDoc },
 ];
 
 const DICHOITHOI_ITEMS: NavItem[] = [
@@ -147,6 +148,16 @@ function IconSearch(props: SVGProps<SVGSVGElement>) {
     <IconBase {...props}>
       <circle cx="11" cy="11" r="7" />
       <path d="M21 21l-4.3-4.3" />
+    </IconBase>
+  );
+}
+
+function IconDoc(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6M9 17h4" />
     </IconBase>
   );
 }

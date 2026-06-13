@@ -71,7 +71,15 @@ function buildUseCase(provider: ContentAiProvider) {
     },
   };
   // Template repo rong -> PromptBuilder fallback DEFAULT_PROMPTS (hop le theo thiet ke)
-  const prompts = new PromptBuilder({ findActive: async () => null });
+  const prompts = new PromptBuilder({
+    findActive: async () => null,
+    findActiveMany: async () => [],
+    findVersions: async () => [],
+    createVersion: async () => {
+      throw new Error("not used");
+    },
+    activateVersion: async () => {},
+  });
   const useCase = new GenerateContentUseCase(
     jobs,
     drafts,

@@ -1,16 +1,23 @@
 import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Put } from "@nestjs/common";
 import {
+  activatePromptVersionRequestSchema,
   aiProviderKeySchema,
   createContentJobRequestSchema,
+  createPromptVersionRequestSchema,
   reviewDraftRequestSchema,
   updateAiProviderSettingRequestSchema,
   updateDraftRequestSchema,
+  type ActivatePromptVersionRequest,
   type AiProviderInfo,
   type AiProviderKey,
   type ContentJob as ContentJobDto,
+  type CreatePromptVersionRequest,
+  type CreatePromptVersionResponse,
   type CreateContentJobRequest,
   type CreateContentJobResponse,
   type ListAiProvidersResponse,
+  type PromptTemplateDetail,
+  type PromptTemplateListResponse,
   type ReviewDraftRequest,
   type RunQualityChecksResponse,
   type UpdateAiProviderSettingRequest,
@@ -24,6 +31,10 @@ import { SubmitForReviewUseCase } from "../application/use-cases/submit-for-revi
 import { ReviewDraftUseCase } from "../application/use-cases/review-draft.usecase";
 import { UpdateDraftUseCase } from "../application/use-cases/update-draft.usecase";
 import { ExportDraftHtmlUseCase } from "../application/use-cases/export-draft-html.usecase";
+import { ListPromptTemplatesUseCase } from "../application/use-cases/list-prompt-templates.usecase";
+import { GetPromptTemplateUseCase } from "../application/use-cases/get-prompt-template.usecase";
+import { CreatePromptVersionUseCase } from "../application/use-cases/create-prompt-version.usecase";
+import { ActivatePromptVersionUseCase } from "../application/use-cases/activate-prompt-version.usecase";
 import {
   QUALITY_RESULT_REPOSITORY,
   type QualityResultRepository,
@@ -90,6 +101,10 @@ export class ContentController {
     private readonly reviewDraft: ReviewDraftUseCase,
     private readonly updateDraft: UpdateDraftUseCase,
     private readonly exportDraftHtml: ExportDraftHtmlUseCase,
+    private readonly listPromptTemplates: ListPromptTemplatesUseCase,
+    private readonly getPromptTemplate: GetPromptTemplateUseCase,
+    private readonly createPromptVersion: CreatePromptVersionUseCase,
+    private readonly activatePromptVersion: ActivatePromptVersionUseCase,
     @Inject(QUALITY_RESULT_REPOSITORY) private readonly qualityResults: QualityResultRepository,
     @Inject(REVIEW_RECORD_REPOSITORY) private readonly reviewRecords: ReviewRecordRepository,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly repository: ContentJobRepository,
@@ -218,6 +233,40 @@ export class ContentController {
   ): Promise<{ key: AiProviderKey; isEnabled: boolean }> {
     await this.providerSettings.setEnabled(key, request.isEnabled);
     return { key, isEnabled: request.isEnabled };
+  }
+
+  // ===== Prompt templates (man /prompts — xem/sua/version prompt sinh bai) =====
+
+  /** Danh sach moi prompt quan ly duoc (gom theo loai bai) */
+  @Get("prompt-templates")
+  listPrompts(): Promise<PromptTemplateListResponse> {
+    return this.listPromptTemplates.execute();
+  }
+
+  /** Chi tiet 1 prompt: noi dung dang dung + mac dinh + lich su version */
+  @Get("prompt-templates/:key")
+  getPrompt(@Param("key") key: string): Promise<PromptTemplateDetail> {
+    return this.getPromptTemplate.execute(key);
+  }
+
+  /** Luu version moi (= active luon). Tra ve canh bao placeholder la neu co. */
+  @Post("prompt-templates/:key/versions")
+  createPromptVersionEndpoint(
+    @Param("key") key: string,
+    @Body(new ZodValidationPipe(createPromptVersionRequestSchema))
+    request: CreatePromptVersionRequest,
+  ): Promise<CreatePromptVersionResponse> {
+    return this.createPromptVersion.execute(key, request.content);
+  }
+
+  /** Kich hoat lai version cu (rollback) */
+  @Post("prompt-templates/:key/activate")
+  activatePromptVersionEndpoint(
+    @Param("key") key: string,
+    @Body(new ZodValidationPipe(activatePromptVersionRequestSchema))
+    request: ActivatePromptVersionRequest,
+  ): Promise<{ activeVersion: number }> {
+    return this.activatePromptVersion.execute(key, request.version);
   }
 
   private toDto(job: import("../domain/content-job").ContentJob): ContentJobDto {

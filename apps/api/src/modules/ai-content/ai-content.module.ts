@@ -10,6 +10,10 @@ import { ReviewDraftUseCase } from "./application/use-cases/review-draft.usecase
 import { UpdateDraftUseCase } from "./application/use-cases/update-draft.usecase";
 import { ExportDraftHtmlUseCase } from "./application/use-cases/export-draft-html.usecase";
 import { SuggestDestinationMetaUseCase } from "./application/use-cases/suggest-destination-meta.usecase";
+import { ListPromptTemplatesUseCase } from "./application/use-cases/list-prompt-templates.usecase";
+import { GetPromptTemplateUseCase } from "./application/use-cases/get-prompt-template.usecase";
+import { CreatePromptVersionUseCase } from "./application/use-cases/create-prompt-version.usecase";
+import { ActivatePromptVersionUseCase } from "./application/use-cases/activate-prompt-version.usecase";
 import { QUALITY_RESULT_REPOSITORY } from "./application/ports/quality-result.repository";
 import { REVIEW_RECORD_REPOSITORY } from "./application/ports/review-record.repository";
 import { TypeOrmQualityResultRepository } from "./infrastructure/repositories/typeorm-quality-result.repository";
@@ -66,6 +70,10 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     UpdateDraftUseCase,
     ExportDraftHtmlUseCase,
     SuggestDestinationMetaUseCase,
+    ListPromptTemplatesUseCase,
+    GetPromptTemplateUseCase,
+    CreatePromptVersionUseCase,
+    ActivatePromptVersionUseCase,
     PromptBuilder,
     ContentGenerateWorker,
     StubContentAiProvider,
