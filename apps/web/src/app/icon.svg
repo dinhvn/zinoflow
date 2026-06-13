@@ -1,0 +1,51 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ZinoFlow">
+  <defs>
+    <!-- Nen squircle: gradient AI tim -> cham -> cyan -->
+    <linearGradient id="zf-bg" x1="64" y1="64" x2="448" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8B5CF6"/>
+      <stop offset="0.5" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+    <!-- Dai flow chuyen sang sang o tam giua -->
+    <linearGradient id="zf-flow" x1="150" y1="170" x2="362" y2="342" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#E0F2FE"/>
+    </linearGradient>
+    <radialGradient id="zf-glow" cx="0.32" cy="0.28" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Khoi nen bo goc squircle -->
+  <rect x="32" y="32" width="448" height="448" rx="116" fill="url(#zf-bg)"/>
+  <rect x="32" y="32" width="448" height="448" rx="116" fill="url(#zf-glow)"/>
+
+  <!-- Chu Z: thanh tren + thanh duoi -->
+  <rect x="150" y="150" width="212" height="46" rx="23" fill="#ffffff"/>
+  <rect x="150" y="316" width="212" height="46" rx="23" fill="#ffffff"/>
+
+  <!-- Duong cheo cua Z bien thanh dai "flow" uon luon (dong chay noi dung) -->
+  <path d="M338 176
+           C300 232 250 250 222 290
+           C200 322 184 336 174 336"
+        stroke="url(#zf-flow)" stroke-width="46" stroke-linecap="round" fill="none"/>
+
+  <!-- Node AI o dau dong chay -->
+  <circle cx="338" cy="176" r="15" fill="#ffffff"/>
+  <circle cx="174" cy="336" r="15" fill="#ffffff"/>
+
+  <!-- Tia AI spark (ngoi sao 4 canh) goc tren phai -->
+  <path d="M372 96
+           C374 116 384 126 404 128
+           C384 130 374 140 372 160
+           C370 140 360 130 340 128
+           C360 126 370 116 372 96Z"
+        fill="#ffffff"/>
+  <path d="M410 150
+           C411 160 416 165 426 166
+           C416 167 411 172 410 182
+           C409 172 404 167 394 166
+           C404 165 409 160 410 150Z"
+        fill="#ffffff" opacity="0.9"/>
+</svg>

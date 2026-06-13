@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<title>ZinoFlow — Icon preview</title>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; padding: 40px; background: #fafafa; color: #18181b; }
+  h1 { font-weight: 800; letter-spacing: -.02em; }
+  .row { display: flex; gap: 32px; align-items: center; flex-wrap: wrap; margin: 24px 0 48px; }
+  .dark { background: #0b0b0f; color: #e4e4e7; padding: 32px; border-radius: 16px; }
+  .lockup { display:inline-flex; align-items:center; gap:10px; font-weight:800; font-size:24px; letter-spacing:-.02em;}
+  .flow { background: linear-gradient(90deg,#6366F1,#06B6D4); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  figure{margin:0;text-align:center;font-size:12px;color:#71717a}
+  img{display:block;margin:0 auto 8px}
+</style>
+</head>
+<body>
+  <h1>ZinoFlow — Bộ nhận diện icon</h1>
+
+  <h3>Bieu tuong (app icon) — nhieu kich co</h3>
+  <div class="row">
+    <figure><img src="../../apps/web/src/app/icon.svg" width="128" height="128">128px</figure>
+    <figure><img src="../../apps/web/src/app/icon.svg" width="64" height="64">64px</figure>
+    <figure><img src="../../apps/web/src/app/icon.svg" width="32" height="32">32px (favicon)</figure>
+    <figure><img src="../../apps/web/src/app/icon.svg" width="16" height="16">16px</figure>
+  </div>
+
+  <h3>Lockup ngang (sidebar / header)</h3>
+  <div class="row">
+    <span class="lockup"><img src="../../apps/web/src/app/icon.svg" width="36" height="36" style="border-radius:9px">Zino<span class="flow">Flow</span></span>
+  </div>
+
+  <h3>Tren nen toi</h3>
+  <div class="row dark">
+    <span class="lockup"><img src="../../apps/web/src/app/icon.svg" width="36" height="36" style="border-radius:9px">Zino<span class="flow">Flow</span></span>
+    <img src="../../apps/web/src/app/icon.svg" width="96" height="96">
+  </div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { QueryProvider } from "@/shared/query-provider";
+import { ZinoFlowLogo } from "@/shared/zinoflow-logo";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <QueryProvider>
           <div className="flex min-h-screen">
             <aside className="w-56 shrink-0 border-r border-zinc-200 p-4 dark:border-zinc-800">
-              <h1 className="mb-6 text-lg font-bold">ZinoFlow</h1>
+              <h1 className="mb-6">
+                <ZinoFlowLogo />
+              </h1>
               <nav className="space-y-2 text-sm">
                 <a href="/" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
                   Dashboard
@@ -37,6 +40,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900"
                   >
                     Điểm đến
+                  </a>
+                  <a
+                    href="/dichoithoi/dia-chi"
+                    className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                  >
+                    Tra cứu địa chỉ
                   </a>
                 </div>
                 <a href="/settings" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
