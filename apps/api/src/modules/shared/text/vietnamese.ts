@@ -13,3 +13,11 @@ export function normalizeVietnamese(text: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/** "Núi Hàm Rồng" -> "nui-ham-rong" — slug URL (bo dau, ky tu khac -> gach ngang). */
+export function slugifyVietnamese(text: string): string {
+  return normalizeVietnamese(text)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+}

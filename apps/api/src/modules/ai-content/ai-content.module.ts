@@ -9,6 +9,7 @@ import { SubmitForReviewUseCase } from "./application/use-cases/submit-for-revie
 import { ReviewDraftUseCase } from "./application/use-cases/review-draft.usecase";
 import { UpdateDraftUseCase } from "./application/use-cases/update-draft.usecase";
 import { ExportDraftHtmlUseCase } from "./application/use-cases/export-draft-html.usecase";
+import { SuggestDestinationMetaUseCase } from "./application/use-cases/suggest-destination-meta.usecase";
 import { QUALITY_RESULT_REPOSITORY } from "./application/ports/quality-result.repository";
 import { REVIEW_RECORD_REPOSITORY } from "./application/ports/review-record.repository";
 import { TypeOrmQualityResultRepository } from "./infrastructure/repositories/typeorm-quality-result.repository";
@@ -64,6 +65,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     ReviewDraftUseCase,
     UpdateDraftUseCase,
     ExportDraftHtmlUseCase,
+    SuggestDestinationMetaUseCase,
     PromptBuilder,
     ContentGenerateWorker,
     StubContentAiProvider,
@@ -111,6 +113,11 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
   ],
   // DestinationModule tao job diem den qua CreateContentJobUseCase (khong goi AI
   // truc tiep); publish diem den can doc job (kiem tra Approved) + draft da duyet.
-  exports: [CreateContentJobUseCase, CONTENT_JOB_REPOSITORY, CONTENT_DRAFT_REPOSITORY],
+  exports: [
+    CreateContentJobUseCase,
+    SuggestDestinationMetaUseCase,
+    CONTENT_JOB_REPOSITORY,
+    CONTENT_DRAFT_REPOSITORY,
+  ],
 })
 export class AiContentModule {}

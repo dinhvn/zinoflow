@@ -252,6 +252,68 @@ export const upsertDestinationRequestSchema = z.object({
 });
 export type UpsertDestinationRequest = z.infer<typeof upsertDestinationRequestSchema>;
 
+/**
+ * 1 dong import hang loat — giong upsert nhung slug TUY CHON (thieu thi server
+ * tu sinh tu ten) + kem thong tin cho AI (ghi chu + URL nguon).
+ */
+export const destinationImportRowSchema = z.object({
+  slug: z
+    .string()
+    .max(64)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug chỉ gồm chữ thường, số và dấu gạch ngang")
+    .optional(),
+  name: z.string().min(1).max(128),
+  kind: destinationKindSchema.default("poi"),
+  parentSlug: z.string().max(64).nullable().optional(),
+  provinceCode: z.string().max(2).nullable().optional(),
+  shortDescription: z.string().max(1000).nullable().optional(),
+  thumbnail: z.string().max(256).nullable().optional(),
+  lat: z.number().min(-90).max(90).nullable().optional(),
+  lng: z.number().min(-180).max(180).nullable().optional(),
+  addressNew: z.string().max(256).nullable().optional(),
+  addressOld: z.string().max(256).nullable().optional(),
+  contactPhone: z.string().max(32).nullable().optional(),
+  contactWebsite: z.string().max(256).nullable().optional(),
+  bookingUrl: z.string().max(512).nullable().optional(),
+  hotelGroupId: z.string().max(50).nullable().optional(),
+  isFeatured: z.boolean().optional(),
+  aiNotes: z.string().max(10_000).nullable().optional(),
+  referenceUrls: z.array(referenceUrlSchema).max(5).optional(),
+});
+export type DestinationImportRow = z.infer<typeof destinationImportRowSchema>;
+
+export const importDestinationsRequestSchema = z.object({
+  items: z.array(destinationImportRowSchema).min(1).max(1000),
+});
+export type ImportDestinationsRequest = z.infer<typeof importDestinationsRequestSchema>;
+
+export const importDestinationsResultSchema = z.object({
+  created: z.number().int(),
+  updated: z.number().int(),
+  errors: z.array(z.object({ row: z.number().int(), slug: z.string(), message: z.string() })),
+});
+export type ImportDestinationsResult = z.infer<typeof importDestinationsResultSchema>;
+
+/** AI goi y metadata "mem" cho 1 diem den (spec §3.5: KHONG dung lat/lng/dia chi) */
+export const suggestDestinationMetaRequestSchema = z.object({
+  name: z.string().min(1).max(128),
+  /** Ten tinh (neu da chon) — giup AI goi y dung vung mien */
+  provinceName: z.string().max(128).nullable().optional(),
+  aiProvider: z.string().optional(),
+  aiModel: z.string().optional(),
+});
+export type SuggestDestinationMetaRequest = z.infer<typeof suggestDestinationMetaRequestSchema>;
+
+export const destinationMetaSuggestionSchema = z.object({
+  /** Mo ta ngan 1-2 cau (tieng Viet co dau) */
+  shortDescription: z.string().min(1).max(1000),
+  /** Goi y cap: tinh / cum / diem */
+  suggestedKind: destinationKindSchema,
+  /** Tu khoa tim kiem, cach nhau dau phay */
+  searchKeyword: z.string().max(250),
+});
+export type DestinationMetaSuggestion = z.infer<typeof destinationMetaSuggestionSchema>;
+
 /** Cap nhat duong dan thumbnail cho 1 diem den (spec §14.3 — MVP) */
 export const updateThumbnailRequestSchema = z.object({
   /** Duong dan TUONG DOI (vd "nui-ham-rong-sapa.webp" | "diem-den/{slug}/thumb.webp") */

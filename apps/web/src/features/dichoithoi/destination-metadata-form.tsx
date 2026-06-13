@@ -4,11 +4,25 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   checkImageResponseSchema,
+  destinationMetaSuggestionSchema,
   destinationTaxonomySchema,
   type DestinationKind,
   type UpsertDestinationRequest,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
+
+/** Sinh slug tu ten: bo dau tieng Viet, d->d, ky tu khac -> gach ngang. */
+export function slugify(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+}
 
 const KIND_OPTIONS: Array<{ value: DestinationKind; label: string }> = [
   { value: "poi", label: "Điểm đến" },
@@ -94,6 +108,8 @@ export function DestinationMetadataForm({
   const [v, setV] = useState<DestinationMetaValues>(initial);
   const [imageCheck, setImageCheck] = useState<{ exists: boolean } | null>(null);
   const [error, setError] = useState<{ message: string; details: string[] } | null>(null);
+  // Khi tao moi: tu sinh slug tu ten cho toi khi nguoi dung tu sua slug
+  const [slugTouched, setSlugTouched] = useState(!isNew);
 
   const taxonomyQuery = useQuery({
     queryKey: ["dichoithoi-taxonomy"],
@@ -110,6 +126,21 @@ export function DestinationMetadataForm({
         await apiSend("POST", "/destinations/check-image", { path: v.thumbnail.trim() }),
       ),
     onSuccess: (r) => setImageCheck({ exists: r.exists }),
+  });
+
+  // AI goi y mo ta + phan loai (mem) — KHONG dung lat/lng/dia chi (spec §3.5)
+  const suggest = useMutation({
+    mutationFn: async () => {
+      const provinceName =
+        taxonomyQuery.data?.provinces.find((p) => p.provinceCode === v.provinceCode)?.shortName ??
+        null;
+      return destinationMetaSuggestionSchema.parse(
+        await apiSend("POST", "/destinations/suggest-meta", { name: v.name.trim(), provinceName }),
+      );
+    },
+    onSuccess: (s) => {
+      setV((prev) => ({ ...prev, shortDescription: s.shortDescription, kind: s.suggestedKind }));
+    },
   });
 
   const save = useMutation({
@@ -151,12 +182,27 @@ export function DestinationMetadataForm({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field label="Tên điểm đến *">
-          <input value={v.name} onChange={(e) => set("name", e.target.value)} className={inputCls} />
+          <input
+            value={v.name}
+            onChange={(e) => {
+              const name = e.target.value;
+              // Tu sinh slug tu ten neu nguoi dung chua tu go slug (chi khi tao moi)
+              setV((prev) => ({
+                ...prev,
+                name,
+                slug: slugTouched ? prev.slug : slugify(name),
+              }));
+            }}
+            className={inputCls}
+          />
         </Field>
         <Field label={isNew ? "Slug * (không sửa được sau khi tạo)" : "Slug (cố định)"}>
           <input
             value={v.slug}
-            onChange={(e) => set("slug", e.target.value)}
+            onChange={(e) => {
+              setSlugTouched(true);
+              set("slug", slugify(e.target.value));
+            }}
             disabled={!isNew}
             placeholder="vd: nui-ham-rong-sapa"
             className={`${inputCls} ${!isNew ? "opacity-60" : ""} font-mono`}
@@ -206,6 +252,24 @@ export function DestinationMetadataForm({
       </div>
 
       <Field label="Mô tả ngắn (card danh sách / SEO)">
+        <div className="mb-1 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => v.name.trim() && suggest.mutate()}
+            disabled={!v.name.trim() || suggest.isPending}
+            className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            {suggest.isPending ? "Đang gợi ý..." : "✨ AI gợi ý mô tả + phân loại"}
+          </button>
+          {suggest.isError && (
+            <span className="text-xs text-amber-600 dark:text-amber-400">
+              Không gợi ý được (kiểm tra API key / quota)
+            </span>
+          )}
+          {suggest.isSuccess && (
+            <span className="text-xs text-zinc-400">Đã điền — kiểm tra lại trước khi lưu</span>
+          )}
+        </div>
         <textarea
           value={v.shortDescription}
           onChange={(e) => set("shortDescription", e.target.value)}

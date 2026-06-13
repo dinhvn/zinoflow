@@ -2,9 +2,11 @@ import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import {
   checkImageRequestSchema,
   createDestinationJobRequestSchema,
+  importDestinationsRequestSchema,
   listDestinationsQuerySchema,
   saveAiInputsRequestSchema,
   relinkAllRequestSchema,
+  suggestDestinationMetaRequestSchema,
   updateThumbnailRequestSchema,
   upsertDestinationRequestSchema,
   type CheckImageRequest,
@@ -13,6 +15,8 @@ import {
   type CreateDestinationJobResponse,
   type DestinationDetail,
   type DestinationTaxonomy,
+  type ImportDestinationsRequest,
+  type ImportDestinationsResult,
   type ListDestinationsQuery,
   type ListDestinationsResponse,
   type PublishDestinationResult,
@@ -20,6 +24,8 @@ import {
   type RelinkAllRequest,
   type RelinkAllReport,
   type SaveAiInputsRequest,
+  type SuggestDestinationMetaRequest,
+  type DestinationMetaSuggestion,
   type SyncDestinationsResult,
   type UpdateThumbnailRequest,
   type UpsertDestinationRequest,
@@ -34,6 +40,8 @@ import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
 import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnail.usecase";
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
 import { UpsertDestinationUseCase } from "../application/use-cases/upsert-destination.usecase";
+import { ImportDestinationsUseCase } from "../application/use-cases/import-destinations.usecase";
+import { SuggestDestinationMetaUseCase } from "../../ai-content/application/use-cases/suggest-destination-meta.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
@@ -55,6 +63,8 @@ export class DestinationsController {
     private readonly updateThumbnail: UpdateThumbnailUseCase,
     private readonly getDetail: GetDestinationDetailUseCase,
     private readonly upsertDestination: UpsertDestinationUseCase,
+    private readonly importDestinations: ImportDestinationsUseCase,
+    private readonly suggestMeta: SuggestDestinationMetaUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
   ) {}
@@ -79,6 +89,23 @@ export class DestinationsController {
     @Body(new ZodValidationPipe(upsertDestinationRequestSchema)) request: UpsertDestinationRequest,
   ): Promise<{ slug: string }> {
     return this.upsertDestination.create(request);
+  }
+
+  /** AI goi y mo ta + phan loai (mem, KHONG dung lat/lng/dia chi) — spec §3.5 */
+  @Post("suggest-meta")
+  suggestMetadata(
+    @Body(new ZodValidationPipe(suggestDestinationMetaRequestSchema))
+    request: SuggestDestinationMetaRequest,
+  ): Promise<DestinationMetaSuggestion> {
+    return this.suggestMeta.execute(request);
+  }
+
+  /** Import hang loat (UPSERT theo slug, khong wipe) — spec §7.2 nut +Them */
+  @Post("import")
+  importBulk(
+    @Body(new ZodValidationPipe(importDestinationsRequestSchema)) request: ImportDestinationsRequest,
+  ): Promise<ImportDestinationsResult> {
+    return this.importDestinations.execute(request.items);
   }
 
   /** Sua metadata diem den (mirror; neu da co tren web thi ghi luon SQL Server) */

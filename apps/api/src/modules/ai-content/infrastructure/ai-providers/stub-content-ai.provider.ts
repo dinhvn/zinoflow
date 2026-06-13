@@ -38,6 +38,8 @@ export class StubContentAiProvider implements ContentAiProvider {
   private buildByOperation(request: StructuredGenerationRequest): unknown {
     const isDestination = request.vars["articleType"] === "guide-diem-den";
     switch (request.operation) {
+      case "suggest-meta":
+        return this.buildMetaSuggestion(request.vars);
       case "outline":
         return isDestination
           ? this.buildDestinationOutline(request.vars)
@@ -51,6 +53,16 @@ export class StubContentAiProvider implements ContentAiProvider {
       default:
         throw new AiProviderError(`Stub provider: unknown operation "${request.operation}"`);
     }
+  }
+
+  /** Goi y metadata "mem" cho diem den (suggest-meta) — output deterministic. */
+  private buildMetaSuggestion(vars: Readonly<Record<string, unknown>>): unknown {
+    const topic = String(vars["topic"] ?? "điểm đến");
+    return {
+      shortDescription: `${topic} là một điểm đến đáng chú ý, phù hợp cho chuyến đi khám phá thiên nhiên và văn hoá địa phương.`,
+      suggestedKind: "poi",
+      searchKeyword: `${topic}, du lịch ${topic}, kinh nghiệm ${topic}`.toLowerCase().slice(0, 250),
+    };
   }
 
   /** Outline bai diem den (guide-diem-den) — >=3 heading theo destinationOutlineSchema. */

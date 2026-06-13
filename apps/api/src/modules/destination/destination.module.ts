@@ -21,6 +21,7 @@ import { HttpImageChecker } from "./infrastructure/reference/http-image-checker"
 import { UpdateThumbnailUseCase } from "./application/use-cases/update-thumbnail.usecase";
 import { GetDestinationDetailUseCase } from "./application/use-cases/get-destination-detail.usecase";
 import { UpsertDestinationUseCase } from "./application/use-cases/upsert-destination.usecase";
+import { ImportDestinationsUseCase } from "./application/use-cases/import-destinations.usecase";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
 import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
@@ -60,6 +61,7 @@ import {
     UpdateThumbnailUseCase,
     GetDestinationDetailUseCase,
     UpsertDestinationUseCase,
+    ImportDestinationsUseCase,
     RecomputeRelatedService,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
