@@ -9,6 +9,8 @@ import {
   type PromptTemplateSummary,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
 
 const ARTICLE_GROUP_LABELS: Record<string, string> = {
   "": "Hệ thống (dùng chung)",
@@ -101,17 +103,9 @@ export default function PromptsPage() {
 
 function SourceBadge({ summary }: { summary: PromptTemplateSummary }) {
   if (summary.source === "db") {
-    return (
-      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-        DB v{summary.activeVersion}
-      </span>
-    );
+    return <Badge tone="emerald">DB v{summary.activeVersion}</Badge>;
   }
-  return (
-    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-500 dark:bg-zinc-800">
-      Mặc định
-    </span>
-  );
+  return <Badge tone="gray">Mặc định</Badge>;
 }
 
 function PromptEditor({ templateKey, onChanged }: { templateKey: string; onChanged: () => void }) {
@@ -216,20 +210,20 @@ function PromptEditor({ templateKey, onChanged }: { templateKey: string; onChang
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
+        <Button
+          variant="primary"
+          loading={saveVersion.isPending}
+          disabled={!isDirty || !content.trim()}
           onClick={() => saveVersion.mutate()}
-          disabled={saveVersion.isPending || !isDirty || !content.trim()}
-          className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
         >
           {saveVersion.isPending ? "Đang lưu..." : "Lưu version mới"}
-        </button>
-        <button
-          onClick={() => setContent(d.defaultContent)}
+        </Button>
+        <Button
           disabled={content === d.defaultContent}
-          className="rounded border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          onClick={() => setContent(d.defaultContent)}
         >
           Khôi phục nội dung mặc định
-        </button>
+        </Button>
         {isDirty && <span className="text-xs text-amber-600 dark:text-amber-400">● chưa lưu</span>}
         {savedNote && !isDirty && (
           <span className="text-xs text-emerald-600 dark:text-emerald-400">✅ {savedNote}</span>
@@ -248,11 +242,7 @@ function PromptEditor({ templateKey, onChanged }: { templateKey: string; onChang
               >
                 <span className="flex items-center gap-2">
                   <span className="font-medium">v{v.version}</span>
-                  {v.isActive && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                      đang dùng
-                    </span>
-                  )}
+                  {v.isActive && <Badge tone="emerald">đang dùng</Badge>}
                   <span className="text-xs text-zinc-400">
                     {new Date(v.createdAt).toLocaleString("vi-VN")}
                   </span>

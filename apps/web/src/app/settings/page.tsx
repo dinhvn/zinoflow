@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listAiProvidersResponseSchema, type AiProviderKey } from "@zinoflow/contracts";
 import { apiGet, apiSend } from "@/shared/api-client";
+import { Badge } from "@/shared/ui/badge";
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
@@ -40,13 +41,9 @@ export default function SettingsPage() {
                 <p className="font-medium">{p.displayName}</p>
                 <div className="mt-1 flex gap-2 text-xs">
                   {p.isConfigured ? (
-                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-700 dark:bg-green-950 dark:text-green-300">
-                      Có API key
-                    </span>
+                    <Badge tone="emerald">Có API key</Badge>
                   ) : (
-                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-500 dark:bg-zinc-800">
-                      Chưa có API key
-                    </span>
+                    <Badge tone="gray">Chưa có API key</Badge>
                   )}
                   {p.models.length > 0 ? (
                     <span className="text-zinc-400">{p.models.length} models</span>

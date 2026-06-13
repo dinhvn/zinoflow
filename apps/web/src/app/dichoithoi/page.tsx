@@ -10,11 +10,19 @@ import {
   syncDestinationsResultSchema,
   type DestinationContentState,
   type DestinationKind,
+  type DestinationMirror,
+  type DestinationSortBy,
   type RecomputeRelatedReport,
   type RelinkAllReport,
   type SyncDestinationsResult,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend } from "@/shared/api-client";
+import { Badge, type BadgeTone } from "@/shared/ui/badge";
+import { Button, buttonClasses } from "@/shared/ui/button";
+import { DataTable, type DataTableColumn, type SortDirection } from "@/shared/ui/data-table";
+import { Input } from "@/shared/ui/input";
+import { Pagination } from "@/shared/ui/pagination";
+import { Select } from "@/shared/ui/select";
 
 const KIND_LABELS: Record<DestinationKind, string> = {
   province: "Tỉnh/Thành",
@@ -29,11 +37,11 @@ const CONTENT_STATE_LABELS: Record<DestinationContentState, string> = {
   "da-publish": "Đã publish (AI)",
 };
 
-const CONTENT_STATE_STYLES: Record<DestinationContentState, string> = {
-  "chua-co-bai": "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  "bai-tay": "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  "dang-soan": "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  "da-publish": "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+const CONTENT_STATE_TONES: Record<DestinationContentState, BadgeTone> = {
+  "chua-co-bai": "gray",
+  "bai-tay": "blue",
+  "dang-soan": "amber",
+  "da-publish": "emerald",
 };
 
 const SYNC_FLAG_LABELS: Record<string, string> = {
@@ -51,7 +59,10 @@ export default function DichoithoiPage() {
   const [provinceCode, setProvinceCode] = useState("");
   const [kind, setKind] = useState("");
   const [contentState, setContentState] = useState("");
+  const [sortBy, setSortBy] = useState<DestinationSortBy>("name");
+  const [sortDir, setSortDir] = useState<SortDirection>("asc");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [syncResult, setSyncResult] = useState<SyncDestinationsResult | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -62,9 +73,24 @@ export default function DichoithoiPage() {
   });
 
   const listQuery = useQuery({
-    queryKey: ["dichoithoi-destinations", search, provinceCode, kind, contentState, page],
+    queryKey: [
+      "dichoithoi-destinations",
+      search,
+      provinceCode,
+      kind,
+      contentState,
+      sortBy,
+      sortDir,
+      page,
+      pageSize,
+    ],
     queryFn: () => {
-      const params = new URLSearchParams({ page: String(page), limit: "50" });
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(pageSize),
+        sortBy,
+        sortDir,
+      });
       if (search) params.set("q", search);
       if (provinceCode) params.set("provinceCode", provinceCode);
       if (kind) params.set("kind", kind);
@@ -116,7 +142,87 @@ export default function DichoithoiPage() {
   });
 
   const data = listQuery.data;
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
+
+  // Doi filter -> ve trang 1 (tranh ket o trang trong)
+  function resetToFirstPage() {
+    setPage(1);
+  }
+  function handleSort(key: string, dir: SortDirection) {
+    setSortBy(key as DestinationSortBy);
+    setSortDir(dir);
+    resetToFirstPage();
+  }
+
+  const columns: DataTableColumn<DestinationMirror>[] = [
+    {
+      key: "name",
+      header: "Tên",
+      sortable: true,
+      render: (d) => (
+        <>
+          <a
+            href={`/dichoithoi/${d.slug}`}
+            className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            {d.name}
+          </a>
+          <div className="text-xs text-zinc-400">{d.slug}</div>
+        </>
+      ),
+    },
+    {
+      key: "province",
+      header: "Tỉnh/Thành",
+      sortable: true,
+      render: (d) => d.provinceName ?? "—",
+    },
+    {
+      key: "kind",
+      header: "Cấp",
+      sortable: true,
+      render: (d) => KIND_LABELS[d.kind],
+    },
+    {
+      key: "contentState",
+      header: "Trạng thái bài",
+      sortable: true,
+      render: (d) => (
+        <Badge tone={CONTENT_STATE_TONES[d.contentState]}>
+          {CONTENT_STATE_LABELS[d.contentState]}
+        </Badge>
+      ),
+    },
+    {
+      key: "syncFlags",
+      header: "Cảnh báo",
+      render: (d) =>
+        d.syncFlags.map((f) => (
+          <Badge key={f} tone="amber" className="mr-1">
+            {SYNC_FLAG_LABELS[f] ?? f}
+          </Badge>
+        )),
+    },
+    {
+      key: "actions",
+      header: "Hành động",
+      cellClassName: "whitespace-nowrap",
+      render: (d) => (
+        <span className="flex items-center gap-3 text-xs">
+          <a href={`/dichoithoi/${d.slug}`} className={buttonClasses({ variant: "primary", size: "sm" })}>
+            Chi tiết →
+          </a>
+          <a
+            href={`${SITE_BASE_URL}/diem-den/${d.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 hover:underline dark:text-blue-400"
+          >
+            Mở web ↗
+          </a>
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -128,25 +234,19 @@ export default function DichoithoiPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <a
-            href="/dichoithoi/new"
-            className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-          >
+          <a href="/dichoithoi/new" className={buttonClasses({ variant: "secondary" })}>
             + Thêm điểm đến
           </a>
-          <a
-            href="/dichoithoi/import"
-            className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-          >
+          <a href="/dichoithoi/import" className={buttonClasses({ variant: "secondary" })}>
             Nhập từ file
           </a>
-          <button
+          <Button
+            variant="primary"
+            loading={syncMutation.isPending}
             onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-            className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
           >
             {syncMutation.isPending ? "Đang đồng bộ..." : "Đồng bộ từ website"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -178,29 +278,22 @@ export default function DichoithoiPage() {
       <div className="rounded border border-zinc-200 p-3 dark:border-zinc-800">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-medium">Công cụ:</span>
-          <button
-            onClick={() => relinkMutation.mutate(true)}
-            disabled={relinkMutation.isPending}
-            className="rounded border border-zinc-300 px-3 py-1 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-          >
+          <Button size="sm" loading={relinkMutation.isPending} onClick={() => relinkMutation.mutate(true)}>
             {relinkMutation.isPending ? "Đang quét..." : "Re-link toàn bộ (xem trước)"}
-          </button>
+          </Button>
           {relinkReport?.dryRun && relinkReport.changed > 0 && (
-            <button
+            <Button
+              size="sm"
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              loading={relinkMutation.isPending}
               onClick={() => relinkMutation.mutate(false)}
-              disabled={relinkMutation.isPending}
-              className="rounded bg-blue-600 px-3 py-1 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               Áp dụng {relinkReport.linksAdded} link vào website
-            </button>
+            </Button>
           )}
-          <button
-            onClick={() => recomputeMutation.mutate()}
-            disabled={recomputeMutation.isPending}
-            className="rounded border border-zinc-300 px-3 py-1 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-          >
+          <Button size="sm" loading={recomputeMutation.isPending} onClick={() => recomputeMutation.mutate()}>
             {recomputeMutation.isPending ? "Đang tính..." : "Tính lại khối liên quan"}
-          </button>
+          </Button>
         </div>
 
         {relinkReport && (
@@ -235,22 +328,21 @@ export default function DichoithoiPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <input
+        <Input
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
-            setPage(1);
+            resetToFirstPage();
           }}
           placeholder="Tìm theo tên (gõ không dấu được)..."
-          className="w-64 rounded border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="w-64"
         />
-        <select
+        <Select
           value={provinceCode}
           onChange={(e) => {
             setProvinceCode(e.target.value);
-            setPage(1);
+            resetToFirstPage();
           }}
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         >
           <option value="">Tất cả tỉnh/thành</option>
           {taxonomyQuery.data?.provinces.map((p) => (
@@ -258,14 +350,13 @@ export default function DichoithoiPage() {
               {p.shortName}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           value={kind}
           onChange={(e) => {
             setKind(e.target.value);
-            setPage(1);
+            resetToFirstPage();
           }}
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         >
           <option value="">Mọi cấp</option>
           {Object.entries(KIND_LABELS).map(([value, label]) => (
@@ -273,14 +364,13 @@ export default function DichoithoiPage() {
               {label}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           value={contentState}
           onChange={(e) => {
             setContentState(e.target.value);
-            setPage(1);
+            resetToFirstPage();
           }}
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         >
           <option value="">Mọi trạng thái bài</option>
           {Object.entries(CONTENT_STATE_LABELS).map(([value, label]) => (
@@ -288,121 +378,43 @@ export default function DichoithoiPage() {
               {label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      {listQuery.isLoading && <p className="text-sm text-zinc-500">Đang tải...</p>}
       {listQuery.isError && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
           {listQuery.error instanceof Error ? listQuery.error.message : "Lỗi tải danh sách"}
         </div>
       )}
 
-      {data && data.items.length === 0 && (
-        <div className="rounded border border-zinc-200 p-8 text-center text-sm text-zinc-500 dark:border-zinc-800">
-          Chưa có điểm đến nào trong mirror.
-          <br />
-          Bấm <strong>"Đồng bộ từ website"</strong> để nạp dữ liệu lần đầu (cần chạy script
-          migration schema v2 trên SQL Server trước).
-        </div>
+      <DataTable
+        columns={columns}
+        items={data?.items ?? []}
+        rowKey={(d) => d.slug}
+        loading={listQuery.isLoading}
+        sortBy={sortBy}
+        sortDir={sortDir}
+        onSortChange={handleSort}
+        emptyMessage={
+          <span>
+            Chưa có điểm đến nào khớp bộ lọc. Bấm <strong>"Đồng bộ từ website"</strong> để nạp dữ
+            liệu lần đầu (cần chạy migration schema v2 trên SQL Server trước).
+          </span>
+        }
+      />
+
+      {data && data.total > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={data.total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            resetToFirstPage();
+          }}
+        />
       )}
-
-      {data && data.items.length > 0 && (
-        <>
-          <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
-            <table className="w-full text-sm">
-              <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Tên</th>
-                  <th className="px-3 py-2 font-medium">Tỉnh/Thành</th>
-                  <th className="px-3 py-2 font-medium">Cấp</th>
-                  <th className="px-3 py-2 font-medium">Trạng thái bài</th>
-                  <th className="px-3 py-2 font-medium">Cảnh báo</th>
-                  <th className="px-3 py-2 font-medium">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((d) => (
-                  <tr
-                    key={d.slug}
-                    className="border-t border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
-                  >
-                    <td className="px-3 py-2">
-                      <a
-                        href={`/dichoithoi/${d.slug}`}
-                        className="font-medium text-blue-600 hover:underline dark:text-blue-400"
-                      >
-                        {d.name}
-                      </a>
-                      <div className="text-xs text-zinc-400">{d.slug}</div>
-                    </td>
-                    <td className="px-3 py-2">{d.provinceName ?? "—"}</td>
-                    <td className="px-3 py-2">{KIND_LABELS[d.kind]}</td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={`rounded px-2 py-0.5 text-xs ${CONTENT_STATE_STYLES[d.contentState]}`}
-                      >
-                        {CONTENT_STATE_LABELS[d.contentState]}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      {d.syncFlags.length === 0
-                        ? ""
-                        : d.syncFlags.map((f) => (
-                            <span
-                              key={f}
-                              className="mr-1 rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                            >
-                              {SYNC_FLAG_LABELS[f] ?? f}
-                            </span>
-                          ))}
-                    </td>
-                    <td className="space-x-3 whitespace-nowrap px-3 py-2 text-xs">
-                      <a
-                        href={`/dichoithoi/${d.slug}`}
-                        className="rounded bg-zinc-900 px-2 py-1 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
-                      >
-                        Chi tiết →
-                      </a>
-                      <a
-                        href={`${SITE_BASE_URL}/diem-den/${d.slug}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 hover:underline dark:text-blue-400"
-                      >
-                        Mở web ↗
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex items-center justify-between text-sm text-zinc-500">
-            <span>
-              {data.total} điểm đến — trang {data.page}/{totalPages}
-            </span>
-            <div className="space-x-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="rounded border border-zinc-300 px-3 py-1 disabled:opacity-40 dark:border-zinc-700"
-              >
-                ← Trước
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="rounded border border-zinc-300 px-3 py-1 disabled:opacity-40 dark:border-zinc-700"
-              >
-                Sau →
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
     </div>
   );
 }

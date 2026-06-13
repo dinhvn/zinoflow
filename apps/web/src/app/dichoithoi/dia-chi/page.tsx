@@ -7,16 +7,21 @@ import {
   addressMappingsResponseSchema,
 } from "@zinoflow/contracts";
 import { apiGet } from "@/shared/api-client";
+import { Input } from "@/shared/ui/input";
+import { Pagination } from "@/shared/ui/pagination";
+import { Select } from "@/shared/ui/select";
 
 /**
  * Tra cuu dia chi cu -> moi sau sap nhap don vi hanh chinh 2025.
  * Du lieu tu bang admin_ward_mappings (seed dvhcvn) — chi doc.
+ * Bang giu header gop 2 tang (dia chi cu/moi) nen khong dung DataTable chung.
  */
 export default function DiaChiPage() {
   const [search, setSearch] = useState("");
   const [oldProvince, setOldProvince] = useState("");
   const [newProvince, setNewProvince] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   const provincesQuery = useQuery({
     queryKey: ["address-mapping-provinces"],
@@ -26,9 +31,9 @@ export default function DiaChiPage() {
   });
 
   const listQuery = useQuery({
-    queryKey: ["address-mappings", search, oldProvince, newProvince, page],
+    queryKey: ["address-mappings", search, oldProvince, newProvince, page, pageSize],
     queryFn: () => {
-      const params = new URLSearchParams({ page: String(page), limit: "50" });
+      const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
       if (search) params.set("q", search);
       if (oldProvince) params.set("oldProvinceName", oldProvince);
       if (newProvince) params.set("newProvinceName", newProvince);
@@ -37,7 +42,6 @@ export default function DiaChiPage() {
   });
 
   const data = listQuery.data;
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
 
   return (
     <div className="space-y-4">
@@ -50,22 +54,21 @@ export default function DiaChiPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <input
+        <Input
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setPage(1);
           }}
           placeholder="Tìm theo tên phường/xã, quận/huyện (gõ có dấu)..."
-          className="w-72 rounded border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="w-72"
         />
-        <select
+        <Select
           value={oldProvince}
           onChange={(e) => {
             setOldProvince(e.target.value);
             setPage(1);
           }}
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         >
           <option value="">Tỉnh/thành cũ (tất cả)</option>
           {provincesQuery.data?.oldProvinces.map((p) => (
@@ -73,14 +76,13 @@ export default function DiaChiPage() {
               {p}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           value={newProvince}
           onChange={(e) => {
             setNewProvince(e.target.value);
             setPage(1);
           }}
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         >
           <option value="">Tỉnh/thành mới (tất cả)</option>
           {provincesQuery.data?.newProvinces.map((p) => (
@@ -88,7 +90,7 @@ export default function DiaChiPage() {
               {p}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {listQuery.isLoading && <p className="text-sm text-zinc-500">Đang tải...</p>}
@@ -146,27 +148,16 @@ export default function DiaChiPage() {
             </table>
           </div>
 
-          <div className="flex items-center justify-between text-sm text-zinc-500">
-            <span>
-              {data.total.toLocaleString("vi-VN")} bản ghi — trang {data.page}/{totalPages}
-            </span>
-            <div className="space-x-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="rounded border border-zinc-300 px-3 py-1 disabled:opacity-40 dark:border-zinc-700"
-              >
-                ← Trước
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="rounded border border-zinc-300 px-3 py-1 disabled:opacity-40 dark:border-zinc-700"
-              >
-                Sau →
-              </button>
-            </div>
-          </div>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={data.total}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+          />
         </>
       )}
     </div>

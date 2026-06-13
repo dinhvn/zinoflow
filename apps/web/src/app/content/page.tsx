@@ -11,20 +11,24 @@ import {
   type CreateContentJobRequest,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
+import { Badge, type BadgeTone } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Select } from "@/shared/ui/select";
 
 const jobsListSchema = z.array(contentJobSchema);
 
 /** Job dang chay thi poll nhanh; xong het thi poll cham. */
 const ACTIVE_STATUSES: ContentJobStatus[] = ["Created", "GeneratingOutline"];
 
-const STATUS_STYLES: Record<string, string> = {
-  Created: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  GeneratingOutline: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 animate-pulse",
-  DraftReady: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-  InReview: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  Approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  Rejected: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
-  Failed: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+const STATUS_TONES: Record<string, BadgeTone> = {
+  Created: "gray",
+  GeneratingOutline: "blue",
+  DraftReady: "emerald",
+  InReview: "amber",
+  Approved: "emerald",
+  Rejected: "red",
+  Failed: "red",
 };
 
 export default function ContentPage() {
@@ -114,56 +118,52 @@ export default function ContentPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="mb-1 block text-zinc-500">Website</span>
-            <select
-              value={siteCode}
-              onChange={(e) => setSiteCode(e.target.value)}
-              className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
-            >
+            <Select value={siteCode} onChange={(e) => setSiteCode(e.target.value)} className="w-full">
               <option value="laruki">laruki.com (thời trang)</option>
               <option value="dochoi3s">dochoi3s.com (đồ chơi)</option>
-            </select>
+            </Select>
           </label>
 
           <label className="block text-sm">
             <span className="mb-1 block text-zinc-500">Loại bài viết</span>
-            <select
+            <Select
               value={articleType}
               onChange={(e) => setArticleType(e.target.value as ArticleType)}
-              className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+              className="w-full"
             >
               <option value="toplist">Top-list (danh sách sản phẩm tốt nhất)</option>
               <option value="review">Review một sản phẩm</option>
-            </select>
+            </Select>
           </label>
 
           <label className="block text-sm">
             <span className="mb-1 block text-zinc-500">AI Provider / Model</span>
             <div className="flex gap-2">
-              <select
+              <Select
                 value={selectedProvider?.key ?? ""}
                 onChange={(e) => {
                   setProvider(e.target.value);
                   setModel(""); // reset model khi doi provider
                 }}
-                className="w-1/2 rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+                className="w-1/2"
               >
                 {usableProviders.map((p) => (
                   <option key={p.key} value={p.key}>
                     {p.displayName}
                   </option>
                 ))}
-              </select>
-              <select
+              </Select>
+              <Select
                 value={selectedModel?.id ?? ""}
                 onChange={(e) => setModel(e.target.value)}
-                className="w-1/2 rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+                className="w-1/2"
               >
                 {(selectedProvider?.models ?? []).map((m) => (
                   <option key={m.id} value={m.id} title={m.costNote}>
                     {m.displayName}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             {selectedModel?.costNote && (
               <span className="mt-1 block text-xs text-zinc-400">{selectedModel.costNote}</span>
@@ -173,35 +173,36 @@ export default function ContentPage() {
 
         <label className="block text-sm">
           <span className="mb-1 block text-zinc-500">Chủ đề bài viết</span>
-          <input
+          <Input
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder="VD: Top 5 túi xách nữ da thật dưới 2 triệu"
             required
             minLength={5}
-            className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+            className="w-full"
           />
         </label>
 
         <label className="block text-sm">
           <span className="mb-1 block text-zinc-500">Từ khóa SEO (phân cách bằng dấu phẩy)</span>
-          <input
+          <Input
             value={keywords}
             onChange={(e) => setKeywords(e.target.value)}
             placeholder="VD: túi xách nữ, túi da thật"
-            className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+            className="w-full"
           />
         </label>
 
         {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
 
-        <button
+        <Button
           type="submit"
-          disabled={createJob.isPending || !selectedProvider}
-          className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          variant="primary"
+          loading={createJob.isPending}
+          disabled={!selectedProvider}
         >
           {createJob.isPending ? "Đang tạo..." : "Tạo bài viết"}
-        </button>
+        </Button>
       </form>
 
       {/* Danh sach jobs */}
@@ -230,20 +231,16 @@ export default function ContentPage() {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {job.status === "Failed" && (
-                  <button
-                    type="button"
-                    onClick={() => retryJob.mutate(job.id)}
-                    disabled={retryJob.isPending}
-                    className="rounded border border-zinc-300 px-2 py-0.5 text-xs hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-                  >
+                  <Button size="sm" loading={retryJob.isPending} onClick={() => retryJob.mutate(job.id)}>
                     {retryJob.isPending ? "Đang gửi..." : "Thử lại"}
-                  </button>
+                  </Button>
                 )}
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[job.status] ?? ""}`}
+                <Badge
+                  tone={STATUS_TONES[job.status] ?? "gray"}
+                  className={job.status === "GeneratingOutline" ? "animate-pulse" : undefined}
                 >
                   {job.status}
-                </span>
+                </Badge>
               </div>
             </li>
           ))}

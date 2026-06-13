@@ -10,6 +10,8 @@ import {
   type UpsertDestinationRequest,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
+import { Button } from "@/shared/ui/button";
+import { Select } from "@/shared/ui/select";
 
 /** Sinh slug tu ten: bo dau tieng Viet, d->d, ky tu khac -> gach ngang. */
 export function slugify(name: string): string {
@@ -209,19 +211,19 @@ export function DestinationMetadataForm({
           />
         </Field>
         <Field label="Cấp">
-          <select value={v.kind} onChange={(e) => set("kind", e.target.value as DestinationKind)} className={inputCls}>
+          <Select value={v.kind} onChange={(e) => set("kind", e.target.value as DestinationKind)} className="w-full">
             {KIND_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Tỉnh/Thành">
-          <select
+          <Select
             value={v.provinceCode}
             onChange={(e) => set("provinceCode", e.target.value)}
-            className={inputCls}
+            className="w-full"
           >
             <option value="">— Chọn tỉnh —</option>
             {taxonomyQuery.data?.provinces.map((p) => (
@@ -229,7 +231,7 @@ export function DestinationMetadataForm({
                 {p.shortName}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Điểm cha (slug) — để trống nếu không có">
           <input
@@ -253,14 +255,15 @@ export function DestinationMetadataForm({
 
       <Field label="Mô tả ngắn (card danh sách / SEO)">
         <div className="mb-1 flex items-center gap-2">
-          <button
-            type="button"
+          <Button
+            size="sm"
+            className="px-2 py-1 text-xs"
+            loading={suggest.isPending}
+            disabled={!v.name.trim()}
             onClick={() => v.name.trim() && suggest.mutate()}
-            disabled={!v.name.trim() || suggest.isPending}
-            className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
           >
             {suggest.isPending ? "Đang gợi ý..." : "✨ AI gợi ý mô tả + phân loại"}
-          </button>
+          </Button>
           {suggest.isError && (
             <span className="text-xs text-amber-600 dark:text-amber-400">
               Không gợi ý được (kiểm tra API key / quota)
@@ -289,13 +292,14 @@ export function DestinationMetadataForm({
             placeholder="vd: slug.webp hoặc diem-den/slug/thumb.webp"
             className={inputCls}
           />
-          <button
+          <Button
+            className="whitespace-nowrap"
+            loading={checkImage.isPending}
+            disabled={!v.thumbnail.trim()}
             onClick={() => v.thumbnail.trim() && checkImage.mutate()}
-            disabled={!v.thumbnail.trim() || checkImage.isPending}
-            className="whitespace-nowrap rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
           >
             Kiểm tra
-          </button>
+          </Button>
         </div>
         {imageCheck && (
           <p
@@ -333,13 +337,14 @@ export function DestinationMetadataForm({
         </Field>
       </div>
 
-      <button
+      <Button
+        variant="primary"
+        loading={save.isPending}
+        disabled={!v.name.trim() || !v.slug.trim()}
         onClick={() => save.mutate()}
-        disabled={save.isPending || !v.name.trim() || !v.slug.trim()}
-        className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
       >
         {save.isPending ? "Đang lưu..." : isNew ? "Tạo điểm đến" : "Lưu thay đổi"}
-      </button>
+      </Button>
     </div>
   );
 }

@@ -8,6 +8,8 @@ import {
   type DestinationImportRow,
 } from "@zinoflow/contracts";
 import { apiSend, ApiError } from "@/shared/api-client";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
 
 const CSV_HEADERS = [
   "name",
@@ -214,19 +216,21 @@ export default function ImportDestinationsPage() {
           Dòng đầu là tiêu đề cột (xem tên cột bên dưới). Tải về sẽ tự xem trước.
         </p>
         <div className="flex gap-2">
-          <input
+          <Input
             value={sheetUrl}
             onChange={(e) => setSheetUrl(e.target.value)}
             placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=0"
-            className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+            className="flex-1"
           />
-          <button
+          <Button
+            variant="primary"
+            className="whitespace-nowrap"
+            loading={fetchSheet.isPending}
+            disabled={!sheetUrl.trim()}
             onClick={() => sheetUrl.trim() && fetchSheet.mutate()}
-            disabled={!sheetUrl.trim() || fetchSheet.isPending}
-            className="whitespace-nowrap rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
           >
             {fetchSheet.isPending ? "Đang tải..." : "Tải từ Sheet"}
-          </button>
+          </Button>
         </div>
         <p className="mt-2 text-xs text-zinc-500">
           Cột hỗ trợ: {CSV_HEADERS.join(", ")}
@@ -254,21 +258,18 @@ export default function ImportDestinationsPage() {
           className="w-full rounded border border-zinc-300 bg-transparent p-2 font-mono text-xs dark:border-zinc-700"
         />
         <div className="mt-2 flex items-center gap-2">
-          <button
-            onClick={handleParse}
-            disabled={!text.trim()}
-            className="rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-          >
+          <Button size="sm" disabled={!text.trim()} onClick={handleParse}>
             Kiểm tra dữ liệu
-          </button>
+          </Button>
           {preview && (
-            <button
+            <Button
+              variant="primary"
+              size="sm"
+              loading={importMutation.isPending}
               onClick={() => importMutation.mutate(preview)}
-              disabled={importMutation.isPending}
-              className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
             >
               {importMutation.isPending ? "Đang nhập..." : `Nhập ${preview.length} điểm`}
-            </button>
+            </Button>
           )}
         </div>
 

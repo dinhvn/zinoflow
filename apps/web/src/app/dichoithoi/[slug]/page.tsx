@@ -17,6 +17,9 @@ import {
   DestinationMetadataForm,
   type DestinationMetaValues,
 } from "@/features/dichoithoi/destination-metadata-form";
+import { Button, buttonClasses } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Select } from "@/shared/ui/select";
 
 const KIND_LABELS: Record<DestinationKind, string> = {
   province: "Tỉnh/Thành",
@@ -237,19 +240,20 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
             </a>
           )}
           {canPublish && (
-            <button
+            <Button
+              size="sm"
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              loading={publish.isPending}
               onClick={() => publish.mutate()}
-              disabled={publish.isPending}
-              className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {publish.isPending ? "Đang đăng..." : "Đăng lên dichoithoi"}
-            </button>
+            </Button>
           )}
           <a
             href={`${SITE_BASE_URL}/diem-den/${d.slug}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
           >
             Mở web ↗
           </a>
@@ -332,7 +336,7 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               <div className="space-y-2">
                 {refUrls.map((row, i) => (
                   <div key={i} className="flex gap-2">
-                    <input
+                    <Input
                       value={row.label}
                       onChange={(e) =>
                         setRefUrls((rows) =>
@@ -340,9 +344,9 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                         )
                       }
                       placeholder="Nhãn (vd Giá vé)"
-                      className="w-36 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+                      className="w-36"
                     />
-                    <input
+                    <Input
                       value={row.url}
                       onChange={(e) =>
                         setRefUrls((rows) =>
@@ -350,15 +354,12 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                         )
                       }
                       placeholder="https://trang-nguon.vn/..."
-                      className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+                      className="flex-1"
                     />
                     {refUrls.length > 1 && (
-                      <button
-                        onClick={() => setRefUrls((rows) => rows.filter((_, j) => j !== i))}
-                        className="rounded border border-zinc-300 px-2 text-sm text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-                      >
+                      <Button onClick={() => setRefUrls((rows) => rows.filter((_, j) => j !== i))}>
                         ✕
-                      </button>
+                      </Button>
                     )}
                   </div>
                 ))}
@@ -382,31 +383,26 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  <select
+                  <Select
                     value={selectedProvider?.key ?? ""}
                     onChange={(e) => {
                       setProvider(e.target.value);
                       setModel(""); // reset model khi doi provider
                     }}
-                    className="rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
                   >
                     {usableProviders.map((p) => (
                       <option key={p.key} value={p.key}>
                         {p.displayName}
                       </option>
                     ))}
-                  </select>
-                  <select
-                    value={selectedModel?.id ?? ""}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
-                  >
+                  </Select>
+                  <Select value={selectedModel?.id ?? ""} onChange={(e) => setModel(e.target.value)}>
                     {(selectedProvider?.models ?? []).map((m) => (
                       <option key={m.id} value={m.id} title={m.costNote}>
                         {m.displayName}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
               {selectedModel?.costNote && (
@@ -415,24 +411,21 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
+              <Button
+                variant="primary"
+                loading={createJob.isPending}
+                disabled={!selectedProvider || !selectedModel}
                 onClick={() => createJob.mutate()}
-                disabled={createJob.isPending || !selectedProvider || !selectedModel}
-                className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
               >
                 {createJob.isPending
                   ? "Đang tạo bài..."
                   : d.contentState === "chua-co-bai"
                     ? "Tạo bài AI"
                     : "Viết lại / cập nhật bài"}
-              </button>
-              <button
-                onClick={() => saveInputs.mutate()}
-                disabled={saveInputs.isPending}
-                className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-              >
+              </Button>
+              <Button loading={saveInputs.isPending} onClick={() => saveInputs.mutate()}>
                 {saveInputs.isPending ? "Đang lưu..." : "Lưu thông tin (chưa tạo bài)"}
-              </button>
+              </Button>
               {inputsSaved && !saveInputs.isPending && (
                 <span className="text-xs text-emerald-600 dark:text-emerald-400">
                   ✅ Đã lưu — sẽ tự điền lại lần sau
