@@ -91,7 +91,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   }
 
   // --- Tao / cap nhat bai AI (spec §7.4) ---
-  const [showJobForm, setShowJobForm] = useState(false);
   const [userNotes, setUserNotes] = useState("");
   const [refUrls, setRefUrls] = useState<Array<{ label: string; url: string }>>([
     { label: "Giá vé", url: "" },
@@ -186,14 +185,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               Xem bài đang soạn
             </a>
           )}
-          {!d.activeContentJobId && (
-            <button
-              onClick={() => setShowJobForm((v) => !v)}
-              className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              {d.contentState === "chua-co-bai" ? "Tạo bài AI" : "Cập nhật bài"}
-            </button>
-          )}
           {canPublish && (
             <button
               onClick={() => publish.mutate()}
@@ -236,22 +227,57 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         </div>
       )}
 
-      {/* Form tao/cap nhat bai (spec §7.4) */}
-      {showJobForm && !d.activeContentJobId && (
-        <Group title="Tạo bài AI">
-          <div className="space-y-3">
+      {/* Cung cap thong tin cho AI viet bai (spec §7.4 / §3.5-3.6) */}
+      <Group title="✍️ Viết bài bằng AI">
+        {d.activeContentJobId ? (
+          <div className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p>
+              Đang có 1 bài {d.activeJobStatus ? `(${d.activeJobStatus})` : ""} cho điểm này.{" "}
+              <a
+                href={`/content/${d.activeContentJobId}`}
+                className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Mở bài để xem / duyệt →
+              </a>
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Muốn viết lại với thông tin mới? Hãy hoàn tất (hoặc từ chối) bài hiện tại trước.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="rounded bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-900">
+              AI tự dùng dữ liệu điểm đến phía trên (tên, địa chỉ, tọa độ, điểm lân cận) làm nền.
+              Phần dưới đây là nơi bạn <strong>bổ sung thông tin chính xác</strong> và{" "}
+              <strong>website để AI đọc thêm</strong> — AI không bịa giá vé / giờ mở cửa, sẽ ưu tiên
+              dữ liệu bạn cung cấp.
+            </p>
+
             <div>
-              <label className="mb-1 block text-sm font-medium">Ghi chú cho AI — tùy chọn</label>
+              <label className="mb-1 block text-sm font-medium">
+                Thông tin bạn cung cấp thêm cho AI
+              </label>
+              <p className="mb-1 text-xs text-zinc-500">
+                Ví dụ: giá vé người lớn 70.000đ / trẻ em 30.000đ, mở cửa 6h–18h, đặc sản gần đó,
+                điểm nên nhấn mạnh, lưu ý mùa cao điểm...
+              </p>
               <textarea
                 value={userNotes}
                 onChange={(e) => setUserNotes(e.target.value)}
-                rows={3}
-                placeholder="Giá vé, giờ mở cửa, điểm cần nhấn mạnh..."
+                rows={4}
+                placeholder="Nhập thông tin chính xác bạn muốn AI dùng trong bài..."
                 className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
               />
             </div>
+
             <div>
-              <label className="mb-1 block text-sm font-medium">URL nguồn theo trường — tùy chọn</label>
+              <label className="mb-1 block text-sm font-medium">
+                Website nguồn để AI đọc thêm
+              </label>
+              <p className="mb-2 text-xs text-zinc-500">
+                Dán link trang chính thức (giá vé, giờ mở cửa, giới thiệu...). AI sẽ đọc nội dung
+                trang và dùng làm dữ liệu, ghi chú nguồn. Tối đa 5 nguồn.
+              </p>
               <div className="space-y-2">
                 {refUrls.map((row, i) => (
                   <div key={i} className="flex gap-2">
@@ -262,8 +288,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                           rows.map((r, j) => (j === i ? { ...r, label: e.target.value } : r)),
                         )
                       }
-                      placeholder="Trường"
-                      className="w-32 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+                      placeholder="Nhãn (vd Giá vé)"
+                      className="w-36 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
                     />
                     <input
                       value={row.url}
@@ -272,9 +298,17 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                           rows.map((r, j) => (j === i ? { ...r, url: e.target.value } : r)),
                         )
                       }
-                      placeholder="https://..."
+                      placeholder="https://trang-nguon.vn/..."
                       className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
                     />
+                    {refUrls.length > 1 && (
+                      <button
+                        onClick={() => setRefUrls((rows) => rows.filter((_, j) => j !== i))}
+                        className="rounded border border-zinc-300 px-2 text-sm text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -287,16 +321,21 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                 </button>
               )}
             </div>
+
             <button
               onClick={() => createJob.mutate()}
               disabled={createJob.isPending}
-              className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+              className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
             >
-              {createJob.isPending ? "Đang tạo job..." : "Tạo bài"}
+              {createJob.isPending
+                ? "Đang tạo bài..."
+                : d.contentState === "chua-co-bai"
+                  ? "Tạo bài AI"
+                  : "Viết lại / cập nhật bài"}
             </button>
           </div>
-        </Group>
-      )}
+        )}
+      </Group>
 
       {/* Noi dung bai viet hien tai tren web (spec §7.3 tab Noi dung) */}
       <Group title="Nội dung bài viết (đang hiển thị trên web)">
