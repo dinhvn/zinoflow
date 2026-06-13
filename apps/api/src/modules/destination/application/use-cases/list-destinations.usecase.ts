@@ -8,6 +8,10 @@ import {
   DESTINATION_MIRROR_REPOSITORY,
   type DestinationMirrorRepository,
 } from "../ports/destination-mirror.repository";
+import {
+  CONTENT_JOB_REPOSITORY,
+  type ContentJobRepository,
+} from "../../../ai-content/application/ports/content-job.repository";
 import { deriveContentState } from "../../domain/destination-mirror";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
@@ -17,16 +21,33 @@ export class ListDestinationsUseCase {
   constructor(
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly mirrorRepo: DestinationMirrorRepository,
+    @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
   ) {}
 
   async execute(query: ListDestinationsQuery): Promise<ListDestinationsResponse> {
     const { items, total } = await this.mirrorRepo.list(query);
+    await this.clearRejectedJobPointers(items);
     return {
       items: items.map((e) => this.toDto(e)),
       total,
       page: query.page,
       limit: query.limit,
     };
+  }
+
+  /**
+   * Self-healing: job Rejected la terminal — diem den khong con "dang soan".
+   * Clear con tro de UI hien lai nut Tao bai (Failed GIU pointer: con retry duoc).
+   */
+  private async clearRejectedJobPointers(items: DestinationMirrorEntity[]): Promise<void> {
+    for (const item of items) {
+      if (!item.activeContentJobId) continue;
+      const job = await this.jobRepo.findById(item.activeContentJobId);
+      if (job && job.toSnapshot().status === "Rejected") {
+        await this.mirrorRepo.setActiveJob(item.slug, null);
+        item.activeContentJobId = null;
+      }
+    }
   }
 
   private toDto(e: DestinationMirrorEntity): DestinationMirror {

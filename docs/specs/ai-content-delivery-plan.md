@@ -176,8 +176,18 @@ Phase C — Publish + auto-link (3-4 ngay) — ✅ CODE XONG 12/06/2026:
    - updateNotice: model tu suy "06/2024" theo kien thuc nen -> them bien
      {{currentDate}} vao prompt frame (migration v2, pattern version cu giu nguyen).
      ⏳ Chua kiem chung lai bang provider that (het quota ngay) — bai sau se ro.
+   ✅ {{currentDate}} kiem chung lai bang gemini-2.5-flash-lite (13/06/2026):
+   updateNotice ra dung "thang 06/2026". Meo quota: moi model co quota ngay RIENG
+   tren free tier — het flash thi dung flash-lite.
+   ✅ Reference fetcher (13/06/2026) — don gian hoa so voi spec §3.6: KHONG co buoc
+   haiku extract + xac nhan form; text trang (fetch tinh, SSRF guard, cat 8k chars)
+   dua thang vao sourceContext kem nhan + URL de model chinh tu doc. Modal tao job
+   tren /dichoithoi: o ghi chu + toi da 5 URL nguon theo truong. 1 nguon loi khong
+   lam chet job — ghi chu "can kiem tra tay" vao ngu canh.
+   ✅ Self-healing: job Rejected la terminal — list tu clear activeContentJobId
+   (Failed GIU pointer de con retry).
    Con lai cua M4 (lam tiep):
-   - Thumbnail field + check ton tai; reference fetcher (URL gia ve -> haiku).
+   - Thumbnail field + check ton tai.
    - Tao diem den MOI hoan toan tu AI tool (hien chi publish diem da ton tai).
    - Review tay + publish 1 bai THAT (job Nui Ham Rong dang DraftReady cho duyet).
 

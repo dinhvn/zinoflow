@@ -10,6 +10,8 @@ import {
   CONTENT_JOB_REPOSITORY,
   type ContentJobRepository,
 } from "../../../ai-content/application/ports/content-job.repository";
+import { REFERENCE_FETCHER, type ReferenceFetcher } from "../ports/reference-fetcher.port";
+import { stripHtml } from "../../../shared/text/strip-html";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 import {
   DESTINATION_MIRROR_REPOSITORY,
@@ -39,6 +41,7 @@ export class CreateDestinationJobUseCase {
     private readonly mirrorRepo: DestinationMirrorRepository,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
+    @Inject(REFERENCE_FETCHER) private readonly referenceFetcher: ReferenceFetcher,
     private readonly createContentJob: CreateContentJobUseCase,
   ) {}
 
@@ -145,17 +148,24 @@ export class CreateDestinationJobUseCase {
       parts.push(request.userNotes.trim());
     }
 
+    // Nguon tham khao theo truong (spec §3.6): fetch text + ghi ro URL de AI chu
+    // thich nguon. 1 nguon loi khong lam chet job — ghi chu de nguoi duyet biet.
+    for (const ref of request.referenceUrls ?? []) {
+      try {
+        const text = await this.referenceFetcher.fetchText(ref.url);
+        parts.push("", `## Nguồn tham khảo cho "${ref.label}" (${ref.url})`);
+        parts.push(text || "(trang không có nội dung text)");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`Bo qua nguon tham khao ${ref.url}: ${message}`);
+        parts.push(
+          "",
+          `## Nguồn tham khảo cho "${ref.label}" (${ref.url})`,
+          "(không tải được trang — dữ liệu trường này cần kiểm tra tay)",
+        );
+      }
+    }
+
     return parts.join("\n");
   }
-}
-
-/** Bo tag HTML + gom khoang trang — du tot cho ngu canh prompt. */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
 }

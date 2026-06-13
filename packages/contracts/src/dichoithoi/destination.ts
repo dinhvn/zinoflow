@@ -86,12 +86,22 @@ export const syncDestinationsResultSchema = z.object({
 });
 export type SyncDestinationsResult = z.infer<typeof syncDestinationsResultSchema>;
 
+/** URL nguon tham khao theo truong (spec §3.6) — gia ve tu trang ve chinh thuc... */
+export const referenceUrlSchema = z.object({
+  /** Truong du lieu ma nguon nay tham khao cho (vd "Giá vé", "Giờ mở cửa") */
+  label: z.string().min(1).max(100),
+  url: z.url().max(500),
+});
+export type ReferenceUrl = z.infer<typeof referenceUrlSchema>;
+
 /** Request tao content job cho 1 diem den (spec §5.1) */
 export const createDestinationJobRequestSchema = z.object({
   /** create = diem chua co bai AI; update = viet lai dua tren content hien tai */
   mode: z.enum(["create", "update"]),
   /** Ghi chu/du lieu bo sung nguoi dung cung cap (gia ve, gio mo cua...) — tuy chon */
   userNotes: z.string().max(10_000).optional(),
+  /** Nguon tham khao theo truong — fetch text dua vao ngu canh prompt (spec §3.6) */
+  referenceUrls: z.array(referenceUrlSchema).max(5).optional(),
   aiProvider: z.string().optional(),
   aiModel: z.string().optional(),
 });

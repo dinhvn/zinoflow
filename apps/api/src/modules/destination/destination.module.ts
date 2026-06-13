@@ -14,6 +14,8 @@ import {
   DESTINATION_MIRROR_REPOSITORY,
   DESTINATION_RELATION_REPOSITORY,
 } from "./application/ports/destination-mirror.repository";
+import { REFERENCE_FETCHER } from "./application/ports/reference-fetcher.port";
+import { HttpReferenceFetcher } from "./infrastructure/reference/http-reference-fetcher";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
 import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
@@ -52,6 +54,7 @@ import {
     RelinkAllUseCase,
     RecomputeRelatedService,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
+    { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
     { provide: DESTINATION_MIRROR_REPOSITORY, useClass: TypeOrmDestinationMirrorRepository },
     { provide: DESTINATION_RELATION_REPOSITORY, useClass: TypeOrmDestinationRelationRepository },
   ],
