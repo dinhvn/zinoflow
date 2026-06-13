@@ -304,6 +304,64 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         </Group>
       )}
 
+      {/* Noi dung bai viet hien tai tren web (spec §7.3 tab Noi dung) */}
+      <Group title="Nội dung bài viết (đang hiển thị trên web)">
+        {d.content ? (
+          <div className="space-y-3">
+            {(d.content.openingTime ||
+              d.content.ticketPrice ||
+              d.content.transport ||
+              d.content.food ||
+              d.content.hotel ||
+              d.content.tip) && (
+              <dl className="grid grid-cols-1 gap-x-6 gap-y-2 rounded border border-zinc-200 p-3 text-sm md:grid-cols-2 dark:border-zinc-800">
+                {(
+                  [
+                    ["Giờ mở cửa", d.content.openingTime],
+                    ["Giá vé", d.content.ticketPrice],
+                    ["Di chuyển", d.content.transport],
+                    ["Ăn uống", d.content.food],
+                    ["Lưu trú", d.content.hotel],
+                    ["Mẹo & lưu ý", d.content.tip],
+                  ] as const
+                )
+                  .filter(([, v]) => v)
+                  .map(([label, value]) => (
+                    <div key={label}>
+                      <dt className="font-medium text-zinc-500">{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+              </dl>
+            )}
+            <div
+              className="prose prose-zinc dark:prose-invert max-w-none text-sm
+                [&_a]:text-blue-600 [&_a]:underline [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold
+                [&_h3]:mt-3 [&_h3]:font-semibold [&_img]:rounded [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
+              // Noi dung tu DB website (bai AI da publish hoac bai viet tay) — preview admin
+              dangerouslySetInnerHTML={{ __html: d.content.contentHtml }}
+            />
+          </div>
+        ) : d.contentState === "dang-soan" && d.activeContentJobId ? (
+          <p className="text-sm text-zinc-500">
+            Bài đang soạn/duyệt, chưa publish.{" "}
+            <a
+              href={`/content/${d.activeContentJobId}`}
+              className="text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Xem bản nháp →
+            </a>
+          </p>
+        ) : (
+          <p className="text-sm text-zinc-500">
+            Chưa có nội dung trên web.{" "}
+            {d.siteId === null
+              ? "Điểm này chưa tồn tại trên website."
+              : "Tạo bài AI để thêm nội dung."}
+          </p>
+        )}
+      </Group>
+
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <Group title="Thông tin cơ bản">
           <Field label="Tên">{d.name}</Field>

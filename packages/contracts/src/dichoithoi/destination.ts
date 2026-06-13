@@ -177,6 +177,19 @@ export const relatedDestinationRefSchema = z.object({
 });
 export type RelatedDestinationRef = z.infer<typeof relatedDestinationRefSchema>;
 
+/** Noi dung hien tai cua 1 diem den tren website (SQL Server) — cho trang detail */
+export const destinationSiteContentSchema = z.object({
+  /** HTML than bai dang hien thi tren web (bai AI da publish hoac bai viet tay) */
+  contentHtml: z.string(),
+  openingTime: z.string().nullable(),
+  ticketPrice: z.string().nullable(),
+  transport: z.string().nullable(),
+  food: z.string().nullable(),
+  hotel: z.string().nullable(),
+  tip: z.string().nullable(),
+});
+export type DestinationSiteContent = z.infer<typeof destinationSiteContentSchema>;
+
 /**
  * Chi tiet 1 diem den (spec §7.3) — mirror + quan he + URL anh + job dang chay.
  * Tat ca thong tin gom theo nhom de trang detail hien day du.
@@ -186,6 +199,8 @@ export const destinationDetailSchema = destinationMirrorSchema.extend({
   imageUrl: z.string().nullable(),
   /** Trang thai job ai-content dang chay (neu co) — de hien link dung cho */
   activeJobStatus: z.string().nullable(),
+  /** Noi dung hien tai tren web — null khi chua co bai hoac chua ket noi SQL Server */
+  content: destinationSiteContentSchema.nullable(),
   /** Cay: cha truc tiep + con truc tiep */
   parent: relatedDestinationRefSchema.nullable(),
   children: z.array(relatedDestinationRefSchema),

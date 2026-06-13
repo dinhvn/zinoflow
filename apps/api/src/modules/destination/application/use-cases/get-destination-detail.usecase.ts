@@ -1,5 +1,9 @@
-import { Inject, Injectable } from "@nestjs/common";
-import type { DestinationDetail, RelatedDestinationRef } from "@zinoflow/contracts";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import type {
+  DestinationDetail,
+  DestinationSiteContent,
+  RelatedDestinationRef,
+} from "@zinoflow/contracts";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 import {
   DESTINATION_MIRROR_REPOSITORY,
@@ -7,6 +11,7 @@ import {
   type DestinationMirrorRepository,
   type DestinationRelationRepository,
 } from "../ports/destination-mirror.repository";
+import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 import {
   CONTENT_JOB_REPOSITORY,
   type ContentJobRepository,
@@ -25,6 +30,8 @@ const NEARBY_PREVIEW_COUNT = 8;
  */
 @Injectable()
 export class GetDestinationDetailUseCase {
+  private readonly logger = new Logger(GetDestinationDetailUseCase.name);
+
   constructor(
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly mirrorRepo: DestinationMirrorRepository,
@@ -32,6 +39,7 @@ export class GetDestinationDetailUseCase {
     private readonly relationRepo: DestinationRelationRepository,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
+    @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
   ) {}
 
   async execute(slug: string): Promise<DestinationDetail> {
@@ -81,6 +89,10 @@ export class GetDestinationDetailUseCase {
       .map((sourceSlug) => this.toRef(bySlug.get(sourceSlug)))
       .filter((r): r is RelatedDestinationRef => r !== null);
 
+    // Noi dung hien tai tren web (bai AI da publish hoac bai viet tay) — best-effort:
+    // SQL Server co the chua cau hinh hoac diem chua co bai -> content = null.
+    const content = await this.fetchSiteContent(entity.siteId);
+
     return {
       siteId: entity.siteId,
       slug: entity.slug,
@@ -112,6 +124,7 @@ export class GetDestinationDetailUseCase {
       syncedAt: entity.syncedAt?.toISOString() ?? null,
       imageUrl: this.imageChecker.buildUrl(entity.thumbnail),
       activeJobStatus,
+      content,
       parent,
       children,
       nearby,
@@ -136,6 +149,29 @@ export class GetDestinationDetailUseCase {
       }),
       distanceMeters,
     };
+  }
+
+  /** Doc noi dung hien tai tren site — null khi chua co bai / chua cau hinh SQL. */
+  private async fetchSiteContent(siteId: number | null): Promise<DestinationSiteContent | null> {
+    if (siteId === null) return null;
+    try {
+      const current = await this.siteDb.fetchDestinationContent(siteId);
+      if (!current?.contentHtml?.trim()) return null;
+      return {
+        contentHtml: current.contentHtml,
+        openingTime: current.openingTime,
+        ticketPrice: current.ticketPrice,
+        transport: current.transport,
+        food: current.food,
+        hotel: current.hotel,
+        tip: current.tip,
+      };
+    } catch (err) {
+      this.logger.warn(
+        `Khong doc duoc noi dung site cho siteId=${siteId}: ${err instanceof Error ? err.message : err}`,
+      );
+      return null;
+    }
   }
 }
 
