@@ -17,3 +17,15 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/*
+ * Native <select> dropdown: o dark mode, popup option do trinh duyet (Windows/Chrome)
+ * render theo mau control — neu select de nen trong suot thi list ra nen trang, chu
+ * xam, rat kho doc. Ep option/optgroup dung token theme de MOI select trong app
+ * (hien tai lan sau nay) deu doc duoc, khong can class rieng tung cho.
+ */
+option,
+optgroup {
+  background-color: var(--background);
+  color: var(--foreground);
+}

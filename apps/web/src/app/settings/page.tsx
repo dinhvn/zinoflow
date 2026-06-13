@@ -63,12 +63,12 @@ export default function SettingsPage() {
                 aria-checked={p.isEnabled}
                 disabled={toggleProvider.isPending}
                 onClick={() => toggleProvider.mutate({ key: p.key, isEnabled: !p.isEnabled })}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0 transition-colors disabled:opacity-50 ${
                   p.isEnabled ? "bg-green-500" : "bg-zinc-300 dark:bg-zinc-700"
                 }`}
               >
                 <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
                     p.isEnabled ? "translate-x-5" : "translate-x-0.5"
                   }`}
                 />

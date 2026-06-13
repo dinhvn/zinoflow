@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { QueryProvider } from "@/shared/query-provider";
-import { ZinoFlowLogo } from "@/shared/zinoflow-logo";
+import { Sidebar } from "@/shared/sidebar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,41 +18,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-screen antialiased" suppressHydrationWarning>
         <QueryProvider>
           <div className="flex min-h-screen">
-            <aside className="w-56 shrink-0 border-r border-zinc-200 p-4 dark:border-zinc-800">
-              <h1 className="mb-6">
-                <ZinoFlowLogo />
-              </h1>
-              <nav className="space-y-2 text-sm">
-                <a href="/" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
-                  Dashboard
-                </a>
-                <a href="/content" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
-                  AI Content
-                </a>
-                {/* Khu Dichoithoi (spec dichoithoi-destination-spec §7.1) —
-                    Taxonomy / Review khach / Cong cu se hien khi sang giai doan 2 */}
-                <div className="pt-2">
-                  <div className="px-2 pb-1 text-xs font-semibold uppercase text-zinc-400">
-                    Dichoithoi
-                  </div>
-                  <a
-                    href="/dichoithoi"
-                    className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                  >
-                    Điểm đến
-                  </a>
-                  <a
-                    href="/dichoithoi/dia-chi"
-                    className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                  >
-                    Tra cứu địa chỉ
-                  </a>
-                </div>
-                <a href="/settings" className="block rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
-                  Settings
-                </a>
-              </nav>
-            </aside>
+            <Sidebar />
             <main className="flex-1 p-6">{children}</main>
           </div>
         </QueryProvider>
