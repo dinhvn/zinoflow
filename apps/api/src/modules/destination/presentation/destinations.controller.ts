@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import {
+  addressMappingsQuerySchema,
   checkImageRequestSchema,
   createDestinationJobRequestSchema,
   fetchSheetRequestSchema,
@@ -10,6 +11,9 @@ import {
   suggestDestinationMetaRequestSchema,
   updateThumbnailRequestSchema,
   upsertDestinationRequestSchema,
+  type AddressMappingProvinces,
+  type AddressMappingsQuery,
+  type AddressMappingsResponse,
   type CheckImageRequest,
   type CheckImageResponse,
   type CreateDestinationJobRequest,
@@ -44,6 +48,7 @@ import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnai
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
 import { UpsertDestinationUseCase } from "../application/use-cases/upsert-destination.usecase";
 import { ImportDestinationsUseCase } from "../application/use-cases/import-destinations.usecase";
+import { ListAddressMappingsUseCase } from "../application/use-cases/list-address-mappings.usecase";
 import { SuggestDestinationMetaUseCase } from "../../ai-content/application/use-cases/suggest-destination-meta.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
@@ -68,6 +73,7 @@ export class DestinationsController {
     private readonly getDetail: GetDestinationDetailUseCase,
     private readonly upsertDestination: UpsertDestinationUseCase,
     private readonly importDestinations: ImportDestinationsUseCase,
+    private readonly listAddressMappings: ListAddressMappingsUseCase,
     private readonly suggestMeta: SuggestDestinationMetaUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
@@ -133,6 +139,21 @@ export class DestinationsController {
   @Get("taxonomy")
   taxonomy(): Promise<DestinationTaxonomy> {
     return this.getTaxonomy.execute();
+  }
+
+  /** Tra cuu dia chi cu->moi sau sap nhap (trang /dichoithoi/dia-chi). Truoc ":slug". */
+  @Get("address-mappings")
+  addressMappings(
+    @Query(new ZodValidationPipe(addressMappingsQuerySchema))
+    query: AddressMappingsQuery,
+  ): Promise<AddressMappingsResponse> {
+    return this.listAddressMappings.list(query);
+  }
+
+  /** Danh sach tinh/thanh (cu + moi) cho bo loc tra cuu dia chi. Truoc ":slug". */
+  @Get("address-mappings/provinces")
+  addressMappingProvinces(): Promise<AddressMappingProvinces> {
+    return this.listAddressMappings.provinces();
   }
 
   /**

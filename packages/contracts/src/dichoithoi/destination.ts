@@ -352,6 +352,50 @@ export const destinationTaxonomySchema = z.object({
   provinces: z.array(
     z.object({ provinceCode: z.string(), name: z.string(), shortName: z.string() }),
   ),
-  types: z.array(z.object({ id: z.number().int(), slug: z.string(), name: z.string() })),
+  // id: SQL Server driver co the tra ve dang chuoi ("64") — coerce de khong vo taxonomy
+  types: z.array(z.object({ id: z.coerce.number().int(), slug: z.string(), name: z.string() })),
 });
 export type DestinationTaxonomy = z.infer<typeof destinationTaxonomySchema>;
+
+/**
+ * Tra cuu dia chi cu -> moi (sau sap nhap don vi hanh chinh 2025).
+ * Nguon: bang admin_ward_mappings (seed dvhcvn). Chi doc, phuc vu tra cuu.
+ */
+export const addressMappingsQuerySchema = z.object({
+  /** Tim theo ten phuong/xa/quan cu hoac phuong/xa moi (go co dau) */
+  q: z.string().optional(),
+  /** Loc theo tinh/thanh CU (truoc sap nhap) */
+  oldProvinceName: z.string().optional(),
+  /** Loc theo tinh/thanh MOI (sau sap nhap) */
+  newProvinceName: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
+export type AddressMappingsQuery = z.infer<typeof addressMappingsQuerySchema>;
+
+export const addressMappingSchema = z.object({
+  id: z.number().int(),
+  oldWardCode: z.string().nullable(),
+  oldWardName: z.string().nullable(),
+  oldDistrictName: z.string().nullable(),
+  oldProvinceName: z.string().nullable(),
+  newWardCode: z.string().nullable(),
+  newWardName: z.string().nullable(),
+  newProvinceName: z.string().nullable(),
+});
+export type AddressMapping = z.infer<typeof addressMappingSchema>;
+
+export const addressMappingsResponseSchema = z.object({
+  items: z.array(addressMappingSchema),
+  total: z.number().int(),
+  page: z.number().int(),
+  limit: z.number().int(),
+});
+export type AddressMappingsResponse = z.infer<typeof addressMappingsResponseSchema>;
+
+/** Danh sach tinh/thanh phuc vu bo loc tra cuu dia chi (cu va moi) */
+export const addressMappingProvincesSchema = z.object({
+  oldProvinces: z.array(z.string()),
+  newProvinces: z.array(z.string()),
+});
+export type AddressMappingProvinces = z.infer<typeof addressMappingProvincesSchema>;

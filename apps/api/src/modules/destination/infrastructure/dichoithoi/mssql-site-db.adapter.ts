@@ -113,7 +113,8 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     const rows = await this.queryWithRetry<{ Id: number; Slug: string; Name: string }>(
       `SELECT Id, Slug, Name FROM v2.DestinationType ORDER BY [Order], Name`,
     );
-    return rows.map((r) => ({ id: r.Id, slug: r.Slug, name: r.Name }));
+    // Driver SQL Server co the tra Id dang chuoi — ep ve number cho dung contract
+    return rows.map((r) => ({ id: Number(r.Id), slug: r.Slug, name: r.Name }));
   }
 
   /**

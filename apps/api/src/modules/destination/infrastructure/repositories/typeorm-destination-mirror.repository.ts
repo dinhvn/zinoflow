@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import type { ListDestinationsQuery } from "@zinoflow/contracts";
+import type { AddressMappingsQuery, ListDestinationsQuery } from "@zinoflow/contracts";
 import { DestinationMirrorEntity } from "../entities/destination-mirror.entity";
-import { AdminProvinceEntity } from "../entities/admin-units.entity";
+import { AdminProvinceEntity, AdminWardMappingEntity } from "../entities/admin-units.entity";
 import type {
+  AddressMappingsListResult,
   DestinationMetadataInput,
   DestinationMirrorListResult,
   DestinationMirrorRepository,
@@ -22,6 +23,8 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     private readonly repo: Repository<DestinationMirrorEntity>,
     @InjectRepository(AdminProvinceEntity)
     private readonly provinceRepo: Repository<AdminProvinceEntity>,
+    @InjectRepository(AdminWardMappingEntity)
+    private readonly wardMappingRepo: Repository<AdminWardMappingEntity>,
   ) {}
 
   findAll(): Promise<DestinationMirrorEntity[]> {
@@ -202,5 +205,62 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       name: p.name,
       shortName: p.shortName,
     }));
+  }
+
+  async listAddressMappings(query: AddressMappingsQuery): Promise<AddressMappingsListResult> {
+    const qb = this.wardMappingRepo.createQueryBuilder("m");
+
+    if (query.q?.trim()) {
+      const term = `%${query.q.trim()}%`;
+      qb.andWhere(
+        "(m.oldWardName ILIKE :term OR m.oldDistrictName ILIKE :term OR m.newWardName ILIKE :term)",
+        { term },
+      );
+    }
+    if (query.oldProvinceName) {
+      qb.andWhere("m.oldProvinceName = :op", { op: query.oldProvinceName });
+    }
+    if (query.newProvinceName) {
+      qb.andWhere("m.newProvinceName = :np", { np: query.newProvinceName });
+    }
+
+    qb.orderBy("m.oldProvinceName", "ASC")
+      .addOrderBy("m.oldDistrictName", "ASC")
+      .addOrderBy("m.oldWardName", "ASC")
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit);
+
+    const [rows, total] = await qb.getManyAndCount();
+    return {
+      items: rows.map((m) => ({
+        id: m.id,
+        oldWardCode: m.oldWardCode,
+        oldWardName: m.oldWardName,
+        oldDistrictName: m.oldDistrictName,
+        oldProvinceName: m.oldProvinceName,
+        newWardCode: m.newWardCode,
+        newWardName: m.newWardName,
+        newProvinceName: m.newProvinceName,
+      })),
+      total,
+    };
+  }
+
+  async listAddressMappingProvinces(): Promise<{ oldProvinces: string[]; newProvinces: string[] }> {
+    const distinct = async (column: "oldProvinceName" | "newProvinceName") => {
+      const rows = await this.wardMappingRepo
+        .createQueryBuilder("m")
+        .select(`m.${column}`, "name")
+        .where(`m.${column} IS NOT NULL`)
+        .distinct(true)
+        .orderBy("name", "ASC")
+        .getRawMany<{ name: string }>();
+      return rows.map((r) => r.name);
+    };
+    const [oldProvinces, newProvinces] = await Promise.all([
+      distinct("oldProvinceName"),
+      distinct("newProvinceName"),
+    ]);
+    return { oldProvinces, newProvinces };
   }
 }

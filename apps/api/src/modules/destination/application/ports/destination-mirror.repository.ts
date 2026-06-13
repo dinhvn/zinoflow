@@ -1,4 +1,4 @@
-import type { ListDestinationsQuery } from "@zinoflow/contracts";
+import type { AddressMapping, AddressMappingsQuery, ListDestinationsQuery } from "@zinoflow/contracts";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
 
@@ -69,6 +69,15 @@ export interface DestinationMirrorRepository {
   markPublished(slug: string, contentHash: string): Promise<void>;
   /** 34 tinh tu admin_provinces (seed dvhcvn) cho form/filter */
   listProvinces(): Promise<ProvinceOption[]>;
+  /** Tra cuu dia chi cu->moi (admin_ward_mappings) — phan trang + loc */
+  listAddressMappings(query: AddressMappingsQuery): Promise<AddressMappingsListResult>;
+  /** Danh sach ten tinh/thanh phan biet (cu va moi) cho bo loc tra cuu */
+  listAddressMappingProvinces(): Promise<{ oldProvinces: string[]; newProvinces: string[] }>;
+}
+
+export interface AddressMappingsListResult {
+  items: AddressMapping[];
+  total: number;
 }
 
 /**
