@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createDestinationJobResponseSchema,
   destinationDetailSchema,
+  listAiProvidersResponseSchema,
   publishDestinationResultSchema,
   type DestinationContentState,
   type DestinationDetail,
@@ -90,6 +91,22 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     void queryClient.invalidateQueries({ queryKey: ["destination-detail", slug] });
   }
 
+  // --- Chon AI provider / model (spec §7.4 "chon provider/model nhu form job") ---
+  const [provider, setProvider] = useState("");
+  const [model, setModel] = useState("");
+  const providersQuery = useQuery({
+    queryKey: ["ai-providers"],
+    queryFn: () => apiGet("/content/ai-providers", listAiProvidersResponseSchema),
+  });
+  // Provider kha dung: co key + dang bat + co model. Provider dau tien lam default.
+  const usableProviders = (providersQuery.data?.providers ?? []).filter(
+    (p) => p.isConfigured && p.isEnabled && p.models.length > 0,
+  );
+  const selectedProvider =
+    usableProviders.find((p) => p.key === provider) ?? usableProviders[0] ?? null;
+  const selectedModel =
+    selectedProvider?.models.find((m) => m.id === model) ?? selectedProvider?.models[0] ?? null;
+
   // --- Tao / cap nhat bai AI (spec §7.4) ---
   const [userNotes, setUserNotes] = useState("");
   const [refUrls, setRefUrls] = useState<Array<{ label: string; url: string }>>([
@@ -136,6 +153,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           mode: d?.contentState === "chua-co-bai" ? "create" : "update",
           userNotes: body.userNotes,
           referenceUrls: body.referenceUrls.length ? body.referenceUrls : undefined,
+          aiProvider: selectedProvider?.key,
+          aiModel: selectedModel?.id,
         }),
       );
     },
@@ -354,10 +373,51 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               )}
             </div>
 
+            <div>
+              <label className="mb-1 block text-sm font-medium">AI Provider / Model</label>
+              {usableProviders.length === 0 ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Chưa có AI provider khả dụng — kiểm tra API key và bật provider trong trang
+                  Settings.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={selectedProvider?.key ?? ""}
+                    onChange={(e) => {
+                      setProvider(e.target.value);
+                      setModel(""); // reset model khi doi provider
+                    }}
+                    className="rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+                  >
+                    {usableProviders.map((p) => (
+                      <option key={p.key} value={p.key}>
+                        {p.displayName}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedModel?.id ?? ""}
+                    onChange={(e) => setModel(e.target.value)}
+                    className="rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+                  >
+                    {(selectedProvider?.models ?? []).map((m) => (
+                      <option key={m.id} value={m.id} title={m.costNote}>
+                        {m.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {selectedModel?.costNote && (
+                <span className="mt-1 block text-xs text-zinc-400">{selectedModel.costNote}</span>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => createJob.mutate()}
-                disabled={createJob.isPending}
+                disabled={createJob.isPending || !selectedProvider || !selectedModel}
                 className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
               >
                 {createJob.isPending
