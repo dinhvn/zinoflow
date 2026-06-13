@@ -212,6 +212,36 @@ export const destinationDetailSchema = destinationMirrorSchema.extend({
 });
 export type DestinationDetail = z.infer<typeof destinationDetailSchema>;
 
+/**
+ * Tao moi / sua metadata 1 diem den (spec §7.3 tab Thong tin).
+ * Dung chung cho POST /destinations (tao) va PATCH /destinations/:slug (sua).
+ * Khi tao: slug bat buoc, chua ton tai. Khi sua: slug lay tu URL, body bo qua slug.
+ */
+export const upsertDestinationRequestSchema = z.object({
+  /** kebab-case, dung lam URL /diem-den/{slug} — chi dat khi tao moi */
+  slug: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug chỉ gồm chữ thường, số và dấu gạch ngang"),
+  name: z.string().min(1).max(128),
+  kind: destinationKindSchema,
+  parentSlug: z.string().max(64).nullable().optional(),
+  provinceCode: z.string().max(2).nullable().optional(),
+  shortDescription: z.string().max(1000).nullable().optional(),
+  thumbnail: z.string().max(256).nullable().optional(),
+  lat: z.number().min(-90).max(90).nullable().optional(),
+  lng: z.number().min(-180).max(180).nullable().optional(),
+  addressNew: z.string().max(256).nullable().optional(),
+  addressOld: z.string().max(256).nullable().optional(),
+  contactPhone: z.string().max(32).nullable().optional(),
+  contactWebsite: z.string().max(256).nullable().optional(),
+  bookingUrl: z.string().max(512).nullable().optional(),
+  hotelGroupId: z.string().max(50).nullable().optional(),
+  isFeatured: z.boolean().optional(),
+});
+export type UpsertDestinationRequest = z.infer<typeof upsertDestinationRequestSchema>;
+
 /** Cap nhat duong dan thumbnail cho 1 diem den (spec §14.3 — MVP) */
 export const updateThumbnailRequestSchema = z.object({
   /** Duong dan TUONG DOI (vd "nui-ham-rong-sapa.webp" | "diem-den/{slug}/thumb.webp") */

@@ -1,9 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  checkImageResponseSchema,
   createDestinationJobResponseSchema,
   destinationDetailSchema,
   publishDestinationResultSchema,
@@ -13,6 +12,10 @@ import {
   type RelatedDestinationRef,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
+import {
+  DestinationMetadataForm,
+  type DestinationMetaValues,
+} from "@/features/dichoithoi/destination-metadata-form";
 
 const KIND_LABELS: Record<DestinationKind, string> = {
   province: "Tỉnh/Thành",
@@ -34,18 +37,34 @@ const CONTENT_STATE_STYLES: Record<DestinationContentState, string> = {
   "da-publish": "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
 };
 
-const SITE_STATUS_LABELS: Record<number, string> = {
-  0: "Nháp",
-  1: "Đang hiển thị",
-  2: "Đã ẩn",
-};
-
 const SITE_BASE_URL = "https://dichoithoi.com";
 
 function formatDistance(meters: number | null): string {
   if (meters === null) return "";
   if (meters < 1000) return `${meters} m`;
   return `${(meters / 1000).toFixed(1).replace(".", ",")} km`;
+}
+
+/** Detail (API) -> gia tri khoi tao form metadata (string hoa, null -> "") */
+function detailToFormValues(d: DestinationDetail): DestinationMetaValues {
+  return {
+    slug: d.slug,
+    name: d.name,
+    kind: d.kind,
+    parentSlug: d.parentSlug ?? "",
+    provinceCode: d.provinceCode ?? "",
+    shortDescription: d.shortDescription ?? "",
+    thumbnail: d.thumbnail ?? "",
+    lat: d.lat === null ? "" : String(d.lat),
+    lng: d.lng === null ? "" : String(d.lng),
+    addressNew: d.addressNew ?? "",
+    addressOld: d.addressOld ?? "",
+    contactPhone: d.contactPhone ?? "",
+    contactWebsite: d.contactWebsite ?? "",
+    bookingUrl: d.bookingUrl ?? "",
+    hotelGroupId: d.hotelGroupId ?? "",
+    isFeatured: d.isFeatured,
+  };
 }
 
 /** Trang chi tiet diem den (spec §7.3) — moi diem (moi/cu) deu mo duoc, gom theo nhom. */
@@ -71,28 +90,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     void queryClient.invalidateQueries({ queryKey: ["destination-detail", slug] });
   }
 
-  // --- Anh dai dien (spec §14.3) ---
-  const [thumbnail, setThumbnail] = useState("");
-  const [imageCheck, setImageCheck] = useState<{ exists: boolean; url: string } | null>(null);
-  useEffect(() => {
-    if (d) setThumbnail(d.thumbnail ?? "");
-  }, [d?.thumbnail]);
-
-  const checkImage = useMutation({
-    mutationFn: async (path: string) =>
-      checkImageResponseSchema.parse(await apiSend("POST", "/destinations/check-image", { path })),
-    onSuccess: (r) => setImageCheck({ exists: r.exists, url: r.url }),
-  });
-  const saveThumbnail = useMutation({
-    mutationFn: () =>
-      apiSend("POST", `/destinations/${slug}/thumbnail`, { thumbnail: thumbnail.trim() || null }),
-    onSuccess: () => {
-      setActionError(null);
-      invalidate();
-    },
-    onError: (e) => setActionError(toActionError(e)),
-  });
-
   // --- Tao / cap nhat bai AI (spec §7.4) ---
   const [showJobForm, setShowJobForm] = useState(false);
   const [userNotes, setUserNotes] = useState("");
@@ -102,9 +99,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   ]);
   const createJob = useMutation({
     mutationFn: async () => {
-      if (thumbnail.trim() && thumbnail.trim() !== (d?.thumbnail ?? "")) {
-        await apiSend("POST", `/destinations/${slug}/thumbnail`, { thumbnail: thumbnail.trim() });
-      }
       const refs = refUrls.filter((r) => r.url.trim() && r.label.trim());
       return createDestinationJobResponseSchema.parse(
         await apiSend("POST", `/destinations/${slug}/jobs`, {
@@ -362,120 +356,19 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         )}
       </Group>
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <Group title="Thông tin cơ bản">
-          <Field label="Tên">{d.name}</Field>
-          <Field label="Slug" mono>
-            {d.slug}
-          </Field>
-          <Field label="Cấp">{KIND_LABELS[d.kind]}</Field>
-          <Field label="Tỉnh/Thành">{d.provinceName ?? "—"}</Field>
-          <Field label="Trạng thái trên web">
-            {d.siteStatus === null ? "—" : (SITE_STATUS_LABELS[d.siteStatus] ?? d.siteStatus)}
-          </Field>
-          <Field label="Nổi bật">{d.isFeatured ? "Có" : "Không"}</Field>
-          <Field label="Mô tả ngắn">{d.shortDescription ?? "—"}</Field>
-        </Group>
-
-        <Group title="Vị trí & địa chỉ">
-          <Field label="Địa chỉ mới (sau sáp nhập)">{d.addressNew ?? "—"}</Field>
-          <Field label="Địa chỉ cũ (trước sáp nhập)">{d.addressOld ?? "—"}</Field>
-          <Field label="Tọa độ">
-            {d.lat !== null && d.lng !== null ? (
-              <a
-                href={`https://www.google.com/maps?q=${d.lat},${d.lng}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-600 hover:underline dark:text-blue-400"
-              >
-                {d.lat}, {d.lng} ↗
-              </a>
-            ) : (
-              "—"
-            )}
-          </Field>
-          <Field label="Thuộc">
-            {d.parent ? <RefLink r={d.parent} /> : "—"}
-          </Field>
-        </Group>
-
-        <Group title="Liên hệ & đặt chỗ">
-          <Field label="Điện thoại">{d.contactPhone ?? "—"}</Field>
-          <Field label="Website chính thức">
-            {d.contactWebsite ? (
-              <a
-                href={d.contactWebsite}
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-600 hover:underline dark:text-blue-400"
-              >
-                {d.contactWebsite} ↗
-              </a>
-            ) : (
-              "—"
-            )}
-          </Field>
-          <Field label="Link đặt vé/phòng">
-            {d.bookingUrl ? (
-              <a
-                href={d.bookingUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-600 hover:underline dark:text-blue-400"
-              >
-                {d.bookingUrl} ↗
-              </a>
-            ) : (
-              "—"
-            )}
-          </Field>
-          <Field label="Nhóm khách sạn">{d.hotelGroupId ?? "—"}</Field>
-        </Group>
-
-        <Group title="Ảnh đại diện">
-          {d.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={d.imageUrl}
-              alt={d.name}
-              className="mb-2 h-32 w-full rounded object-cover"
-              onError={(e) => (e.currentTarget.style.display = "none")}
-            />
-          )}
-          <div className="flex gap-2">
-            <input
-              value={thumbnail}
-              onChange={(e) => {
-                setThumbnail(e.target.value);
-                setImageCheck(null);
-              }}
-              placeholder="vd: slug.webp hoặc diem-den/slug/thumb.webp"
-              className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
-            />
-            <button
-              onClick={() => thumbnail.trim() && checkImage.mutate(thumbnail.trim())}
-              disabled={!thumbnail.trim() || checkImage.isPending}
-              className="whitespace-nowrap rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-            >
-              Kiểm tra
-            </button>
-            <button
-              onClick={() => saveThumbnail.mutate()}
-              disabled={saveThumbnail.isPending || thumbnail.trim() === (d.thumbnail ?? "")}
-              className="whitespace-nowrap rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              Lưu
-            </button>
-          </div>
-          {imageCheck && (
-            <p
-              className={`mt-1 text-xs ${imageCheck.exists ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}
-            >
-              {imageCheck.exists ? "✅ Ảnh tồn tại" : "⚠️ Chưa tìm thấy ảnh"}
-            </p>
-          )}
-        </Group>
-      </div>
+      {/* Thong tin diem den — form sua truc tiep (spec §7.3 tab Thong tin) */}
+      <Group title="Thông tin điểm đến">
+        <p className="mb-3 text-xs text-zinc-500">
+          {d.siteId === null
+            ? "Điểm tạo trong AI tool, chưa có trên web — sửa tại đây, sẽ ghi lên website khi publish bài."
+            : "Sửa và lưu sẽ cập nhật thẳng lên website (metadata, không cần publish lại bài)."}
+        </p>
+        <DestinationMetadataForm
+          initial={detailToFormValues(d)}
+          isNew={false}
+          onSaved={() => invalidate()}
+        />
+      </Group>
 
       {/* Quan he (spec §7.3 tab 3) */}
       <Group title="Quan hệ">

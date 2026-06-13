@@ -21,6 +21,7 @@ import type {
   PublishDestinationInput,
   SiteContentRow,
   SiteDestinationContent,
+  SiteDestinationMeta,
   SiteTypeRow,
 } from "../../application/ports/dichoithoi-site-db.port";
 
@@ -28,6 +29,12 @@ const KIND_BY_NUMBER: Record<number, SiteDestinationRow["kind"]> = {
   1: "province",
   2: "cluster",
   3: "poi",
+};
+
+const NUMBER_BY_KIND: Record<SiteDestinationMeta["kind"], number> = {
+  province: 1,
+  cluster: 2,
+  poi: 3,
 };
 
 /**
@@ -259,6 +266,72 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       `);
       return (result.rowsAffected[0] ?? 0) > 0;
     });
+  }
+
+  async createDestination(meta: SiteDestinationMeta): Promise<{ siteId: number }> {
+    const rows = await this.runWithRetry<Array<{ SiteId: number }>>(async (pool) => {
+      const request = this.bindMeta(pool.request(), meta);
+      const result = await request.query<{ SiteId: number }>(`
+        DECLARE @parentId int = (SELECT Id FROM v2.Destination WHERE Slug = @parentSlug);
+        DECLARE @provinceId int = (SELECT Id FROM v2.Province WHERE Code = @provinceCode);
+        INSERT INTO v2.Destination
+          (Slug, Kind, ParentId, ProvinceId, Name, NameUnaccented, ShortDescription, Thumbnail,
+           Lat, Lng, AddressNew, AddressOld, ContactPhone, ContactWebsite, BookingUrl,
+           HotelGroupId, IsFeatured, Status, ContentSource)
+        VALUES
+          (@slug, @kind, @parentId, @provinceId, @name, @nameUnaccented,
+           COALESCE(@shortDescription, N''), @thumbnail, @lat, @lng, @addressNew, @addressOld,
+           @contactPhone, @contactWebsite, @bookingUrl, @hotelGroupId, @isFeatured, 1, 1);
+        SELECT CAST(SCOPE_IDENTITY() AS int) AS SiteId;
+      `);
+      return result.recordset;
+    });
+    const siteId = rows[0]?.SiteId;
+    if (!siteId) {
+      throw new UpstreamApiError(`Không tạo được điểm đến "${meta.slug}" trên SQL Server`);
+    }
+    return { siteId };
+  }
+
+  async updateMetadata(siteId: number, meta: SiteDestinationMeta): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = this.bindMeta(pool.request(), meta);
+      request.input("siteId", siteId);
+      return request.query(`
+        DECLARE @parentId int = (SELECT Id FROM v2.Destination WHERE Slug = @parentSlug);
+        DECLARE @provinceId int = (SELECT Id FROM v2.Province WHERE Code = @provinceCode);
+        UPDATE v2.Destination SET
+          Kind = @kind, ParentId = @parentId, ProvinceId = @provinceId,
+          Name = @name, NameUnaccented = @nameUnaccented,
+          ShortDescription = COALESCE(@shortDescription, N''), Thumbnail = @thumbnail,
+          Lat = @lat, Lng = @lng, AddressNew = @addressNew, AddressOld = @addressOld,
+          ContactPhone = @contactPhone, ContactWebsite = @contactWebsite, BookingUrl = @bookingUrl,
+          HotelGroupId = @hotelGroupId, IsFeatured = @isFeatured, UpdatedAt = SYSUTCDATETIME()
+        WHERE Id = @siteId;
+      `);
+    });
+  }
+
+  /** Bind tham so metadata dung chung cho insert + update */
+  private bindMeta(request: sql.Request, meta: SiteDestinationMeta): sql.Request {
+    request.input("slug", meta.slug);
+    request.input("kind", NUMBER_BY_KIND[meta.kind]);
+    request.input("parentSlug", meta.parentSlug);
+    request.input("provinceCode", meta.provinceCode);
+    request.input("name", meta.name);
+    request.input("nameUnaccented", meta.nameUnaccented);
+    request.input("shortDescription", meta.shortDescription);
+    request.input("thumbnail", meta.thumbnail);
+    request.input("lat", meta.lat);
+    request.input("lng", meta.lng);
+    request.input("addressNew", meta.addressNew);
+    request.input("addressOld", meta.addressOld);
+    request.input("contactPhone", meta.contactPhone);
+    request.input("contactWebsite", meta.contactWebsite);
+    request.input("bookingUrl", meta.bookingUrl);
+    request.input("hotelGroupId", meta.hotelGroupId);
+    request.input("isFeatured", meta.isFeatured);
+    return request;
   }
 
   async updateThumbnail(siteId: number, thumbnail: string | null): Promise<void> {

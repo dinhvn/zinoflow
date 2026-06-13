@@ -54,6 +54,27 @@ export interface PublishDestinationInput {
   mentionedTargetSiteIds: readonly number[];
 }
 
+/** Metadata diem den ghi xuong v2.Destination (insert moi hoac update metadata) */
+export interface SiteDestinationMeta {
+  slug: string;
+  kind: "province" | "cluster" | "poi";
+  parentSlug: string | null;
+  provinceCode: string | null;
+  name: string;
+  nameUnaccented: string;
+  shortDescription: string | null;
+  thumbnail: string | null;
+  lat: number | null;
+  lng: number | null;
+  addressNew: string | null;
+  addressOld: string | null;
+  contactPhone: string | null;
+  contactWebsite: string | null;
+  bookingUrl: string | null;
+  hotelGroupId: string | null;
+  isFeatured: boolean;
+}
+
 export interface DichoithoiSiteDb {
   /** false khi thieu DICHOITHOI_DB_* trong env — UI hien huong dan cau hinh */
   isConfigured(): boolean;
@@ -82,4 +103,8 @@ export interface DichoithoiSiteDb {
   updateRelatedJson(siteId: number, relatedJson: string): Promise<boolean>;
   /** Cap nhat rieng cot Thumbnail (metadata — sua truc tiep, khong qua publish) */
   updateThumbnail(siteId: number, thumbnail: string | null): Promise<void>;
+  /** Insert diem den MOI (resolve ParentId/ProvinceId tu slug/code) -> tra ve siteId */
+  createDestination(meta: SiteDestinationMeta): Promise<{ siteId: number }>;
+  /** Cap nhat metadata diem den da ton tai (khong dong cham content/quan he) */
+  updateMetadata(siteId: number, meta: SiteDestinationMeta): Promise<void>;
 }

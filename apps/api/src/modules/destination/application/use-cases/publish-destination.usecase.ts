@@ -60,13 +60,6 @@ export class PublishDestinationUseCase {
         "Bấm Đồng bộ từ website rồi thử lại",
       ]);
     }
-    if (destination.siteId === null) {
-      // MVP Phase C: chi publish diem DA ton tai tren site (271 diem migrate).
-      // Tao diem den moi hoan toan tu AI tool = buoc sau (can taxonomy + thumbnail).
-      throw new DomainRuleError(
-        `Điểm đến "${slug}" chưa tồn tại trên website — phiên bản này chỉ publish điểm đã có`,
-      );
-    }
     const jobId = destination.activeContentJobId;
     if (!jobId) {
       throw new DomainRuleError(`Điểm đến "${destination.name}" không có bài đang chờ publish`, [
@@ -99,18 +92,46 @@ export class PublishDestinationUseCase {
     if (!draft?.article) throw new DomainRuleError("Draft đã duyệt không có nội dung bài viết");
     const article = destinationArticleSchema.parse(draft.article);
 
+    // Diem MOI (chua co tren web): INSERT shell xuong SQL Server lay siteId truoc khi
+    // ghi noi dung. Diem cu: dung siteId san co.
+    let siteId = destination.siteId;
+    if (siteId === null) {
+      const created = await this.siteDb.createDestination({
+        slug: destination.slug,
+        kind: destination.kind as "province" | "cluster" | "poi",
+        parentSlug: destination.parentSlug,
+        provinceCode: destination.provinceCode,
+        name: destination.name,
+        nameUnaccented: destination.nameUnaccented,
+        shortDescription: article.metadata.description,
+        thumbnail: destination.thumbnail,
+        lat: destination.lat === null ? null : Number(destination.lat),
+        lng: destination.lng === null ? null : Number(destination.lng),
+        addressNew: destination.addressNew,
+        addressOld: destination.addressOld,
+        contactPhone: destination.contactPhone,
+        contactWebsite: destination.contactWebsite,
+        bookingUrl: destination.bookingUrl,
+        hotelGroupId: destination.hotelGroupId,
+        isFeatured: destination.isFeatured,
+      });
+      siteId = created.siteId;
+      await this.mirrorRepo.setSiteId(slug, siteId);
+      this.logger.log(`Tao diem den moi tren SQL Server: ${slug} -> siteId ${siteId}`);
+    }
+
     // Render HTML sach roi auto-link toi moi diem published khac (spec §3.4 thoi diem 1)
     const bodyHtml = await renderDestinationBodyHtml(article);
     const targets: LinkTarget[] = all
-      .filter((d) => d.siteStatus === 1 && d.siteId !== null)
+      .filter((d) => d.siteStatus === 1 && d.siteId !== null && d.slug !== slug)
       .map((d) => ({ slug: d.slug, name: d.name }));
     const { html: linkedHtml, addedLinks } = autoLinkContent(bodyHtml, targets, slug);
 
     const siteIdBySlug = new Map(
-      all.filter((d) => d.siteId !== null).map((d) => [d.slug, d.siteId!]),
+      all.filter((d) => d.siteId !== null && d.slug !== slug).map((d) => [d.slug, d.siteId!]),
     );
     const { contentHash } = await this.siteDb.publishDestination({
-      siteId: destination.siteId,
+      siteId,
       thumbnail: destination.thumbnail,
       shortDescription: article.metadata.description,
       searchKeyword: article.metadata.searchKeyword ?? null,

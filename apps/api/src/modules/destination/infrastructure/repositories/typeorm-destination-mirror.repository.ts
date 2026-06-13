@@ -5,6 +5,7 @@ import type { ListDestinationsQuery } from "@zinoflow/contracts";
 import { DestinationMirrorEntity } from "../entities/destination-mirror.entity";
 import { AdminProvinceEntity } from "../entities/admin-units.entity";
 import type {
+  DestinationMetadataInput,
   DestinationMirrorListResult,
   DestinationMirrorRepository,
   ProvinceOption,
@@ -25,6 +26,51 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
 
   findAll(): Promise<DestinationMirrorEntity[]> {
     return this.repo.find();
+  }
+
+  findBySlug(slug: string): Promise<DestinationMirrorEntity | null> {
+    return this.repo.findOne({ where: { slug } });
+  }
+
+  async createLocal(slug: string, meta: DestinationMetadataInput): Promise<void> {
+    await this.repo.insert({
+      slug,
+      siteId: null, // diem tao trong AI tool — chua co tren SQL Server
+      ...this.metaColumns(meta),
+      contentSource: null,
+      contentHash: null,
+      activeContentJobId: null,
+      syncFlags: [],
+      hasLocalChanges: true, // co thay doi local chua publish (chan sync de)
+      siteUpdatedAt: null,
+      syncedAt: null,
+    });
+  }
+
+  async updateMetadata(slug: string, meta: DestinationMetadataInput): Promise<void> {
+    await this.repo.update({ slug }, this.metaColumns(meta));
+  }
+
+  /** Map metadata input -> cot entity (dung chung create + update) */
+  private metaColumns(meta: DestinationMetadataInput): Partial<DestinationMirrorEntity> {
+    return {
+      kind: meta.kind,
+      parentSlug: meta.parentSlug,
+      provinceCode: meta.provinceCode,
+      name: meta.name,
+      nameUnaccented: normalizeVietnamese(meta.name),
+      shortDescription: meta.shortDescription,
+      thumbnail: meta.thumbnail,
+      lat: meta.lat?.toString() ?? null,
+      lng: meta.lng?.toString() ?? null,
+      addressNew: meta.addressNew,
+      addressOld: meta.addressOld,
+      contactPhone: meta.contactPhone,
+      contactWebsite: meta.contactWebsite,
+      bookingUrl: meta.bookingUrl,
+      hotelGroupId: meta.hotelGroupId,
+      isFeatured: meta.isFeatured,
+    };
   }
 
   async list(query: ListDestinationsQuery): Promise<DestinationMirrorListResult> {
@@ -118,6 +164,10 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
 
   async setActiveJob(slug: string, jobId: string | null): Promise<void> {
     await this.repo.update({ slug }, { activeContentJobId: jobId });
+  }
+
+  async setSiteId(slug: string, siteId: number): Promise<void> {
+    await this.repo.update({ slug }, { siteId });
   }
 
   async setThumbnail(slug: string, thumbnail: string | null): Promise<void> {

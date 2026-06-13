@@ -19,15 +19,41 @@ export interface ProvinceOption {
   shortName: string;
 }
 
+/** Metadata tao/sua 1 diem den trong mirror (khong dong cham content/job/sync) */
+export interface DestinationMetadataInput {
+  name: string;
+  kind: string;
+  parentSlug: string | null;
+  provinceCode: string | null;
+  shortDescription: string | null;
+  thumbnail: string | null;
+  lat: number | null;
+  lng: number | null;
+  addressNew: string | null;
+  addressOld: string | null;
+  contactPhone: string | null;
+  contactWebsite: string | null;
+  bookingUrl: string | null;
+  hotelGroupId: string | null;
+  isFeatured: boolean;
+}
+
 export interface DestinationMirrorRepository {
   findAll(): Promise<DestinationMirrorEntity[]>;
+  findBySlug(slug: string): Promise<DestinationMirrorEntity | null>;
   list(query: ListDestinationsQuery): Promise<DestinationMirrorListResult>;
+  /** Tao diem den moi trong AI tool (siteId=null cho toi khi publish) */
+  createLocal(slug: string, meta: DestinationMetadataInput): Promise<void>;
+  /** Sua metadata (giu nguyen siteId/content/job/sync) */
+  updateMetadata(slug: string, meta: DestinationMetadataInput): Promise<void>;
   /** Upsert tu site row; flags ghi de hoan toan (ket qua quyet dinh sync moi nhat) */
   upsertFromSite(row: SiteDestinationRow, flags: string[], syncedAt: Date): Promise<void>;
   /** Danh dau orphan (co o mirror, mat ben site) — khong tu xoa (spec §12.1) */
   setFlags(slug: string, flags: string[]): Promise<void>;
   /** Gan/clear content job dang chay cho diem den (null = clear) */
   setActiveJob(slug: string, jobId: string | null): Promise<void>;
+  /** Gan siteId sau khi insert diem moi xuong SQL Server (publish lan dau) */
+  setSiteId(slug: string, siteId: number): Promise<void>;
   /** Cap nhat duong dan thumbnail (spec §14.3) */
   setThumbnail(slug: string, thumbnail: string | null): Promise<void>;
   /**

@@ -5,6 +5,7 @@ import {
   listDestinationsQuerySchema,
   relinkAllRequestSchema,
   updateThumbnailRequestSchema,
+  upsertDestinationRequestSchema,
   type CheckImageRequest,
   type CheckImageResponse,
   type CreateDestinationJobRequest,
@@ -19,6 +20,7 @@ import {
   type RelinkAllReport,
   type SyncDestinationsResult,
   type UpdateThumbnailRequest,
+  type UpsertDestinationRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { ListDestinationsUseCase } from "../application/use-cases/list-destinations.usecase";
@@ -29,6 +31,8 @@ import { PublishDestinationUseCase } from "../application/use-cases/publish-dest
 import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
 import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnail.usecase";
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
+import { UpsertDestinationUseCase } from "../application/use-cases/upsert-destination.usecase";
+import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
 import { Inject } from "@nestjs/common";
@@ -48,6 +52,7 @@ export class DestinationsController {
     private readonly relinkAll: RelinkAllUseCase,
     private readonly updateThumbnail: UpdateThumbnailUseCase,
     private readonly getDetail: GetDestinationDetailUseCase,
+    private readonly upsertDestination: UpsertDestinationUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
   ) {}
@@ -64,6 +69,23 @@ export class DestinationsController {
   @Post("sync")
   sync(): Promise<SyncDestinationsResult> {
     return this.syncDestinations.execute();
+  }
+
+  /** Tao diem den MOI trong AI tool (siteId=null cho toi khi publish) — spec §7.3 */
+  @Post()
+  create(
+    @Body(new ZodValidationPipe(upsertDestinationRequestSchema)) request: UpsertDestinationRequest,
+  ): Promise<{ slug: string }> {
+    return this.upsertDestination.create(request);
+  }
+
+  /** Sua metadata diem den (mirror; neu da co tren web thi ghi luon SQL Server) */
+  @Patch(":slug")
+  updateMeta(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(upsertDestinationRequestSchema)) request: UpsertDestinationRequest,
+  ): Promise<{ slug: string }> {
+    return this.upsertDestination.update(slug, request);
   }
 
   @Get("taxonomy")
