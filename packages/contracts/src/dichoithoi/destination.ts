@@ -287,6 +287,17 @@ export const importDestinationsRequestSchema = z.object({
 });
 export type ImportDestinationsRequest = z.infer<typeof importDestinationsRequestSchema>;
 
+/** Tai 1 Google Sheet (chia se cong khai) ve dang CSV de import */
+export const fetchSheetRequestSchema = z.object({
+  url: z.string().min(1).max(1000),
+});
+export type FetchSheetRequest = z.infer<typeof fetchSheetRequestSchema>;
+
+export const fetchSheetResponseSchema = z.object({
+  csv: z.string(),
+});
+export type FetchSheetResponse = z.infer<typeof fetchSheetResponseSchema>;
+
 export const importDestinationsResultSchema = z.object({
   created: z.number().int(),
   updated: z.number().int(),

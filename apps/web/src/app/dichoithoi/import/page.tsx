@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
+  fetchSheetResponseSchema,
   importDestinationsResultSchema,
   type DestinationImportRow,
 } from "@zinoflow/contracts";
@@ -136,8 +137,33 @@ function parseInput(text: string): DestinationImportRow[] {
 /** Import hang loat tu CSV/JSON (spec §7.2) — UPSERT theo slug, khong wipe. */
 export default function ImportDestinationsPage() {
   const [text, setText] = useState("");
+  const [sheetUrl, setSheetUrl] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
   const [preview, setPreview] = useState<DestinationImportRow[] | null>(null);
+
+  // Tai Google Sheet (cong khai) -> CSV roi parse + xem truoc nhu file
+  const fetchSheet = useMutation({
+    mutationFn: async () =>
+      fetchSheetResponseSchema.parse(
+        await apiSend("POST", "/destinations/fetch-sheet", { url: sheetUrl.trim() }),
+      ),
+    onSuccess: (r) => {
+      setText(r.csv);
+      setPreview(null);
+      importMutation.reset();
+      try {
+        const items = parseInput(r.csv);
+        const bad = items.findIndex((x) => !x.name.trim());
+        if (bad >= 0) throw new Error(`Dòng ${bad + 1}: thiếu tên điểm đến`);
+        setParseError(null);
+        setPreview(items);
+      } catch (e) {
+        setParseError(e instanceof Error ? e.message : String(e));
+      }
+    },
+    onError: (e) =>
+      setParseError(e instanceof ApiError ? e.message : "Không tải được Google Sheet"),
+  });
 
   const importMutation = useMutation({
     mutationFn: async (items: DestinationImportRow[]) =>
@@ -174,8 +200,36 @@ export default function ImportDestinationsPage() {
       <div>
         <h2 className="text-xl font-semibold">Nhập danh sách điểm đến</h2>
         <p className="text-sm text-zinc-500">
-          Dán JSON/CSV hoặc chọn file. Khớp theo <strong>slug</strong> (thiếu thì tự sinh từ tên):
-          slug đã có → cập nhật, chưa có → tạo mới. Không bao giờ xoá dữ liệu cũ.
+          Nhập từ <strong>Google Sheet</strong> (hoặc dán JSON/CSV). Khớp theo{" "}
+          <strong>slug</strong> (thiếu thì tự sinh từ tên): slug đã có → cập nhật, chưa có → tạo
+          mới. Không bao giờ xoá dữ liệu cũ.
+        </p>
+      </div>
+
+      {/* Nhap tu Google Sheet */}
+      <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <label className="mb-1 block text-sm font-medium">Link Google Sheet</label>
+        <p className="mb-2 text-xs text-zinc-500">
+          Sheet phải đặt chia sẻ <strong>&quot;Bất kỳ ai có đường liên kết: Người xem&quot;</strong>.
+          Dòng đầu là tiêu đề cột (xem tên cột bên dưới). Tải về sẽ tự xem trước.
+        </p>
+        <div className="flex gap-2">
+          <input
+            value={sheetUrl}
+            onChange={(e) => setSheetUrl(e.target.value)}
+            placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=0"
+            className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+          />
+          <button
+            onClick={() => sheetUrl.trim() && fetchSheet.mutate()}
+            disabled={!sheetUrl.trim() || fetchSheet.isPending}
+            className="whitespace-nowrap rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            {fetchSheet.isPending ? "Đang tải..." : "Tải từ Sheet"}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          Cột hỗ trợ: {CSV_HEADERS.join(", ")}
         </p>
       </div>
 

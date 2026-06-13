@@ -16,8 +16,10 @@ import {
 } from "./application/ports/destination-mirror.repository";
 import { REFERENCE_FETCHER } from "./application/ports/reference-fetcher.port";
 import { IMAGE_CHECKER } from "./application/ports/image-checker.port";
+import { SHEET_CSV_FETCHER } from "./application/ports/sheet-csv-fetcher.port";
 import { HttpReferenceFetcher } from "./infrastructure/reference/http-reference-fetcher";
 import { HttpImageChecker } from "./infrastructure/reference/http-image-checker";
+import { GoogleSheetCsvFetcher } from "./infrastructure/reference/google-sheet-csv-fetcher";
 import { UpdateThumbnailUseCase } from "./application/use-cases/update-thumbnail.usecase";
 import { GetDestinationDetailUseCase } from "./application/use-cases/get-destination-detail.usecase";
 import { UpsertDestinationUseCase } from "./application/use-cases/upsert-destination.usecase";
@@ -66,6 +68,7 @@ import {
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
     { provide: IMAGE_CHECKER, useClass: HttpImageChecker },
+    { provide: SHEET_CSV_FETCHER, useClass: GoogleSheetCsvFetcher },
     { provide: DESTINATION_MIRROR_REPOSITORY, useClass: TypeOrmDestinationMirrorRepository },
     { provide: DESTINATION_RELATION_REPOSITORY, useClass: TypeOrmDestinationRelationRepository },
   ],

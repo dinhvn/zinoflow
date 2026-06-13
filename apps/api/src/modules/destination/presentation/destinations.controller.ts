@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import {
   checkImageRequestSchema,
   createDestinationJobRequestSchema,
+  fetchSheetRequestSchema,
   importDestinationsRequestSchema,
   listDestinationsQuerySchema,
   saveAiInputsRequestSchema,
@@ -15,6 +16,8 @@ import {
   type CreateDestinationJobResponse,
   type DestinationDetail,
   type DestinationTaxonomy,
+  type FetchSheetRequest,
+  type FetchSheetResponse,
   type ImportDestinationsRequest,
   type ImportDestinationsResult,
   type ListDestinationsQuery,
@@ -45,6 +48,7 @@ import { SuggestDestinationMetaUseCase } from "../../ai-content/application/use-
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
+import { SHEET_CSV_FETCHER, type SheetCsvFetcher } from "../application/ports/sheet-csv-fetcher.port";
 import { Inject } from "@nestjs/common";
 
 /**
@@ -67,6 +71,7 @@ export class DestinationsController {
     private readonly suggestMeta: SuggestDestinationMetaUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
+    @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
   ) {}
 
   @Get()
@@ -98,6 +103,14 @@ export class DestinationsController {
     request: SuggestDestinationMetaRequest,
   ): Promise<DestinationMetaSuggestion> {
     return this.suggestMeta.execute(request);
+  }
+
+  /** Tai Google Sheet (cong khai) ve CSV — client parse + xem truoc roi import */
+  @Post("fetch-sheet")
+  async fetchSheet(
+    @Body(new ZodValidationPipe(fetchSheetRequestSchema)) request: FetchSheetRequest,
+  ): Promise<FetchSheetResponse> {
+    return { csv: await this.sheetFetcher.fetchCsv(request.url) };
   }
 
   /** Import hang loat (UPSERT theo slug, khong wipe) — spec §7.2 nut +Them */
