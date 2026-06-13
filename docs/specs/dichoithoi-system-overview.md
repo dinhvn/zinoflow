@@ -102,6 +102,65 @@ Hệ quả của thiết kế này:
    trên SQL Server, xem được qua URL trực tiếp nhưng không vào danh sách/sitemap;
    ưng rồi bật `Status=published`. Dùng cho bài nhạy cảm/đợt đầu chưa tin pipeline.
 
+## 2.2) Ba cửa vào: tạo điểm mới, viết lại bài cũ, sửa metadata
+
+§2.1 mô tả vòng đời TỪ lúc Generate. Phần này bổ sung **bước 0 (tạo metadata)**
+và phân nhánh điểm MỚI vs điểm CŨ ở hai đầu (tạo job + publish) — soi theo code:
+`upsert-destination.usecase.ts`, `create-destination-job.usecase.ts`,
+`publish-destination.usecase.ts`.
+
+Mọi điểm đến đều có cột `siteId` trong mirror Postgres: `null` = chỉ sống trong
+AI tool (production chưa biết tới); có giá trị = đã tồn tại bên SQL Server. `siteId`
+là cờ quyết định nhánh ở mọi bước.
+
+### Cửa A — Viết bài cho điểm đến MỚI hoàn toàn
+
+```
+[0] Thêm điểm đến  POST /api/destinations  (UpsertDestination.create)
+      └─ tạo dòng mirror siteId=null — sống ở Postgres, CHƯA chạm SQL Server.
+         Người dùng nhập tay thứ AI không được bịa: tên, slug, lat/lng,
+         địa chỉ cũ/mới, liên hệ, bookingUrl, hotelGroup, thumbnail.
+[1] Tạo job AI  POST /:slug/jobs  mode=create  (CreateDestinationJob)
+      └─ gom sourceContext (facts mirror + điểm cùng tỉnh để auto-link + URL nguồn)
+         → CreateContentJob siteCode=dichoithoi, articleType=guide-diem-den
+         → set activeContentJobId vào mirror.
+[2..4] Generate → CHỐT 1 Review/Approve → CHỐT 2 Publish (y hệt §2.1)
+[5] Publish (PublishDestination): vì siteId=null →
+      INSERT "shell" Destination xuống SQL Server lấy siteId mới → lưu lại mirror →
+      rồi mới UPSERT nội dung. Đây là LẦN ĐẦU điểm đến chạm production.
+```
+
+### Cửa B — Viết lại NỘI DUNG bài đã có (mode=update)
+
+Giống Cửa A nhưng bỏ bước [0] (điểm đã có trong mirror, `siteId != null`):
+```
+[1] POST /:slug/jobs  mode=update
+      └─ nạp THÊM nội dung hiện tại trên web (fetchDestinationContent) vào prompt
+         → AI viết lại tốt hơn, giữ thông tin đúng.
+[2..4] Generate → Review/Approve → Publish (§2.1)
+[5] Publish: vì siteId đã có → KHÔNG insert shell, chỉ UPSERT ĐÈ nội dung.
+      Taxonomy/lat/lng/địa chỉ giữ nguyên (publish chỉ ghi cột nội dung +
+      thumbnail + description). Bài cũ trên web giữ nguyên tới đúng lúc bấm publish.
+```
+
+### Cửa C — Chỉ sửa METADATA (đường tắt, KHÔNG qua review/publish)
+
+Đổi địa chỉ / lat-lng / bookingUrl / thumbnail / hotelGroup... của điểm đã có:
+```
+PATCH /api/destinations/:slug  (UpsertDestination.update)
+      └─ cập nhật mirror; vì siteId != null → ghi metadata THẲNG SQL Server ngay
+         (updateMetadata) → website phản ánh tức thì.
+```
+Lý do bỏ qua 2 chốt: đây là **dữ liệu cứng người dùng nhập tay**, không phải nội
+dung AI sinh — không có gì để duyệt. Nội dung bài (Content HTML) thì luôn phải đi
+qua Cửa A/B. Sửa metadata của điểm `siteId=null` chỉ cập nhật mirror, chờ publish.
+
+| Cửa | siteId trước | Qua review/publish? | Tác động production |
+|---|---|---|---|
+| A — bài điểm mới | null | có (2 chốt) | INSERT shell + UPSERT nội dung |
+| B — viết lại bài cũ | != null | có (2 chốt) | UPSERT đè nội dung, giữ metadata |
+| C — sửa metadata | != null | KHÔNG | ghi thẳng metadata (updateMetadata) |
+
 ## 3) Vì sao sắp xếp như vậy (phân tích)
 
 1. **AI tool = CMS** thay vì "AI tool đẩy về CMS cũ rồi CMS publish":
