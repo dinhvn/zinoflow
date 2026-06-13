@@ -93,8 +93,25 @@ Reusability:
 - Before writing a helper, check `packages/contracts` and the module's existing code — reuse first.
 - Shared logic between modules goes to `packages/contracts` (schemas/types) or a shared module —
   never copy-paste between modules.
-- Components in `apps/web`: build on shadcn/ui primitives; feature components live in
-  `features/<feature>/`, truly generic ones in `shared/`.
+
+UI components in `apps/web` — ALWAYS reuse shared components, compose smallest → largest:
+- There is a shared UI primitive library at `apps/web/src/shared/ui/` (exported via its `index.ts`):
+  `Button`/`buttonClasses`, `Select`, `Input`, `Badge`, `DataTable`, `Pagination`, `cn`.
+  MANDATORY: use these instead of hand-writing `<button>`/`<select>`/`<input>` or inline-styled
+  status chips / tables / pagers. Do NOT duplicate their Tailwind classes inline.
+- If a needed primitive does not exist yet, CREATE IT in `shared/ui/` (one component per file,
+  export from `index.ts`) and use it — never inline a one-off. New primitives must support
+  dark-mode and follow the existing prop style (variant/size/tone + spread native attributes).
+- Build by composition, smallest unit first, then assemble upward:
+  1. Primitive (atom): `Button`, `Input`, `Select`, `Badge` — in `shared/ui/`.
+  2. Composite (built only from primitives): e.g. `DataTable`, `Pagination`, a labelled field —
+     generic ones in `shared/ui/`, feature-specific ones in `features/<feature>/`.
+  3. Feature component: forms/panels assembled from primitives + composites — `features/<feature>/`.
+  4. Page (`app/.../page.tsx`): composes feature components; contains NO inline-styled
+     buttons/inputs/tables — only layout + wiring.
+- A page or feature component must never reach below its level by re-implementing a primitive.
+  If you catch inline UI that a primitive covers, refactor it to the primitive.
+- No shadcn/headless or extra UI deps — primitives are plain Tailwind on native elements.
 
 Error handling:
 - Use the standard error envelope (`errorCode`, `message`, `details[]`, `traceId`) — spec §12.
