@@ -15,4 +15,6 @@ export interface ImageCheckResult {
 export interface ImageChecker {
   /** Ghep base URL + path roi HEAD request — khong nem, tra exists=false khi loi */
   check(path: string): Promise<ImageCheckResult>;
+  /** Ghep base + path KHONG goi mang — null khi thieu base hoac path rong (de preview) */
+  buildUrl(path: string | null): string | null;
 }

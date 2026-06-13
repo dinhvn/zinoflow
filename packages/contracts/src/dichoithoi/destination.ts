@@ -166,6 +166,37 @@ export const recomputeRelatedReportSchema = z.object({
 });
 export type RecomputeRelatedReport = z.infer<typeof recomputeRelatedReportSchema>;
 
+/** 1 diem den lien quan toi diem dang xem (cho trang chi tiet §7.3 tab Quan he) */
+export const relatedDestinationRefSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  kind: destinationKindSchema,
+  contentState: destinationContentStateSchema,
+  /** Chi co voi nearby — khoang cach met */
+  distanceMeters: z.number().int().nullable(),
+});
+export type RelatedDestinationRef = z.infer<typeof relatedDestinationRefSchema>;
+
+/**
+ * Chi tiet 1 diem den (spec §7.3) — mirror + quan he + URL anh + job dang chay.
+ * Tat ca thong tin gom theo nhom de trang detail hien day du.
+ */
+export const destinationDetailSchema = destinationMirrorSchema.extend({
+  /** Full URL anh (base + thumbnail) — null khi chua cau hinh base hoac chua co anh */
+  imageUrl: z.string().nullable(),
+  /** Trang thai job ai-content dang chay (neu co) — de hien link dung cho */
+  activeJobStatus: z.string().nullable(),
+  /** Cay: cha truc tiep + con truc tiep */
+  parent: relatedDestinationRefSchema.nullable(),
+  children: z.array(relatedDestinationRefSchema),
+  /** Quan he (spec §7.3 tab 3) */
+  nearby: z.array(relatedDestinationRefSchema),
+  relatedCurated: z.array(relatedDestinationRefSchema),
+  /** Cac bai NHAC toi diem nay (mentioned) — "duoc nhac trong bai nao" */
+  mentionedBy: z.array(relatedDestinationRefSchema),
+});
+export type DestinationDetail = z.infer<typeof destinationDetailSchema>;
+
 /** Cap nhat duong dan thumbnail cho 1 diem den (spec §14.3 — MVP) */
 export const updateThumbnailRequestSchema = z.object({
   /** Duong dan TUONG DOI (vd "nui-ham-rong-sapa.webp" | "diem-den/{slug}/thumb.webp") */

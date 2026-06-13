@@ -9,6 +9,7 @@ import {
   type CheckImageResponse,
   type CreateDestinationJobRequest,
   type CreateDestinationJobResponse,
+  type DestinationDetail,
   type DestinationTaxonomy,
   type ListDestinationsQuery,
   type ListDestinationsResponse,
@@ -27,6 +28,7 @@ import { CreateDestinationJobUseCase } from "../application/use-cases/create-des
 import { PublishDestinationUseCase } from "../application/use-cases/publish-destination.usecase";
 import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
 import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnail.usecase";
+import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
 import { Inject } from "@nestjs/common";
@@ -45,6 +47,7 @@ export class DestinationsController {
     private readonly publishDestination: PublishDestinationUseCase,
     private readonly relinkAll: RelinkAllUseCase,
     private readonly updateThumbnail: UpdateThumbnailUseCase,
+    private readonly getDetail: GetDestinationDetailUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
   ) {}
@@ -66,6 +69,15 @@ export class DestinationsController {
   @Get("taxonomy")
   taxonomy(): Promise<DestinationTaxonomy> {
     return this.getTaxonomy.execute();
+  }
+
+  /**
+   * Chi tiet 1 diem den cho trang /dichoithoi/[slug] (spec §7.3).
+   * DAT SAU cac GET tinh ("taxonomy") de khong nuot chung thanh slug.
+   */
+  @Get(":slug")
+  detail(@Param("slug") slug: string): Promise<DestinationDetail> {
+    return this.getDetail.execute(slug);
   }
 
   /** Tao job AI cho 1 diem den — mode create (bai moi) | update (viet lai bai cu) */

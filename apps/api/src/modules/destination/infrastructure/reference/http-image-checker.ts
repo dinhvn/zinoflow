@@ -30,11 +30,11 @@ export class HttpImageChecker implements ImageChecker {
   }
 
   /** Ghep base + path, tranh thieu/thua dau "/" giua hai phan */
-  private buildUrl(path: string): string | null {
+  buildUrl(path: string | null): string | null {
     const base = process.env.DICHOITHOI_IMAGE_BASE_URL;
-    if (!base) return null;
+    if (!base || !path?.trim()) return null;
     const cleanBase = base.replace(/\/+$/, "");
-    const cleanPath = path.replace(/^\/+/, "");
+    const cleanPath = path.trim().replace(/^\/+/, "");
     return `${cleanBase}/${cleanPath}`;
   }
 }

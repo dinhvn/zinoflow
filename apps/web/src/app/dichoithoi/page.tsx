@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  checkImageResponseSchema,
-  createDestinationJobResponseSchema,
   destinationTaxonomySchema,
   listDestinationsResponseSchema,
   recomputeRelatedReportSchema,
@@ -73,56 +71,6 @@ export default function DichoithoiPage() {
       if (contentState) params.set("contentState", contentState);
       return apiGet(`/destinations?${params}`, listDestinationsResponseSchema);
     },
-  });
-
-  // Form tao job (spec §7.4): ghi chu + URL nguon theo truong (gia ve, gio mo cua...)
-  const [jobForm, setJobForm] = useState<{
-    slug: string;
-    name: string;
-    mode: "create" | "update";
-  } | null>(null);
-  const [thumbnail, setThumbnail] = useState("");
-  const [imageCheck, setImageCheck] = useState<{ exists: boolean; url: string } | null>(null);
-  const [userNotes, setUserNotes] = useState("");
-  const [refUrls, setRefUrls] = useState<Array<{ label: string; url: string }>>([
-    { label: "Giá vé", url: "" },
-    { label: "Giờ mở cửa", url: "" },
-  ]);
-
-  const createJobMutation = useMutation({
-    mutationFn: async ({ slug, mode }: { slug: string; mode: "create" | "update" }) => {
-      // Luu thumbnail truoc (neu nguoi dung sua) — metadata diem den, doc lap voi job
-      if (thumbnail.trim()) {
-        await apiSend("POST", `/destinations/${slug}/thumbnail`, { thumbnail: thumbnail.trim() });
-      }
-      return createDestinationJobResponseSchema.parse(
-        await apiSend("POST", `/destinations/${slug}/jobs`, {
-          mode,
-          userNotes: userNotes.trim() || undefined,
-          referenceUrls: refUrls.filter((r) => r.url.trim() && r.label.trim()).length
-            ? refUrls.filter((r) => r.url.trim() && r.label.trim())
-            : undefined,
-        }),
-      );
-    },
-    onSuccess: (result) => {
-      // Job da vao queue — chuyen thang sang man theo doi/review draft
-      window.location.href = `/content/${result.jobId}`;
-    },
-    onError: (err) => {
-      setJobForm(null);
-      setSyncResult(null);
-      setSyncError(err instanceof Error ? err.message : "Tạo bài thất bại");
-    },
-  });
-
-  // Kiem tra anh ton tai tren hosting (HEAD — spec §14.3)
-  const checkImageMutation = useMutation({
-    mutationFn: async (path: string) =>
-      checkImageResponseSchema.parse(
-        await apiSend("POST", "/destinations/check-image", { path }),
-      ),
-    onSuccess: (result) => setImageCheck({ exists: result.exists, url: result.url }),
   });
 
   const syncMutation = useMutation({
@@ -366,7 +314,12 @@ export default function DichoithoiPage() {
                     className="border-t border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
                   >
                     <td className="px-3 py-2">
-                      <div className="font-medium">{d.name}</div>
+                      <a
+                        href={`/dichoithoi/${d.slug}`}
+                        className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        {d.name}
+                      </a>
                       <div className="text-xs text-zinc-400">{d.slug}</div>
                     </td>
                     <td className="px-3 py-2">{d.provinceName ?? "—"}</td>
@@ -390,36 +343,13 @@ export default function DichoithoiPage() {
                             </span>
                           ))}
                     </td>
-                    <td className="space-x-2 whitespace-nowrap px-3 py-2 text-xs">
-                      {d.contentState === "dang-soan" && d.activeContentJobId ? (
-                        <a
-                          href={`/content/${d.activeContentJobId}`}
-                          className="rounded bg-amber-100 px-2 py-1 text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300"
-                        >
-                          Xem bài đang soạn
-                        </a>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setUserNotes("");
-                            setThumbnail(d.thumbnail ?? "");
-                            setImageCheck(null);
-                            setRefUrls([
-                              { label: "Giá vé", url: "" },
-                              { label: "Giờ mở cửa", url: "" },
-                            ]);
-                            setJobForm({
-                              slug: d.slug,
-                              name: d.name,
-                              mode: d.contentState === "chua-co-bai" ? "create" : "update",
-                            });
-                          }}
-                          disabled={createJobMutation.isPending}
-                          className="rounded bg-zinc-900 px-2 py-1 text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-                        >
-                          {d.contentState === "chua-co-bai" ? "Tạo bài AI" : "Cập nhật bài"}
-                        </button>
-                      )}
+                    <td className="space-x-3 whitespace-nowrap px-3 py-2 text-xs">
+                      <a
+                        href={`/dichoithoi/${d.slug}`}
+                        className="rounded bg-zinc-900 px-2 py-1 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
+                      >
+                        Chi tiết →
+                      </a>
                       <a
                         href={`${SITE_BASE_URL}/diem-den/${d.slug}`}
                         target="_blank"
@@ -459,121 +389,6 @@ export default function DichoithoiPage() {
         </>
       )}
 
-      {/* Modal tao job (spec §7.4): ghi chu + URL nguon theo truong — AI khong bia
-          gia ve/gio mo cua, du lieu nguoi dung cap luon thang prompt */}
-      {jobForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg space-y-4 rounded-lg bg-white p-5 shadow-xl dark:bg-zinc-900">
-            <h3 className="text-lg font-semibold">
-              {jobForm.mode === "create" ? "Tạo bài AI" : "Cập nhật bài"} — {jobForm.name}
-            </h3>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Ảnh đại diện (đường dẫn tương đối, bắt buộc để publish)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  value={thumbnail}
-                  onChange={(e) => {
-                    setThumbnail(e.target.value);
-                    setImageCheck(null);
-                  }}
-                  placeholder="vd: nui-ham-rong-sapa.webp hoặc diem-den/slug/thumb.webp"
-                  className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
-                />
-                <button
-                  onClick={() => thumbnail.trim() && checkImageMutation.mutate(thumbnail.trim())}
-                  disabled={!thumbnail.trim() || checkImageMutation.isPending}
-                  className="whitespace-nowrap rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-                >
-                  {checkImageMutation.isPending ? "Đang kiểm tra..." : "Kiểm tra ảnh"}
-                </button>
-              </div>
-              {imageCheck && (
-                <p
-                  className={`mt-1 text-xs ${imageCheck.exists ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}
-                >
-                  {imageCheck.exists ? "✅ Ảnh tồn tại" : "⚠️ Chưa tìm thấy ảnh"} —{" "}
-                  <a href={imageCheck.url} target="_blank" rel="noreferrer" className="underline">
-                    {imageCheck.url}
-                  </a>
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Ghi chú cho AI (giá vé, giờ mở cửa, điểm cần nhấn mạnh...) — tùy chọn
-              </label>
-              <textarea
-                value={userNotes}
-                onChange={(e) => setUserNotes(e.target.value)}
-                rows={4}
-                placeholder="Ví dụ: Giá vé người lớn 70.000đ, trẻ em 30.000đ (kiểm tra 06/2026). Nhấn mạnh trải nghiệm săn mây."
-                className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                URL nguồn tham khảo theo trường — tùy chọn (AI sẽ đọc trang và ghi chú nguồn)
-              </label>
-              <div className="space-y-2">
-                {refUrls.map((row, i) => (
-                  <div key={i} className="flex gap-2">
-                    <input
-                      value={row.label}
-                      onChange={(e) =>
-                        setRefUrls((rows) =>
-                          rows.map((r, j) => (j === i ? { ...r, label: e.target.value } : r)),
-                        )
-                      }
-                      placeholder="Trường (vd Giá vé)"
-                      className="w-36 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
-                    />
-                    <input
-                      value={row.url}
-                      onChange={(e) =>
-                        setRefUrls((rows) =>
-                          rows.map((r, j) => (j === i ? { ...r, url: e.target.value } : r)),
-                        )
-                      }
-                      placeholder="https://..."
-                      className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
-                    />
-                  </div>
-                ))}
-              </div>
-              {refUrls.length < 5 && (
-                <button
-                  onClick={() => setRefUrls((rows) => [...rows, { label: "", url: "" }])}
-                  className="mt-2 text-sm text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  + Thêm nguồn
-                </button>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setJobForm(null)}
-                disabled={createJobMutation.isPending}
-                className="rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={() => createJobMutation.mutate({ slug: jobForm.slug, mode: jobForm.mode })}
-                disabled={createJobMutation.isPending}
-                className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-              >
-                {createJobMutation.isPending ? "Đang tạo job..." : "Tạo bài"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
