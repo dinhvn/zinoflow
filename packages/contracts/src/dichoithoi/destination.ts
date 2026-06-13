@@ -55,12 +55,18 @@ export const destinationMirrorSchema = z.object({
 });
 export type DestinationMirror = z.infer<typeof destinationMirrorSchema>;
 
+/** Cot sort duoc tren man danh sach diem den */
+export const destinationSortBySchema = z.enum(["name", "province", "kind", "contentState"]);
+export type DestinationSortBy = z.infer<typeof destinationSortBySchema>;
+
 /** Query list diem den */
 export const listDestinationsQuerySchema = z.object({
   q: z.string().optional(),
   provinceCode: z.string().optional(),
   kind: destinationKindSchema.optional(),
   contentState: destinationContentStateSchema.optional(),
+  sortBy: destinationSortBySchema.default("name"),
+  sortDir: z.enum(["asc", "desc"]).default("asc"),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });

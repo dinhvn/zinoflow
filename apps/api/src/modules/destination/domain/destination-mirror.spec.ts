@@ -1,4 +1,10 @@
-import { decideSyncAction, deriveContentState, type SiteDestinationRow } from "./destination-mirror";
+import {
+  compareDestinationsForSort,
+  decideSyncAction,
+  deriveContentState,
+  type DestinationSortRow,
+  type SiteDestinationRow,
+} from "./destination-mirror";
 
 function siteRow(overrides: Partial<SiteDestinationRow> = {}): SiteDestinationRow {
   return {
@@ -96,5 +102,52 @@ describe("deriveContentState (spec §7.2)", () => {
     expect(
       deriveContentState({ activeContentJobId: null, contentSource: null, contentHash: null }),
     ).toBe("chua-co-bai");
+  });
+});
+
+describe("compareDestinationsForSort", () => {
+  const row = (over: Partial<DestinationSortRow>): DestinationSortRow => ({
+    name: "A",
+    provinceName: null,
+    kind: "poi",
+    contentState: "chua-co-bai",
+    ...over,
+  });
+
+  function sorted(rows: DestinationSortRow[], by: Parameters<typeof compareDestinationsForSort>[0], dir: "asc" | "desc") {
+    return [...rows].sort(compareDestinationsForSort(by, dir)).map((r) => r.name);
+  }
+
+  it("sort theo ten (locale vi) asc/desc", () => {
+    const rows = [row({ name: "Ô Quan Chưởng" }), row({ name: "Ấn Độ" }), row({ name: "Ba Vì" })];
+    expect(sorted(rows, "name", "asc")).toEqual(["Ấn Độ", "Ba Vì", "Ô Quan Chưởng"]);
+    expect(sorted(rows, "name", "desc")).toEqual(["Ô Quan Chưởng", "Ba Vì", "Ấn Độ"]);
+  });
+
+  it("sort theo kind theo rank province->cluster->poi", () => {
+    const rows = [
+      row({ name: "p", kind: "poi" }),
+      row({ name: "t", kind: "province" }),
+      row({ name: "c", kind: "cluster" }),
+    ];
+    expect(sorted(rows, "kind", "asc")).toEqual(["t", "c", "p"]);
+  });
+
+  it("sort theo contentState theo rank, tie-break theo ten", () => {
+    const rows = [
+      row({ name: "B", contentState: "da-publish" }),
+      row({ name: "A", contentState: "da-publish" }),
+      row({ name: "C", contentState: "chua-co-bai" }),
+    ];
+    expect(sorted(rows, "contentState", "asc")).toEqual(["C", "A", "B"]);
+  });
+
+  it("sort theo province dua diem khong co tinh (null) xuong cuoi khi asc", () => {
+    const rows = [
+      row({ name: "x", provinceName: null }),
+      row({ name: "y", provinceName: "Hà Nội" }),
+      row({ name: "z", provinceName: "Đà Nẵng" }),
+    ];
+    expect(sorted(rows, "province", "asc")).toEqual(["z", "y", "x"]);
   });
 });

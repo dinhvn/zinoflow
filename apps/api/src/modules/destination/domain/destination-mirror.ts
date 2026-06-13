@@ -1,7 +1,8 @@
 import type {
   DestinationContentState,
-  DestinationSyncFlag,
+  DestinationSortBy,
 } from "@zinoflow/contracts";
+import type { DestinationSyncFlag } from "@zinoflow/contracts";
 
 /**
  * Domain rules cho mirror diem den (spec dichoithoi-destination-spec §12.1).
@@ -88,4 +89,57 @@ export function deriveContentState(input: {
   if (input.contentSource === 1) return "da-publish";
   if (input.contentHash) return "bai-tay";
   return "chua-co-bai";
+}
+
+/** Du lieu toi thieu de sort 1 dong tren man danh sach */
+export interface DestinationSortRow {
+  name: string;
+  provinceName: string | null;
+  kind: "province" | "cluster" | "poi";
+  contentState: DestinationContentState;
+}
+
+// Rank de sort kind/contentState theo thu tu CO NGHIA (khong phai alphabet)
+const KIND_RANK: Record<DestinationSortRow["kind"], number> = {
+  province: 0,
+  cluster: 1,
+  poi: 2,
+};
+const CONTENT_STATE_RANK: Record<DestinationContentState, number> = {
+  "chua-co-bai": 0,
+  "bai-tay": 1,
+  "dang-soan": 2,
+  "da-publish": 3,
+};
+
+/**
+ * Comparator sort cho danh sach diem den (server-side). name/province so chuoi
+ * (locale vi), kind/contentState so theo rank co nghia. dir "desc" dao dau.
+ */
+export function compareDestinationsForSort(
+  sortBy: DestinationSortBy,
+  sortDir: "asc" | "desc",
+): (a: DestinationSortRow, b: DestinationSortRow) => number {
+  const factor = sortDir === "desc" ? -1 : 1;
+  return (a, b) => {
+    let cmp: number;
+    switch (sortBy) {
+      case "name":
+        cmp = a.name.localeCompare(b.name, "vi");
+        break;
+      case "province":
+        // Diem chua gan tinh (null) xuong cuoi khi asc
+        cmp = (a.provinceName ?? "￿").localeCompare(b.provinceName ?? "￿", "vi");
+        break;
+      case "kind":
+        cmp = KIND_RANK[a.kind] - KIND_RANK[b.kind];
+        break;
+      case "contentState":
+        cmp = CONTENT_STATE_RANK[a.contentState] - CONTENT_STATE_RANK[b.contentState];
+        break;
+    }
+    // Tie-break theo ten de thu tu on dinh
+    if (cmp === 0 && sortBy !== "name") cmp = a.name.localeCompare(b.name, "vi");
+    return cmp * factor;
+  };
 }

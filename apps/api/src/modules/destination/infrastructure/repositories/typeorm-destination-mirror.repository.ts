@@ -12,7 +12,7 @@ import type {
   ProvinceOption,
 } from "../../application/ports/destination-mirror.repository";
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
-import { deriveContentState } from "../../domain/destination-mirror";
+import { compareDestinationsForSort, deriveContentState } from "../../domain/destination-mirror";
 import { normalizeVietnamese } from "../../../shared/text/vietnamese";
 
 /** Repository mirror diem den tren Postgres (implement port application). */
@@ -98,31 +98,39 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       qb.andWhere("d.kind = :kind", { kind: query.kind });
     }
 
-    qb.orderBy("d.name", "ASC");
+    const entities = await qb.getMany();
 
-    let entities = await qb.getMany();
-
-    // contentState la gia tri suy ra (domain) — loc sau khi load.
-    // Quy mo vai tram diem den nen loc trong memory la du nhanh.
-    if (query.contentState) {
-      entities = entities.filter(
-        (e) =>
-          deriveContentState({
-            activeContentJobId: e.activeContentJobId,
-            contentSource: e.contentSource,
-            contentHash: e.contentHash,
-          }) === query.contentState,
-      );
-    }
-
-    const total = entities.length;
-    const start = (query.page - 1) * query.limit;
-    const items = entities.slice(start, start + query.limit).map((e) => {
+    // contentState + provinceName la gia tri suy ra/join — gan vao entity de loc + sort.
+    // Quy mo vai tram diem den nen xu ly trong memory la du nhanh.
+    const enriched = entities.map((e) => {
       const province = (e as DestinationMirrorEntity & {
         province?: AdminProvinceEntity;
       }).province;
-      return Object.assign(e, { provinceName: province?.shortName ?? null });
+      const provinceName = province?.shortName ?? null;
+      const contentState = deriveContentState({
+        activeContentJobId: e.activeContentJobId,
+        contentSource: e.contentSource,
+        contentHash: e.contentHash,
+      });
+      return Object.assign(e, { provinceName, contentState });
     });
+
+    let filtered = enriched;
+    if (query.contentState) {
+      filtered = filtered.filter((e) => e.contentState === query.contentState);
+    }
+
+    // Sort server-side tren TOAN BO du lieu da loc, truoc khi cat trang (spec sort).
+    // Cast: entity.kind khai bao string nhung gia tri thuc luon thuoc union kind.
+    const comparator = compareDestinationsForSort(query.sortBy, query.sortDir) as (
+      a: (typeof filtered)[number],
+      b: (typeof filtered)[number],
+    ) => number;
+    filtered.sort(comparator);
+
+    const total = filtered.length;
+    const start = (query.page - 1) * query.limit;
+    const items = filtered.slice(start, start + query.limit);
 
     return { items, total };
   }
