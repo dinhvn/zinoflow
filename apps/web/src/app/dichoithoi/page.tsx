@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  checkImageResponseSchema,
   createDestinationJobResponseSchema,
   destinationTaxonomySchema,
   listDestinationsResponseSchema,
@@ -80,6 +81,8 @@ export default function DichoithoiPage() {
     name: string;
     mode: "create" | "update";
   } | null>(null);
+  const [thumbnail, setThumbnail] = useState("");
+  const [imageCheck, setImageCheck] = useState<{ exists: boolean; url: string } | null>(null);
   const [userNotes, setUserNotes] = useState("");
   const [refUrls, setRefUrls] = useState<Array<{ label: string; url: string }>>([
     { label: "Giá vé", url: "" },
@@ -87,8 +90,12 @@ export default function DichoithoiPage() {
   ]);
 
   const createJobMutation = useMutation({
-    mutationFn: async ({ slug, mode }: { slug: string; mode: "create" | "update" }) =>
-      createDestinationJobResponseSchema.parse(
+    mutationFn: async ({ slug, mode }: { slug: string; mode: "create" | "update" }) => {
+      // Luu thumbnail truoc (neu nguoi dung sua) — metadata diem den, doc lap voi job
+      if (thumbnail.trim()) {
+        await apiSend("POST", `/destinations/${slug}/thumbnail`, { thumbnail: thumbnail.trim() });
+      }
+      return createDestinationJobResponseSchema.parse(
         await apiSend("POST", `/destinations/${slug}/jobs`, {
           mode,
           userNotes: userNotes.trim() || undefined,
@@ -96,7 +103,8 @@ export default function DichoithoiPage() {
             ? refUrls.filter((r) => r.url.trim() && r.label.trim())
             : undefined,
         }),
-      ),
+      );
+    },
     onSuccess: (result) => {
       // Job da vao queue — chuyen thang sang man theo doi/review draft
       window.location.href = `/content/${result.jobId}`;
@@ -106,6 +114,15 @@ export default function DichoithoiPage() {
       setSyncResult(null);
       setSyncError(err instanceof Error ? err.message : "Tạo bài thất bại");
     },
+  });
+
+  // Kiem tra anh ton tai tren hosting (HEAD — spec §14.3)
+  const checkImageMutation = useMutation({
+    mutationFn: async (path: string) =>
+      checkImageResponseSchema.parse(
+        await apiSend("POST", "/destinations/check-image", { path }),
+      ),
+    onSuccess: (result) => setImageCheck({ exists: result.exists, url: result.url }),
   });
 
   const syncMutation = useMutation({
@@ -385,6 +402,8 @@ export default function DichoithoiPage() {
                         <button
                           onClick={() => {
                             setUserNotes("");
+                            setThumbnail(d.thumbnail ?? "");
+                            setImageCheck(null);
                             setRefUrls([
                               { label: "Giá vé", url: "" },
                               { label: "Giờ mở cửa", url: "" },
@@ -448,6 +467,40 @@ export default function DichoithoiPage() {
             <h3 className="text-lg font-semibold">
               {jobForm.mode === "create" ? "Tạo bài AI" : "Cập nhật bài"} — {jobForm.name}
             </h3>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Ảnh đại diện (đường dẫn tương đối, bắt buộc để publish)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  value={thumbnail}
+                  onChange={(e) => {
+                    setThumbnail(e.target.value);
+                    setImageCheck(null);
+                  }}
+                  placeholder="vd: nui-ham-rong-sapa.webp hoặc diem-den/slug/thumb.webp"
+                  className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+                />
+                <button
+                  onClick={() => thumbnail.trim() && checkImageMutation.mutate(thumbnail.trim())}
+                  disabled={!thumbnail.trim() || checkImageMutation.isPending}
+                  className="whitespace-nowrap rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                >
+                  {checkImageMutation.isPending ? "Đang kiểm tra..." : "Kiểm tra ảnh"}
+                </button>
+              </div>
+              {imageCheck && (
+                <p
+                  className={`mt-1 text-xs ${imageCheck.exists ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}
+                >
+                  {imageCheck.exists ? "✅ Ảnh tồn tại" : "⚠️ Chưa tìm thấy ảnh"} —{" "}
+                  <a href={imageCheck.url} target="_blank" rel="noreferrer" className="underline">
+                    {imageCheck.url}
+                  </a>
+                </p>
+              )}
+            </div>
 
             <div>
               <label className="mb-1 block text-sm font-medium">

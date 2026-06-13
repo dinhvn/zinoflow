@@ -28,6 +28,8 @@ export interface DestinationMirrorRepository {
   setFlags(slug: string, flags: string[]): Promise<void>;
   /** Gan/clear content job dang chay cho diem den (null = clear) */
   setActiveJob(slug: string, jobId: string | null): Promise<void>;
+  /** Cap nhat duong dan thumbnail (spec §14.3) */
+  setThumbnail(slug: string, thumbnail: string | null): Promise<void>;
   /**
    * Ghi nhan publish thanh cong: contentSource=1, contentHash moi (de lan sync
    * sau khong bao edited-outside), clear activeContentJobId + hasLocalChanges.

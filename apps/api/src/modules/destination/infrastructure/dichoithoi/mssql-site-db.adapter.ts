@@ -128,6 +128,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     const rows = await this.runWithRetry<Array<{ ContentHash: string }>>(async (pool) => {
       const request = pool.request();
       request.input("siteId", input.siteId);
+      request.input("thumbnail", input.thumbnail);
       request.input("shortDescription", input.shortDescription);
       request.input("searchKeyword", input.searchKeyword);
       request.input("contentHtml", input.contentHtml);
@@ -149,6 +150,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         UPDATE v2.Destination SET
           ShortDescription = @shortDescription,
           SearchKeyword    = @searchKeyword,
+          Thumbnail        = @thumbnail,
           ContentSource    = 1,
           UpdatedAt        = SYSUTCDATETIME()
         WHERE Id = @siteId;
@@ -256,6 +258,18 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
           AND (RelatedJson IS NULL OR RelatedJson <> @relatedJson)
       `);
       return (result.rowsAffected[0] ?? 0) > 0;
+    });
+  }
+
+  async updateThumbnail(siteId: number, thumbnail: string | null): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("thumbnail", thumbnail);
+      return request.query(
+        `UPDATE v2.Destination SET Thumbnail = @thumbnail, UpdatedAt = SYSUTCDATETIME()
+         WHERE Id = @siteId`,
+      );
     });
   }
 

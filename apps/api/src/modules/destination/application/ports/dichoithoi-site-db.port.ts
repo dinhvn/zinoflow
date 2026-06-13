@@ -34,6 +34,8 @@ export interface SiteContentRow {
 /** Du lieu publish 1 bai diem den (Phase C) — ghi trong 1 transaction, KHONG wipe */
 export interface PublishDestinationInput {
   siteId: number;
+  /** Duong dan thumbnail tuong doi — giu nguyen gia tri mirror khi publish (§14.3) */
+  thumbnail: string | null;
   shortDescription: string;
   searchKeyword: string | null;
   /** HTML hoan chinh: da sanitize + auto-link */
@@ -78,4 +80,6 @@ export interface DichoithoiSiteDb {
   fetchSlugRedirects(): Promise<Map<string, string>>;
   /** Ghi RelatedJson, CHI khi khac gia tri cu (spec §12.3) — tra ve true neu co ghi */
   updateRelatedJson(siteId: number, relatedJson: string): Promise<boolean>;
+  /** Cap nhat rieng cot Thumbnail (metadata — sua truc tiep, khong qua publish) */
+  updateThumbnail(siteId: number, thumbnail: string | null): Promise<void>;
 }

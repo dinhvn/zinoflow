@@ -87,6 +87,14 @@ export class PublishDestinationUseCase {
       throw new DomainRuleError("Job này không phải bài điểm đến (guide-diem-den)");
     }
 
+    // Gate anh (spec §14.3): khong publish bai khong co thumbnail — card danh sach,
+    // og:image, khoi lien quan deu can. Nguoi dung set o "Anh đại diện" roi thu lai.
+    if (!destination.thumbnail?.trim()) {
+      throw new DomainRuleError(`Điểm đến "${destination.name}" chưa có ảnh đại diện (thumbnail)`, [
+        "Nhập đường dẫn ảnh ở mục Ảnh đại diện trên trang Điểm đến rồi publish lại",
+      ]);
+    }
+
     const draft = await this.draftRepo.findLatestByJobId(jobId);
     if (!draft?.article) throw new DomainRuleError("Draft đã duyệt không có nội dung bài viết");
     const article = destinationArticleSchema.parse(draft.article);
@@ -103,6 +111,7 @@ export class PublishDestinationUseCase {
     );
     const { contentHash } = await this.siteDb.publishDestination({
       siteId: destination.siteId,
+      thumbnail: destination.thumbnail,
       shortDescription: article.metadata.description,
       searchKeyword: article.metadata.searchKeyword ?? null,
       contentHtml: linkedHtml,

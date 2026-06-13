@@ -186,8 +186,13 @@ Phase C — Publish + auto-link (3-4 ngay) — ✅ CODE XONG 12/06/2026:
    lam chet job — ghi chu "can kiem tra tay" vao ngu canh.
    ✅ Self-healing: job Rejected la terminal — list tu clear activeContentJobId
    (Failed GIU pointer de con retry).
+   ✅ Anh thumbnail (13/06/2026 — MVP §14.3): o "Anh dai dien" + nut "Kiem tra anh"
+   (HEAD request qua DICHOITHOI_IMAGE_BASE_URL) trong modal tao job; luu thumbnail
+   ghi ca mirror + SQL Server (POST :slug/thumbnail). Publish GHI cot Thumbnail +
+   CHAN publish khi diem den chua co thumbnail (gate anh). Endpoint check-image
+   xu ly 404/loi mang sach (khong 500). LUU Y: base URL trong .env hien la PHONG
+   DOAN (contents/diem-den/) — anh chinh lai cho dung cau truc hosting that.
    Con lai cua M4 (lam tiep):
-   - Thumbnail field + check ton tai.
    - Tao diem den MOI hoan toan tu AI tool (hien chi publish diem da ton tai).
    - Review tay + publish 1 bai THAT (job Nui Ham Rong dang DraftReady cho duyet).
 

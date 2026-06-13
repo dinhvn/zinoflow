@@ -166,6 +166,28 @@ export const recomputeRelatedReportSchema = z.object({
 });
 export type RecomputeRelatedReport = z.infer<typeof recomputeRelatedReportSchema>;
 
+/** Cap nhat duong dan thumbnail cho 1 diem den (spec §14.3 — MVP) */
+export const updateThumbnailRequestSchema = z.object({
+  /** Duong dan TUONG DOI (vd "nui-ham-rong-sapa.webp" | "diem-den/{slug}/thumb.webp") */
+  thumbnail: z.string().max(256).nullable(),
+});
+export type UpdateThumbnailRequest = z.infer<typeof updateThumbnailRequestSchema>;
+
+/** Kiem tra anh ton tai tren hosting (HEAD request — spec §14.3) */
+export const checkImageRequestSchema = z.object({
+  path: z.string().min(1).max(256),
+});
+export type CheckImageRequest = z.infer<typeof checkImageRequestSchema>;
+
+export const checkImageResponseSchema = z.object({
+  /** Full URL da ghep tu base + path */
+  url: z.string(),
+  exists: z.boolean(),
+  /** HTTP status tu HEAD (0 neu loi mang/timeout) */
+  status: z.number().int(),
+});
+export type CheckImageResponse = z.infer<typeof checkImageResponseSchema>;
+
 /** Taxonomy cho form/filter */
 export const destinationTaxonomySchema = z.object({
   provinces: z.array(

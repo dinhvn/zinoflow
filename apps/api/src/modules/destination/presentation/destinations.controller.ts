@@ -1,8 +1,12 @@
 import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import {
+  checkImageRequestSchema,
   createDestinationJobRequestSchema,
   listDestinationsQuerySchema,
   relinkAllRequestSchema,
+  updateThumbnailRequestSchema,
+  type CheckImageRequest,
+  type CheckImageResponse,
   type CreateDestinationJobRequest,
   type CreateDestinationJobResponse,
   type DestinationTaxonomy,
@@ -13,6 +17,7 @@ import {
   type RelinkAllRequest,
   type RelinkAllReport,
   type SyncDestinationsResult,
+  type UpdateThumbnailRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { ListDestinationsUseCase } from "../application/use-cases/list-destinations.usecase";
@@ -21,7 +26,10 @@ import { GetDestinationTaxonomyUseCase } from "../application/use-cases/get-dest
 import { CreateDestinationJobUseCase } from "../application/use-cases/create-destination-job.usecase";
 import { PublishDestinationUseCase } from "../application/use-cases/publish-destination.usecase";
 import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
+import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnail.usecase";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
+import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
+import { Inject } from "@nestjs/common";
 
 /**
  * REST khu Dichoithoi (spec dichoithoi-destination-spec §5.1):
@@ -36,7 +44,9 @@ export class DestinationsController {
     private readonly createJob: CreateDestinationJobUseCase,
     private readonly publishDestination: PublishDestinationUseCase,
     private readonly relinkAll: RelinkAllUseCase,
+    private readonly updateThumbnail: UpdateThumbnailUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
+    @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
   ) {}
 
   @Get()
@@ -85,6 +95,24 @@ export class DestinationsController {
     const startedAt = Date.now();
     const result = await this.recomputeRelated.recomputeAll();
     return { ...result, durationMs: Date.now() - startedAt };
+  }
+
+  /** Kiem tra anh ton tai tren hosting (HEAD request — spec §14.3) */
+  @Post("check-image")
+  checkImage(
+    @Body(new ZodValidationPipe(checkImageRequestSchema)) request: CheckImageRequest,
+  ): Promise<CheckImageResponse> {
+    return this.imageChecker.check(request.path);
+  }
+
+  /** Cap nhat duong dan thumbnail cho 1 diem den (spec §14.3) */
+  @Post(":slug/thumbnail")
+  async setThumbnail(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updateThumbnailRequestSchema)) request: UpdateThumbnailRequest,
+  ): Promise<{ ok: true }> {
+    await this.updateThumbnail.execute(slug, request.thumbnail);
+    return { ok: true };
   }
 
   /** Publish bai DA DUYET cua 1 diem den xuong SQL Server (gate thu cong thu 2) */

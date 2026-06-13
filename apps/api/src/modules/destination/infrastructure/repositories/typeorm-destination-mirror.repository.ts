@@ -120,6 +120,10 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     await this.repo.update({ slug }, { activeContentJobId: jobId });
   }
 
+  async setThumbnail(slug: string, thumbnail: string | null): Promise<void> {
+    await this.repo.update({ slug }, { thumbnail });
+  }
+
   async markPublished(slug: string, contentHash: string): Promise<void> {
     await this.repo.update(
       { slug },
