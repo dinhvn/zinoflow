@@ -35,14 +35,29 @@ async function toApiError(res: Response, fallback: string): Promise<ApiError> {
   }
 }
 
+/**
+ * Goi fetch + bien loi mang (server tat / sai port / CORS) thanh ApiError ro rang.
+ * Truoc day loi nay nem TypeError "Failed to fetch" tru tru -> kho chan doan.
+ */
+async function fetchOrThrow(url: string, init: RequestInit, label: string): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    throw new ApiError(
+      0,
+      `Không kết nối được API tại ${API_BASE_URL} (${label}). Kiểm tra server API đã chạy chưa (cổng 3001) hoặc NEXT_PUBLIC_API_URL.`,
+      [detail],
+    );
+  }
+}
+
 export async function apiGet<TSchema extends z.ZodType>(
   path: string,
   schema: TSchema,
 ): Promise<z.infer<TSchema>> {
-  const res = await fetch(`${API_BASE_URL}/api${path}`, {
-    cache: "no-store",
-    headers: authHeaders(),
-  });
+  const url = `${API_BASE_URL}/api${path}`;
+  const res = await fetchOrThrow(url, { cache: "no-store", headers: authHeaders() }, `GET ${path}`);
   if (!res.ok) throw await toApiError(res, `GET ${path} failed: ${res.status}`);
   return schema.parse(await res.json());
 }
@@ -53,11 +68,16 @@ export async function apiSend(
   path: string,
   body: unknown,
 ): Promise<unknown> {
-  const res = await fetch(`${API_BASE_URL}/api${path}`, {
-    method,
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(body),
-  });
+  const url = `${API_BASE_URL}/api${path}`;
+  const res = await fetchOrThrow(
+    url,
+    {
+      method,
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(body),
+    },
+    `${method} ${path}`,
+  );
   if (!res.ok) throw await toApiError(res, `${method} ${path} failed: ${res.status}`);
   return res.json();
 }

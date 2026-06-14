@@ -20,6 +20,7 @@ import { apiGet, apiSend } from "@/shared/api-client";
 import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { Button, buttonClasses } from "@/shared/ui/button";
 import { DataTable, type DataTableColumn, type SortDirection } from "@/shared/ui/data-table";
+import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
 import { Pagination } from "@/shared/ui/pagination";
 import { Select } from "@/shared/ui/select";
@@ -381,11 +382,7 @@ export default function DichoithoiPage() {
         </Select>
       </div>
 
-      {listQuery.isError && (
-        <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-          {listQuery.error instanceof Error ? listQuery.error.message : "Lỗi tải danh sách"}
-        </div>
-      )}
+      {listQuery.isError && <ErrorBox error={listQuery.error} fallback="Lỗi tải danh sách" />}
 
       <DataTable
         columns={columns}
