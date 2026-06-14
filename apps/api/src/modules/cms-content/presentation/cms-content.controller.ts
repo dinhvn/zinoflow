@@ -12,12 +12,14 @@ import {
   type ListCmsPostsResponse,
   type SaveCmsAiInputsRequest,
   type SyncCmsPostsResult,
+  type WriteCmsResult,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { SyncCmsPostsUseCase } from "../application/use-cases/sync-cms-posts.usecase";
 import { ListCmsPostsUseCase } from "../application/use-cases/list-cms-posts.usecase";
 import { GetCmsPostDetailUseCase } from "../application/use-cases/get-cms-post-detail.usecase";
 import { CreateCmsContentJobUseCase } from "../application/use-cases/create-cms-content-job.usecase";
+import { WriteContentToCmsUseCase } from "../application/use-cases/write-content-to-cms.usecase";
 
 /**
  * REST khu CMS khuyenmai (laruki/dochoi3s) — spec laruki-dochoi3s-content-spec §3.
@@ -30,6 +32,7 @@ export class CmsContentController {
     private readonly listPosts: ListCmsPostsUseCase,
     private readonly getDetail: GetCmsPostDetailUseCase,
     private readonly createJob: CreateCmsContentJobUseCase,
+    private readonly writeToCms: WriteContentToCmsUseCase,
   ) {}
 
   /** Danh sach bai theo site (mirror) */
@@ -77,5 +80,11 @@ export class CmsContentController {
       request.referenceUrls ?? [],
     );
     return { ok: true };
+  }
+
+  /** Ghi content da duyet (Approved) xuong CMS — UPDATE WordpressPost.FixedContent */
+  @Post("posts/:cmsId/write")
+  write(@Param("cmsId") cmsId: string): Promise<WriteCmsResult> {
+    return this.writeToCms.execute(Number(cmsId));
   }
 }

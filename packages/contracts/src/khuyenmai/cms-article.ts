@@ -52,6 +52,14 @@ export const createCmsJobResponseSchema = z.object({
 });
 export type CreateCmsJobResponse = z.infer<typeof createCmsJobResponseSchema>;
 
+/** POST /cms/posts/:cmsId/write — ghi content da duyet vao CMS */
+export const writeCmsResultSchema = z.object({
+  cmsId: z.number().int(),
+  jobId: z.string(),
+  title: z.string(),
+});
+export type WriteCmsResult = z.infer<typeof writeCmsResultSchema>;
+
 /** POST /cms/posts/:cmsId/ai-inputs — luu thong tin cho AI ma chua tao bai */
 export const saveCmsAiInputsRequestSchema = z.object({
   userNotes: z.string().optional(),

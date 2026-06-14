@@ -7,6 +7,7 @@ import {
   createCmsJobResponseSchema,
   khuyenmaiPostTypeLabel,
   listAiProvidersResponseSchema,
+  writeCmsResultSchema,
   type KhuyenmaiSite,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
@@ -69,6 +70,18 @@ export function CmsPostDetail({ site, cmsId }: { site: KhuyenmaiSite; cmsId: num
     onSuccess: () => {
       setActionError(null);
       setInputsSaved(true);
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+
+  const [writeMsg, setWriteMsg] = useState<string | null>(null);
+  const writeToCms = useMutation({
+    mutationFn: async () =>
+      writeCmsResultSchema.parse(await apiSend("POST", `/cms/posts/${cmsId}/write`, {})),
+    onSuccess: (r) => {
+      setActionError(null);
+      setWriteMsg(`✅ Đã ghi nội dung "${r.title}" vào CMS. Vào CMS để chèn tag (nếu cần) + publish.`);
+      void detailQuery.refetch();
     },
     onError: (e) => setActionError(toActionError(e)),
   });
@@ -136,14 +149,31 @@ export function CmsPostDetail({ site, cmsId }: { site: KhuyenmaiSite; cmsId: num
           <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
             <h3 className="mb-3 font-medium">✍️ Viết bài bằng AI</h3>
             {d.activeContentJobId ? (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Đang có 1 bài cho điểm này.{" "}
-                <a href={`/content/${d.activeContentJobId}`} className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                  Mở bài để xem / duyệt →
-                </a>
-                <br />
-                <span className="text-xs text-zinc-500">Hoàn tất (hoặc từ chối) bài hiện tại trước khi viết lại.</span>
-              </p>
+              <div className="space-y-3 text-sm">
+                <p className="text-zinc-600 dark:text-zinc-400">
+                  Đang có 1 bài {d.activeJobStatus ? `(${d.activeJobStatus})` : ""} cho bài này.{" "}
+                  <a href={`/content/${d.activeContentJobId}`} className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                    Mở bài để xem / duyệt →
+                  </a>
+                </p>
+                {d.activeJobStatus === "Approved" ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="primary" loading={writeToCms.isPending} onClick={() => writeToCms.mutate()}>
+                      {writeToCms.isPending ? "Đang ghi..." : "Ghi vào CMS"}
+                    </Button>
+                    <span className="text-xs text-zinc-500">Ghi nội dung đã duyệt vào CMS (chưa publish).</span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-500">
+                    Duyệt bài (Approved) trên màn review để mở nút "Ghi vào CMS".
+                  </p>
+                )}
+                {writeMsg && (
+                  <div className="rounded border border-emerald-300 bg-emerald-50 p-2 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+                    {writeMsg}
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="space-y-4">
                 <p className="rounded bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-900">

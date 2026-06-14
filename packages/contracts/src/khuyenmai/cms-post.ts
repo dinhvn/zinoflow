@@ -70,6 +70,8 @@ export type SyncCmsPostsResult = z.infer<typeof syncCmsPostsResultSchema>;
 export const cmsPostDetailSchema = cmsPostSchema.extend({
   /** Cac tag [Type_Param:value] hien co trong FixedContent (chi doc, tham khao) */
   existingTags: z.array(z.string()),
+  /** Trang thai job ai-content dang soan (null neu khong co) — UI mo nut "Ghi vao CMS" khi Approved */
+  activeJobStatus: z.string().nullable(),
   aiNotes: z.string().nullable(),
   aiTagHints: z.string().nullable(),
   aiReferenceUrls: z.array(z.object({ label: z.string(), url: z.string() })),
