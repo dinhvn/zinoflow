@@ -14,6 +14,7 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/data-source.ts",
     "seed:dvhcvn": "ts-node scripts/seed-dvhcvn.ts",
     "check:dichoithoi": "ts-node scripts/check-dichoithoi-connection.ts",
+    "check:khuyenmai": "ts-node scripts/check-khuyenmai-connection.ts",
     "clone:dichoithoi": "ts-node scripts/clone-dichoithoi-to-localdb.ts"
   },
   "dependencies": {
