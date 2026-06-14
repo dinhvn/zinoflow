@@ -173,6 +173,67 @@ Còn cần làm/chốt:
    để render ra chuỗi `[Type_Param:value;...]` chuẩn + bảo toàn khi viết lại (phương án Y).
 4. **Prompt pack / template** riêng laruki vs dochoi3s theo `PostContentType` (tái dùng màn `/prompts`).
 
+## 8) Đặc tả TAG chi tiết (bóc từ source CMS — 14/06/2026)
+
+Nguồn: `ContentService.ReplaceCodeTagAsync` + 7 hàm `Replace*Async`, `ContentUtil`,
+`Enums/ContentDataType.cs`, `Enums/ContentCodeType.cs`. **Đây là hợp đồng tag mà AI phải tuân thủ.**
+
+### 8.1 Cú pháp tổng quát
+```
+[<Type>_<Param>:<v1>,<v2>;<Param2>:<v>;<FlagParam>]
+```
+- Parse bằng regex `\[(.+?)\]` (non-greedy) → mỗi `[...]` là 1 tag.
+- Tách `Type` và phần option bằng dấu **`_`** đầu tiên: `splits = code.Split("_")`.
+- Các param ngăn bằng **`;`**; cặp `Param:value` ngăn bằng **`:`**; nhiều value ngăn bằng **`,`**.
+- **Flag param** (vd `ShowTop`) chỉ cần có mặt, không cần `:value`.
+- Value chứa `:` (vd `Url:https://...`) được nối lại đúng (code xử lý `spilts.Length > 2`).
+- **Named code** (không có `_`, vd `[Year]`): tra trong bảng `PostContent` theo `Code` → lấy `Type`+`Format`.
+  → ngoài tag tham số inline, còn có tag "đặt tên sẵn" do CMS định nghĩa.
+- ⚠️ Param/Type **không khớp enum thì bị bỏ qua** (không lỗi, chỉ không render). Sai chính tả = mất block.
+
+### 8.2 Bảng tham số hợp lệ (`ContentCodeType`)
+`Code, Url, Text, SupplierCode, SellerCode, ProductTag, ShowProduct, NumberProduct,`
+`CategoryCode, ButtonTitle, Format, HeaderTitle, UtmSource, ShowTop, Order`
+(Order nhận: `None | Price | Discount`; Link Format nhận: `None`=button, `Normal`=`<a>`, `Product`.)
+
+### 8.3 7 loại tag (`ContentDataType`) — tham số + điều kiện + output
+| Type | Param chính | Mặc định / ràng buộc | CMS render ra |
+|---|---|---|---|
+| **ProductList** | `SupplierCode`(nhiều), `ProductTag`(nhiều), `CategoryCode`, `NumberProduct`(=4), `Order`(None/Price/Discount), `ShowTop`(flag→đánh số), `HeaderTitle`(="SẢN PHẨM GỢI Ý") | **Bỏ qua nếu cả SupplierCode lẫn ProductTag đều rỗng** | `<div class="suggest-products"><div class="s-header">{title}</div>{bảng SP}</div>` |
+| **SellerList** | `SupplierCode`(1, **bắt buộc**), `SellerCode`(lọc), `ShowProduct`(true/false=def), `ButtonTitle` | rỗng SupplierCode → "" | khối "nơi bán" (sellers) của supplier |
+| **Product** | `ProductTag`(nhiều, **bắt buộc**) | rỗng → "" | bảng **so sánh giá** 1 sản phẩm cố định |
+| **SaleList** | `SupplierCode`(1, **bắt buộc**), `NumberProduct`(=12) | thiếu supplier/promotion → "" | danh sách KM + sản phẩm sale của supplier |
+| **Link** | `Url`, `Text`, `UtmSource`, `Format`(None/Normal/Product), `SupplierCode`, `ProductTag` | nếu có `ProductTag` → tự lấy fixed product + supplier | `<a>`/button affiliate kèm UTM |
+| **QA** | `Code`(1, **bắt buộc**) | rỗng → "" | khối hỏi-đáp theo code |
+| **DateTime** | `Format`(.NET, vd `yyyy`,`MM/yyyy`) | — | chuỗi ngày hiện tại; hoặc named `[Year]` từ PostContent |
+
+UTM: mọi link/sản phẩm tự ghép UTM (site + post.UtmSource + tag). Bài publish cuối =
+`TopDescription + AutoContent + FixedContent + FotterDescription` (đều chạy replace) — AI chỉ lo FixedContent.
+
+### 8.4 Hệ quả cho AI (rule prompt — bắt buộc)
+1. **Không bịa code thật** (SupplierCode/ProductTag/QA Code/Url). Code phải do **người dùng cấp trước**
+   (ô "Gợi ý tag" / `tagHints`) hoặc giữ lại từ tag cũ. Thiếu code → AI mô tả văn xuôi, **không đặt tag rỗng**
+   (tag rỗng bị CMS bỏ qua, vô nghĩa).
+2. **Đúng cú pháp tuyệt đối**: `[Type_Param:value;...]` — sai 1 ký tự = mất block. Liệt kê enum hợp lệ
+   trong prompt để model không tự chế param.
+3. **Tag không bọc `<p>`** (renderer đã `unwrapTagParagraphs`, nhưng prompt vẫn phải dặn đặt tag trên dòng riêng).
+4. **Bảo toàn khi viết lại (phương án Y)**: liệt kê tag cũ vào ngữ cảnh + lệnh "GIỮ NGUYÊN từng tag, kể cả
+   thứ tự param" → đã làm ở `create-cms-content-job.usecase`. Nên bổ sung **kiểm tra sau generate**:
+   so khớp tập tag đầu ra ⊇ tập tag cũ; thiếu → cảnh báo ở màn review.
+5. **Đặt tag đúng vị trí ngữ nghĩa**: ProductList/SaleList sau đoạn dẫn; Link trong câu CTA;
+   DateTime (`[Year]`) trong tiêu đề/thời điểm; QA cuối bài.
+
+## 9) Đề xuất schema TAG có cấu trúc trong AI tool (item #3 — chưa implement)
+
+Hôm nay AI chèn tag **dạng chuỗi** trong `section.content` (đủ cho MVP). Để bảo toàn chắc chắn + validate,
+đề xuất (giai đoạn sau) mô hình tag như **dữ liệu có cấu trúc** trong `packages/contracts`:
+- `cmsTagSchema = { type: ContentDataType, params: Record<ContentCodeType, string[]>, flags: ContentCodeType[] }`.
+- Hàm `renderCmsTag(tag) -> "[Type_...]"` (1 nguồn sự thật cú pháp) + `parseCmsTag(str)` (đối xứng C# `CreateOptionFromStr`).
+- Validate theo §8.3 (ProductList cần Supplier|ProductTag; SellerList/SaleList cần SupplierCode; ...) → chặn tag vô nghĩa **trước khi ghi CMS**.
+- Lưu danh sách tag tách khỏi prose ở draft → cập nhật = sửa prose, **giữ mảng tag** (phương án Y "cứng", không phụ thuộc prompt).
+
+Phạm vi: chỉ làm khi cần độ chắc chắn cao hơn; MVP hiện tại vẫn chạy bằng prompt + kiểm tra hậu kỳ (§8.4.4).
+
 ## 7) So sánh nhanh với dichoithoi (để định hình kỳ vọng)
 | | dichoithoi | laruki / dochoi3s |
 |---|---|---|
