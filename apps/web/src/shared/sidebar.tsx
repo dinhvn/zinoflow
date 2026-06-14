@@ -30,6 +30,12 @@ const DICHOITHOI_ITEMS: NavItem[] = [
   { href: "/dichoithoi/dia-chi", label: "Tra cứu địa chỉ", icon: IconSearch },
 ];
 
+/** Khu CMS khuyenmai (laruki + dochoi3s) — tao content AI ghi vao CMS */
+const KHUYENMAI_ITEMS: NavItem[] = [
+  { href: "/laruki", label: "Laruki", icon: IconTag },
+  { href: "/dochoi3s", label: "Dochoi3s", icon: IconTag },
+];
+
 const BOTTOM_ITEMS: NavItem[] = [{ href: "/settings", label: "Settings", icon: IconSettings }];
 
 function isActive(item: NavItem, pathname: string): boolean {
@@ -80,6 +86,14 @@ export function Sidebar() {
           Dichoithoi
         </div>
         {DICHOITHOI_ITEMS.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} />
+        ))}
+
+        {/* Khu CMS khuyenmai (spec laruki-dochoi3s-content-spec §3.1) */}
+        <div className="mt-5 mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          Affiliate (CMS)
+        </div>
+        {KHUYENMAI_ITEMS.map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
 
@@ -148,6 +162,15 @@ function IconSearch(props: SVGProps<SVGSVGElement>) {
     <IconBase {...props}>
       <circle cx="11" cy="11" r="7" />
       <path d="M21 21l-4.3-4.3" />
+    </IconBase>
+  );
+}
+
+function IconTag(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
+      <circle cx="7" cy="7" r="1.2" />
     </IconBase>
   );
 }

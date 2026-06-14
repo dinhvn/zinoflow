@@ -5,6 +5,10 @@ export * from "./common/error";
 export * from "./dichoithoi/destination";
 export * from "./dichoithoi/destination-article";
 
+// Khuyenmai — laruki/dochoi3s (M5)
+export * from "./khuyenmai/cms-site";
+export * from "./khuyenmai/cms-post";
+
 // AI Content
 export * from "./ai-content/ai-provider";
 export * from "./ai-content/article";
