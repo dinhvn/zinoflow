@@ -129,6 +129,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
   exports: [
     CreateContentJobUseCase,
     SuggestDestinationMetaUseCase,
+    GetAiUsageSummaryUseCase,
     CONTENT_JOB_REPOSITORY,
     CONTENT_DRAFT_REPOSITORY,
     AI_PROVIDER_REGISTRY,

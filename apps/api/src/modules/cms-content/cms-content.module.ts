@@ -39,5 +39,6 @@ import { AiContentModule } from "../ai-content/ai-content.module";
     // HttpReferenceFetcher la utility thuan (fetch tinh + SSRF guard) — tai dung tu module destination
     { provide: CMS_REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
   ],
+  exports: [CMS_POST_MIRROR_REPOSITORY],
 })
 export class CmsContentModule {}

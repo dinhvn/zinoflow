@@ -18,3 +18,4 @@ export * from "./ai-content/content-draft";
 export * from "./ai-content/quality";
 export * from "./ai-content/prompt-template";
 export * from "./ai-content/usage";
+export * from "./dashboard/summary";

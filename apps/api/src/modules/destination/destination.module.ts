@@ -74,6 +74,6 @@ import {
     { provide: DESTINATION_MIRROR_REPOSITORY, useClass: TypeOrmDestinationMirrorRepository },
     { provide: DESTINATION_RELATION_REPOSITORY, useClass: TypeOrmDestinationRelationRepository },
   ],
-  exports: [DICHOITHOI_SITE_DB],
+  exports: [DICHOITHOI_SITE_DB, DESTINATION_MIRROR_REPOSITORY],
 })
 export class DestinationModule {}

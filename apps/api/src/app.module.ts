@@ -7,6 +7,7 @@ import { JobsModule } from "./modules/shared/jobs/jobs.module";
 import { AiContentModule } from "./modules/ai-content/ai-content.module";
 import { DestinationModule } from "./modules/destination/destination.module";
 import { CmsContentModule } from "./modules/cms-content/cms-content.module";
+import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { AppExceptionFilter } from "./modules/shared/errors/app-exception.filter";
 import { TraceMiddleware } from "./modules/shared/observability/trace.middleware";
 import { ApiTokenGuard } from "./modules/shared/auth/api-token.guard";
@@ -29,6 +30,7 @@ import { ApiTokenGuard } from "./modules/shared/auth/api-token.guard";
     AiContentModule,
     DestinationModule,
     CmsContentModule,
+    DashboardModule,
   ],
   providers: [
     // Global: moi loi deu tra ve error envelope chuan kem traceId (spec §12)
