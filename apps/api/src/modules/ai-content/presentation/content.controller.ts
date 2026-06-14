@@ -1,7 +1,8 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Put } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import {
   activatePromptVersionRequestSchema,
   aiProviderKeySchema,
+  aiUsageSummaryQuerySchema,
   createContentJobRequestSchema,
   createPromptVersionRequestSchema,
   reviewDraftRequestSchema,
@@ -10,6 +11,8 @@ import {
   type ActivatePromptVersionRequest,
   type AiProviderInfo,
   type AiProviderKey,
+  type AiUsageSummaryQuery,
+  type AiUsageSummaryResponse,
   type ContentJob as ContentJobDto,
   type CreatePromptVersionRequest,
   type CreatePromptVersionResponse,
@@ -35,6 +38,7 @@ import { ListPromptTemplatesUseCase } from "../application/use-cases/list-prompt
 import { GetPromptTemplateUseCase } from "../application/use-cases/get-prompt-template.usecase";
 import { CreatePromptVersionUseCase } from "../application/use-cases/create-prompt-version.usecase";
 import { ActivatePromptVersionUseCase } from "../application/use-cases/activate-prompt-version.usecase";
+import { GetAiUsageSummaryUseCase } from "../application/use-cases/get-ai-usage-summary.usecase";
 import {
   QUALITY_RESULT_REPOSITORY,
   type QualityResultRepository,
@@ -105,6 +109,7 @@ export class ContentController {
     private readonly getPromptTemplate: GetPromptTemplateUseCase,
     private readonly createPromptVersion: CreatePromptVersionUseCase,
     private readonly activatePromptVersion: ActivatePromptVersionUseCase,
+    private readonly getAiUsageSummary: GetAiUsageSummaryUseCase,
     @Inject(QUALITY_RESULT_REPOSITORY) private readonly qualityResults: QualityResultRepository,
     @Inject(REVIEW_RECORD_REPOSITORY) private readonly reviewRecords: ReviewRecordRepository,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly repository: ContentJobRepository,
@@ -222,6 +227,14 @@ export class ContentController {
         isEnabled: enabledMap[provider.key] ?? true,
       })),
     };
+  }
+
+  /** Tong hop chi phi AI (ai_usage_logs) cho man /usage — mac dinh 30 ngay gan nhat. */
+  @Get("ai-usage/summary")
+  aiUsageSummary(
+    @Query(new ZodValidationPipe(aiUsageSummaryQuerySchema)) query: AiUsageSummaryQuery,
+  ): Promise<AiUsageSummaryResponse> {
+    return this.getAiUsageSummary.execute(query);
   }
 
   /** Bat/tat provider tu Settings page. */

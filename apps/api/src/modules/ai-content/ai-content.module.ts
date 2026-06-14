@@ -9,6 +9,7 @@ import { SubmitForReviewUseCase } from "./application/use-cases/submit-for-revie
 import { ReviewDraftUseCase } from "./application/use-cases/review-draft.usecase";
 import { UpdateDraftUseCase } from "./application/use-cases/update-draft.usecase";
 import { ExportDraftHtmlUseCase } from "./application/use-cases/export-draft-html.usecase";
+import { GetAiUsageSummaryUseCase } from "./application/use-cases/get-ai-usage-summary.usecase";
 import { SuggestDestinationMetaUseCase } from "./application/use-cases/suggest-destination-meta.usecase";
 import { ListPromptTemplatesUseCase } from "./application/use-cases/list-prompt-templates.usecase";
 import { GetPromptTemplateUseCase } from "./application/use-cases/get-prompt-template.usecase";
@@ -28,10 +29,12 @@ import { OpenAiContentAiProvider } from "./infrastructure/ai-providers/openai-co
 import { CONTENT_JOB_REPOSITORY } from "./application/ports/content-job.repository";
 import { CONTENT_DRAFT_REPOSITORY } from "./application/ports/content-draft.repository";
 import { AI_USAGE_RECORDER } from "./application/ports/ai-usage-recorder.port";
+import { AI_USAGE_READER } from "./application/ports/ai-usage-reader.port";
 import { AI_PROVIDER_REGISTRY } from "./application/ports/content-ai-provider.port";
 import { TypeOrmContentJobRepository } from "./infrastructure/repositories/typeorm-content-job.repository";
 import { TypeOrmContentDraftRepository } from "./infrastructure/repositories/typeorm-content-draft.repository";
 import { TypeOrmAiUsageRecorder } from "./infrastructure/repositories/typeorm-ai-usage-recorder";
+import { TypeOrmAiUsageReader } from "./infrastructure/repositories/typeorm-ai-usage-reader";
 import { StubContentAiProvider } from "./infrastructure/ai-providers/stub-content-ai.provider";
 import { AnthropicContentAiProvider } from "./infrastructure/ai-providers/anthropic-content-ai.provider";
 import { GeminiContentAiProvider } from "./infrastructure/ai-providers/gemini-content-ai.provider";
@@ -74,6 +77,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     GetPromptTemplateUseCase,
     CreatePromptVersionUseCase,
     ActivatePromptVersionUseCase,
+    GetAiUsageSummaryUseCase,
     PromptBuilder,
     ContentGenerateWorker,
     StubContentAiProvider,
@@ -86,6 +90,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     { provide: CONTENT_JOB_REPOSITORY, useClass: TypeOrmContentJobRepository },
     { provide: CONTENT_DRAFT_REPOSITORY, useClass: TypeOrmContentDraftRepository },
     { provide: AI_USAGE_RECORDER, useClass: TypeOrmAiUsageRecorder },
+    { provide: AI_USAGE_READER, useClass: TypeOrmAiUsageReader },
     { provide: AI_PROVIDER_SETTINGS, useClass: TypeOrmAiProviderSettings },
     { provide: PROMPT_TEMPLATE_REPOSITORY, useClass: TypeOrmPromptTemplateRepository },
     { provide: QUALITY_RESULT_REPOSITORY, useClass: TypeOrmQualityResultRepository },

@@ -23,6 +23,7 @@ const MAIN_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: IconDashboard, exact: true },
   { href: "/content", label: "AI Content", icon: IconSparkles },
   { href: "/prompts", label: "Prompt mẫu", icon: IconDoc },
+  { href: "/usage", label: "Chi phí AI", icon: IconChart },
 ];
 
 const DICHOITHOI_ITEMS: NavItem[] = [
@@ -171,6 +172,15 @@ function IconTag(props: SVGProps<SVGSVGElement>) {
     <IconBase {...props}>
       <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
       <circle cx="7" cy="7" r="1.2" />
+    </IconBase>
+  );
+}
+
+function IconChart(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <path d="M3 3v18h18" />
+      <path d="M7 15l3-4 3 2 4-6" />
     </IconBase>
   );
 }
