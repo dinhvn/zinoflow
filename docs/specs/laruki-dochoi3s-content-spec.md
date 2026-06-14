@@ -109,6 +109,10 @@ Hai site **luồng giống hệt nhau**, chỉ khác **template/prompt pack** (�
 
 ### 3.3 Màn detail
 - Thông tin bài (Title, Link, PostType, tag hiện có trong FixedContent — chỉ đọc để tham khảo).
+- **Nội dung hiện tại** (đã làm): hiển thị `FixedContent` đang có trên CMS (sanitize chống XSS) để
+  đối chiếu trước khi viết lại; bài mới chưa có thì gợi ý dùng "Viết bài bằng AI".
+- **Mô tả SEO** (đã làm): textarea `Excerpt` (plain text), nút **"Gợi ý bằng AI"** (Haiku, theo niche site)
+  + **"Lưu mô tả vào CMS"** (`UPDATE WordpressPost.Excerpt`, độc lập với luồng ghi content).
 - Khu **"Viết bài bằng AI"**: ô nhập **mô tả/ngữ cảnh** để AI gen (giống dichoithoi: userNotes + URL nguồn),
   chọn provider/model (đã có), chọn template theo PostType.
 - Nút **Tạo bài AI** / **Cập nhật bài** → generate qua pipeline ai-content → review/duyệt →

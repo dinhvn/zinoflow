@@ -240,6 +240,14 @@ Metrics MVP:
 - avg time draft completion
 - approval rate
 
+### 13.1 Da implement (UI)
+- **Dashboard trang chu (`/`)** — `GET /dashboard/summary` (module `dashboard`, chi doc, gom
+  tu ai-content + destination + cms-content): KPI (cho duyet / da duyet cho dang / chi phi 30N /
+  da xuat ban), hang doi "viec can lam" + bai gan day, pipeline trang thai job, tien do theo kenh
+  (dichoithoi/laruki/dochoi3s), bieu do chi phi theo ngay, trang thai he thong. Auto refresh 30s.
+- **Dashboard chi phi AI (`/usage`)** — `GET /content/ai-usage/summary?from&to` (mac dinh 30 ngay):
+  tong token + cost, gop theo provider×model, theo operation (buoc pipeline), theo ngay. Nguon: `ai_usage_logs`.
+
 ## 14) Security
 - API auth cho admin actions.
 - Secret key qua env vars.

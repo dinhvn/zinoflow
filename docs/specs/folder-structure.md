@@ -13,29 +13,35 @@ root/
   apps/
     web/                          # Next.js App Router
       src/
-        app/                      # routes: /content, /content/[id]/review, /settings
-        features/
-          ai-content/             # components + hooks theo feature
-        shared/                   # ui primitives (shadcn), api client, utils
+        app/                      # routes: / (dashboard), /content, /content/[id],
+                                  #   /prompts, /usage (chi phi AI), /settings,
+                                  #   /dichoithoi (+ /dia-chi, /[slug]),
+                                  #   /laruki, /dochoi3s (+ /new, /[cmsId])
+        features/                 # components theo feature: dashboard/, usage/,
+                                  #   cms-content/, ... (page chi compose, khong inline UI)
+        shared/
+          ui/                     # primitives thuan Tailwind (Button, Select, Input,
+                                  #   Badge, DataTable, Pagination, ErrorBox) — KHONG shadcn
+          api-client.ts, ...      # fetch wrapper, utils
       .env.local
 
     api/                          # NestJS
       src/
         modules/
-          ai-content/
-            domain/               # entities, value objects, state machine, gate rules
-            application/          # use cases (CreateContentJob, GenerateDraft, ...)
-            infrastructure/       # TypeORM repos, AI provider adapters, CMS client
-              ai-providers/
-                anthropic.provider.ts
-                openai.provider.ts
-                provider.registry.ts
+          ai-content/             # loi: job/draft/state machine, quality gates,
+            domain/               #   AI providers, prompt templates, ai_usage_logs
+            application/          # use cases (CreateContentJob, GenerateContent,
+                                  #   GetAiUsageSummary, ...)
+            infrastructure/       # TypeORM repos, AI provider adapters (anthropic/
+              ai-providers/       #   gemini/openai/stub), provider.registry
             presentation/         # controllers, DTOs
-          publisher/              # WordPress publish (cung cau truc 4 lop)
+          destination/            # dichoithoi.com — ghi thang SQL Server (4 lop)
+          cms-content/            # laruki/dochoi3s — ghi CMS khuyenmai (4 lop)
+          dashboard/              # chi doc, gom tu 3 module tren cho trang chu
           shared/
             jobs/                 # pg-boss setup + handlers
-            observability/        # logging, traceId, ai usage/cost log
-            auth/
+            observability/        # logging, traceId
+            auth/, errors/, text/, validation/
         migrations/               # TypeORM migrations
         main.ts
       .env
@@ -43,8 +49,11 @@ root/
   packages/
     contracts/
       src/
-        ai-content/               # Zod: job, draft, article blocks (8-block framework)
-        publisher/
+        ai-content/               # Zod: job, draft, article (8-block), quality,
+                                  #   prompt-template, usage (chi phi)
+        dichoithoi/               # destination (diem den)
+        khuyenmai/                # cms-site, cms-post, cms-article (laruki/dochoi3s)
+        dashboard/                # summary trang chu
         common/                   # error envelope, pagination
 
   outputs/                        # generated files (html snapshots, images sau nay)

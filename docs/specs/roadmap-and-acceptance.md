@@ -50,7 +50,8 @@ Acceptance:
 Deliverables:
 - CMS old API integration hardening.
 - Retry/backoff, timeout, error classification.
-- Basic dashboard cho job status.
+- Basic dashboard cho job status. ✅ DA LAM (14/06/2026) — trang chu `/` (pipeline job +
+  viec can lam + tien do theo kenh) + trang chi phi AI `/usage`. Xem spec chinh §13.1.
 
 Acceptance:
 1. Upstream CMS loi tam thoi duoc retry dung policy.
