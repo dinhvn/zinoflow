@@ -57,6 +57,16 @@ export const listCmsPostsResponseSchema = z.object({
 });
 export type ListCmsPostsResponse = z.infer<typeof listCmsPostsResponseSchema>;
 
+/** POST /cms/:site/posts — tao bai MOI (INSERT shell PostId=0 ben CMS) */
+export const createCmsPostRequestSchema = z.object({
+  title: z.string().min(5).max(128),
+  postType: z.number().int().optional(),
+});
+export type CreateCmsPostRequest = z.infer<typeof createCmsPostRequestSchema>;
+
+export const createCmsPostResponseSchema = z.object({ cmsId: z.number().int() });
+export type CreateCmsPostResponse = z.infer<typeof createCmsPostResponseSchema>;
+
 /** Ket qua dong bo mirror tu CMS */
 export const syncCmsPostsResultSchema = z.object({
   added: z.number().int(),

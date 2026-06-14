@@ -1,3 +1,21 @@
+// marked la ESM -> mock bang fake "giong that" (boc block thanh <p>/<h2>) de
+// test logic go <p> quanh tag ma khong can transform ESM trong jest.
+jest.mock("marked", () => ({
+  marked: {
+    parse: (md: string) =>
+      Promise.resolve(
+        md
+          .split(/\n\n+/)
+          .map((block) =>
+            block.startsWith("## ")
+              ? `<h2>${block.slice(3)}</h2>`
+              : `<p>${block.replace(/\n/g, "<br>")}</p>`,
+          )
+          .join("\n"),
+      ),
+  },
+}));
+
 import { renderCmsBodyHtml, unwrapTagParagraphs } from "./cms-html.renderer";
 import type { CmsArticle } from "@zinoflow/contracts";
 
@@ -20,7 +38,7 @@ describe("renderCmsBodyHtml", () => {
     excerpt: "Mô tả ngắn về đồ chơi cho bé.",
     sections: [
       { heading: "Giới thiệu", content: "Đoạn văn giới thiệu sản phẩm cho bé." },
-      { heading: "Danh sách", content: "Tham khảo:\n\n[ProductList_SupplierCode:juno]" },
+      { heading: "Danh sách", content: "[ProductList_SupplierCode:juno]" },
     ],
   };
 

@@ -57,17 +57,22 @@ export class MssqlCmsDbAdapter implements KhuyenMaiCmsDb, OnModuleDestroy {
     );
   }
 
-  async insertNewPost(siteId: number, content: CmsContentWrite): Promise<{ cmsId: number }> {
+  async insertNewPost(
+    siteId: number,
+    content: CmsContentWrite,
+    postType: number | null,
+  ): Promise<{ cmsId: number }> {
     const result = await this.runWithRetry<sql.IResult<{ NewId: number }>>((pool) =>
       this.bindContent(pool.request(), content)
         .input("siteId", siteId)
+        .input("postType", postType)
         .query<{ NewId: number }>(
           // PostId=0: CMS tao WP post luc publish dau (phuong an R). Link rong tam,
           // DatePublished sentinel '1900-01-01' = chua publish. IsReadyAuto=0: can cau hinh trong CMS.
           `INSERT INTO WordpressPost
-             (SiteId, PostId, Title, Link, FixedContent, Excerpt, IsReadyAuto, DateUpdated, DatePublished)
+             (SiteId, PostId, PostType, Title, Link, FixedContent, Excerpt, IsReadyAuto, DateUpdated, DatePublished)
            OUTPUT INSERTED.Id AS NewId
-           VALUES (@siteId, 0, @title, '', @fixedContent, @excerpt, 0, GETDATE(), '1900-01-01')`,
+           VALUES (@siteId, 0, @postType, @title, '', @fixedContent, @excerpt, 0, GETDATE(), '1900-01-01')`,
         ),
     );
     return { cmsId: result.recordset[0]!.NewId };

@@ -1,11 +1,14 @@
 import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import {
   createCmsJobRequestSchema,
+  createCmsPostRequestSchema,
   khuyenmaiSiteSchema,
   listCmsPostsQuerySchema,
   saveCmsAiInputsRequestSchema,
   type CreateCmsJobRequest,
   type CreateCmsJobResponse,
+  type CreateCmsPostRequest,
+  type CreateCmsPostResponse,
   type KhuyenmaiSite,
   type CmsPostDetail,
   type ListCmsPostsQuery,
@@ -20,6 +23,7 @@ import { ListCmsPostsUseCase } from "../application/use-cases/list-cms-posts.use
 import { GetCmsPostDetailUseCase } from "../application/use-cases/get-cms-post-detail.usecase";
 import { CreateCmsContentJobUseCase } from "../application/use-cases/create-cms-content-job.usecase";
 import { WriteContentToCmsUseCase } from "../application/use-cases/write-content-to-cms.usecase";
+import { CreateCmsPostUseCase } from "../application/use-cases/create-cms-post.usecase";
 
 /**
  * REST khu CMS khuyenmai (laruki/dochoi3s) — spec laruki-dochoi3s-content-spec §3.
@@ -33,7 +37,17 @@ export class CmsContentController {
     private readonly getDetail: GetCmsPostDetailUseCase,
     private readonly createJob: CreateCmsContentJobUseCase,
     private readonly writeToCms: WriteContentToCmsUseCase,
+    private readonly createPost: CreateCmsPostUseCase,
   ) {}
+
+  /** Tao bai MOI (INSERT shell PostId=0 ben CMS) — tra ve cmsId de mo trang chi tiet */
+  @Post(":site/posts")
+  create(
+    @Param("site", new ZodValidationPipe(khuyenmaiSiteSchema)) site: KhuyenmaiSite,
+    @Body(new ZodValidationPipe(createCmsPostRequestSchema)) request: CreateCmsPostRequest,
+  ): Promise<CreateCmsPostResponse> {
+    return this.createPost.execute(site, request);
+  }
 
   /** Danh sach bai theo site (mirror) */
   @Get(":site/posts")

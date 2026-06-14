@@ -18,5 +18,9 @@ export interface KhuyenMaiCmsDb {
   /** Cap nhat noi dung bai da co (UPDATE WordpressPost) */
   updateContent(cmsId: number, content: CmsContentWrite): Promise<void>;
   /** Tao bai moi (PostId=0 — CMS se tao WP post luc publish dau). Tra ve cmsId moi. */
-  insertNewPost(siteId: number, content: CmsContentWrite): Promise<{ cmsId: number }>;
+  insertNewPost(
+    siteId: number,
+    content: CmsContentWrite,
+    postType: number | null,
+  ): Promise<{ cmsId: number }>;
 }
