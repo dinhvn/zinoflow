@@ -121,7 +121,8 @@ export class CreateCmsContentJobUseCase {
     }
 
     if (request.mode === "update") {
-      const current = await this.cmsDb.fetchPostContent(cmsId).catch(() => null);
+      const body = await this.cmsDb.fetchPostContent(cmsId).catch(() => null);
+      const current = body?.fixedContent;
       if (current?.trim()) {
         parts.push(
           "",

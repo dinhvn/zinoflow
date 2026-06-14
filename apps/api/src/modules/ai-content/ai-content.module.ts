@@ -126,6 +126,8 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     SuggestDestinationMetaUseCase,
     CONTENT_JOB_REPOSITORY,
     CONTENT_DRAFT_REPOSITORY,
+    AI_PROVIDER_REGISTRY,
+    AI_USAGE_RECORDER,
   ],
 })
 export class AiContentModule {}

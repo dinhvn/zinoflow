@@ -5,6 +5,9 @@ import {
   khuyenmaiSiteSchema,
   listCmsPostsQuerySchema,
   saveCmsAiInputsRequestSchema,
+  saveCmsExcerptRequestSchema,
+  suggestCmsSeoRequestSchema,
+  type CmsSeoSuggestion,
   type CreateCmsJobRequest,
   type CreateCmsJobResponse,
   type CreateCmsPostRequest,
@@ -14,6 +17,8 @@ import {
   type ListCmsPostsQuery,
   type ListCmsPostsResponse,
   type SaveCmsAiInputsRequest,
+  type SaveCmsExcerptRequest,
+  type SuggestCmsSeoRequest,
   type SyncCmsPostsResult,
   type WriteCmsResult,
 } from "@zinoflow/contracts";
@@ -24,6 +29,8 @@ import { GetCmsPostDetailUseCase } from "../application/use-cases/get-cms-post-d
 import { CreateCmsContentJobUseCase } from "../application/use-cases/create-cms-content-job.usecase";
 import { WriteContentToCmsUseCase } from "../application/use-cases/write-content-to-cms.usecase";
 import { CreateCmsPostUseCase } from "../application/use-cases/create-cms-post.usecase";
+import { SuggestCmsSeoUseCase } from "../application/use-cases/suggest-cms-seo.usecase";
+import { SaveCmsExcerptUseCase } from "../application/use-cases/save-cms-excerpt.usecase";
 
 /**
  * REST khu CMS khuyenmai (laruki/dochoi3s) — spec laruki-dochoi3s-content-spec §3.
@@ -38,6 +45,8 @@ export class CmsContentController {
     private readonly createJob: CreateCmsContentJobUseCase,
     private readonly writeToCms: WriteContentToCmsUseCase,
     private readonly createPost: CreateCmsPostUseCase,
+    private readonly suggestSeo: SuggestCmsSeoUseCase,
+    private readonly saveExcerpt: SaveCmsExcerptUseCase,
   ) {}
 
   /** Tao bai MOI (INSERT shell PostId=0 ben CMS) — tra ve cmsId de mo trang chi tiet */
@@ -100,5 +109,24 @@ export class CmsContentController {
   @Post("posts/:cmsId/write")
   write(@Param("cmsId") cmsId: string): Promise<WriteCmsResult> {
     return this.writeToCms.execute(Number(cmsId));
+  }
+
+  /** AI goi y mo ta SEO (meta description) cho bai */
+  @Post("posts/:cmsId/seo-description")
+  suggestSeoDescription(
+    @Param("cmsId") cmsId: string,
+    @Body(new ZodValidationPipe(suggestCmsSeoRequestSchema)) request: SuggestCmsSeoRequest,
+  ): Promise<CmsSeoSuggestion> {
+    return this.suggestSeo.execute(Number(cmsId), request);
+  }
+
+  /** Luu mo ta SEO thang xuong CMS (UPDATE WordpressPost.Excerpt) */
+  @Post("posts/:cmsId/excerpt")
+  async saveSeoExcerpt(
+    @Param("cmsId") cmsId: string,
+    @Body(new ZodValidationPipe(saveCmsExcerptRequestSchema)) request: SaveCmsExcerptRequest,
+  ): Promise<{ ok: true }> {
+    await this.saveExcerpt.execute(Number(cmsId), request.excerpt);
+    return { ok: true };
   }
 }

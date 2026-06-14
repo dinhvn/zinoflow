@@ -2,7 +2,11 @@ import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import * as sql from "mssql";
 import { UpstreamApiError } from "../../../shared/errors/app-error";
 import type { CmsPostRow } from "../../domain/cms-post";
-import type { CmsContentWrite, KhuyenMaiCmsDb } from "../../application/ports/khuyenmai-cms-db.port";
+import type {
+  CmsContentWrite,
+  CmsPostBody,
+  KhuyenMaiCmsDb,
+} from "../../application/ports/khuyenmai-cms-db.port";
 
 /**
  * Adapter SQL Server CMS khuyenmai (laruki/dochoi3s) — bang WordpressPost.
@@ -37,11 +41,24 @@ export class MssqlCmsDbAdapter implements KhuyenMaiCmsDb, OnModuleDestroy {
     }));
   }
 
-  async fetchPostContent(cmsId: number): Promise<string | null> {
-    const rows = await this.queryWithRetry<{ FixedContent: string | null }>(
-      `SELECT FixedContent FROM WordpressPost WHERE Id = ${Number(cmsId)}`,
+  async fetchPostContent(cmsId: number): Promise<CmsPostBody> {
+    const rows = await this.queryWithRetry<{ FixedContent: string | null; Excerpt: string | null }>(
+      `SELECT FixedContent, Excerpt FROM WordpressPost WHERE Id = ${Number(cmsId)}`,
     );
-    return rows[0]?.FixedContent ?? null;
+    return {
+      fixedContent: rows[0]?.FixedContent ?? null,
+      excerpt: rows[0]?.Excerpt ?? null,
+    };
+  }
+
+  async updateExcerpt(cmsId: number, excerpt: string): Promise<void> {
+    await this.runWithRetry((pool) =>
+      pool
+        .request()
+        .input("cmsId", cmsId)
+        .input("excerpt", excerpt.slice(0, 512))
+        .query(`UPDATE WordpressPost SET Excerpt = @excerpt, DateUpdated = GETDATE() WHERE Id = @cmsId`),
+    );
   }
 
   async updateContent(cmsId: number, content: CmsContentWrite): Promise<void> {

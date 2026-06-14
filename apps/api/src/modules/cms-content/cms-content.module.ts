@@ -14,6 +14,8 @@ import { GetCmsPostDetailUseCase } from "./application/use-cases/get-cms-post-de
 import { CreateCmsContentJobUseCase } from "./application/use-cases/create-cms-content-job.usecase";
 import { WriteContentToCmsUseCase } from "./application/use-cases/write-content-to-cms.usecase";
 import { CreateCmsPostUseCase } from "./application/use-cases/create-cms-post.usecase";
+import { SuggestCmsSeoUseCase } from "./application/use-cases/suggest-cms-seo.usecase";
+import { SaveCmsExcerptUseCase } from "./application/use-cases/save-cms-excerpt.usecase";
 import { AiContentModule } from "../ai-content/ai-content.module";
 
 /**
@@ -30,6 +32,8 @@ import { AiContentModule } from "../ai-content/ai-content.module";
     CreateCmsContentJobUseCase,
     WriteContentToCmsUseCase,
     CreateCmsPostUseCase,
+    SuggestCmsSeoUseCase,
+    SaveCmsExcerptUseCase,
     { provide: CMS_POST_MIRROR_REPOSITORY, useClass: TypeOrmCmsPostMirrorRepository },
     { provide: KHUYENMAI_CMS_DB, useClass: MssqlCmsDbAdapter },
     // HttpReferenceFetcher la utility thuan (fetch tinh + SSRF guard) — tai dung tu module destination

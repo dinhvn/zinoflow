@@ -11,6 +11,8 @@ import {
   type ContentJobRepository,
 } from "../../../ai-content/application/ports/content-job.repository";
 import { extractCmsTags } from "../../domain/cms-post";
+import { stripHtml } from "../../../shared/text/strip-html";
+import { sanitizeCmsHtmlForDisplay } from "../services/cms-html.renderer";
 import { toCmsPostDto } from "./cms-post.mapper";
 
 /** Chi tiet 1 bai cho man /[site]/[cmsId] — gom mirror + tag hien co + trang thai job + ghi chu AI. */
@@ -29,12 +31,17 @@ export class GetCmsPostDetailUseCase {
         "Bấm Đồng bộ từ CMS rồi thử lại",
       ]);
     }
-    // Bóc tag tu FixedContent ben CMS (chi de hien thi tham khao). Bai moi (postId=0,
-    // chua ghi) co the chua co content -> tag rong.
+    // Doc noi dung hien tai ben CMS (FixedContent + Excerpt): hien thi tham khao + boc tag.
+    // Bai moi (postId=0, chua ghi) co the chua co content -> bo qua.
     let existingTags: string[] = [];
+    let currentContent: string | null = null;
+    let currentExcerpt: string | null = null;
     if (entity.postId !== 0 || entity.aiContentWrittenAt) {
-      const content = await this.cmsDb.fetchPostContent(cmsId).catch(() => null);
-      existingTags = extractCmsTags(content);
+      const body = await this.cmsDb.fetchPostContent(cmsId).catch(() => null);
+      existingTags = extractCmsTags(body?.fixedContent ?? null);
+      currentContent = body?.fixedContent ? sanitizeCmsHtmlForDisplay(body.fixedContent) : null;
+      // Excerpt la meta description -> hien thi plain text (bo the HTML cu neu co)
+      currentExcerpt = body?.excerpt ? stripHtml(body.excerpt).trim() || null : null;
     }
 
     // Trang thai job dang soan (UI mo nut "Ghi vao CMS" khi Approved)
@@ -47,6 +54,8 @@ export class GetCmsPostDetailUseCase {
     return {
       ...toCmsPostDto(entity),
       existingTags,
+      currentContent,
+      currentExcerpt,
       activeJobStatus,
       aiNotes: entity.aiNotes,
       aiTagHints: entity.aiTagHints,

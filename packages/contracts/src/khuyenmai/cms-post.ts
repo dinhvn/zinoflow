@@ -80,6 +80,10 @@ export type SyncCmsPostsResult = z.infer<typeof syncCmsPostsResultSchema>;
 export const cmsPostDetailSchema = cmsPostSchema.extend({
   /** Cac tag [Type_Param:value] hien co trong FixedContent (chi doc, tham khao) */
   existingTags: z.array(z.string()),
+  /** Noi dung HTML hien tai (FixedContent ben CMS, da sanitize) — hien thi tham khao, null neu bai moi */
+  currentContent: z.string().nullable(),
+  /** Mo ta SEO hien tai (WordpressPost.Excerpt) */
+  currentExcerpt: z.string().nullable(),
   /** Trang thai job ai-content dang soan (null neu khong co) — UI mo nut "Ghi vao CMS" khi Approved */
   activeJobStatus: z.string().nullable(),
   aiNotes: z.string().nullable(),
@@ -87,3 +91,22 @@ export const cmsPostDetailSchema = cmsPostSchema.extend({
   aiReferenceUrls: z.array(z.object({ label: z.string(), url: z.string() })),
 });
 export type CmsPostDetail = z.infer<typeof cmsPostDetailSchema>;
+
+/** POST /cms/posts/:cmsId/seo-description — AI goi y mo ta SEO; chon provider/model nhe */
+export const suggestCmsSeoRequestSchema = z.object({
+  aiProvider: z.string().optional(),
+  aiModel: z.string().optional(),
+});
+export type SuggestCmsSeoRequest = z.infer<typeof suggestCmsSeoRequestSchema>;
+
+export const cmsSeoSuggestionSchema = z.object({
+  /** Mo ta meta chuan SEO: 1 cau hap dan, ~120-160 ky tu, co tu khoa chinh */
+  description: z.string().min(20).max(320),
+});
+export type CmsSeoSuggestion = z.infer<typeof cmsSeoSuggestionSchema>;
+
+/** POST /cms/posts/:cmsId/excerpt — luu mo ta SEO thang vao CMS (UPDATE WordpressPost.Excerpt) */
+export const saveCmsExcerptRequestSchema = z.object({
+  excerpt: z.string().max(512),
+});
+export type SaveCmsExcerptRequest = z.infer<typeof saveCmsExcerptRequestSchema>;

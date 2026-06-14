@@ -35,3 +35,23 @@ export async function renderCmsBodyHtml(article: CmsArticle): Promise<string> {
 export function unwrapTagParagraphs(html: string): string {
   return html.replace(/<p>\s*(\[[^\]]+\])\s*<\/p>/g, "$1");
 }
+
+/**
+ * Sanitize FixedContent doc tu CMS truoc khi hien thi preview o detail (chong XSS).
+ * Noi dung CMS production co the chua HTML tuy y -> chi giu tag an toan.
+ */
+export function sanitizeCmsHtmlForDisplay(html: string): string {
+  return sanitizeHtml(html, {
+    allowedTags: [
+      "h2", "h3", "h4", "p", "br", "hr",
+      "strong", "em", "b", "i", "u", "s", "blockquote",
+      "ul", "ol", "li", "a", "img",
+      "table", "thead", "tbody", "tr", "th", "td",
+    ],
+    allowedAttributes: {
+      a: ["href", "title", "rel", "target"],
+      img: ["src", "alt", "title"],
+    },
+    allowedSchemes: ["http", "https"],
+  });
+}

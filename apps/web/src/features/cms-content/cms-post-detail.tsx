@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   cmsPostDetailSchema,
+  cmsSeoSuggestionSchema,
   createCmsJobResponseSchema,
   khuyenmaiPostTypeLabel,
   listAiProvidersResponseSchema,
@@ -26,6 +27,8 @@ export function CmsPostDetail({ site, cmsId }: { site: KhuyenmaiSite; cmsId: num
   const [inputsSaved, setInputsSaved] = useState(false);
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
+  const [seoDescription, setSeoDescription] = useState("");
+  const [seoSaved, setSeoSaved] = useState(false);
 
   const detailQuery = useQuery({
     queryKey: ["cms-post", cmsId],
@@ -50,6 +53,7 @@ export function CmsPostDetail({ site, cmsId }: { site: KhuyenmaiSite; cmsId: num
     setUserNotes(d.aiNotes ?? "");
     setTagHints(d.aiTagHints ?? "");
     setRefUrls(d.aiReferenceUrls.length > 0 ? d.aiReferenceUrls : [{ label: "Nguồn", url: "" }]);
+    setSeoDescription(d.currentExcerpt ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d?.cmsId]);
 
@@ -81,6 +85,33 @@ export function CmsPostDetail({ site, cmsId }: { site: KhuyenmaiSite; cmsId: num
     onSuccess: (r) => {
       setActionError(null);
       setWriteMsg(`✅ Đã ghi nội dung "${r.title}" vào CMS. Vào CMS để chèn tag (nếu cần) + publish.`);
+      void detailQuery.refetch();
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+
+  const suggestSeo = useMutation({
+    mutationFn: async () =>
+      cmsSeoSuggestionSchema.parse(
+        await apiSend("POST", `/cms/posts/${cmsId}/seo-description`, {
+          aiProvider: selectedProvider?.key,
+          aiModel: selectedModel?.id,
+        }),
+      ),
+    onSuccess: (r) => {
+      setActionError(null);
+      setSeoDescription(r.description);
+      setSeoSaved(false);
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+
+  const saveSeo = useMutation({
+    mutationFn: () =>
+      apiSend("POST", `/cms/posts/${cmsId}/excerpt`, { excerpt: seoDescription.trim() }),
+    onSuccess: () => {
+      setActionError(null);
+      setSeoSaved(true);
       void detailQuery.refetch();
     },
     onError: (e) => setActionError(toActionError(e)),
@@ -129,6 +160,55 @@ export function CmsPostDetail({ site, cmsId }: { site: KhuyenmaiSite; cmsId: num
             </div>
           </div>
 
+          {/* Mo ta SEO (Excerpt) — co AI goi y, luu thang xuong CMS */}
+          <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className="font-medium">Mô tả SEO (meta description)</h3>
+              <span
+                className={`text-xs ${
+                  seoDescription.length > 160 ? "text-amber-600 dark:text-amber-400" : "text-zinc-400"
+                }`}
+              >
+                {seoDescription.length} ký tự (chuẩn ~120–160)
+              </span>
+            </div>
+            <textarea
+              value={seoDescription}
+              onChange={(e) => {
+                setSeoDescription(e.target.value);
+                setSeoSaved(false);
+              }}
+              rows={2}
+              placeholder="Mô tả ngắn hiển thị trên Google. Bấm “Gợi ý bằng AI” để tạo tự động."
+              className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Button
+                loading={suggestSeo.isPending}
+                disabled={!selectedProvider || !selectedModel}
+                onClick={() => suggestSeo.mutate()}
+              >
+                {suggestSeo.isPending ? "Đang gợi ý..." : "✨ Gợi ý bằng AI"}
+              </Button>
+              <Button
+                variant="primary"
+                loading={saveSeo.isPending}
+                disabled={seoDescription.trim().length < 20}
+                onClick={() => saveSeo.mutate()}
+              >
+                {saveSeo.isPending ? "Đang lưu..." : "Lưu mô tả vào CMS"}
+              </Button>
+              {seoSaved && !saveSeo.isPending && (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400">✅ Đã lưu vào CMS</span>
+              )}
+              {!selectedProvider && (
+                <span className="text-xs text-amber-600 dark:text-amber-400">
+                  Cần bật AI provider trong Settings để dùng gợi ý.
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Tag hien co (chi doc) */}
           <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
             <h3 className="mb-2 font-medium">Tag hiện có trong bài</h3>
@@ -142,6 +222,26 @@ export function CmsPostDetail({ site, cmsId }: { site: KhuyenmaiSite; cmsId: num
                   </Badge>
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* Noi dung hien tai (FixedContent ben CMS, chi doc) */}
+          <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+            <h3 className="mb-2 font-medium">Nội dung hiện tại</h3>
+            {d.currentContent ? (
+              <details open>
+                <summary className="cursor-pointer text-sm text-zinc-500 hover:underline">
+                  Xem nội dung đang có trên CMS
+                </summary>
+                <div
+                  className="mt-3 max-w-none border-t border-zinc-100 pt-3 text-sm leading-relaxed dark:border-zinc-800 [&_a]:text-blue-600 [&_a]:underline dark:[&_a]:text-blue-400 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:font-semibold [&_li]:my-1 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_table]:my-2 [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:px-2 [&_th]:py-1 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+                  dangerouslySetInnerHTML={{ __html: d.currentContent }}
+                />
+              </details>
+            ) : (
+              <p className="text-sm text-zinc-500">
+                Chưa có nội dung trên CMS. Dùng “Viết bài bằng AI” bên dưới để tạo.
+              </p>
             )}
           </div>
 
