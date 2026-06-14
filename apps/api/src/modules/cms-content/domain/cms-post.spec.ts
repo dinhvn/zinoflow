@@ -1,9 +1,26 @@
 import {
+  CMS_TAG_PLACEHOLDER,
   compareCmsPostsForSort,
   deriveCmsContentState,
   extractCmsTags,
+  hasUnfilledTagPlaceholder,
   type CmsPostSortFields,
 } from "./cms-post";
+
+describe("hasUnfilledTagPlaceholder", () => {
+  it("phat hien placeholder CAN_DIEN_MA trong content", () => {
+    expect(hasUnfilledTagPlaceholder(`[ProductList_ProductTag:${CMS_TAG_PLACEHOLDER};NumberProduct:5]`)).toBe(true);
+  });
+  it("phat hien o bat ky doan nao (title)", () => {
+    expect(hasUnfilledTagPlaceholder("<p>html</p>", `Tiêu đề ${CMS_TAG_PLACEHOLDER}`)).toBe(true);
+  });
+  it("false khi tag da dien ma that", () => {
+    expect(hasUnfilledTagPlaceholder("[ProductList_ProductTag:lap-rap-co-khi]", "Tiêu đề sạch")).toBe(false);
+  });
+  it("bo qua null/undefined", () => {
+    expect(hasUnfilledTagPlaceholder(null, undefined, "")).toBe(false);
+  });
+});
 
 describe("deriveCmsContentState", () => {
   const base = { activeContentJobId: null, aiContentWrittenAt: null, datePublished: null };

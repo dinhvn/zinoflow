@@ -40,6 +40,17 @@ export function extractCmsTags(content: string | null): string[] {
   return matches ? [...new Set(matches)] : [];
 }
 
+/**
+ * Placeholder AI dat khi de xuat tag ma chua co ma that (phuong an "chi dung ma nguoi dung cap").
+ * WriteContentToCms chan ghi neu con sot — nguoi dung phai dien ma that o editor man review.
+ */
+export const CMS_TAG_PLACEHOLDER = "CAN_DIEN_MA";
+
+/** Con tag chua dien ma (placeholder CAN_DIEN_MA) trong bat ky doan text nao? */
+export function hasUnfilledTagPlaceholder(...texts: Array<string | null | undefined>): boolean {
+  return texts.some((t) => !!t && t.includes(CMS_TAG_PLACEHOLDER));
+}
+
 export interface CmsPostSortFields {
   title: string;
   postType: number | null;

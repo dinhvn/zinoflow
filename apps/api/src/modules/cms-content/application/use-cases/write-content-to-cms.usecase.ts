@@ -15,6 +15,7 @@ import {
 } from "../ports/cms-post-mirror.repository";
 import { KHUYENMAI_CMS_DB, type KhuyenMaiCmsDb } from "../ports/khuyenmai-cms-db.port";
 import { renderCmsBodyHtml } from "../services/cms-html.renderer";
+import { CMS_TAG_PLACEHOLDER, hasUnfilledTagPlaceholder } from "../../domain/cms-post";
 
 /**
  * Ghi content da DUYET (Approved) xuong CMS (UPDATE WordpressPost.FixedContent) — phuong an R.
@@ -55,6 +56,16 @@ export class WriteContentToCmsUseCase {
     const article = cmsArticleSchema.parse(draft.article);
 
     const html = await renderCmsBodyHtml(article);
+
+    // Chot chan: con placeholder ma tag chua dien -> chan ghi (tranh ghi tag vo nghia xuong CMS).
+    // Nguoi dung dien ma that o editor man review roi duyet lai.
+    if (hasUnfilledTagPlaceholder(html, article.title)) {
+      throw new DomainRuleError(
+        `Bài còn tag chưa điền mã ("${CMS_TAG_PLACEHOLDER}") — điền mã thật ở màn soạn rồi duyệt lại`,
+        [`Mở bài, thay ${CMS_TAG_PLACEHOLDER} bằng mã supplier/product/QA thật, lưu version mới và duyệt (Approved)`],
+      );
+    }
+
     await this.cmsDb.updateContent(cmsId, {
       title: article.title,
       fixedContent: html,

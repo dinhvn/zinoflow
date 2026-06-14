@@ -211,9 +211,11 @@ UTM: mọi link/sản phẩm tự ghép UTM (site + post.UtmSource + tag). Bài 
 `TopDescription + AutoContent + FixedContent + FotterDescription` (đều chạy replace) — AI chỉ lo FixedContent.
 
 ### 8.4 Hệ quả cho AI (rule prompt — bắt buộc)
-1. **Không bịa code thật** (SupplierCode/ProductTag/QA Code/Url). Code phải do **người dùng cấp trước**
-   (ô "Gợi ý tag" / `tagHints`) hoặc giữ lại từ tag cũ. Thiếu code → AI mô tả văn xuôi, **không đặt tag rỗng**
-   (tag rỗng bị CMS bỏ qua, vô nghĩa).
+1. **AI chủ động đề xuất + đặt tag** ở chỗ hợp lý (chốt 14/06/2026): AI tự quyết **chèn ở đâu** và **viết
+   luôn chuỗi tag**. Mã thật do **người dùng cấp** (ô "Gợi ý tag" / `tagHints`) hoặc giữ từ tag cũ —
+   **không bịa mã thật**. Chỗ nên có tag nhưng chưa có mã → đặt placeholder **`CAN_DIEN_MA`**
+   (vd `[ProductList_ProductTag:CAN_DIEN_MA;NumberProduct:5]`) để người dùng điền ở editor màn review.
+   **Chốt chặn:** `WriteContentToCms` từ chối ghi nếu còn `CAN_DIEN_MA` (tránh ghi tag vô nghĩa xuống CMS).
 2. **Đúng cú pháp tuyệt đối**: `[Type_Param:value;...]` — sai 1 ký tự = mất block. Liệt kê enum hợp lệ
    trong prompt để model không tự chế param.
 3. **Tag không bọc `<p>`** (renderer đã `unwrapTagParagraphs`, nhưng prompt vẫn phải dặn đặt tag trên dòng riêng).
