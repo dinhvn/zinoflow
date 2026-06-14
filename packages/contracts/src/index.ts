@@ -8,6 +8,7 @@ export * from "./dichoithoi/destination-article";
 // Khuyenmai — laruki/dochoi3s (M5)
 export * from "./khuyenmai/cms-site";
 export * from "./khuyenmai/cms-post";
+export * from "./khuyenmai/cms-article";
 
 // AI Content
 export * from "./ai-content/ai-provider";

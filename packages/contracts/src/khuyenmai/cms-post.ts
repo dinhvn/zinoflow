@@ -71,6 +71,7 @@ export const cmsPostDetailSchema = cmsPostSchema.extend({
   /** Cac tag [Type_Param:value] hien co trong FixedContent (chi doc, tham khao) */
   existingTags: z.array(z.string()),
   aiNotes: z.string().nullable(),
+  aiTagHints: z.string().nullable(),
   aiReferenceUrls: z.array(z.object({ label: z.string(), url: z.string() })),
 });
 export type CmsPostDetail = z.infer<typeof cmsPostDetailSchema>;

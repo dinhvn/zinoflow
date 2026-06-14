@@ -7,7 +7,7 @@ import {
   PROMPT_TEMPLATE_REPOSITORY,
   type PromptTemplateRepository,
 } from "../ports/prompt-template.repository";
-import { DEFAULT_PROMPTS, PROMPT_KEYS } from "./default-prompts";
+import { DEFAULT_PROMPTS, SYSTEM_PROMPT_KEY } from "./default-prompts";
 import { renderPromptTemplate } from "./prompt-template.renderer";
 
 /**
@@ -48,11 +48,8 @@ export class PromptBuilder {
     return {
       model: ctx.model,
       operation: "outline",
-      system: await this.loadTemplate(PROMPT_KEYS.system),
-      prompt: renderPromptTemplate(
-        await this.loadTemplate(PROMPT_KEYS.outline(ctx.articleType)),
-        vars,
-      ),
+      system: await this.resolveTemplate(this.systemKeys(ctx)),
+      prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("outline", ctx)), vars),
       maxTokens: MAX_TOKENS.outline,
       vars,
     };
@@ -72,11 +69,8 @@ export class PromptBuilder {
     return {
       model: ctx.model,
       operation: "section",
-      system: await this.loadTemplate(PROMPT_KEYS.system),
-      prompt: renderPromptTemplate(
-        await this.loadTemplate(PROMPT_KEYS.section(ctx.articleType)),
-        vars,
-      ),
+      system: await this.resolveTemplate(this.systemKeys(ctx)),
+      prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("section", ctx)), vars),
       maxTokens: MAX_TOKENS.section,
       vars,
     };
@@ -100,11 +94,8 @@ export class PromptBuilder {
     return {
       model: ctx.model,
       operation: "frame",
-      system: await this.loadTemplate(PROMPT_KEYS.system),
-      prompt: renderPromptTemplate(
-        await this.loadTemplate(PROMPT_KEYS.frame(ctx.articleType)),
-        vars,
-      ),
+      system: await this.resolveTemplate(this.systemKeys(ctx)),
+      prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("frame", ctx)), vars),
       maxTokens: MAX_TOKENS.frame,
       vars,
     };
@@ -126,17 +117,45 @@ export class PromptBuilder {
     };
   }
 
-  /** DB truoc, fallback DEFAULT_PROMPTS — chi warn 1 dong khi fallback. */
-  private async loadTemplate(templateKey: string): Promise<string> {
-    const record = await this.templates.findActive(templateKey);
-    if (record) return record.content;
-
-    const fallback = DEFAULT_PROMPTS[templateKey];
-    if (!fallback) {
-      // Sai articleType/templateKey la bug lap trinh, khong phai loi runtime cua user
-      throw new Error(`No prompt template found for key "${templateKey}" (DB + defaults)`);
+  /**
+   * Cac key prompt ung vien cho 1 buoc, tu CU THE -> CHUNG (spec laruki-dochoi3s §4):
+   * <site>.<articleType>.<step> -> <articleType>.<step>
+   * (bai km them: -> <site>.km-bai-viet.<step> -> km-bai-viet.<step>)
+   */
+  private stepKeys(step: "outline" | "section" | "frame", ctx: PromptJobContext): string[] {
+    const at = ctx.articleType;
+    const site = ctx.siteCode;
+    const keys = [`${site}.${at}.${step}.vi`, `${at}.${step}.vi`];
+    if (at.startsWith("km-")) {
+      keys.push(`${site}.km-bai-viet.${step}.vi`, `km-bai-viet.${step}.vi`);
     }
-    this.logger.warn(`Prompt template "${templateKey}" not in DB - using built-in default`);
-    return fallback;
+    return keys;
+  }
+
+  private systemKeys(ctx: PromptJobContext): string[] {
+    return [`${ctx.siteCode}.${SYSTEM_PROMPT_KEY}`, SYSTEM_PROMPT_KEY];
+  }
+
+  /**
+   * Phan giai 1 prompt theo danh sach key cu the->chung: uu tien DB (bat ky key nao),
+   * roi den DEFAULT_PROMPTS. DB override luon thang baseline; trong cung nguon, key cu the thang.
+   */
+  private async resolveTemplate(keys: string[]): Promise<string> {
+    for (const key of keys) {
+      const record = await this.templates.findActive(key);
+      if (record) return record.content;
+    }
+    for (const key of keys) {
+      const fallback = DEFAULT_PROMPTS[key];
+      if (fallback) {
+        // keys[1] = "<articleType>.<step>" la default binh thuong (khong on ao);
+        // chi warn khi roi xa hon (vd km dung default chung thay vi per-site/postType).
+        if (key !== keys[1]) {
+          this.logger.warn(`Prompt "${keys[0]}" -> dung default "${key}"`);
+        }
+        return fallback;
+      }
+    }
+    throw new Error(`No prompt template for keys: ${keys.join(", ")}`);
   }
 }

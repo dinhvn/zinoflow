@@ -49,6 +49,10 @@ export class CmsPostMirrorEntity {
   @Column({ name: "ai_notes", type: "text", nullable: true })
   aiNotes!: string | null;
 
+  /** Thong tin tag nguoi dung cung cap truoc de AI goi y dat tag hop ly */
+  @Column({ name: "ai_tag_hints", type: "text", nullable: true })
+  aiTagHints!: string | null;
+
   /** URL nguon tham khao [{label,url}] — gom ca trang tieng Anh cho dochoi3s */
   @Column({ name: "ai_reference_urls", type: "jsonb", default: () => "'[]'" })
   aiReferenceUrls!: Array<{ label: string; url: string }>;

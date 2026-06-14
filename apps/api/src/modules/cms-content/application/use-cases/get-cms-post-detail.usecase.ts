@@ -36,6 +36,7 @@ export class GetCmsPostDetailUseCase {
       ...toCmsPostDto(entity),
       existingTags,
       aiNotes: entity.aiNotes,
+      aiTagHints: entity.aiTagHints,
       aiReferenceUrls: entity.aiReferenceUrls,
     };
   }

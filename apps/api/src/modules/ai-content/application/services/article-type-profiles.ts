@@ -3,17 +3,22 @@ import {
   articleFrameSchema,
   articleOutlineSchema,
   articleSchema,
+  cmsArticleFrameSchema,
+  cmsArticleSchema,
+  cmsOutlineSchema,
   contentSectionSchema,
   destinationArticleFrameSchema,
   destinationArticleSchema,
   destinationOutlineSchema,
   type Article,
   type ArticleType,
+  type CmsArticle,
   type ContentSection,
   type DestinationArticle,
 } from "@zinoflow/contracts";
 import { renderArticleMarkdown } from "./article-markdown.renderer";
 import { renderDestinationMarkdown } from "./destination-markdown.renderer";
+import { renderCmsMarkdown } from "./cms-markdown.renderer";
 
 /**
  * Content Type registry (spec chinh §19.3): moi articleType khai bao bo schema
@@ -28,7 +33,7 @@ export interface OutlineLike {
 }
 
 /** Bai viet cua bat ky loai nao — luu jsonb trong content_drafts.article. */
-export type AnyArticle = Article | DestinationArticle;
+export type AnyArticle = Article | DestinationArticle | CmsArticle;
 
 export interface ArticleTypeProfile {
   /** Schema buoc 1 — phai chua title + sectionHeadings */
@@ -66,14 +71,30 @@ const destinationProfile: ArticleTypeProfile = {
   usesProductCatalog: false,
 };
 
-const PROFILES: Record<ArticleType, ArticleTypeProfile> = {
+/** Bai CMS khuyenmai (km-*) — 1 content, prompt khac theo site x postType (resolve o prompt-builder). */
+const cmsProfile: ArticleTypeProfile = {
+  outlineSchema: cmsOutlineSchema as z.ZodType<OutlineLike>,
+  sectionSchema: contentSectionSchema,
+  frameSchema: cmsArticleFrameSchema as unknown as z.ZodType<Record<string, unknown>>,
+  assemble: (frame, sections) => cmsArticleSchema.parse({ ...frame, sections }),
+  renderMarkdown: (article) => renderCmsMarkdown(article as CmsArticle),
+  extractTitle: (article) => (article as CmsArticle).title,
+  usesProductCatalog: false,
+};
+
+const PROFILES: Record<string, ArticleTypeProfile> = {
   toplist: affiliateProfile,
   review: affiliateProfile,
   "guide-diem-den": destinationProfile,
 };
 
 export function getArticleTypeProfile(articleType: ArticleType): ArticleTypeProfile {
-  return PROFILES[articleType];
+  // Moi articleType km-<postType> dung chung cmsProfile (output schema giong nhau);
+  // khac biet nam o PROMPT (site x postType) resolve trong prompt-builder.
+  if (articleType.startsWith("km-")) return cmsProfile;
+  const profile = PROFILES[articleType];
+  if (!profile) throw new Error(`Khong co profile cho articleType "${articleType}"`);
+  return profile;
 }
 
 /** Type guard cho UI/gates: bai nay co phai bai diem den khong. */

@@ -21,10 +21,15 @@ export type ContentSourceType = z.infer<typeof contentSourceTypeSchema>;
 
 /**
  * Loai bai viet — quyet dinh prompt pack + output schema su dung (spec §17.2 + §19.3).
- * toplist/review: bai affiliate 8-block. guide-diem-den: bai diem den dichoithoi
- * (schema rieng — dichoithoi/destination-article.ts).
+ * toplist/review: bai affiliate 8-block. guide-diem-den: bai diem den dichoithoi.
+ * km-<postType>: bai CMS khuyenmai laruki/dochoi3s (schema cms-article.ts, prompt theo
+ * site x postType — resolve trong prompt-builder).
  */
-export const articleTypeSchema = z.enum(["toplist", "review", "guide-diem-den"]);
+export const KNOWN_ARTICLE_TYPES = ["toplist", "review", "guide-diem-den"] as const;
+export const articleTypeSchema = z.union([
+  z.enum(KNOWN_ARTICLE_TYPES),
+  z.string().regex(/^km-[a-z0-9-]+$/, "articleType khuyenmai phải dạng km-<slug>"),
+]);
 export type ArticleType = z.infer<typeof articleTypeSchema>;
 
 /** Request tao content job — spec §7.1. */

@@ -109,6 +109,10 @@ export class TypeOrmCmsPostMirrorRepository implements CmsPostMirrorRepository {
     await this.repo.update({ cmsId }, { aiNotes: notes, aiReferenceUrls: referenceUrls });
   }
 
+  async saveTagHints(cmsId: number, tagHints: string | null): Promise<void> {
+    await this.repo.update({ cmsId }, { aiTagHints: tagHints });
+  }
+
   async createLocal(row: CmsPostRow): Promise<void> {
     await this.repo.insert({
       cmsId: row.cmsId,

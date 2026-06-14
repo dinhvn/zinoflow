@@ -11,8 +11,12 @@ import { PROMPT_KEYS, SYSTEM_PROMPT_KEY } from "./default-prompts";
 /** Buoc trong pipeline 3 buoc + system message dung chung */
 export type PromptOperation = "system" | "outline" | "section" | "frame";
 
-/** Loai bai co prompt rieng (khop articleTypeSchema). null = system dung chung. */
-export type PromptArticleType = "toplist" | "review" | "guide-diem-den";
+/**
+ * Loai bai co prompt rieng (khop articleTypeSchema). null = system dung chung.
+ * "km-bai-viet": prompt CHUNG cho bai khuyenmai (laruki/dochoi3s) — site-aware qua {{siteCode}};
+ * override per-site/postType (key "<site>.km-<postType>.<step>.vi") tao truc tiep qua DB (prompt-builder resolve).
+ */
+export type PromptArticleType = "toplist" | "review" | "guide-diem-den" | "km-bai-viet";
 
 export interface PromptCatalogEntry {
   key: string;
@@ -24,12 +28,13 @@ export interface PromptCatalogEntry {
   variables: string[];
 }
 
-const ARTICLE_TYPES: PromptArticleType[] = ["toplist", "review", "guide-diem-den"];
+const ARTICLE_TYPES: PromptArticleType[] = ["toplist", "review", "guide-diem-den", "km-bai-viet"];
 
 export const ARTICLE_TYPE_LABELS: Record<PromptArticleType, string> = {
   toplist: "Top-list",
   review: "Review",
   "guide-diem-den": "Điểm đến (dichoithoi)",
+  "km-bai-viet": "Khuyến mãi (laruki/dochoi3s)",
 };
 
 const OPERATION_LABELS: Record<PromptOperation, string> = {

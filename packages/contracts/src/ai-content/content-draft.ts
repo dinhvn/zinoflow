@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { articleSchema } from "./article";
 import { destinationArticleSchema } from "../dichoithoi/destination-article";
+import { cmsArticleSchema } from "../khuyenmai/cms-article";
 
 /**
  * Outline toi thieu chung cho moi loai bai (toplist/review co them plannedProducts,
@@ -14,7 +15,11 @@ export const draftOutlineSchema = z
   .loose();
 
 /** Bai viet cua bat ky loai nao — phan biet qua job.articleType. */
-export const draftArticleSchema = z.union([articleSchema, destinationArticleSchema]);
+export const draftArticleSchema = z.union([
+  articleSchema,
+  destinationArticleSchema,
+  cmsArticleSchema,
+]);
 export type DraftArticle = z.infer<typeof draftArticleSchema>;
 
 /**

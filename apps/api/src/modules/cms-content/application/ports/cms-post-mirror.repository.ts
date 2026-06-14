@@ -24,6 +24,7 @@ export interface CmsPostMirrorRepository {
     notes: string | null,
     referenceUrls: Array<{ label: string; url: string }>,
   ): Promise<void>;
+  saveTagHints(cmsId: number, tagHints: string | null): Promise<void>;
   /** Tao dong mirror cho bai moi (INSERT ben CMS xong) — Phase 4 */
   createLocal(row: CmsPostRow): Promise<void>;
   /** Danh dau da ghi content AI xuong CMS (Phase 3) */
