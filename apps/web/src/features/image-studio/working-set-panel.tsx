@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatPriceVnd, type ProductCell } from "@zinoflow/contracts";
 import { Button } from "@/shared/ui/button";
+import { Select } from "@/shared/ui/select";
 
 /**
  * Buoc 2: working set — sap xep (keo-tha hoac ▲▼), xoa 1 hoac tat ca — spec §3.
@@ -14,14 +15,14 @@ export function WorkingSetPanel({
   onReorder,
   onRemove,
   onClear,
-  onSortByDiscount,
+  onSort,
 }: {
   products: ProductCell[];
   onMove: (index: number, dir: -1 | 1) => void;
   onReorder: (from: number, to: number) => void;
   onRemove: (id: string) => void;
   onClear: () => void;
-  onSortByDiscount: () => void;
+  onSort: (key: string) => void;
 }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -37,9 +38,21 @@ export function WorkingSetPanel({
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">Đã chọn ({products.length})</span>
         <div className="flex gap-2">
-          <Button size="sm" variant="secondary" disabled={products.length === 0} onClick={onSortByDiscount}>
-            Sắp theo % giảm
-          </Button>
+          <Select
+            value=""
+            disabled={products.length === 0}
+            onChange={(e) => {
+              if (e.target.value) onSort(e.target.value);
+            }}
+            className="py-1 text-xs"
+            aria-label="Sắp xếp toàn bộ"
+          >
+            <option value="">Sắp xếp…</option>
+            <option value="price-asc">Giá thấp → cao</option>
+            <option value="price-desc">Giá cao → thấp</option>
+            <option value="discount-desc">% giảm nhiều nhất</option>
+            <option value="name">Tên A → Z</option>
+          </Select>
           <Button size="sm" variant="danger" disabled={products.length === 0} onClick={onClear}>
             Xóa hết
           </Button>

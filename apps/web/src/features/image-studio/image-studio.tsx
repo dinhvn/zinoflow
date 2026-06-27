@@ -81,8 +81,24 @@ export function ImageStudio() {
   function removeProduct(id: string) {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   }
-  function sortByDiscount() {
-    setProducts((prev) => [...prev].sort((a, b) => (b.discountPercent ?? 0) - (a.discountPercent ?? 0)));
+  /** Sap xep toan bo working set theo tieu chi chon. */
+  function sortWorkingSet(key: string) {
+    const priceOf = (p: ProductCell) => p.salePrice ?? p.originalPrice ?? 0;
+    setProducts((prev) => {
+      const arr = [...prev];
+      switch (key) {
+        case "price-asc":
+          return arr.sort((a, b) => priceOf(a) - priceOf(b));
+        case "price-desc":
+          return arr.sort((a, b) => priceOf(b) - priceOf(a));
+        case "discount-desc":
+          return arr.sort((a, b) => (b.discountPercent ?? 0) - (a.discountPercent ?? 0));
+        case "name":
+          return arr.sort((a, b) => a.name.localeCompare(b.name, "vi"));
+        default:
+          return prev;
+      }
+    });
   }
 
   const exportMutation = useMutation({
@@ -109,7 +125,7 @@ export function ImageStudio() {
             onReorder={reorderProduct}
             onRemove={removeProduct}
             onClear={() => setProducts([])}
-            onSortByDiscount={sortByDiscount}
+            onSort={sortWorkingSet}
           />
         </div>
         <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
