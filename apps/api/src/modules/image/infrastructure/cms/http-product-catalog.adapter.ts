@@ -1,4 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { request as httpsRequest } from "node:https";
+import { request as httpRequest } from "node:http";
 import {
   computeDiscountPercent,
   type ProductBadge,
@@ -8,12 +10,14 @@ import {
 } from "@zinoflow/contracts";
 import type { ProductCatalog } from "../../application/ports/product-catalog.port";
 
-const TIMEOUT_MS = 12_000;
+const TIMEOUT_MS = 15_000;
 
 /**
  * Adapter goi CMS cu /api/v1/product/search (spec §12).
- * Key auth + base URL tu env (CMS_PRODUCT_API_BASE_URL, CMS_PRODUCT_API_KEY).
- * Response CMS chua chuan -> normalize linh hoat ve ProductCell (anh tuyet doi, % giam).
+ * Base URL + key auth tu env (CMS_PRODUCT_API_BASE_URL, CMS_PRODUCT_API_KEY).
+ * Response CMS: { rows[], total, page, limit, totalPages }. Mỗi row: id, name, image,
+ * price (gia ban), oldPrice (gia goc), discount (%), isNew/isHot...
+ * CMS_PRODUCT_API_INSECURE_TLS=true -> bo qua cert self-signed (dev https localhost).
  */
 @Injectable()
 export class HttpProductCatalogAdapter implements ProductCatalog {
@@ -38,44 +42,80 @@ export class HttpProductCatalogAdapter implements ProductCatalog {
     url.searchParams.set("page", String(query.page));
     url.searchParams.set("pageSize", String(query.limit));
 
-    const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-    if (!res.ok) {
-      throw new Error(`CMS product search loi ${res.status}`);
-    }
-    const raw = (await res.json()) as unknown;
+    const raw = await this.getJson(url);
     return this.normalize(raw, query);
   }
 
-  /** Doc linh hoat: ho tro { items, total } hoac mang phang. */
+  /** GET JSON qua node:http(s) — kiem soat TLS (cho phep self-signed khi bat env flag). */
+  private getJson(url: URL): Promise<unknown> {
+    const insecure = process.env.CMS_PRODUCT_API_INSECURE_TLS === "true";
+    const isHttps = url.protocol === "https:";
+    const requestFn = isHttps ? httpsRequest : httpRequest;
+
+    return new Promise((resolve, reject) => {
+      const req = requestFn(
+        url,
+        { method: "GET", timeout: TIMEOUT_MS, ...(isHttps ? { rejectUnauthorized: !insecure } : {}) },
+        (res) => {
+          const status = res.statusCode ?? 0;
+          const chunks: Buffer[] = [];
+          res.on("data", (c: Buffer) => chunks.push(c));
+          res.on("end", () => {
+            const body = Buffer.concat(chunks).toString("utf8");
+            if (status < 200 || status >= 300) {
+              reject(new Error(`CMS product search loi ${status}: ${body.slice(0, 200)}`));
+              return;
+            }
+            try {
+              resolve(JSON.parse(body));
+            } catch {
+              reject(new Error("CMS tra ve khong phai JSON hop le"));
+            }
+          });
+        },
+      );
+      req.on("error", reject);
+      req.on("timeout", () => req.destroy(new Error("CMS product search timeout")));
+      req.end();
+    });
+  }
+
+  /** Doc { rows, total, page, limit } (fallback items/data cho linh hoat). */
   private normalize(raw: unknown, query: ProductSearchQuery): ProductSearchResult {
     const obj = (raw ?? {}) as Record<string, unknown>;
     const rawItems = Array.isArray(raw)
       ? raw
-      : (obj.items ?? obj.data ?? obj.results ?? []) as unknown[];
+      : ((obj.rows ?? obj.items ?? obj.data ?? obj.results ?? []) as unknown[]);
     const total = Number(obj.total ?? obj.totalCount ?? (Array.isArray(rawItems) ? rawItems.length : 0));
 
     const items = (Array.isArray(rawItems) ? rawItems : [])
       .map((r) => this.toCell(r as Record<string, unknown>))
       .filter((c): c is ProductCell => c !== null);
 
-    return { items, total: Number.isFinite(total) ? total : items.length, page: query.page, limit: query.limit };
+    return {
+      items,
+      total: Number.isFinite(total) ? total : items.length,
+      page: query.page,
+      limit: query.limit,
+    };
   }
 
   private toCell(r: Record<string, unknown>): ProductCell | null {
     const id = str(r.id ?? r.code ?? r.productCode ?? r.sku);
     const name = str(r.name ?? r.title ?? r.productName);
-    const imageUrl = this.absoluteUrl(str(r.imageUrl ?? r.image ?? r.thumbnail ?? r.photo));
+    const imageUrl = this.absoluteUrl(str(r.image ?? r.imageUrl ?? r.thumbnail ?? r.photo));
     if (!id || !name || !imageUrl) return null;
 
-    const originalPrice = num(r.originalPrice ?? r.price ?? r.listPrice);
-    const salePrice = num(r.salePrice ?? r.discountPrice ?? r.finalPrice);
+    // CMS: price = gia ban hien tai, oldPrice = gia goc gach.
+    const salePrice = num(r.price ?? r.salePrice ?? r.finalPrice);
+    const originalPrice = num(r.oldPrice ?? r.originalPrice ?? r.listPrice);
     const discountPercent =
-      num(r.discountPercent ?? r.discount) ?? computeDiscountPercent(originalPrice, salePrice);
+      num(r.discount ?? r.discountPercent) ?? computeDiscountPercent(originalPrice, salePrice);
 
     const badges: ProductBadge[] = [];
     if (truthy(r.isNew)) badges.push("new");
     if (truthy(r.isHot)) badges.push("hot");
-    if (truthy(r.isDiscount) || (discountPercent ?? 0) > 0) badges.push("sale");
+    if ((discountPercent ?? 0) > 0) badges.push("sale");
 
     return {
       id,
