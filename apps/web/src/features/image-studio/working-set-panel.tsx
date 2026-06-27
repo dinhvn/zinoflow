@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatPriceVnd, type ProductCell } from "@zinoflow/contracts";
+import { formatPriceVnd, formatDiscountPercent, type ProductCell } from "@zinoflow/contracts";
 import { Button } from "@/shared/ui/button";
 import { Select } from "@/shared/ui/select";
 
@@ -96,7 +96,17 @@ export function WorkingSetPanel({
                   {(p.supplierName ?? p.supplierCode) && (
                     <span className="block truncate text-[10px] text-zinc-400">{p.supplierName ?? p.supplierCode}</span>
                   )}
-                  <span className="text-xs font-semibold text-rose-600">{formatPriceVnd(p.salePrice ?? p.originalPrice)}</span>
+                  <span className="flex flex-wrap items-baseline gap-x-1.5">
+                    <span className="text-xs font-semibold text-rose-600">{formatPriceVnd(p.salePrice ?? p.originalPrice)}</span>
+                    {p.salePrice != null && p.originalPrice != null && p.salePrice < p.originalPrice && (
+                      <span className="text-[10px] text-zinc-400 line-through">{formatPriceVnd(p.originalPrice)}</span>
+                    )}
+                    {(p.discountPercent ?? 0) > 0 && (
+                      <span className="rounded bg-rose-100 px-1 text-[10px] font-semibold text-rose-600 dark:bg-rose-950">
+                        {formatDiscountPercent(p.discountPercent)}
+                      </span>
+                    )}
+                  </span>
                 </span>
                 <div className="flex flex-col">
                   <button type="button" aria-label="Lên" disabled={i === 0} onClick={() => onMove(i, -1)} className="px-1 text-xs disabled:opacity-30">▲</button>
