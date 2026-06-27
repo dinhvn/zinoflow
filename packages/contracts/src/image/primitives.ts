@@ -57,7 +57,8 @@ export type ImageStyle = z.infer<typeof imageStyleSchema>;
 
 /** Bat/tat hien thi thong tin — toolbar DOC (spec §7). Bat/tat logo nam o logo.visible. */
 export const visibilityFlagsSchema = z.object({
-  showName: z.boolean().default(true),
+  // Mac dinh AN ten san pham (anh sale FB thuong chi can gia + % giam); bat khi can.
+  showName: z.boolean().default(false),
   showOriginalPrice: z.boolean().default(true),
   showSalePrice: z.boolean().default(true),
   showDiscountPercent: z.boolean().default(true),
