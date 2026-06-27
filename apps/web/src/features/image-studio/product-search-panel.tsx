@@ -119,6 +119,14 @@ export function ProductSearchPanel({
     });
   }
 
+  // Cac san pham co the chon (chua duoc them vao working set).
+  const selectableIds = items.filter((p) => !existingIds.has(p.id)).map((p) => p.id);
+  const allSelected = selectableIds.length > 0 && selectableIds.every((id) => picked.has(id));
+
+  function toggleSelectAll() {
+    setPicked(allSelected ? new Set() : new Set(selectableIds));
+  }
+
   function addPicked() {
     const toAdd = items
       .filter((p) => picked.has(p.id) && !existingIds.has(p.id))
@@ -187,6 +195,9 @@ export function ProductSearchPanel({
             <option key={k} value={k}>{SORT_LABELS[k]}</option>
           ))}
         </Select>
+        <Button size="sm" variant="secondary" disabled={selectableIds.length === 0} onClick={toggleSelectAll}>
+          {allSelected ? "Bỏ chọn" : "Chọn tất cả"}
+        </Button>
         <span className="ml-auto text-xs text-zinc-500">{picked.size} đã chọn</span>
         <Button size="sm" variant="primary" disabled={picked.size === 0} onClick={addPicked}>
           + Thêm {picked.size}
