@@ -15,7 +15,7 @@ import { Checkbox } from "@/shared/ui/checkbox";
 import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
 import { Pagination } from "@/shared/ui/pagination";
-import { Select } from "@/shared/ui/select";
+import { Combobox } from "@/shared/ui/combobox";
 
 // Filter options doi rat it -> cache lau, khong refetch lien tuc.
 const OPTIONS_STALE_MS = 10 * 60 * 1000;
@@ -64,6 +64,13 @@ export function ProductSearchPanel({
 
   const items = query.data?.items ?? [];
 
+  // Category phan cap: thut le theo level cho de doc trong combobox.
+  const categoryOptions = (categoriesQuery.data ?? []).map((c) => ({
+    value: c.code,
+    label: "  ".repeat(Math.max(0, c.level - 1)) + c.name,
+  }));
+  const supplierOptions = (suppliersQuery.data ?? []).map((s) => ({ value: s.code, label: s.name }));
+
   function togglePick(id: string) {
     setPicked((prev) => {
       const next = new Set(prev);
@@ -97,28 +104,26 @@ export function ProductSearchPanel({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Select
+        <Combobox
+          className="flex-1"
+          emptyLabel="Mọi nhà cung cấp"
           value={supplierCode}
-          onChange={(e) => { setSupplierCode(e.target.value); setPage(1); }}
+          onChange={(v) => {
+            setSupplierCode(v);
+            setPage(1);
+          }}
+          options={supplierOptions}
+        />
+        <Combobox
           className="flex-1"
-        >
-          <option value="">Mọi nhà cung cấp</option>
-          {(suppliersQuery.data ?? []).map((s) => (
-            <option key={s.code} value={s.code}>{s.name}</option>
-          ))}
-        </Select>
-        <Select
+          emptyLabel="Mọi danh mục"
           value={categoryCode}
-          onChange={(e) => { setCategoryCode(e.target.value); setPage(1); }}
-          className="flex-1"
-        >
-          <option value="">Mọi danh mục</option>
-          {(categoriesQuery.data ?? []).map((c) => (
-            <option key={c.path || c.code} value={c.code}>
-              {`${"  ".repeat(Math.max(0, c.level - 1))}${c.name}`}
-            </option>
-          ))}
-        </Select>
+          onChange={(v) => {
+            setCategoryCode(v);
+            setPage(1);
+          }}
+          options={categoryOptions}
+        />
       </div>
 
       <div className="flex flex-wrap gap-3">
