@@ -8,3 +8,4 @@ export { Pagination } from "./pagination";
 export { ErrorBox } from "./error-box";
 export { Slider } from "./slider";
 export { Checkbox } from "./checkbox";
+export { Drawer } from "./drawer";

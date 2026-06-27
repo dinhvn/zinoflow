@@ -14,6 +14,7 @@ import {
 import { BUILT_IN_TEMPLATES, getTemplate } from "@zinoflow/image-compositions";
 import { apiSend } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
+import { Drawer } from "@/shared/ui/drawer";
 import { ConfigPanel } from "./config-panel";
 import { ExportResult } from "./export-result";
 import { InteractivePreview } from "./interactive-preview";
@@ -41,6 +42,7 @@ export function ImageStudio() {
   const [templateId, setTemplateId] = useState(FIRST_TEMPLATE.id);
   const [perImage, setPerImage] = useState(4);
   const [config, setConfig] = useState<BatchConfig>(() => configFromTemplate(FIRST_TEMPLATE));
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const existingIds = useMemo(() => new Set(products.map((p) => p.id)), [products]);
 
@@ -82,17 +84,16 @@ export function ImageStudio() {
   });
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_320px_1fr]">
-      {/* Cot 1: tim san pham */}
-      <section className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-        <h3 className="mb-2 text-sm font-semibold">1. Tìm sản phẩm</h3>
-        <ProductSearchPanel existingIds={existingIds} onAdd={addProducts} />
-      </section>
-
-      {/* Cot 2: working set + cau hinh */}
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
+      {/* Cot 1: working set + cau hinh (tim san pham mo o drawer ben phai) */}
       <section className="space-y-4">
         <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-          <h3 className="mb-2 text-sm font-semibold">2. Đã chọn</h3>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">1. Đã chọn</h3>
+            <Button size="sm" variant="primary" onClick={() => setSearchOpen(true)}>
+              + Tìm sản phẩm
+            </Button>
+          </div>
           <WorkingSetPanel
             products={products}
             onMove={moveProduct}
@@ -102,7 +103,7 @@ export function ImageStudio() {
           />
         </div>
         <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-          <h3 className="mb-2 text-sm font-semibold">3+4. Loại ảnh & cấu hình</h3>
+          <h3 className="mb-2 text-sm font-semibold">2+3. Loại ảnh & cấu hình</h3>
           <ConfigPanel
             aspect={aspect}
             templateId={templateId}
@@ -119,7 +120,7 @@ export function ImageStudio() {
       {/* Cot 3: preview gallery + export */}
       <section className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">5. Preview ({items.length} ảnh) & xuất</h3>
+          <h3 className="text-sm font-semibold">4. Preview ({items.length} ảnh) & xuất</h3>
           <Button
             variant="primary"
             disabled={items.length === 0}
@@ -146,7 +147,7 @@ export function ImageStudio() {
             <p className="mb-1 text-xs text-zinc-500">
               Ảnh chỉnh (kéo để di chuyển ảnh · lăn chuột zoom · kéo logo/góc logo) — áp cho cả batch:
             </p>
-            <div className="max-w-md">
+            <div className="max-w-xl">
               <InteractivePreview props={items[0]} config={config} onConfig={setConfig} />
             </div>
           </div>
@@ -155,6 +156,11 @@ export function ImageStudio() {
         {items.length > 1 && <p className="mb-2 text-xs text-zinc-500">Tất cả {items.length} ảnh:</p>}
         <PreviewGallery items={items} />
       </section>
+
+      {/* Drawer tim san pham — truot tu phai, khong chiem cho preview */}
+      <Drawer open={searchOpen} onClose={() => setSearchOpen(false)} title="Tìm & thêm sản phẩm" width="w-[480px]">
+        <ProductSearchPanel existingIds={existingIds} onAdd={addProducts} />
+      </Drawer>
     </div>
   );
 }
