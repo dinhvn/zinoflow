@@ -15,7 +15,8 @@
     "seed:dvhcvn": "ts-node scripts/seed-dvhcvn.ts",
     "check:dichoithoi": "ts-node scripts/check-dichoithoi-connection.ts",
     "check:khuyenmai": "ts-node scripts/check-khuyenmai-connection.ts",
-    "clone:dichoithoi": "ts-node scripts/clone-dichoithoi-to-localdb.ts"
+    "clone:dichoithoi": "ts-node scripts/clone-dichoithoi-to-localdb.ts",
+    "render:smoke": "ts-node scripts/render-image-smoke.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
@@ -26,7 +27,10 @@
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
     "@nestjs/typeorm": "^11.0.0",
+    "@remotion/bundler": "^4.0.0",
+    "@remotion/renderer": "^4.0.0",
     "@zinoflow/contracts": "workspace:*",
+    "@zinoflow/image-compositions": "workspace:*",
     "dotenv": "^16.4.0",
     "marked": "^18.0.5",
     "msnodesqlv8": "^5.2.0",

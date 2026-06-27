@@ -8,6 +8,7 @@ import { AiContentModule } from "./modules/ai-content/ai-content.module";
 import { DestinationModule } from "./modules/destination/destination.module";
 import { CmsContentModule } from "./modules/cms-content/cms-content.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
+import { ImageModule } from "./modules/image/image.module";
 import { AppExceptionFilter } from "./modules/shared/errors/app-exception.filter";
 import { TraceMiddleware } from "./modules/shared/observability/trace.middleware";
 import { ApiTokenGuard } from "./modules/shared/auth/api-token.guard";
@@ -31,6 +32,7 @@ import { ApiTokenGuard } from "./modules/shared/auth/api-token.guard";
     DestinationModule,
     CmsContentModule,
     DashboardModule,
+    ImageModule,
   ],
   providers: [
     // Global: moi loi deu tra ve error envelope chuan kem traceId (spec §12)
