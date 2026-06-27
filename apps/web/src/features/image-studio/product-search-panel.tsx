@@ -203,31 +203,42 @@ export function ProductSearchPanel({
               disabled={already}
               onClick={() => togglePick(p.id)}
               className={[
-                "flex gap-2 rounded border p-2 text-left transition-colors",
+                "flex flex-col overflow-hidden rounded border text-left transition-colors",
                 already
                   ? "cursor-not-allowed border-emerald-300 bg-emerald-50 opacity-70 dark:border-emerald-900 dark:bg-emerald-950"
                   : active
-                    ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950"
+                    ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-400 dark:bg-indigo-950"
                     : "border-zinc-200 hover:border-zinc-400 dark:border-zinc-700",
               ].join(" ")}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.imageUrl} alt={p.name} className="h-14 w-14 shrink-0 rounded object-cover" />
-              <span className="min-w-0 flex-1">
+              <span className="relative block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.imageUrl} alt={p.name} className="aspect-square w-full object-cover" />
+                {already && (
+                  <span className="absolute right-1 top-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] text-white">
+                    đã thêm
+                  </span>
+                )}
+                {active && !already && (
+                  <span className="absolute right-1 top-1 rounded bg-indigo-600 px-1.5 py-0.5 text-[10px] text-white">
+                    ✓ chọn
+                  </span>
+                )}
+              </span>
+              <span className="flex flex-1 flex-col gap-0.5 p-2">
                 <span className="line-clamp-2 text-xs">{p.name}</span>
                 {supplierLabel(p) && (
-                  <span className="mt-0.5 block truncate text-[10px] text-zinc-400">{supplierLabel(p)}</span>
+                  <span className="truncate text-[10px] text-zinc-400">{supplierLabel(p)}</span>
                 )}
-                <span className="mt-1 block text-xs font-semibold text-rose-600">
+                <span className="mt-auto pt-1 text-sm font-semibold text-rose-600">
                   {formatPriceVnd(p.salePrice ?? p.originalPrice)}
                 </span>
-                {already && <span className="text-[10px] text-emerald-600">đã thêm</span>}
               </span>
             </button>
           );
         })}
         {!query.isLoading && items.length === 0 && (
-          <p className="col-span-2 py-6 text-center text-sm text-zinc-400">Không có sản phẩm.</p>
+          <p className="col-span-full py-6 text-center text-sm text-zinc-400">Không có sản phẩm.</p>
         )}
       </div>
 
