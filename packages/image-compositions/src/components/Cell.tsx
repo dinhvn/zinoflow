@@ -76,23 +76,42 @@ export const Cell: React.FC<{
           </div>
         )}
 
-        {cellLayout === "price-overlay" && visibility.showSalePrice && price && (
+        {cellLayout === "price-overlay" && (visibility.showName || (visibility.showSalePrice && price)) && (
           <div
             style={{
               position: "absolute",
               bottom: 0,
               left: 0,
               right: 0,
-              padding: "6px 10px",
-              background: "linear-gradient(transparent, rgba(0,0,0,0.65))",
+              padding: "8px 10px",
+              background: "linear-gradient(transparent, rgba(0,0,0,0.72))",
               color: "#fff",
-              fontWeight: 700,
-              fontSize: 26,
             }}
           >
-            <span style={{ color: "#fff" }}>{price}</span>
-            {showStrike && (
-              <span style={{ marginLeft: 8, fontSize: 18, opacity: 0.8, textDecoration: "line-through" }}>{original}</span>
+            {visibility.showName && (
+              <div
+                style={{
+                  fontSize: 20,
+                  fontWeight: 600,
+                  lineHeight: 1.2,
+                  marginBottom: 2,
+                  maxHeight: "2.4em",
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                }}
+              >
+                {product.name}
+              </div>
+            )}
+            {visibility.showSalePrice && price && (
+              <div style={{ fontWeight: 700, fontSize: 26 }}>
+                <span style={{ color: "#fff" }}>{price}</span>
+                {showStrike && (
+                  <span style={{ marginLeft: 8, fontSize: 18, opacity: 0.8, textDecoration: "line-through" }}>{original}</span>
+                )}
+              </div>
             )}
           </div>
         )}
