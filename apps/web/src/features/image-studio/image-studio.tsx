@@ -158,7 +158,7 @@ export function ImageStudio() {
       </section>
 
       {/* Drawer tim san pham — truot tu phai, khong chiem cho preview */}
-      <Drawer open={searchOpen} onClose={() => setSearchOpen(false)} title="Tìm & thêm sản phẩm" width="w-[480px]">
+      <Drawer open={searchOpen} onClose={() => setSearchOpen(false)} title="Tìm & thêm sản phẩm" width="w-[720px]">
         <ProductSearchPanel existingIds={existingIds} onAdd={addProducts} />
       </Drawer>
     </div>

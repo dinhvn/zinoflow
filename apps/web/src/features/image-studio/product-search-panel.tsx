@@ -90,7 +90,7 @@ export function ProductSearchPanel({
         </Button>
       </div>
 
-      <div className="grid max-h-[420px] grid-cols-2 gap-2 overflow-y-auto pr-1">
+      <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
         {items.map((p) => {
           const already = existingIds.has(p.id);
           const active = picked.has(p.id);
