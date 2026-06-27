@@ -24,9 +24,15 @@ export const Cell: React.FC<{
   cellLayout: CellLayout;
 }> = ({ product, style, visibility, batchFit, cellLayout }) => {
   const fit = resolveImageFit(product, batchFit);
-  // offset -1..1 -> object-position 0..100%
+  // offset -1..1 -> object-position 0..100% (pan truc bi cover crop, vd anh dai).
   const posX = ((fit.offsetX + 1) / 2) * 100;
   const posY = ((fit.offsetY + 1) / 2) * 100;
+  // Khi zoom (scale>1), anh duoc phong to o giua -> objectPosition khong pan duoc.
+  // Translate trong vung overflow do zoom tao ra (gap-free, clamp toi bien) de keo
+  // duoc CA HAI truc khi zoom. panFraction = (s-1)/(2s) tinh theo kich thuoc element.
+  const panFraction = fit.scale > 1 ? (fit.scale - 1) / (2 * fit.scale) : 0;
+  const tx = -fit.offsetX * panFraction * 100;
+  const ty = -fit.offsetY * panFraction * 100;
 
   const price = formatPriceVnd(product.salePrice ?? product.originalPrice);
   const original = formatPriceVnd(product.originalPrice);
@@ -53,7 +59,7 @@ export const Cell: React.FC<{
             height: "100%",
             objectFit: "cover",
             objectPosition: `${posX}% ${posY}%`,
-            transform: `scale(${fit.scale})`,
+            transform: `scale(${fit.scale}) translate(${tx}%, ${ty}%)`,
             transformOrigin: "center",
           }}
         />
