@@ -19,6 +19,9 @@ export const productCellSchema = z.object({
   salePrice: z.number().nonnegative().nullable().default(null),
   discountPercent: z.number().min(0).max(100).nullable().default(null),
   badges: z.array(productBadgeSchema).default([]),
+  /** Nha cung cap (code tu CMS; name resolve tu danh sach suppliers de hien thi). */
+  supplierCode: z.string().nullable().default(null),
+  supplierName: z.string().nullable().default(null),
   /** null = dung imageFit global; co = override rieng o nay (spec §7.1). */
   imageFitOverride: imageFitSchema.nullable().default(null),
 });

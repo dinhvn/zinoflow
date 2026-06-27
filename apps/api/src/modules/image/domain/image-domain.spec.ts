@@ -24,6 +24,8 @@ function cell(id: string, override: ProductCell["imageFitOverride"] = null): Pro
     salePrice: null,
     discountPercent: null,
     badges: [],
+    supplierCode: null,
+    supplierName: null,
     imageFitOverride: override,
   };
 }

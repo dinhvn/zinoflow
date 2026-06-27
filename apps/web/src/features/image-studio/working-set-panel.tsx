@@ -45,6 +45,9 @@ export function WorkingSetPanel({
               <img src={p.imageUrl} alt={p.name} className="h-10 w-10 shrink-0 rounded object-cover" />
               <span className="min-w-0 flex-1">
                 <span className="line-clamp-1 text-xs">{p.name}</span>
+                {(p.supplierName ?? p.supplierCode) && (
+                  <span className="block truncate text-[10px] text-zinc-400">{p.supplierName ?? p.supplierCode}</span>
+                )}
                 <span className="text-xs font-semibold text-rose-600">{formatPriceVnd(p.salePrice ?? p.originalPrice)}</span>
               </span>
               <div className="flex flex-col">

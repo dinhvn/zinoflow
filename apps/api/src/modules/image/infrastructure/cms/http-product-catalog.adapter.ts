@@ -163,6 +163,8 @@ export class HttpProductCatalogAdapter implements ProductCatalog {
       salePrice: salePrice ?? null,
       discountPercent: discountPercent ?? null,
       badges,
+      supplierCode: str(r.supplierCode ?? r.parentSupplierCode),
+      supplierName: null, // CMS product row khong co ten -> resolve o web tu danh sach suppliers
       imageFitOverride: null,
     };
   }

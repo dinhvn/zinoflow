@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   productSearchResultSchema,
@@ -16,9 +16,37 @@ import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
 import { Pagination } from "@/shared/ui/pagination";
 import { Combobox } from "@/shared/ui/combobox";
+import { Select } from "@/shared/ui/select";
 
 // Filter options doi rat it -> cache lau, khong refetch lien tuc.
 const OPTIONS_STALE_MS = 10 * 60 * 1000;
+
+type SortKey = "default" | "price-asc" | "price-desc" | "discount-desc" | "name";
+const SORT_LABELS: Record<SortKey, string> = {
+  default: "Mặc định (CMS)",
+  "price-asc": "Giá thấp → cao",
+  "price-desc": "Giá cao → thấp",
+  "discount-desc": "% giảm nhiều nhất",
+  name: "Tên A → Z",
+};
+
+const priceOf = (p: ProductCell) => p.salePrice ?? p.originalPrice ?? 0;
+
+/** Sort client-side tren trang dang tai (CMS khong nhan SortBy). */
+function sortProducts(items: ProductCell[], key: SortKey): ProductCell[] {
+  if (key === "default") return items;
+  const arr = [...items];
+  switch (key) {
+    case "price-asc":
+      return arr.sort((a, b) => priceOf(a) - priceOf(b));
+    case "price-desc":
+      return arr.sort((a, b) => priceOf(b) - priceOf(a));
+    case "discount-desc":
+      return arr.sort((a, b) => (b.discountPercent ?? 0) - (a.discountPercent ?? 0));
+    case "name":
+      return arr.sort((a, b) => a.name.localeCompare(b.name, "vi"));
+  }
+}
 
 /** Buoc 1+2: tim san pham tu CMS (filter) va chon vao working set — spec §3. */
 export function ProductSearchPanel({
@@ -35,6 +63,7 @@ export function ProductSearchPanel({
   const [isNew, setIsNew] = useState(false);
   const [isHot, setIsHot] = useState(false);
   const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState<SortKey>("default");
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
   const suppliersQuery = useQuery({
@@ -63,6 +92,15 @@ export function ProductSearchPanel({
   });
 
   const items = query.data?.items ?? [];
+  const sortedItems = useMemo(() => sortProducts(items, sortKey), [items, sortKey]);
+
+  // Map code -> ten NCC de hien thi tren tung san pham.
+  const supplierNameByCode = useMemo(
+    () => new Map((suppliersQuery.data ?? []).map((s) => [s.code, s.name])),
+    [suppliersQuery.data],
+  );
+  const supplierLabel = (p: ProductCell) =>
+    (p.supplierCode ? supplierNameByCode.get(p.supplierCode) : null) ?? p.supplierName ?? p.supplierCode ?? "";
 
   // Category phan cap: thut le theo level cho de doc trong combobox.
   const categoryOptions = (categoriesQuery.data ?? []).map((c) => ({
@@ -81,7 +119,10 @@ export function ProductSearchPanel({
   }
 
   function addPicked() {
-    const toAdd = items.filter((p) => picked.has(p.id) && !existingIds.has(p.id));
+    const toAdd = items
+      .filter((p) => picked.has(p.id) && !existingIds.has(p.id))
+      // Gan ten NCC vao san pham de working set + preview hien duoc.
+      .map((p) => ({ ...p, supplierName: supplierLabel(p) || null }));
     if (toAdd.length) onAdd(toAdd);
     setPicked(new Set());
   }
@@ -134,15 +175,25 @@ export function ProductSearchPanel({
 
       {query.isError && <ErrorBox error={query.error} fallback="Lỗi tải sản phẩm (API /images/products đã chạy chưa?)" />}
 
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-zinc-500">{picked.size} đã chọn</span>
+      <div className="flex items-center gap-2">
+        <Select
+          value={sortKey}
+          onChange={(e) => setSortKey(e.target.value as SortKey)}
+          className="py-1 text-xs"
+          aria-label="Sắp xếp"
+        >
+          {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
+            <option key={k} value={k}>{SORT_LABELS[k]}</option>
+          ))}
+        </Select>
+        <span className="ml-auto text-xs text-zinc-500">{picked.size} đã chọn</span>
         <Button size="sm" variant="primary" disabled={picked.size === 0} onClick={addPicked}>
-          + Thêm {picked.size} sản phẩm
+          + Thêm {picked.size}
         </Button>
       </div>
 
       <div className="grid max-h-[60vh] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
-        {items.map((p) => {
+        {sortedItems.map((p) => {
           const already = existingIds.has(p.id);
           const active = picked.has(p.id);
           return (
@@ -164,6 +215,9 @@ export function ProductSearchPanel({
               <img src={p.imageUrl} alt={p.name} className="h-14 w-14 shrink-0 rounded object-cover" />
               <span className="min-w-0 flex-1">
                 <span className="line-clamp-2 text-xs">{p.name}</span>
+                {supplierLabel(p) && (
+                  <span className="mt-0.5 block truncate text-[10px] text-zinc-400">{supplierLabel(p)}</span>
+                )}
                 <span className="mt-1 block text-xs font-semibold text-rose-600">
                   {formatPriceVnd(p.salePrice ?? p.originalPrice)}
                 </span>
