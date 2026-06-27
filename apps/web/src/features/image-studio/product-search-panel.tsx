@@ -7,6 +7,7 @@ import {
   supplierOptionsSchema,
   categoryOptionsSchema,
   formatPriceVnd,
+  formatDiscountPercent,
   type ProductCell,
 } from "@zinoflow/contracts";
 import { apiGet } from "@/shared/api-client";
@@ -214,6 +215,11 @@ export function ProductSearchPanel({
               <span className="relative block">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.imageUrl} alt={p.name} className="aspect-square w-full object-cover" />
+                {(p.discountPercent ?? 0) > 0 && (
+                  <span className="absolute left-1 top-1 rounded bg-rose-600 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                    {formatDiscountPercent(p.discountPercent)}
+                  </span>
+                )}
                 {already && (
                   <span className="absolute right-1 top-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] text-white">
                     đã thêm
@@ -230,8 +236,13 @@ export function ProductSearchPanel({
                 {supplierLabel(p) && (
                   <span className="truncate text-[10px] text-zinc-400">{supplierLabel(p)}</span>
                 )}
-                <span className="mt-auto pt-1 text-sm font-semibold text-rose-600">
-                  {formatPriceVnd(p.salePrice ?? p.originalPrice)}
+                <span className="mt-auto flex flex-wrap items-baseline gap-x-1.5 pt-1">
+                  <span className="text-sm font-semibold text-rose-600">
+                    {formatPriceVnd(p.salePrice ?? p.originalPrice)}
+                  </span>
+                  {p.salePrice != null && p.originalPrice != null && p.salePrice < p.originalPrice && (
+                    <span className="text-[11px] text-zinc-400 line-through">{formatPriceVnd(p.originalPrice)}</span>
+                  )}
                 </span>
               </span>
             </button>
