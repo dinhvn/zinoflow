@@ -109,7 +109,7 @@ export function ImageStudio() {
   });
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr] lg:items-start">
       {/* Cot 1: working set + cau hinh (tim san pham mo o drawer ben phai) */}
       <section className="space-y-4">
         <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
@@ -143,8 +143,8 @@ export function ImageStudio() {
         </div>
       </section>
 
-      {/* Cot 3: preview gallery + export */}
-      <section className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+      {/* Cot 3: preview gallery + export — ghim (sticky) de khong troi khi cuon cot trai */}
+      <section className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold">4. Preview ({items.length} ảnh) & xuất</h3>
           <Button
