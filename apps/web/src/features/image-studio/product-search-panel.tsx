@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   productSearchResultSchema,
+  supplierOptionsSchema,
+  categoryOptionsSchema,
   formatPriceVnd,
   type ProductCell,
 } from "@zinoflow/contracts";
@@ -13,6 +15,10 @@ import { Checkbox } from "@/shared/ui/checkbox";
 import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
 import { Pagination } from "@/shared/ui/pagination";
+import { Select } from "@/shared/ui/select";
+
+// Filter options doi rat it -> cache lau, khong refetch lien tuc.
+const OPTIONS_STALE_MS = 10 * 60 * 1000;
 
 /** Buoc 1+2: tim san pham tu CMS (filter) va chon vao working set — spec §3. */
 export function ProductSearchPanel({
@@ -23,17 +29,32 @@ export function ProductSearchPanel({
   onAdd: (products: ProductCell[]) => void;
 }) {
   const [keyword, setKeyword] = useState("");
+  const [supplierCode, setSupplierCode] = useState("");
+  const [categoryCode, setCategoryCode] = useState("");
   const [isDiscount, setIsDiscount] = useState(false);
   const [isNew, setIsNew] = useState(false);
   const [isHot, setIsHot] = useState(false);
   const [page, setPage] = useState(1);
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
+  const suppliersQuery = useQuery({
+    queryKey: ["image-suppliers"],
+    queryFn: () => apiGet("/images/suppliers", supplierOptionsSchema),
+    staleTime: OPTIONS_STALE_MS,
+  });
+  const categoriesQuery = useQuery({
+    queryKey: ["image-categories"],
+    queryFn: () => apiGet("/images/categories", categoryOptionsSchema),
+    staleTime: OPTIONS_STALE_MS,
+  });
+
   const query = useQuery({
-    queryKey: ["image-products", keyword, isDiscount, isNew, isHot, page],
+    queryKey: ["image-products", keyword, supplierCode, categoryCode, isDiscount, isNew, isHot, page],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "24" });
       if (keyword) params.set("keyword", keyword);
+      if (supplierCode) params.set("supplierCode", supplierCode);
+      if (categoryCode) params.set("categoryCode", categoryCode);
       if (isDiscount) params.set("isDiscount", "true");
       if (isNew) params.set("isNew", "true");
       if (isHot) params.set("isHot", "true");
@@ -73,6 +94,31 @@ export function ProductSearchPanel({
         <Button variant="primary" onClick={() => query.refetch()} loading={query.isFetching}>
           Tìm
         </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Select
+          value={supplierCode}
+          onChange={(e) => { setSupplierCode(e.target.value); setPage(1); }}
+          className="flex-1"
+        >
+          <option value="">Mọi nhà cung cấp</option>
+          {(suppliersQuery.data ?? []).map((s) => (
+            <option key={s.code} value={s.code}>{s.name}</option>
+          ))}
+        </Select>
+        <Select
+          value={categoryCode}
+          onChange={(e) => { setCategoryCode(e.target.value); setPage(1); }}
+          className="flex-1"
+        >
+          <option value="">Mọi danh mục</option>
+          {(categoriesQuery.data ?? []).map((c) => (
+            <option key={c.path || c.code} value={c.code}>
+              {`${"  ".repeat(Math.max(0, c.level - 1))}${c.name}`}
+            </option>
+          ))}
+        </Select>
       </div>
 
       <div className="flex flex-wrap gap-3">

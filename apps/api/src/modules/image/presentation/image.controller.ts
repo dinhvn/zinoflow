@@ -14,17 +14,20 @@ import { basename, resolve } from "node:path";
 import {
   createImageJobRequestSchema,
   productSearchQuerySchema,
+  type CategoryOption,
   type CreateImageJobRequest,
   type CreateImageJobResponse,
   type ImageJobDetail,
   type ProductSearchQuery,
   type ProductSearchResult,
+  type SupplierOption,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { UpstreamApiError, ValidationError } from "../../shared/errors/app-error";
 import { SearchProductsUseCase } from "../application/use-cases/search-products.usecase";
 import { CreateImageJobUseCase } from "../application/use-cases/create-image-job.usecase";
 import { GetImageJobUseCase } from "../application/use-cases/get-image-job.usecase";
+import { ListCategoriesUseCase, ListSuppliersUseCase } from "../application/use-cases/list-taxonomy.usecase";
 
 /**
  * REST khu Image tool (spec §11): tim san pham, tao job render, lay trang thai,
@@ -36,6 +39,8 @@ export class ImageController {
     private readonly searchProducts: SearchProductsUseCase,
     private readonly createJob: CreateImageJobUseCase,
     private readonly getJob: GetImageJobUseCase,
+    private readonly listSuppliers: ListSuppliersUseCase,
+    private readonly listCategories: ListCategoriesUseCase,
   ) {}
 
   /** Buoc 1: tim san pham tu CMS cu. */
@@ -44,6 +49,18 @@ export class ImageController {
     @Query(new ZodValidationPipe(productSearchQuerySchema)) query: ProductSearchQuery,
   ): Promise<ProductSearchResult> {
     return this.searchProducts.execute(query);
+  }
+
+  /** Option filter: supplier. */
+  @Get("suppliers")
+  suppliers(): Promise<SupplierOption[]> {
+    return this.listSuppliers.execute();
+  }
+
+  /** Option filter: category (phan cap). */
+  @Get("categories")
+  categories(): Promise<CategoryOption[]> {
+    return this.listCategories.execute();
   }
 
   /** Buoc 5: tao job render batch (enqueue, render async). */

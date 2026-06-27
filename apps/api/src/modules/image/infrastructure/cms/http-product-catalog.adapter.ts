@@ -3,10 +3,12 @@ import { request as httpsRequest } from "node:https";
 import { request as httpRequest } from "node:http";
 import {
   computeDiscountPercent,
+  type CategoryOption,
   type ProductBadge,
   type ProductCell,
   type ProductSearchQuery,
   type ProductSearchResult,
+  type SupplierOption,
 } from "@zinoflow/contracts";
 import type { ProductCatalog } from "../../application/ports/product-catalog.port";
 
@@ -44,6 +46,42 @@ export class HttpProductCatalogAdapter implements ProductCatalog {
 
     const raw = await this.getJson(url);
     return this.normalize(raw, query);
+  }
+
+  async listSuppliers(): Promise<SupplierOption[]> {
+    const raw = await this.getCmsJson("/api/v1/suppliers");
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((r) => r as Record<string, unknown>)
+      .map((r) => ({ code: str(r.code ?? r.value) ?? "", name: str(r.name ?? r.text) ?? "" }))
+      .filter((o) => o.code && o.name);
+  }
+
+  async listCategories(): Promise<CategoryOption[]> {
+    const raw = await this.getCmsJson("/api/v1/categories");
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((r) => r as Record<string, unknown>)
+      .map((r) => ({
+        code: str(r.code ?? r.value) ?? "",
+        name: str(r.name ?? r.text) ?? "",
+        level: num(r.level) ?? 1,
+        path: str(r.path) ?? "",
+      }))
+      .filter((o) => o.code && o.name);
+  }
+
+  /** GET JSON tu 1 path cua CMS (ghep base + key). Tra null neu chua cau hinh. */
+  private getCmsJson(path: string): Promise<unknown> {
+    const base = process.env.CMS_PRODUCT_API_BASE_URL;
+    const key = process.env.CMS_PRODUCT_API_KEY;
+    if (!base || !key) {
+      this.logger.warn("CMS_PRODUCT_API_BASE_URL / CMS_PRODUCT_API_KEY chua cau hinh");
+      return Promise.resolve([]);
+    }
+    const url = new URL(`${base.replace(/\/+$/, "")}${path}`);
+    url.searchParams.set("key", key);
+    return this.getJson(url);
   }
 
   /** GET JSON qua node:http(s) — kiem soat TLS (cho phep self-signed khi bat env flag). */

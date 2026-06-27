@@ -5,6 +5,7 @@ import { SearchProductsUseCase } from "./application/use-cases/search-products.u
 import { CreateImageJobUseCase } from "./application/use-cases/create-image-job.usecase";
 import { GetImageJobUseCase } from "./application/use-cases/get-image-job.usecase";
 import { RenderImageJobUseCase } from "./application/use-cases/render-image-job.usecase";
+import { ListCategoriesUseCase, ListSuppliersUseCase } from "./application/use-cases/list-taxonomy.usecase";
 import { PRODUCT_CATALOG } from "./application/ports/product-catalog.port";
 import { IMAGE_RENDERER } from "./application/ports/image-renderer.port";
 import { IMAGE_JOB_REPOSITORY } from "./application/ports/image-job.repository";
@@ -27,6 +28,8 @@ import { ImageRenderWorker } from "./infrastructure/workers/image-render.worker"
     CreateImageJobUseCase,
     GetImageJobUseCase,
     RenderImageJobUseCase,
+    ListSuppliersUseCase,
+    ListCategoriesUseCase,
     ImageRenderWorker,
     { provide: PRODUCT_CATALOG, useClass: HttpProductCatalogAdapter },
     { provide: IMAGE_RENDERER, useClass: RemotionImageRenderer },

@@ -49,3 +49,21 @@ export const productSearchResultSchema = z.object({
   limit: z.number().int(),
 });
 export type ProductSearchResult = z.infer<typeof productSearchResultSchema>;
+
+/** Option filter — supplier (CMS tra code/name). */
+export const supplierOptionSchema = z.object({
+  code: z.string(),
+  name: z.string(),
+});
+export type SupplierOption = z.infer<typeof supplierOptionSchema>;
+export const supplierOptionsSchema = z.array(supplierOptionSchema);
+
+/** Option filter — category phan cap (code/name + level/path de hien thi cay). */
+export const categoryOptionSchema = z.object({
+  code: z.string(),
+  name: z.string(),
+  level: z.number().int(),
+  path: z.string(),
+});
+export type CategoryOption = z.infer<typeof categoryOptionSchema>;
+export const categoryOptionsSchema = z.array(categoryOptionSchema);
