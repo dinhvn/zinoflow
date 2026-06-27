@@ -113,9 +113,9 @@ export const Cell: React.FC<{
             )}
             {visibility.showSalePrice && price && (
               <div style={{ fontWeight: 700, fontSize: 26 }}>
-                <span style={{ color: "#fff" }}>{price}</span>
+                <span style={{ color: style.priceColor }}>{price}</span>
                 {showStrike && (
-                  <span style={{ marginLeft: 8, fontSize: 18, opacity: 0.8, textDecoration: "line-through" }}>{original}</span>
+                  <span style={{ marginLeft: 8, fontSize: 18, opacity: 0.8, textDecoration: "line-through", color: "#fff" }}>{original}</span>
                 )}
               </div>
             )}
