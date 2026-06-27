@@ -52,6 +52,11 @@ async function fetchOrThrow(url: string, init: RequestInit, label: string): Prom
   }
 }
 
+/** URL tuyet doi toi 1 endpoint API — dung cho link tai file (the <a href>), khong qua fetch. */
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}/api${path}`;
+}
+
 export async function apiGet<TSchema extends z.ZodType>(
   path: string,
   schema: TSchema,
