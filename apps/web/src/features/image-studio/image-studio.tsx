@@ -69,6 +69,15 @@ export function ImageStudio() {
       return next;
     });
   }
+  function reorderProduct(from: number, to: number) {
+    setProducts((prev) => {
+      if (from === to || to < 0 || to >= prev.length || from < 0 || from >= prev.length) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved!);
+      return next;
+    });
+  }
   function removeProduct(id: string) {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   }
@@ -97,6 +106,7 @@ export function ImageStudio() {
           <WorkingSetPanel
             products={products}
             onMove={moveProduct}
+            onReorder={reorderProduct}
             onRemove={removeProduct}
             onClear={() => setProducts([])}
             onSortByDiscount={sortByDiscount}
