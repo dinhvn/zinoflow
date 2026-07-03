@@ -1,70 +1,65 @@
-# CMS Integration Contract (Old Repo -> New Image Tool)
+# CMS Integration Contract (CMS cũ -> Image Tool mới)
+
+> Cập nhật 2026-06-27: đổi sang model **search + chọn thủ công**. UI gọi thẳng
+> `product/search` của CMS cũ rồi tự build props ảnh — KHÔNG còn pull render-data theo jobId.
+> Xem `docs/specs/image-tool-technical-spec.md` (§11, §12) cho bức tranh đầy đủ.
 
 ## Mục tiêu
-Dùng CMS cũ làm data source cho image tool mới (Remotion), chạy local-first.
+Dùng CMS cũ làm **data source sản phẩm** cho image tool mới (Remotion), chạy local-first.
 
-## Integration model
-1. Pull model (khuyến nghị giai đoạn đầu):
-- Image tool gọi CMS API để lấy dữ liệu product/campaign.
-- Image tool tự render và lưu file local.
+## Integration model (hiện tại)
 
-2. Callback model (tùy chọn):
-- Sau khi render xong, image tool gọi ngược CMS để ghi kết quả.
+**Search-and-select (model chính):**
+1. Người dùng lọc + tìm sản phẩm trên UID image tool.
+2. UI gọi CMS `GET /api/v1/product/search` lấy danh sách sản phẩm.
+3. Người dùng chọn/sort/xóa → working set → image tool tự build `ImageProps` và render.
+4. Sản phẩm KHÔNG đi qua API render của image tool — chỉ ảnh + giá + brand được nhúng vào props.
 
-## API contract tối thiểu
-### A. Fetch render data
+Callback model (tùy chọn, phase sau): sau khi render xong, ghi ngược kết quả về CMS nếu cần.
+
+## API contract
+
+### A. Search sản phẩm (CMS cũ — bắt buộc)
 - Method: GET
-- Path: /api/image-jobs/{jobId}/render-data
-- Response:
-  - jobId
-  - templateId
-  - products[]
-  - branding
-  - outputConfig
+- Path: `/api/v1/product/search?key={authKey}`
+- Query filter: `keyword`, `supplierCode`, `categoryCode`,
+  `isDiscount`, `isNew`, `isHot`, `isChanged`, `isFixedProduct`, paging (`page`, `pageSize`).
+- Response (tối thiểu mỗi item): `id`, `name`, `imageUrl`, `originalPrice`, `salePrice`,
+  `discountPercent`, `brand`/`supplier`, badges (new/hot...).
+- Auth: `key` lưu env var (`CMS_PRODUCT_API_KEY`), KHÔNG hardcode, KHÔNG log.
 
-### B. Update render result (optional)
+### B. Proxy ảnh sản phẩm (image tool — render-safe)
+- Method: GET
+- Path: `/api/images/asset?src={absoluteImageUrl}`
+- Mục đích: giải CORS cho canvas/Player, cache local, fallback placeholder khi ảnh lỗi.
+- Whitelist host nguồn ảnh; chặn SSRF (chỉ cho host CMS/CDN đã biết).
+
+### C. Update render result (optional, phase sau)
 - Method: POST
-- Path: /api/image-jobs/{jobId}/result
-- Request:
-  - status (Succeeded/Failed)
-  - outputFiles[] (path/url)
-  - errorMessage (optional)
+- Path: `/api/image-jobs/{jobId}/result`
+- Request: `status` (Succeeded/Failed), `outputFiles[]`, `errorMessage?`.
 
 ## Auth và bảo mật
-1. Dùng API key hoặc Bearer token.
-2. Token lưu ở env vars (không hardcode).
-3. Timeout cho request outbound.
-4. Retry có backoff cho lỗi tạm thời.
+1. API key cho `product/search` lưu env vars (timeout outbound, retry có backoff).
+2. Proxy ảnh: whitelist host, chặn path traversal/SSRF.
+3. Không hardcode, không log key.
 
 ## Data normalization rules
-1. Ảnh product phải resolve được URL tuyệt đối.
-2. Dedupe ảnh trùng key.
-3. Fallback ảnh mặc định nếu thiếu ảnh.
-4. ID product/campaign phải unique trong job payload.
+1. URL ảnh phải resolve tuyệt đối trước khi đưa vào props.
+2. Dedupe sản phẩm trùng `id` trong working set.
+3. Fallback ảnh mặc định/placeholder nếu thiếu hoặc ảnh lỗi (không fail cả batch).
+4. `id` sản phẩm unique trong một ảnh/payload.
 
 ## Error contract
-1. Mọi lỗi trả JSON dạng:
-- error: string
-- details: string[]
-- traceId: string
-
-2. Phân loại lỗi:
-- ValidationError
-- UpstreamApiError
-- RenderError
-- StorageError
+1. Lỗi trả JSON: `errorCode`, `message`, `details[]`, `traceId`.
+2. Phân loại: `ValidationError`, `UpstreamApiError` (CMS), `RenderError` (Remotion), `StorageError`.
 
 ## Local-first output convention
-1. Folder output:
-- ./outputs/images/{yyyy}/{MM}/{dd}/{jobId}/
-
-2. File naming:
-- {templateId}-{index}-{slug}-{timestamp}.png
-
-3. Manifest file:
-- manifest.json chứa danh sách output và metadata render.
+1. Folder output: `./outputs/images/{yyyy}/{MM}/{dd}/{jobId}/`.
+2. File naming: `{templateId}-{index}-{slug}-{timestamp}.{ext}` (png/jpeg — §9 spec).
+3. Manifest: `manifest.json` chứa danh sách output + metadata render.
 
 ## Future-ready notes
-1. Giữ contract additive-only trong major version.
-2. Không để Remotion worker truy cập DB CMS trực tiếp.
-3. Chỉ tích hợp qua HTTP contract hoặc queue message.
+1. Contract additive-only trong cùng major version.
+2. Remotion worker KHÔNG truy cập DB CMS trực tiếp — chỉ qua HTTP contract / props.
+3. Mọi tích hợp qua HTTP contract hoặc queue message (pg-boss).

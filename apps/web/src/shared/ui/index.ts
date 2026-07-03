@@ -6,3 +6,7 @@ export { Badge, type BadgeTone } from "./badge";
 export { DataTable, type DataTableColumn, type SortDirection } from "./data-table";
 export { Pagination } from "./pagination";
 export { ErrorBox } from "./error-box";
+export { Slider } from "./slider";
+export { Checkbox } from "./checkbox";
+export { Drawer } from "./drawer";
+export { Combobox, type ComboboxOption } from "./combobox";

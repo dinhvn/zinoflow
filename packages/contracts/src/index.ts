@@ -19,3 +19,6 @@ export * from "./ai-content/quality";
 export * from "./ai-content/prompt-template";
 export * from "./ai-content/usage";
 export * from "./dashboard/summary";
+
+// Image tool (product collage)
+export * from "./image";

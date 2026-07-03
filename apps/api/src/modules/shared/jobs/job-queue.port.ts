@@ -16,4 +16,5 @@ export interface JobQueue {
 export const QUEUE_NAMES = {
   systemPing: "system.ping",
   contentGenerate: "content.generate",
+  imageRender: "image.render",
 } as const;
