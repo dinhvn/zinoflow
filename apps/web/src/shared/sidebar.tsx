@@ -28,8 +28,14 @@ const MAIN_ITEMS: NavItem[] = [
 ];
 
 const DICHOITHOI_ITEMS: NavItem[] = [
-  { href: "/dichoithoi", label: "Điểm đến", icon: IconMapPin, exclude: ["/dichoithoi/dia-chi"] },
+  {
+    href: "/dichoithoi",
+    label: "Điểm đến",
+    icon: IconMapPin,
+    exclude: ["/dichoithoi/dia-chi", "/dichoithoi/quy-trinh"],
+  },
   { href: "/dichoithoi/dia-chi", label: "Tra cứu địa chỉ", icon: IconSearch },
+  { href: "/dichoithoi/quy-trinh", label: "Quy trình", icon: IconFlow },
 ];
 
 /** Khu CMS khuyenmai (laruki + dochoi3s) — tao content AI ghi vao CMS */
@@ -202,6 +208,16 @@ function IconDoc(props: SVGProps<SVGSVGElement>) {
       <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />
       <path d="M14 3v5h5" />
       <path d="M9 13h6M9 17h4" />
+    </IconBase>
+  );
+}
+
+function IconFlow(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <rect x="4" y="3" width="7" height="5" rx="1.5" />
+      <rect x="13" y="16" width="7" height="5" rx="1.5" />
+      <path d="M7.5 8v4a2 2 0 002 2h7" />
     </IconBase>
   );
 }
