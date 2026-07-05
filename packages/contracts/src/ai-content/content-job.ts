@@ -53,6 +53,22 @@ export const createContentJobRequestSchema = z.object({
 });
 export type CreateContentJobRequest = z.infer<typeof createContentJobRequestSchema>;
 
+/**
+ * Request sua tham so sinh bai cua 1 job (topic/keyword/provider/model/tone)
+ * truoc khi generate lai — chi hop le khi job o Failed hoac DraftReady (state machine §5).
+ * Tat ca field optional: chi field nao gui len moi bi ghi de.
+ */
+export const updateContentJobRequestSchema = z
+  .object({
+    topic: z.string().min(5),
+    keywordSeed: z.array(z.string()),
+    toneProfile: z.string().nullable(),
+    aiProvider: aiProviderKeySchema,
+    aiModel: z.string().min(1),
+  })
+  .partial();
+export type UpdateContentJobRequest = z.infer<typeof updateContentJobRequestSchema>;
+
 export const contentJobSchema = z.object({
   id: z.string().uuid(),
   siteCode: z.string(),
@@ -60,6 +76,7 @@ export const contentJobSchema = z.object({
   sourceRef: z.string(),
   topic: z.string(),
   articleType: articleTypeSchema,
+  keywordSeed: z.array(z.string()),
   status: contentJobStatusSchema,
   aiProvider: aiProviderKeySchema,
   aiModel: z.string(),

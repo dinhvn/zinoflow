@@ -7,6 +7,7 @@ import {
   createPromptVersionRequestSchema,
   reviewDraftRequestSchema,
   updateAiProviderSettingRequestSchema,
+  updateContentJobRequestSchema,
   updateDraftRequestSchema,
   type ActivatePromptVersionRequest,
   type AiProviderInfo,
@@ -24,11 +25,13 @@ import {
   type ReviewDraftRequest,
   type RunQualityChecksResponse,
   type UpdateAiProviderSettingRequest,
+  type UpdateContentJobRequest,
   type UpdateDraftRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { CreateContentJobUseCase } from "../application/use-cases/create-content-job.usecase";
 import { RetryContentJobUseCase } from "../application/use-cases/retry-content-job.usecase";
+import { EditContentJobUseCase } from "../application/use-cases/edit-content-job.usecase";
 import { RunQualityChecksUseCase } from "../application/use-cases/run-quality-checks.usecase";
 import { SubmitForReviewUseCase } from "../application/use-cases/submit-for-review.usecase";
 import { ReviewDraftUseCase } from "../application/use-cases/review-draft.usecase";
@@ -100,6 +103,7 @@ export class ContentController {
   constructor(
     private readonly createContentJob: CreateContentJobUseCase,
     private readonly retryContentJob: RetryContentJobUseCase,
+    private readonly editContentJob: EditContentJobUseCase,
     private readonly runQualityChecks: RunQualityChecksUseCase,
     private readonly submitForReview: SubmitForReviewUseCase,
     private readonly reviewDraft: ReviewDraftUseCase,
@@ -129,6 +133,20 @@ export class ContentController {
   @Post("jobs/:id/retry")
   async retry(@Param("id") id: string): Promise<{ jobId: string; status: string }> {
     return this.retryContentJob.execute(id);
+  }
+
+  /**
+   * Sua tham so sinh bai (topic/keyword/tone/provider/model) truoc khi chay lai.
+   * Chi hop le khi job Failed/DraftReady — trang thai khac bi 422 (domain rule).
+   * KHONG requeue: UI goi retry sau khi luu de chay lai.
+   */
+  @Patch("jobs/:id")
+  async edit(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateContentJobRequestSchema)) request: UpdateContentJobRequest,
+  ): Promise<ContentJobDto> {
+    const job = await this.editContentJob.execute(id, request);
+    return this.toDto(job);
   }
 
   @Get("jobs")
@@ -291,6 +309,7 @@ export class ContentController {
       sourceRef: s.sourceRef,
       topic: s.topic,
       articleType: s.articleType,
+      keywordSeed: [...s.keywordSeed],
       status: s.status,
       aiProvider: s.aiProvider,
       aiModel: s.aiModel,

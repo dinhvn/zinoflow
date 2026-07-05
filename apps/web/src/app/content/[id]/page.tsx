@@ -6,12 +6,17 @@ import { z } from "zod/v4";
 import {
   contentJobSchema,
   draftArticleSchema,
+  listAiProvidersResponseSchema,
   publishDestinationResultSchema,
   runQualityChecksResponseSchema,
   type PublishDestinationResult,
   type ReviewAction,
+  type UpdateContentJobRequest,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Select } from "@/shared/ui/select";
 
 /** Draft response tu GET /content/jobs/:id/draft (DraftRecord phia API). */
 const draftSchema = z.object({
@@ -68,6 +73,13 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     null,
   );
 
+  // Form sua tham so sinh bai (chi mo khi job Failed/DraftReady)
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTopic, setEditTopic] = useState("");
+  const [editKeywords, setEditKeywords] = useState("");
+  const [editProvider, setEditProvider] = useState("");
+  const [editModel, setEditModel] = useState("");
+
   const jobQuery = useQuery({
     queryKey: ["content-job", id],
     queryFn: () => apiGet(`/content/jobs/${id}`, contentJobSchema),
@@ -80,6 +92,34 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   const job = jobQuery.data;
   const hasDraft = job && !["Created", "GeneratingOutline", "Failed"].includes(job.status);
+  // Chi sua tham so + chay lai duoc khi job Failed hoac DraftReady (dong bo state machine BE)
+  const canEditParams = job && ["Failed", "DraftReady"].includes(job.status);
+
+  const providersQuery = useQuery({
+    queryKey: ["ai-providers"],
+    queryFn: () => apiGet("/content/ai-providers", listAiProvidersResponseSchema),
+    enabled: Boolean(canEditParams),
+  });
+  const usableProviders = (providersQuery.data?.providers ?? []).filter(
+    (p) => p.isConfigured && p.isEnabled && p.models.length > 0,
+  );
+  const editSelectedProvider =
+    usableProviders.find((p) => p.key === editProvider) ?? usableProviders[0] ?? null;
+  const editSelectedModel =
+    editSelectedProvider?.models.find((m) => m.id === editModel) ??
+    editSelectedProvider?.models[0] ??
+    null;
+
+  // Prefill form khi mo (dung gia tri hien tai cua job)
+  function openEditForm() {
+    if (!job) return;
+    setEditTopic(job.topic);
+    setEditKeywords(job.keywordSeed.join(", "));
+    setEditProvider(job.aiProvider);
+    setEditModel(job.aiModel);
+    setActionError(null);
+    setEditOpen(true);
+  }
 
   const draftQuery = useQuery({
     queryKey: ["content-draft", id],
@@ -174,6 +214,29 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     onError: (error) => setActionError(toActionError(error)),
   });
 
+  // Sua tham so job roi chay lai: PATCH cap nhat -> POST retry (2 buoc, tach bach).
+  const editAndRerun = useMutation({
+    mutationFn: async () => {
+      const body: UpdateContentJobRequest = {
+        topic: editTopic.trim(),
+        keywordSeed: editKeywords
+          .split(",")
+          .map((k) => k.trim())
+          .filter(Boolean),
+        aiProvider: editSelectedProvider?.key,
+        aiModel: editSelectedModel?.id,
+      };
+      await apiSend("PATCH", `/content/jobs/${id}`, body);
+      await apiSend("POST", `/content/jobs/${id}/retry`, {});
+    },
+    onSuccess: () => {
+      setActionError(null);
+      setEditOpen(false);
+      invalidateAll();
+    },
+    onError: (error) => setActionError(toActionError(error)),
+  });
+
   const [publishResult, setPublishResult] = useState<PublishDestinationResult | null>(null);
   // Gate thu cong thu 2 (Approve ≠ Publish): day bai da duyet xuong SQL Server dichoithoi
   const publishDichoithoi = useMutation({
@@ -233,6 +296,92 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             <p className="mt-2 text-emerald-600 dark:text-emerald-400">
               Bài đã được duyệt. Sửa nội dung sẽ tạo version mới và phải duyệt lại.
             </p>
+          )}
+
+          {/* Sua tham so sinh bai + chay lai (Failed/DraftReady) */}
+          {canEditParams && (
+            <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+              {!editOpen ? (
+                <Button size="sm" variant="secondary" onClick={openEditForm}>
+                  Sửa thông tin / chọn lại model & chạy lại
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  <label className="block text-sm">
+                    <span className="mb-1 block text-zinc-500">Chủ đề bài viết</span>
+                    <Input
+                      value={editTopic}
+                      onChange={(e) => setEditTopic(e.target.value)}
+                      minLength={5}
+                      className="w-full"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block text-zinc-500">Từ khóa SEO (phân cách bằng dấu phẩy)</span>
+                    <Input
+                      value={editKeywords}
+                      onChange={(e) => setEditKeywords(e.target.value)}
+                      placeholder="VD: túi xách nữ, túi da thật"
+                      className="w-full"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block text-zinc-500">AI Provider / Model</span>
+                    <div className="flex gap-2">
+                      <Select
+                        value={editSelectedProvider?.key ?? ""}
+                        onChange={(e) => {
+                          setEditProvider(e.target.value);
+                          setEditModel(""); // reset model khi doi provider
+                        }}
+                        className="w-1/2"
+                      >
+                        {usableProviders.map((p) => (
+                          <option key={p.key} value={p.key}>
+                            {p.displayName}
+                          </option>
+                        ))}
+                      </Select>
+                      <Select
+                        value={editSelectedModel?.id ?? ""}
+                        onChange={(e) => setEditModel(e.target.value)}
+                        className="w-1/2"
+                      >
+                        {(editSelectedProvider?.models ?? []).map((m) => (
+                          <option key={m.id} value={m.id} title={m.costNote}>
+                            {m.displayName}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    {editSelectedModel?.costNote && (
+                      <span className="mt-1 block text-xs text-zinc-400">
+                        {editSelectedModel.costNote}
+                      </span>
+                    )}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      loading={editAndRerun.isPending}
+                      disabled={editTopic.trim().length < 5 || !editSelectedModel}
+                      onClick={() => editAndRerun.mutate()}
+                    >
+                      {editAndRerun.isPending ? "Đang lưu & chạy lại..." : "Lưu & chạy lại"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={editAndRerun.isPending}
+                      onClick={() => setEditOpen(false)}
+                    >
+                      Hủy
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Thanh hanh dong theo trang thai */}

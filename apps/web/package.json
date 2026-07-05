@@ -4,9 +4,9 @@
   "private": true,
   "description": "ZinoFlow Web - Next.js admin UI",
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "next dev --port 3005",
     "build": "next build",
-    "start": "next start --port 3000",
+    "start": "next start --port 3005",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

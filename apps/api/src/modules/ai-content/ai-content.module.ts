@@ -4,6 +4,7 @@ import { ContentController } from "./presentation/content.controller";
 import { CreateContentJobUseCase } from "./application/use-cases/create-content-job.usecase";
 import { GenerateContentUseCase } from "./application/use-cases/generate-content.usecase";
 import { RetryContentJobUseCase } from "./application/use-cases/retry-content-job.usecase";
+import { EditContentJobUseCase } from "./application/use-cases/edit-content-job.usecase";
 import { RunQualityChecksUseCase } from "./application/use-cases/run-quality-checks.usecase";
 import { SubmitForReviewUseCase } from "./application/use-cases/submit-for-review.usecase";
 import { ReviewDraftUseCase } from "./application/use-cases/review-draft.usecase";
@@ -67,6 +68,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     CreateContentJobUseCase,
     GenerateContentUseCase,
     RetryContentJobUseCase,
+    EditContentJobUseCase,
     RunQualityChecksUseCase,
     SubmitForReviewUseCase,
     ReviewDraftUseCase,

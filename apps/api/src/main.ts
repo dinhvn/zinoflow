@@ -21,7 +21,7 @@ async function bootstrap(): Promise<void> {
   // Validation: dung Zod schema tu @zinoflow/contracts qua custom pipe (Day 2),
   // KHONG dung class-validator/ValidationPipe — tranh 2 he validation song song.
   // Web (Next.js) chay o port khac trong dev nen can CORS
-  app.enableCors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:3000" });
+  app.enableCors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:3005" });
 
   // Swagger docs tai /docs (yeu cau spec §16.4 — API docs co examples)
   const swaggerConfig = new DocumentBuilder()

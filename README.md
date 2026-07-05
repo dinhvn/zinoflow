@@ -11,7 +11,7 @@ pnpm install
 copy apps\api\.env.example apps\api\.env   # dien DATABASE_URL + API key AI
 pnpm --filter @zinoflow/contracts build
 pnpm migration:run
-pnpm dev    # web: http://localhost:3000 | api: http://localhost:3001 (Swagger: /docs)
+pnpm dev    # web: http://localhost:3005 | api: http://localhost:3001 (Swagger: /docs)
 ```
 
 Chi tiet setup + xu ly loi: **[docs/runbook.md](docs/runbook.md)**
