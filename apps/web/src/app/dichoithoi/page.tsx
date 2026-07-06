@@ -5,12 +5,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   destinationTaxonomySchema,
   listDestinationsResponseSchema,
+  migrateDestinationImagesReportSchema,
   recomputeRelatedReportSchema,
   relinkAllReportSchema,
   syncDestinationsResultSchema,
+  type MigrateDestinationImagesReport,
   type DestinationContentState,
   type DestinationKind,
   type DestinationMirror,
+  type DestinationProductionState,
   type DestinationSortBy,
   type RecomputeRelatedReport,
   type RelinkAllReport,
@@ -35,6 +38,7 @@ const CONTENT_STATE_LABELS: Record<DestinationContentState, string> = {
   "chua-co-bai": "Chưa có bài",
   "bai-tay": "Bài viết tay",
   "dang-soan": "Đang soạn / duyệt",
+  "da-duyet": "Đã duyệt · chờ publish",
   "da-publish": "Đã publish (AI)",
 };
 
@@ -42,7 +46,23 @@ const CONTENT_STATE_TONES: Record<DestinationContentState, BadgeTone> = {
   "chua-co-bai": "gray",
   "bai-tay": "blue",
   "dang-soan": "amber",
+  "da-duyet": "indigo",
   "da-publish": "emerald",
+};
+
+// Tinh trang ben production (dichoithoi.com) — tach rieng khoi trang thai bai
+const PRODUCTION_LABELS: Record<DestinationProductionState, string> = {
+  online: "Online",
+  hidden: "Ẩn",
+  draft: "Nháp",
+  "not-live": "Chưa lên",
+};
+
+const PRODUCTION_TONES: Record<DestinationProductionState, BadgeTone> = {
+  online: "emerald",
+  hidden: "amber",
+  draft: "blue",
+  "not-live": "gray",
 };
 
 const SYNC_FLAG_LABELS: Record<string, string> = {
@@ -60,6 +80,7 @@ export default function DichoithoiPage() {
   const [provinceCode, setProvinceCode] = useState("");
   const [kind, setKind] = useState("");
   const [contentState, setContentState] = useState("");
+  const [production, setProduction] = useState("");
   const [sortBy, setSortBy] = useState<DestinationSortBy>("name");
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
   const [page, setPage] = useState(1);
@@ -80,6 +101,7 @@ export default function DichoithoiPage() {
       provinceCode,
       kind,
       contentState,
+      production,
       sortBy,
       sortDir,
       page,
@@ -96,6 +118,7 @@ export default function DichoithoiPage() {
       if (provinceCode) params.set("provinceCode", provinceCode);
       if (kind) params.set("kind", kind);
       if (contentState) params.set("contentState", contentState);
+      if (production) params.set("production", production);
       return apiGet(`/destinations?${params}`, listDestinationsResponseSchema);
     },
   });
@@ -142,6 +165,23 @@ export default function DichoithoiPage() {
       setSyncError(err instanceof Error ? err.message : "Tính lại khối liên quan thất bại"),
   });
 
+  // Migrate anh layout cu -> {slug}/3 co WebP (chay theo batch, idempotent)
+  const [migrateReport, setMigrateReport] = useState<MigrateDestinationImagesReport | null>(null);
+  const migrateMutation = useMutation({
+    mutationFn: async (dryRun: boolean) =>
+      migrateDestinationImagesReportSchema.parse(
+        await apiSend("POST", "/destinations/migrate-images", { dryRun, limit: 20 }),
+      ),
+    onSuccess: (report) => {
+      setMigrateReport(report);
+      setSyncError(null);
+      if (!report.dryRun && report.migrated.length > 0) {
+        void queryClient.invalidateQueries({ queryKey: ["dichoithoi-destinations"] });
+      }
+    },
+    onError: (err) => setSyncError(err instanceof Error ? err.message : "Migrate ảnh thất bại"),
+  });
+
   const data = listQuery.data;
 
   // Doi filter -> ve trang 1 (tranh ket o trang trong)
@@ -160,15 +200,31 @@ export default function DichoithoiPage() {
       header: "Tên",
       sortable: true,
       render: (d) => (
-        <>
-          <a
-            href={`/dichoithoi/${d.slug}`}
-            className="font-medium text-blue-600 hover:underline dark:text-blue-400"
-          >
-            {d.name}
-          </a>
-          <div className="text-xs text-zinc-400">{d.slug}</div>
-        </>
+        <div className="flex items-center gap-3">
+          {d.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={d.imageUrl}
+              alt=""
+              className="h-10 w-14 shrink-0 rounded object-cover"
+              loading="lazy"
+              onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+            />
+          ) : (
+            <div className="flex h-10 w-14 shrink-0 items-center justify-center rounded bg-zinc-100 text-[10px] text-zinc-400 dark:bg-zinc-800">
+              chưa có
+            </div>
+          )}
+          <div className="min-w-0">
+            <a
+              href={`/dichoithoi/${d.slug}`}
+              className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+            >
+              {d.name}
+            </a>
+            <div className="text-xs text-zinc-400">{d.slug}</div>
+          </div>
+        </div>
       ),
     },
     {
@@ -190,6 +246,15 @@ export default function DichoithoiPage() {
       render: (d) => (
         <Badge tone={CONTENT_STATE_TONES[d.contentState]}>
           {CONTENT_STATE_LABELS[d.contentState]}
+        </Badge>
+      ),
+    },
+    {
+      key: "production",
+      header: "Trên web",
+      render: (d) => (
+        <Badge tone={PRODUCTION_TONES[d.productionState]}>
+          {PRODUCTION_LABELS[d.productionState]}
         </Badge>
       ),
     },
@@ -295,6 +360,23 @@ export default function DichoithoiPage() {
           <Button size="sm" loading={recomputeMutation.isPending} onClick={() => recomputeMutation.mutate()}>
             {recomputeMutation.isPending ? "Đang tính..." : "Tính lại khối liên quan"}
           </Button>
+          <Button
+            size="sm"
+            loading={migrateMutation.isPending && migrateMutation.variables === true}
+            onClick={() => migrateMutation.mutate(true)}
+          >
+            Migrate ảnh cũ (xem trước)
+          </Button>
+          {migrateReport && migrateReport.remaining > 0 && (
+            <Button
+              size="sm"
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              loading={migrateMutation.isPending && migrateMutation.variables === false}
+              onClick={() => migrateMutation.mutate(false)}
+            >
+              Migrate 20 ảnh tiếp theo ({migrateReport.remaining} còn lại)
+            </Button>
+          )}
         </div>
 
         {relinkReport && (
@@ -325,6 +407,37 @@ export default function DichoithoiPage() {
             ✅ Khối liên quan: quét {relatedReport.scanned} bài, cập nhật {relatedReport.updated}{" "}
             bài ({(relatedReport.durationMs / 1000).toFixed(1)}s).
           </p>
+        )}
+        {migrateReport && (
+          <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <p>
+              {migrateReport.dryRun ? "🔍 Xem trước migrate ảnh" : "✅ Migrate ảnh"}: tổng{" "}
+              {migrateReport.scanned} điểm — {migrateReport.alreadyNew} đã theo chuẩn mới,{" "}
+              {migrateReport.candidates} cần migrate
+              {!migrateReport.dryRun && (
+                <>
+                  ; lần này chuyển được {migrateReport.migrated.length}, còn lại{" "}
+                  {migrateReport.remaining}
+                </>
+              )}{" "}
+              ({(migrateReport.durationMs / 1000).toFixed(1)}s).
+            </p>
+            {migrateReport.missingSource.length > 0 && (
+              <p className="mt-1 text-amber-700 dark:text-amber-300">
+                ⚠️ {migrateReport.missingSource.length} điểm không tải được ảnh gốc cũ:{" "}
+                {migrateReport.missingSource.join(", ")}
+              </p>
+            )}
+            {migrateReport.failed.length > 0 && (
+              <ul className="mt-1 list-inside list-disc text-red-600 dark:text-red-400">
+                {migrateReport.failed.map((f) => (
+                  <li key={f.slug}>
+                    <span className="font-mono">{f.slug}</span> — {f.error}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </div>
 
@@ -375,6 +488,20 @@ export default function DichoithoiPage() {
         >
           <option value="">Mọi trạng thái bài</option>
           {Object.entries(CONTENT_STATE_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <Select
+          value={production}
+          onChange={(e) => {
+            setProduction(e.target.value);
+            resetToFirstPage();
+          }}
+        >
+          <option value="">Mọi tình trạng web</option>
+          {Object.entries(PRODUCTION_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>

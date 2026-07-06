@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+} from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import {
   addressMappingsQuerySchema,
   checkImageRequestSchema,
@@ -34,10 +44,15 @@ import {
   type SuggestDestinationMetaRequest,
   type DestinationMetaSuggestion,
   type SyncDestinationsResult,
+  migrateDestinationImagesRequestSchema,
+  type MigrateDestinationImagesReport,
+  type MigrateDestinationImagesRequest,
   type UpdateThumbnailRequest,
+  type UploadDestinationImageResponse,
   type UpsertDestinationRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
+import { ValidationError } from "../../shared/errors/app-error";
 import { ListDestinationsUseCase } from "../application/use-cases/list-destinations.usecase";
 import { SyncDestinationsUseCase } from "../application/use-cases/sync-destinations.usecase";
 import { GetDestinationTaxonomyUseCase } from "../application/use-cases/get-destination-taxonomy.usecase";
@@ -45,6 +60,8 @@ import { CreateDestinationJobUseCase } from "../application/use-cases/create-des
 import { PublishDestinationUseCase } from "../application/use-cases/publish-destination.usecase";
 import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
 import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnail.usecase";
+import { UploadDestinationImageUseCase } from "../application/use-cases/upload-destination-image.usecase";
+import { MigrateDestinationImagesUseCase } from "../application/use-cases/migrate-destination-images.usecase";
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
 import { UpsertDestinationUseCase } from "../application/use-cases/upsert-destination.usecase";
 import { ImportDestinationsUseCase } from "../application/use-cases/import-destinations.usecase";
@@ -55,6 +72,9 @@ import { RecomputeRelatedService } from "../application/services/recompute-relat
 import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
 import { SHEET_CSV_FETCHER, type SheetCsvFetcher } from "../application/ports/sheet-csv-fetcher.port";
 import { Inject } from "@nestjs/common";
+
+/** Gioi han kich thuoc anh goc upload (truoc khi convert) — 15MB */
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 
 /**
  * REST khu Dichoithoi (spec dichoithoi-destination-spec §5.1):
@@ -70,6 +90,8 @@ export class DestinationsController {
     private readonly publishDestination: PublishDestinationUseCase,
     private readonly relinkAll: RelinkAllUseCase,
     private readonly updateThumbnail: UpdateThumbnailUseCase,
+    private readonly uploadImage: UploadDestinationImageUseCase,
+    private readonly migrateImages: MigrateDestinationImagesUseCase,
     private readonly getDetail: GetDestinationDetailUseCase,
     private readonly upsertDestination: UpsertDestinationUseCase,
     private readonly importDestinations: ImportDestinationsUseCase,
@@ -204,6 +226,18 @@ export class DestinationsController {
     return { ...result, durationMs: Date.now() - startedAt };
   }
 
+  /**
+   * Migrate anh layout cu sang folder-theo-slug (notes refactor §8 buoc 2).
+   * dryRun=true chi quet; that thi chay theo limit, bam nhieu lan cho het (idempotent).
+   */
+  @Post("migrate-images")
+  migrateDestinationImages(
+    @Body(new ZodValidationPipe(migrateDestinationImagesRequestSchema))
+    request: MigrateDestinationImagesRequest,
+  ): Promise<MigrateDestinationImagesReport> {
+    return this.migrateImages.execute(request);
+  }
+
   /** Kiem tra anh ton tai tren hosting (HEAD request — spec §14.3) */
   @Post("check-image")
   checkImage(
@@ -220,6 +254,25 @@ export class DestinationsController {
   ): Promise<{ ok: true }> {
     await this.updateThumbnail.execute(slug, request.thumbnail);
     return { ok: true };
+  }
+
+  /**
+   * Upload anh dai dien: nhan file goc (multipart "file") -> convert 3 co WebP ->
+   * FTP len hosting -> ghi cot Thumbnail (spec §14.3 giai doan 2). Gioi han 15MB.
+   */
+  @Post(":slug/images")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_IMAGE_BYTES } }))
+  uploadDestinationImage(
+    @Param("slug") slug: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ): Promise<UploadDestinationImageResponse> {
+    if (!file) {
+      throw new ValidationError("Thiếu file ảnh (field 'file')");
+    }
+    if (!file.mimetype.startsWith("image/")) {
+      throw new ValidationError(`File không phải ảnh (${file.mimetype})`);
+    }
+    return this.uploadImage.execute(slug, file.buffer);
   }
 
   /** Publish bai DA DUYET cua 1 diem den xuong SQL Server (gate thu cong thu 2) */

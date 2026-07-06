@@ -17,6 +17,7 @@ import {
   DestinationMetadataForm,
   type DestinationMetaValues,
 } from "@/features/dichoithoi/destination-metadata-form";
+import { DestinationImageUploader } from "@/features/dichoithoi/destination-image-uploader";
 import { Button, buttonClasses } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
@@ -31,6 +32,7 @@ const CONTENT_STATE_LABELS: Record<DestinationContentState, string> = {
   "chua-co-bai": "Chưa có bài",
   "bai-tay": "Bài viết tay",
   "dang-soan": "Đang soạn / duyệt",
+  "da-duyet": "Đã duyệt · chờ publish",
   "da-publish": "Đã publish (AI)",
 };
 
@@ -38,6 +40,7 @@ const CONTENT_STATE_STYLES: Record<DestinationContentState, string> = {
   "chua-co-bai": "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   "bai-tay": "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
   "dang-soan": "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  "da-duyet": "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
   "da-publish": "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
 };
 
@@ -259,6 +262,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           </a>
         </div>
       </div>
+
+      <DestinationImageUploader slug={d.slug} imageUrl={d.imageUrl} onUploaded={invalidate} />
 
       {actionError && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">

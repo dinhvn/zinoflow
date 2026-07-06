@@ -1,6 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
+  ContentJobStatus,
+  DestinationContentState,
   DestinationMirror,
+  DestinationProductionState,
   ListDestinationsQuery,
   ListDestinationsResponse,
 } from "@zinoflow/contracts";
@@ -8,12 +11,20 @@ import {
   DESTINATION_MIRROR_REPOSITORY,
   type DestinationMirrorRepository,
 } from "../ports/destination-mirror.repository";
-import {
-  CONTENT_JOB_REPOSITORY,
-  type ContentJobRepository,
-} from "../../../ai-content/application/ports/content-job.repository";
+import { IMAGE_CHECKER, type ImageChecker } from "../ports/image-checker.port";
 import { deriveContentState } from "../../domain/destination-mirror";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
+
+/**
+ * Entity mirror da duoc repository.list() lam giau: gan san provinceName, status job
+ * dang gan, contentState + productionState suy ra (xem repo). Usecase chi doc lai.
+ */
+type EnrichedMirrorEntity = DestinationMirrorEntity & {
+  provinceName?: string | null;
+  activeJobStatus: ContentJobStatus | null;
+  contentState: DestinationContentState;
+  productionState: DestinationProductionState;
+};
 
 /** Danh sach diem den cho man hub /dichoithoi (spec §7.2). */
 @Injectable()
@@ -21,14 +32,15 @@ export class ListDestinationsUseCase {
   constructor(
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly mirrorRepo: DestinationMirrorRepository,
-    @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
+    @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
   ) {}
 
   async execute(query: ListDestinationsQuery): Promise<ListDestinationsResponse> {
     const { items, total } = await this.mirrorRepo.list(query);
-    await this.clearRejectedJobPointers(items);
+    const enriched = items as EnrichedMirrorEntity[];
+    await this.clearRejectedJobPointers(enriched);
     return {
-      items: items.map((e) => this.toDto(e)),
+      items: enriched.map((e) => this.toDto(e)),
       total,
       page: query.page,
       limit: query.limit,
@@ -38,19 +50,25 @@ export class ListDestinationsUseCase {
   /**
    * Self-healing: job Rejected la terminal — diem den khong con "dang soan".
    * Clear con tro de UI hien lai nut Tao bai (Failed GIU pointer: con retry duoc).
+   * Dung status da batch-load o repo (khong query lai tung job).
    */
-  private async clearRejectedJobPointers(items: DestinationMirrorEntity[]): Promise<void> {
+  private async clearRejectedJobPointers(items: EnrichedMirrorEntity[]): Promise<void> {
     for (const item of items) {
-      if (!item.activeContentJobId) continue;
-      const job = await this.jobRepo.findById(item.activeContentJobId);
-      if (job && job.toSnapshot().status === "Rejected") {
-        await this.mirrorRepo.setActiveJob(item.slug, null);
-        item.activeContentJobId = null;
-      }
+      if (!item.activeContentJobId || item.activeJobStatus !== "Rejected") continue;
+      await this.mirrorRepo.setActiveJob(item.slug, null);
+      item.activeContentJobId = null;
+      item.activeJobStatus = null;
+      // Khong con job -> tinh lai trang thai bai (bai-tay/da-publish/chua-co-bai)
+      item.contentState = deriveContentState({
+        activeContentJobId: null,
+        activeJobStatus: null,
+        contentSource: item.contentSource,
+        contentHash: item.contentHash,
+      });
     }
   }
 
-  private toDto(e: DestinationMirrorEntity): DestinationMirror {
+  private toDto(e: EnrichedMirrorEntity): DestinationMirror {
     return {
       siteId: e.siteId,
       slug: e.slug,
@@ -58,10 +76,12 @@ export class ListDestinationsUseCase {
       parentSlug: e.parentSlug,
       provinceCode: e.provinceCode,
       // ProvinceName join o repository (admin_provinces) — null khi chua gan tinh
-      provinceName: (e as DestinationMirrorEntity & { provinceName?: string }).provinceName ?? null,
+      provinceName: e.provinceName ?? null,
       name: e.name,
       shortDescription: e.shortDescription,
       thumbnail: e.thumbnail,
+      // Full URL de UI list hien anh cu truc tiep (base env + path tuong doi)
+      imageUrl: this.imageChecker.buildUrl(e.thumbnail),
       lat: e.lat === null ? null : Number(e.lat),
       lng: e.lng === null ? null : Number(e.lng),
       addressNew: e.addressNew,
@@ -72,11 +92,9 @@ export class ListDestinationsUseCase {
       hotelGroupId: e.hotelGroupId,
       isFeatured: e.isFeatured,
       siteStatus: e.siteStatus,
-      contentState: deriveContentState({
-        activeContentJobId: e.activeContentJobId,
-        contentSource: e.contentSource,
-        contentHash: e.contentHash,
-      }),
+      // contentState + productionState do repository.list() suy san (co status job)
+      contentState: e.contentState,
+      productionState: e.productionState,
       activeContentJobId: e.activeContentJobId,
       syncFlags: e.syncFlags as DestinationMirror["syncFlags"],
       siteUpdatedAt: e.siteUpdatedAt?.toISOString() ?? null,

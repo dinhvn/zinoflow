@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import type {
+  ContentJobStatus,
   DestinationDetail,
   DestinationSiteContent,
   RelatedDestinationRef,
@@ -18,7 +19,7 @@ import {
 } from "../../../ai-content/application/ports/content-job.repository";
 import { IMAGE_CHECKER, type ImageChecker } from "../ports/image-checker.port";
 import { computeNearby, type RelatedCandidate } from "../../domain/related-builder";
-import { deriveContentState } from "../../domain/destination-mirror";
+import { deriveContentState, deriveProductionState } from "../../domain/destination-mirror";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
 const NEARBY_PREVIEW_COUNT = 8;
@@ -57,7 +58,7 @@ export class GetDestinationDetailUseCase {
       provinces.find((p) => p.provinceCode === entity.provinceCode)?.shortName ?? null;
 
     // Trang thai job dang chay (neu co) — UI quyet dinh nut Xem draft / Publish
-    let activeJobStatus: string | null = null;
+    let activeJobStatus: ContentJobStatus | null = null;
     if (entity.activeContentJobId) {
       const job = await this.jobRepo.findById(entity.activeContentJobId);
       activeJobStatus = job ? job.toSnapshot().status : null;
@@ -115,9 +116,11 @@ export class GetDestinationDetailUseCase {
       siteStatus: entity.siteStatus,
       contentState: deriveContentState({
         activeContentJobId: entity.activeContentJobId,
+        activeJobStatus,
         contentSource: entity.contentSource,
         contentHash: entity.contentHash,
       }),
+      productionState: deriveProductionState(entity.siteId, entity.siteStatus),
       activeContentJobId: entity.activeContentJobId,
       syncFlags: entity.syncFlags as DestinationDetail["syncFlags"],
       siteUpdatedAt: entity.siteUpdatedAt?.toISOString() ?? null,
@@ -144,8 +147,10 @@ export class GetDestinationDetailUseCase {
       slug: entity.slug,
       name: entity.name,
       kind: entity.kind as RelatedDestinationRef["kind"],
+      // Ref lan can chi la chip — khong batch status job, coi job dang chay la "dang-soan"
       contentState: deriveContentState({
         activeContentJobId: entity.activeContentJobId,
+        activeJobStatus: null,
         contentSource: entity.contentSource,
         contentHash: entity.contentHash,
       }),

@@ -1,0 +1,23 @@
+/**
+ * Port xu ly anh (spec §14.3 giai doan 2): convert anh nguon -> 3 co WebP.
+ * Adapter thuc thi (sharp) nam o infrastructure — application khong biet thu vien.
+ */
+export const IMAGE_PROCESSOR = Symbol("IMAGE_PROCESSOR");
+
+/** 3 bien the WebP theo convention folder-theo-slug (spec §14.1.3, §14.2) */
+export interface WebpVariants {
+  /** ~1600w — anh dau bai + og:image */
+  hero: Buffer;
+  /** ~800w — dung cho srcset */
+  medium: Buffer;
+  /** ~400w — card danh sach / related / search */
+  thumb: Buffer;
+}
+
+export interface ImageProcessor {
+  /**
+   * Convert 1 anh nguon (buffer bat ky dinh dang sharp doc duoc) thanh 3 co WebP.
+   * Khong phong to anh nho hon kich thuoc dich (withoutEnlargement).
+   */
+  toWebpVariants(source: Buffer): Promise<WebpVariants>;
+}

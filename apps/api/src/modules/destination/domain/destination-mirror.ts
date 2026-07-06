@@ -1,5 +1,7 @@
 import type {
+  ContentJobStatus,
   DestinationContentState,
+  DestinationProductionState,
   DestinationSortBy,
 } from "@zinoflow/contracts";
 import type { DestinationSyncFlag } from "@zinoflow/contracts";
@@ -79,16 +81,47 @@ export function decideSyncAction(
 /**
  * Suy trang thai noi dung cho UI (spec §7.2 — cot quan trong nhat):
  * dang co job chay > da publish boi AI > co bai viet tay > chua co bai.
+ * activeJobStatus = Approved -> tach rieng "da-duyet" (da duyet nhung chua publish);
+ * cac status con lai coi la "dang-soan". Job Rejected da duoc caller clear con tro
+ * truoc do nen o day khong xuat hien.
  */
 export function deriveContentState(input: {
   activeContentJobId: string | null;
+  activeJobStatus: ContentJobStatus | null;
   contentSource: number | null;
   contentHash: string | null;
 }): DestinationContentState {
-  if (input.activeContentJobId) return "dang-soan";
+  if (input.activeContentJobId) {
+    return input.activeJobStatus === "Approved" ? "da-duyet" : "dang-soan";
+  }
   if (input.contentSource === 1) return "da-publish";
   if (input.contentHash) return "bai-tay";
   return "chua-co-bai";
+}
+
+/**
+ * Suy tinh trang production tu siteId + Status ben SQL Server (0 draft,1 published,2 hidden):
+ * chua co siteId = chua len web; con lai map thang theo Status.
+ */
+export function deriveProductionState(
+  siteId: number | null,
+  siteStatus: number | null,
+): DestinationProductionState {
+  if (siteId === null) return "not-live";
+  if (siteStatus === 1) return "online";
+  if (siteStatus === 2) return "hidden";
+  if (siteStatus === 0) return "draft";
+  // Da co siteId nhung chua biet Status (chua sync lai) -> coi nhu chua chac len
+  return "not-live";
+}
+
+/**
+ * Anh da theo convention MOI chua? (spec §14.1.3 — folder theo slug)
+ * Moi = "{slug}/thumb.webp" (co "/"); cu = ten file phang "{slug}.webp" hoac null.
+ * Dung de job migrate anh bo qua diem da chuyen (idempotent).
+ */
+export function isNewImagePath(thumbnail: string | null): boolean {
+  return thumbnail !== null && thumbnail.includes("/");
 }
 
 /** Du lieu toi thieu de sort 1 dong tren man danh sach */
@@ -109,7 +142,8 @@ const CONTENT_STATE_RANK: Record<DestinationContentState, number> = {
   "chua-co-bai": 0,
   "bai-tay": 1,
   "dang-soan": 2,
-  "da-publish": 3,
+  "da-duyet": 3,
+  "da-publish": 4,
 };
 
 /**

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
+import type { ContentJobStatus } from "@zinoflow/contracts";
 import { ContentJob } from "../../domain/content-job";
 import type { ContentJobRepository } from "../../application/ports/content-job.repository";
 import { ContentJobEntity } from "../entities/content-job.entity";
@@ -28,6 +29,15 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
   async findAll(): Promise<ContentJob[]> {
     const entities = await this.repo.find({ order: { createdAt: "DESC" } });
     return entities.map((entity) => this.toDomain(entity));
+  }
+
+  async findStatusesByIds(ids: string[]): Promise<Map<string, ContentJobStatus>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.repo.find({
+      where: { id: In(ids) },
+      select: { id: true, status: true },
+    });
+    return new Map(rows.map((r) => [r.id, r.status as ContentJobStatus]));
   }
 
   private toEntity(job: ContentJob): ContentJobEntity {

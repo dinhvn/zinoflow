@@ -16,11 +16,19 @@ import {
 } from "./application/ports/destination-mirror.repository";
 import { REFERENCE_FETCHER } from "./application/ports/reference-fetcher.port";
 import { IMAGE_CHECKER } from "./application/ports/image-checker.port";
+import { IMAGE_PROCESSOR } from "./application/ports/image-processor.port";
+import { IMAGE_UPLOADER } from "./application/ports/image-uploader.port";
 import { SHEET_CSV_FETCHER } from "./application/ports/sheet-csv-fetcher.port";
 import { HttpReferenceFetcher } from "./infrastructure/reference/http-reference-fetcher";
 import { HttpImageChecker } from "./infrastructure/reference/http-image-checker";
+import { SharpImageProcessor } from "./infrastructure/image/sharp-image-processor";
+import { FtpsImageUploader } from "./infrastructure/dichoithoi/ftps-image-uploader";
 import { GoogleSheetCsvFetcher } from "./infrastructure/reference/google-sheet-csv-fetcher";
 import { UpdateThumbnailUseCase } from "./application/use-cases/update-thumbnail.usecase";
+import { UploadDestinationImageUseCase } from "./application/use-cases/upload-destination-image.usecase";
+import { MigrateDestinationImagesUseCase } from "./application/use-cases/migrate-destination-images.usecase";
+import { IMAGE_DOWNLOADER } from "./application/ports/image-downloader.port";
+import { HttpImageDownloader } from "./infrastructure/reference/http-image-downloader";
 import { GetDestinationDetailUseCase } from "./application/use-cases/get-destination-detail.usecase";
 import { UpsertDestinationUseCase } from "./application/use-cases/upsert-destination.usecase";
 import { ImportDestinationsUseCase } from "./application/use-cases/import-destinations.usecase";
@@ -62,6 +70,8 @@ import {
     PublishDestinationUseCase,
     RelinkAllUseCase,
     UpdateThumbnailUseCase,
+    UploadDestinationImageUseCase,
+    MigrateDestinationImagesUseCase,
     GetDestinationDetailUseCase,
     UpsertDestinationUseCase,
     ImportDestinationsUseCase,
@@ -70,6 +80,9 @@ import {
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
     { provide: IMAGE_CHECKER, useClass: HttpImageChecker },
+    { provide: IMAGE_PROCESSOR, useClass: SharpImageProcessor },
+    { provide: IMAGE_UPLOADER, useClass: FtpsImageUploader },
+    { provide: IMAGE_DOWNLOADER, useClass: HttpImageDownloader },
     { provide: SHEET_CSV_FETCHER, useClass: GoogleSheetCsvFetcher },
     { provide: DESTINATION_MIRROR_REPOSITORY, useClass: TypeOrmDestinationMirrorRepository },
     { provide: DESTINATION_RELATION_REPOSITORY, useClass: TypeOrmDestinationRelationRepository },

@@ -93,6 +93,8 @@ export class GetDashboardSummaryUseCase {
         (d) =>
           deriveContentState({
             activeContentJobId: d.activeContentJobId,
+            // Dashboard giu nhom "dang-soan" gop ca Approved (khong batch status o day)
+            activeJobStatus: null,
             contentSource: d.contentSource,
             contentHash: d.contentHash,
           }) === key,

@@ -1,3 +1,4 @@
+import type { ContentJobStatus } from "@zinoflow/contracts";
 import type { ContentJob } from "../../domain/content-job";
 
 /**
@@ -10,4 +11,9 @@ export interface ContentJobRepository {
   save(job: ContentJob): Promise<void>;
   findById(id: string): Promise<ContentJob | null>;
   findAll(): Promise<ContentJob[]>;
+  /**
+   * Lay status cua nhieu job trong 1 query (tranh N+1 khi list diem den can suy
+   * trang thai bai). Chi tra status — khong nan ca domain object cho nhe.
+   */
+  findStatusesByIds(ids: string[]): Promise<Map<string, ContentJobStatus>>;
 }

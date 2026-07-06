@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { ContentJobStatus } from "@zinoflow/contracts";
 import { ContentJob } from "../../domain/content-job";
 import type { ContentJobRepository } from "../../application/ports/content-job.repository";
 
@@ -20,5 +21,14 @@ export class InMemoryContentJobRepository implements ContentJobRepository {
 
   async findAll(): Promise<ContentJob[]> {
     return [...this.jobs.values()];
+  }
+
+  async findStatusesByIds(ids: string[]): Promise<Map<string, ContentJobStatus>> {
+    const result = new Map<string, ContentJobStatus>();
+    for (const id of ids) {
+      const job = this.jobs.get(id);
+      if (job) result.set(id, job.toSnapshot().status);
+    }
+    return result;
   }
 }

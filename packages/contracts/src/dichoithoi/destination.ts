@@ -14,10 +14,19 @@ export type DestinationKind = z.infer<typeof destinationKindSchema>;
 export const destinationContentStateSchema = z.enum([
   "chua-co-bai", // chua co noi dung
   "bai-tay", // co noi dung viet tay (ContentSource=0), chua qua AI tool
-  "dang-soan", // co content job dang chay/cho duyet
+  "dang-soan", // co content job dang chay/cho duyet (chua Approved)
+  "da-duyet", // job da Approved tren zinoflow, cho publish (van chi o Postgres)
   "da-publish", // bai AI da publish (ContentSource=1)
 ]);
 export type DestinationContentState = z.infer<typeof destinationContentStateSchema>;
+
+/**
+ * Tinh trang diem den ben production (SQL Server), suy tu siteId + Status:
+ * - not-live: chua ton tai ben SQL Server (siteId = null)
+ * - online: Status=1 (hien tren web) · hidden: Status=2 (co URL nhung an) · draft: Status=0
+ */
+export const destinationProductionStateSchema = z.enum(["online", "hidden", "draft", "not-live"]);
+export type DestinationProductionState = z.infer<typeof destinationProductionStateSchema>;
 
 /** Co canh bao tu job dong bo mirror (spec §12.1) */
 export const destinationSyncFlagSchema = z.enum(["edited-outside", "conflict", "orphan"]);
@@ -35,6 +44,8 @@ export const destinationMirrorSchema = z.object({
   name: z.string().min(1).max(128),
   shortDescription: z.string().nullable(),
   thumbnail: z.string().nullable(),
+  /** Full URL anh thumb (base + thumbnail) de UI hien truc tiep — null khi chua co */
+  imageUrl: z.string().nullable(),
   lat: z.number().nullable(),
   lng: z.number().nullable(),
   addressNew: z.string().nullable(),
@@ -47,6 +58,8 @@ export const destinationMirrorSchema = z.object({
   /** 0 draft, 1 published, 2 hidden — theo cot Status SQL Server */
   siteStatus: z.number().int().min(0).max(2).nullable(),
   contentState: destinationContentStateSchema,
+  /** Tinh trang ben production (suy tu siteId + siteStatus) — cot rieng tren UI */
+  productionState: destinationProductionStateSchema,
   /** Job ai-content dang soan cho diem nay — UI link sang man review */
   activeContentJobId: z.string().nullable(),
   syncFlags: z.array(destinationSyncFlagSchema),
@@ -54,6 +67,59 @@ export const destinationMirrorSchema = z.object({
   syncedAt: z.string().nullable(),
 });
 export type DestinationMirror = z.infer<typeof destinationMirrorSchema>;
+
+/**
+ * Ket qua upload anh dai dien qua FTP (giai doan 2 — spec §14.3).
+ * paths = duong dan TUONG DOI (so voi DICHOITHOI_IMAGE_BASE_URL) cua 3 co WebP;
+ * thumbnail = path duoc ghi vao cot Thumbnail (dung co thumb cho card danh sach).
+ */
+export const uploadDestinationImageResponseSchema = z.object({
+  slug: z.string(),
+  thumbnail: z.string(),
+  paths: z.object({
+    hero: z.string(),
+    medium: z.string(),
+    thumb: z.string(),
+  }),
+});
+export type UploadDestinationImageResponse = z.infer<typeof uploadDestinationImageResponseSchema>;
+
+/**
+ * Migrate anh layout CU ({slug}.webp + thumbnail/{slug}.webp) sang solution moi
+ * ({slug}/hero|medium|thumb.webp) — tai full cu ve, tao 3 co WebP, FTP len,
+ * dien cot Thumbnail. KHONG xoa anh cu (website con fallback path cu).
+ */
+export const migrateDestinationImagesRequestSchema = z.object({
+  /** true = chi quet + liet ke diem se migrate, khong tai/ghi gi */
+  dryRun: z.boolean(),
+  /** So diem migrate moi lan bam (chay lai nhieu lan cho het — idempotent) */
+  limit: z.number().int().min(1).max(100).default(20),
+});
+export type MigrateDestinationImagesRequest = z.infer<
+  typeof migrateDestinationImagesRequestSchema
+>;
+
+export const migrateDestinationImagesReportSchema = z.object({
+  dryRun: z.boolean(),
+  /** Tong so diem trong mirror */
+  scanned: z.number().int(),
+  /** Da o dinh dang moi ({slug}/thumb.webp) — bo qua */
+  alreadyNew: z.number().int(),
+  /** Tong so diem CAN migrate (truoc lan chay nay) */
+  candidates: z.number().int(),
+  /** Migrate thanh cong lan nay */
+  migrated: z.array(z.string()),
+  /** Khong tai duoc anh full cu (404/loi mang) — can xu ly tay */
+  missingSource: z.array(z.string()),
+  /** Loi xu ly/upload — xem message de sua */
+  failed: z.array(z.object({ slug: z.string(), error: z.string() })),
+  /** So diem con lai chua migrate sau lan chay nay */
+  remaining: z.number().int(),
+  durationMs: z.number(),
+});
+export type MigrateDestinationImagesReport = z.infer<
+  typeof migrateDestinationImagesReportSchema
+>;
 
 /** Cot sort duoc tren man danh sach diem den */
 export const destinationSortBySchema = z.enum(["name", "province", "kind", "contentState"]);
@@ -65,6 +131,7 @@ export const listDestinationsQuerySchema = z.object({
   provinceCode: z.string().optional(),
   kind: destinationKindSchema.optional(),
   contentState: destinationContentStateSchema.optional(),
+  production: destinationProductionStateSchema.optional(),
   sortBy: destinationSortBySchema.default("name"),
   sortDir: z.enum(["asc", "desc"]).default("asc"),
   page: z.coerce.number().int().min(1).default(1),

@@ -2,6 +2,8 @@ import {
   compareDestinationsForSort,
   decideSyncAction,
   deriveContentState,
+  deriveProductionState,
+  isNewImagePath,
   type DestinationSortRow,
   type SiteDestinationRow,
 } from "./destination-mirror";
@@ -80,28 +82,91 @@ describe("decideSyncAction (spec §12.1)", () => {
 });
 
 describe("deriveContentState (spec §7.2)", () => {
-  it("dang-soan khi co job dang chay (uu tien cao nhat)", () => {
+  it("dang-soan khi co job dang chay chua duyet (uu tien cao nhat)", () => {
     expect(
-      deriveContentState({ activeContentJobId: "job-1", contentSource: 1, contentHash: "h" }),
+      deriveContentState({
+        activeContentJobId: "job-1",
+        activeJobStatus: "GeneratingOutline",
+        contentSource: 1,
+        contentHash: "h",
+      }),
     ).toBe("dang-soan");
   });
 
-  it("da-publish khi contentSource = 1 (AI tool)", () => {
+  it("da-duyet khi job da Approved nhung chua publish", () => {
     expect(
-      deriveContentState({ activeContentJobId: null, contentSource: 1, contentHash: "h" }),
+      deriveContentState({
+        activeContentJobId: "job-1",
+        activeJobStatus: "Approved",
+        contentSource: null,
+        contentHash: null,
+      }),
+    ).toBe("da-duyet");
+  });
+
+  it("da-publish khi contentSource = 1 (AI tool) va khong con job", () => {
+    expect(
+      deriveContentState({
+        activeContentJobId: null,
+        activeJobStatus: null,
+        contentSource: 1,
+        contentHash: "h",
+      }),
     ).toBe("da-publish");
   });
 
   it("bai-tay khi co content nhung khong phai tu AI tool", () => {
     expect(
-      deriveContentState({ activeContentJobId: null, contentSource: 0, contentHash: "h" }),
+      deriveContentState({
+        activeContentJobId: null,
+        activeJobStatus: null,
+        contentSource: 0,
+        contentHash: "h",
+      }),
     ).toBe("bai-tay");
   });
 
   it("chua-co-bai khi khong co content", () => {
     expect(
-      deriveContentState({ activeContentJobId: null, contentSource: null, contentHash: null }),
+      deriveContentState({
+        activeContentJobId: null,
+        activeJobStatus: null,
+        contentSource: null,
+        contentHash: null,
+      }),
     ).toBe("chua-co-bai");
+  });
+});
+
+describe("deriveProductionState", () => {
+  it("not-live khi chua co siteId (chi song trong AI tool)", () => {
+    expect(deriveProductionState(null, null)).toBe("not-live");
+  });
+
+  it("online khi Status=1", () => {
+    expect(deriveProductionState(42, 1)).toBe("online");
+  });
+
+  it("hidden khi Status=2 (co URL nhung an)", () => {
+    expect(deriveProductionState(42, 2)).toBe("hidden");
+  });
+
+  it("draft khi Status=0", () => {
+    expect(deriveProductionState(42, 0)).toBe("draft");
+  });
+});
+
+describe("isNewImagePath (migrate anh §14.1.3)", () => {
+  it("true khi path theo folder-slug moi", () => {
+    expect(isNewImagePath("nui-ham-rong/thumb.webp")).toBe(true);
+  });
+
+  it("false khi ten file phang layout cu", () => {
+    expect(isNewImagePath("nui-ham-rong.webp")).toBe(false);
+  });
+
+  it("false khi chua co anh", () => {
+    expect(isNewImagePath(null)).toBe(false);
   });
 });
 

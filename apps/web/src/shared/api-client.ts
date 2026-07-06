@@ -67,6 +67,25 @@ export async function apiGet<TSchema extends z.ZodType>(
   return schema.parse(await res.json());
 }
 
+/**
+ * Upload multipart (FormData) — KHONG set Content-Type de trinh duyet tu them
+ * boundary. Dung cho upload anh (POST /destinations/:slug/images).
+ */
+export async function apiUpload<TSchema extends z.ZodType>(
+  path: string,
+  formData: FormData,
+  schema: TSchema,
+): Promise<z.infer<TSchema>> {
+  const url = `${API_BASE_URL}/api${path}`;
+  const res = await fetchOrThrow(
+    url,
+    { method: "POST", headers: authHeaders(), body: formData },
+    `POST ${path}`,
+  );
+  if (!res.ok) throw await toApiError(res, `POST ${path} failed: ${res.status}`);
+  return schema.parse(await res.json());
+}
+
 /** POST/PATCH/PUT voi JSON body. Tra ve response da parse (unknown neu khong can schema). */
 export async function apiSend(
   method: "POST" | "PATCH" | "PUT",

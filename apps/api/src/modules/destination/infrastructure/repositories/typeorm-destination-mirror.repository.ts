@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import type { AddressMappingsQuery, ListDestinationsQuery } from "@zinoflow/contracts";
@@ -12,7 +12,15 @@ import type {
   ProvinceOption,
 } from "../../application/ports/destination-mirror.repository";
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
-import { compareDestinationsForSort, deriveContentState } from "../../domain/destination-mirror";
+import {
+  compareDestinationsForSort,
+  deriveContentState,
+  deriveProductionState,
+} from "../../domain/destination-mirror";
+import {
+  CONTENT_JOB_REPOSITORY,
+  type ContentJobRepository,
+} from "../../../ai-content/application/ports/content-job.repository";
 import { normalizeVietnamese } from "../../../shared/text/vietnamese";
 
 /** Repository mirror diem den tren Postgres (implement port application). */
@@ -25,6 +33,8 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     private readonly provinceRepo: Repository<AdminProvinceEntity>,
     @InjectRepository(AdminWardMappingEntity)
     private readonly wardMappingRepo: Repository<AdminWardMappingEntity>,
+    @Inject(CONTENT_JOB_REPOSITORY)
+    private readonly jobRepo: ContentJobRepository,
   ) {}
 
   findAll(): Promise<DestinationMirrorEntity[]> {
@@ -100,24 +110,39 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
 
     const entities = await qb.getMany();
 
-    // contentState + provinceName la gia tri suy ra/join — gan vao entity de loc + sort.
-    // Quy mo vai tram diem den nen xu ly trong memory la du nhanh.
+    // Batch-load status cua cac job dang gan (1 query) de phan biet "da-duyet" (Approved)
+    // voi "dang-soan" — tranh N+1 findById.
+    const jobIds = entities
+      .map((e) => e.activeContentJobId)
+      .filter((id): id is string => id !== null);
+    const jobStatuses = await this.jobRepo.findStatusesByIds(jobIds);
+
+    // contentState/productionState/provinceName la gia tri suy ra/join — gan vao entity de
+    // loc + sort. Quy mo vai tram diem den nen xu ly trong memory la du nhanh.
     const enriched = entities.map((e) => {
       const province = (e as DestinationMirrorEntity & {
         province?: AdminProvinceEntity;
       }).province;
       const provinceName = province?.shortName ?? null;
+      const activeJobStatus = e.activeContentJobId
+        ? jobStatuses.get(e.activeContentJobId) ?? null
+        : null;
       const contentState = deriveContentState({
         activeContentJobId: e.activeContentJobId,
+        activeJobStatus,
         contentSource: e.contentSource,
         contentHash: e.contentHash,
       });
-      return Object.assign(e, { provinceName, contentState });
+      const productionState = deriveProductionState(e.siteId, e.siteStatus);
+      return Object.assign(e, { provinceName, activeJobStatus, contentState, productionState });
     });
 
     let filtered = enriched;
     if (query.contentState) {
       filtered = filtered.filter((e) => e.contentState === query.contentState);
+    }
+    if (query.production) {
+      filtered = filtered.filter((e) => e.productionState === query.production);
     }
 
     // Sort server-side tren TOAN BO du lieu da loc, truoc khi cat trang (spec sort).
