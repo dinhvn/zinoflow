@@ -174,6 +174,48 @@ const OPS: Op[] = [
   },
 ];
 
+type Door = {
+  key: string;
+  title: string;
+  before: string;
+  gate: string;
+  gateTone: BadgeTone;
+  effect: ReactNode;
+};
+
+/** Ba cua vao — phan nhanh theo siteId + co qua 2 cong thu cong khong (system overview §2.2). */
+const DOORS: Door[] = [
+  {
+    key: "A",
+    title: "Bài cho điểm đến MỚI",
+    before: "siteId = null",
+    gate: "Có — 2 cổng",
+    gateTone: "amber",
+    effect: <>INSERT shell lấy siteId + UPSERT nội dung. Lần đầu chạm production.</>,
+  },
+  {
+    key: "B",
+    title: "Viết lại NỘI DUNG bài cũ (mode=update)",
+    before: "siteId ≠ null",
+    gate: "Có — 2 cổng",
+    gateTone: "amber",
+    effect: <>UPSERT đè nội dung, giữ nguyên metadata / toạ độ / taxonomy.</>,
+  },
+  {
+    key: "C",
+    title: "Chỉ sửa METADATA (địa chỉ, toạ độ, booking, thumbnail...)",
+    before: "siteId ≠ null",
+    gate: "KHÔNG",
+    gateTone: "emerald",
+    effect: (
+      <>
+        Ghi <b>thẳng</b> SQL Server ngay (<Code>updateMetadata</Code>) — website phản ánh tức thì,
+        không qua review/publish vì đây là dữ liệu cứng người nhập tay.
+      </>
+    ),
+  },
+];
+
 const RISKS: ReactNode[] = [
   <>
     <b>DICHOITHOI_IMAGE_BASE_URL đang là phỏng đoán</b> (contents/diem-den/) — gate ảnh có thể
@@ -196,6 +238,105 @@ const RISKS: ReactNode[] = [
     Hàm Rồng&quot; còn ở DraftReady.
   </>,
 ];
+
+/** 1 hop thanh phan trong so do kien truc. */
+function ArchBox({
+  title,
+  role,
+  tone,
+  muted,
+}: {
+  title: string;
+  role: string;
+  tone: BadgeTone;
+  muted?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-xl border p-3 text-center ${
+        muted
+          ? "border-dashed border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/40"
+          : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+      }`}
+    >
+      <div className="flex justify-center">
+        <Badge tone={tone}>{title}</Badge>
+      </div>
+      <p className="mt-1.5 text-[11.5px] leading-snug text-zinc-500 dark:text-zinc-400">{role}</p>
+    </div>
+  );
+}
+
+/** Nhan 1 luong (mui ten + chu thich) giua cac hop. */
+function Flow({ arrow, children }: { arrow: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-center gap-1.5 text-[11.5px] text-zinc-500 dark:text-zinc-400">
+      <span className="font-bold text-teal-600 dark:text-teal-400">{arrow}</span>
+      <span>{children}</span>
+    </div>
+  );
+}
+
+/**
+ * So do kien truc tong: 4 thanh phan + huong ghi/doc (system-overview §2).
+ * Nguyen tac single-writer: moi bang chi 1 he duoc ghi.
+ */
+function ArchitectureDiagram() {
+  return (
+    <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+        Sơ đồ kiến trúc — ai ghi, ai đọc
+      </h3>
+      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        Nguyên tắc <b>single-writer</b>: mỗi bảng chỉ đúng một hệ được ghi, không bao giờ hai hệ
+        cùng ghi một bảng.
+      </p>
+
+      <div className="mx-auto mt-4 max-w-md space-y-1">
+        {/* Nguon ghi noi dung */}
+        <ArchBox
+          title="AI Content Tool (zinoflow)"
+          role="CMS mới cho điểm đến · Postgres: draft, review, quan hệ, mirror"
+          tone="indigo"
+        />
+        <Flow arrow="▼">(1) publish / UPSERT · transaction · không wipe</Flow>
+        <Flow arrow="▽">(2) invalidate cache website (secret key) — chưa bật</Flow>
+
+        {/* Hub render + website */}
+        <div className="grid items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr]">
+          <ArchBox
+            title="SQL Server (site4now)"
+            role="Nguồn render production · chỉ bản đã duyệt"
+            tone="emerald"
+          />
+          <div className="grid place-items-center">
+            <Flow arrow="◀">(3) đọc</Flow>
+          </div>
+          <ArchBox
+            title="Website dichoithoi (.NET)"
+            role="Chỉ ĐỌC để render + (4) ghi DestinationReview khi khách gửi"
+            tone="blue"
+          />
+        </div>
+
+        <Flow arrow="▲">(5) CMS cũ vẫn ghi Hotel / Tour / Sim / Phượt (không đụng điểm đến)</Flow>
+
+        {/* He cu — module diem den da tat */}
+        <ArchBox
+          title="CMS dichoithoi (cũ)"
+          role="Module Destination ĐÃ TẮT vĩnh viễn · chỉ giữ crawler Hotel/Tour/Sim"
+          tone="gray"
+          muted
+        />
+      </div>
+
+      <p className="mt-4 text-[12px] text-zinc-500 dark:text-zinc-400">
+        Không có luồng nào giữa <b>AI tool ↔ CMS cũ</b> (không tích hợp), và website{" "}
+        <b>không ghi</b> bảng điểm đến.
+      </p>
+    </section>
+  );
+}
 
 /** Doan code inline dong nhat (mono + mau accent). */
 function Code({ children }: { children: ReactNode }) {
@@ -223,6 +364,8 @@ export function DestinationProcessFlow() {
         </p>
       </header>
 
+      <ArchitectureDiagram />
+
       {/* Legend nguon du lieu */}
       <div className="grid gap-3 sm:grid-cols-3">
         {STORES.map((s) => (
@@ -237,6 +380,48 @@ export function DestinationProcessFlow() {
           </div>
         ))}
       </div>
+
+      {/* Noi dung song o dau — mo hinh 2 database */}
+      <section className="rounded-2xl border border-teal-200 bg-teal-50 p-5 dark:border-teal-900 dark:bg-teal-950/30">
+        <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+          Nội dung sống ở đâu? — hai database, một chiều đẩy
+        </h3>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+          Một bài luôn ở đúng một nơi tại một thời điểm, không bao giờ &quot;nửa này nửa kia&quot;.
+          Chỉ khi bấm Publish nội dung mới đi từ trái sang phải:
+        </p>
+        <div className="mt-3 grid items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-1.5">
+              <Badge tone="indigo">Postgres — xưởng soạn thảo</Badge>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Nguồn sự thật của nội dung: job, <b>mọi version draft</b>, lịch sử review, kết quả
+              gates, quan hệ đang soạn. Chứa cả bài <b>chưa duyệt</b>.
+            </p>
+          </div>
+          <div className="grid place-items-center">
+            <span className="rounded-full border border-teal-300 bg-white px-2 py-1 text-xs font-semibold text-teal-700 dark:border-teal-800 dark:bg-zinc-900 dark:text-teal-300">
+              Publish ▸
+            </span>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-1.5">
+              <Badge tone="emerald">SQL Server — bản production</Badge>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Read-model website đọc để render: chỉ chứa bản <b>ĐÃ duyệt</b> (HTML cuối, quan hệ,
+              redirect). <b>Không bao giờ</b> có khái niệm draft ở đây.
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 text-[13px] text-zinc-600 dark:text-zinc-300">
+          Cột <Code>siteId</Code> trong mirror là cờ quyết định mọi nhánh: <b>null</b> = mới chỉ
+          sống trong tool (production chưa biết tới) · <b>có giá trị</b> = đã tồn tại bên SQL Server.
+          Lần đầu publish một điểm <Code>siteId=null</Code> sẽ INSERT &quot;shell&quot; xuống SQL
+          Server để lấy <Code>siteId</Code> rồi mới ghi nội dung.
+        </p>
+      </section>
 
       {/* Rail cac giai doan */}
       <ol className="space-y-0">
@@ -297,6 +482,53 @@ export function DestinationProcessFlow() {
           </li>
         ))}
       </ol>
+
+      {/* Ba cua vao — phan nhanh theo siteId */}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+        <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+          Ba cửa vào & tác động lên production
+        </h3>
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          Cùng một mirror nhưng ghi ra SQL Server theo 3 cách khác nhau — <Code>siteId</Code> và
+          &quot;có qua 2 cổng không&quot; quyết định.
+        </p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full border-collapse text-left text-[13px]">
+            <thead>
+              <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-400 dark:border-zinc-800">
+                <th className="py-2 pr-3 font-semibold">Cửa</th>
+                <th className="py-2 pr-3 font-semibold">siteId trước</th>
+                <th className="py-2 pr-3 font-semibold">Qua duyệt/publish?</th>
+                <th className="py-2 font-semibold">Tác động lên SQL Server</th>
+              </tr>
+            </thead>
+            <tbody>
+              {DOORS.map((d) => (
+                <tr
+                  key={d.key}
+                  className="border-b border-zinc-100 align-top last:border-0 dark:border-zinc-800/60"
+                >
+                  <td className="py-3 pr-3">
+                    <span className="grid h-6 w-6 place-items-center rounded-lg bg-zinc-900 text-xs font-bold text-white dark:bg-zinc-700">
+                      {d.key}
+                    </span>
+                    <span className="mt-1 block max-w-[11rem] text-zinc-700 dark:text-zinc-300">
+                      {d.title}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-3">
+                    <Code>{d.before}</Code>
+                  </td>
+                  <td className="py-3 pr-3">
+                    <Badge tone={d.gateTone}>{d.gate}</Badge>
+                  </td>
+                  <td className="py-3 text-zinc-600 dark:text-zinc-300">{d.effect}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {/* Van hanh phu */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
