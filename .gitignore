@@ -28,5 +28,8 @@ outputs/
 Thumbs.db
 .idea/
 
+# Claude Code — cau hinh ca nhan theo may (duong dan tuyet doi)
+.claude/settings.local.json
+
 # dvhcvn raw SQL dumps (tai lai bang scripts/convert-dvhcvn.ts khi can; chi commit JSON)
 apps/api/seed-data/dvhcvn/*.sql
