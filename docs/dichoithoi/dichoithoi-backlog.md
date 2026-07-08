@@ -7,6 +7,17 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- **Sim du lịch — gợi ý/gắn link sản phẩm liên quan** (repo `dichoithoi`, ghi
+  nhận 07/2026, CHƯA phân tích): mục đích gợi ý và gắn link sản phẩm liên quan
+  tới sim du lịch — dự kiến có thể tái dùng chính module Article/Product mới
+  đang plan ở đây (`dichoithoi-product-spec.md`, `dichoithoi-article-spec.md`)
+  thay vì xây riêng. Trạng thái hiện tại: code Controller/Service/View (Sim,
+  FixedProduct) đã có sẵn trong repo `dichoithoi` (nhánh `develop`), nhưng menu
+  "SIM DU LỊCH" đã ẩn khỏi header công khai (`_Header.cshtml`, commit
+  `43444aa`) — KHÔNG hiển thị cho người dùng cho tới khi phân tích xong hướng
+  đi. Khi có thời gian: phân tích lại có nên gộp vào Product/Article hay giữ
+  module Sim riêng.
+
 - **Vé máy bay + vé xe** (`dichoithoi-flight-spec.md`, `dichoithoi-bus-spec.md`,
   phân tích 07/2026): 2 kênh mới trả lời "tới điểm đến bằng cách nào", song song
   Hotel/Tour nhưng gắn theo TUYẾN ở cấp tỉnh/thành (không theo POI, không có
