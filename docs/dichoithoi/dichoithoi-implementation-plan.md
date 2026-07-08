@@ -329,6 +329,38 @@ scan mỗi lần search) + `RemoveUnicode()` tính lại mỗi request — chậ
 
 ---
 
+## Phase 20 — Điều hướng CMS: sidebar-first, không nhét vào header trang (ĐÃ XONG)
+
+**Phụ thuộc**: không phụ thuộc phase nào — chỉ sửa `apps/web` (zinoflow), không
+đụng website dichoithoi.
+
+Phát hiện lúc rà soát 07/2026: trang `/dichoithoi` (hub Điểm đến) nhét cả link
+điều hướng module con ("Khách sạn", "Tour", "Quy tắc affiliate") lẫn nút hành
+động ("+ Thêm điểm đến", "Nhập từ file", "Đồng bộ từ website") chung 1 hàng ở
+đầu trang → hàng nút phình to, khó phân biệt "đi tới trang khác" với "thực
+hiện hành động trên trang này".
+
+- **Đồng bộ zinoflow**: chuyển 3 mục điều hướng module con
+  (`/dichoithoi/khach-san`, `/dichoithoi/tour`, `/dichoithoi/affiliate`) từ
+  hàng nút trong `app/dichoithoi/page.tsx` sang nhóm "Dichoithoi" trong
+  `shared/sidebar.tsx` (cạnh Điểm đến/Tra cứu địa chỉ/Quy trình); hàng nút đầu
+  trang chỉ còn giữ hành động thật trên chính trang đó (thêm mới, nhập file,
+  bài cẩm nang, đồng bộ).
+- **Đồng bộ website**: không áp dụng — đây là điều hướng nội bộ công cụ CMS,
+  không phải website dichoithoi.com.
+- **Quy tắc áp dụng cho MỌI trang sau này** (không chỉ phase này): nếu một
+  link dẫn sang 1 trang/module khác (xem danh sách, quản lý 1 thực thể khác)
+  → luôn là mục trong sidebar trái, KHÔNG phải nút trong page header; page
+  header chỉ chứa hành động thực hiện ngay trên trang đang xem (tạo mới, nhập
+  file, đồng bộ, lưu...). Khi thêm trang/module mới cho dichoithoi (Phase
+  16 Sản phẩm, Phase 18 UI mới, v.v.) phải thêm mục sidebar tương ứng ngay khi
+  tạo route, không để dồn lại nhét vào header như đã xảy ra ở đây.
+- **DoD**: mở `/dichoithoi` → sidebar trái nhóm "Dichoithoi" có đủ Điểm đến/
+  Tra cứu địa chỉ/Khách sạn/Tour/Quy tắc affiliate/Quy trình; hàng nút đầu
+  trang chỉ còn nút hành động; `tsc --noEmit` sạch.
+
+---
+
 ## Còn treo — CHƯA đủ điều kiện đưa vào phase code (cần bạn quyết định trước)
 
 - **`kind=cluster` 2 biến thể + trục vùng/miền** (§10.6) — chưa xác nhận cuối,
@@ -365,4 +397,5 @@ Phase 18 (đập đi làm lại UI)        — cần 14, nên sau 17
   └─ 1 phần bị CHẶN bởi quyết định "kind=cluster 2 biến thể + vùng/miền"
      chưa xác nhận (xem mục "Còn treo" phía trên)
 Phase 19 (search trong RAM)         — độc lập, làm bất kỳ lúc nào
+Phase 20 (sidebar-first nav CMS)    — độc lập, ĐÃ XONG (07/2026)
 ```

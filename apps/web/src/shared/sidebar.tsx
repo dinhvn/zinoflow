@@ -35,6 +35,9 @@ const DICHOITHOI_ITEMS: NavItem[] = [
     exclude: ["/dichoithoi/dia-chi", "/dichoithoi/quy-trinh"],
   },
   { href: "/dichoithoi/dia-chi", label: "Tra cứu địa chỉ", icon: IconSearch },
+  { href: "/dichoithoi/khach-san", label: "Khách sạn", icon: IconHotel },
+  { href: "/dichoithoi/tour", label: "Tour", icon: IconCompass },
+  { href: "/dichoithoi/affiliate", label: "Quy tắc affiliate", icon: IconLink },
   { href: "/dichoithoi/quy-trinh", label: "Quy trình", icon: IconFlow },
 ];
 
@@ -218,6 +221,36 @@ function IconFlow(props: SVGProps<SVGSVGElement>) {
       <rect x="4" y="3" width="7" height="5" rx="1.5" />
       <rect x="13" y="16" width="7" height="5" rx="1.5" />
       <path d="M7.5 8v4a2 2 0 002 2h7" />
+    </IconBase>
+  );
+}
+
+function IconHotel(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <path d="M3 21V6a1 1 0 011-1h6a1 1 0 011 1v15" />
+      <path d="M13 21v-9a1 1 0 011-1h6a1 1 0 011 1v9" />
+      <path d="M3 21h18" />
+      <path d="M7 8h2M7 12h2M7 16h2" />
+    </IconBase>
+  );
+}
+
+function IconCompass(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M14.8 9.2l-1.6 4.4-4.4 1.6 1.6-4.4z" />
+    </IconBase>
+  );
+}
+
+function IconLink(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <path d="M9 15l6-6" />
+      <path d="M11 6l.8-.8a3.5 3.5 0 015 5l-.8.8" />
+      <path d="M13 18l-.8.8a3.5 3.5 0 01-5-5l.8-.8" />
     </IconBase>
   );
 }

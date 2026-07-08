@@ -345,17 +345,8 @@ export default function DichoithoiPage() {
           <a href="/dichoithoi/import" className={buttonClasses({ variant: "secondary" })}>
             Nhập từ file
           </a>
-          <a href="/dichoithoi/khach-san" className={buttonClasses({ variant: "secondary" })}>
-            Khách sạn
-          </a>
-          <a href="/dichoithoi/tour" className={buttonClasses({ variant: "secondary" })}>
-            Tour
-          </a>
           <a href="/dichoithoi/articles/new" className={buttonClasses({ variant: "secondary" })}>
             + Bài cẩm nang
-          </a>
-          <a href="/dichoithoi/affiliate" className={buttonClasses({ variant: "secondary" })}>
-            Quy tắc affiliate
           </a>
           <Button
             variant="primary"
