@@ -7,6 +7,7 @@ import { ListToursUseCase } from "./application/use-cases/list-tours.usecase";
 import { UpsertTourUseCase } from "./application/use-cases/upsert-tour.usecase";
 import { AssignTourToDestinationUseCase } from "./application/use-cases/assign-tour-to-destination.usecase";
 import { ListToursForDestinationUseCase } from "./application/use-cases/list-tours-for-destination.usecase";
+import { RecomputeTourCardsUseCase } from "./application/use-cases/recompute-tour-cards.usecase";
 import { TourAffiliateReapplyService } from "./application/services/tour-affiliate-reapply.service";
 import { TOUR_REPOSITORY } from "./application/ports/tour.repository";
 import { TOUR_SITE_DB } from "./application/ports/tour-site-db.port";
@@ -32,6 +33,7 @@ import { TourDestinationMapEntity } from "./infrastructure/entities/tour-destina
     UpsertTourUseCase,
     AssignTourToDestinationUseCase,
     ListToursForDestinationUseCase,
+    RecomputeTourCardsUseCase,
     TourAffiliateReapplyService,
     { provide: TOUR_REPOSITORY, useClass: TypeOrmTourRepository },
     { provide: TOUR_SITE_DB, useClass: MssqlTourSiteDbAdapter },

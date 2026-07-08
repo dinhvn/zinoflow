@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import type * as sql from "mssql";
 import { UpstreamApiError } from "../../../shared/errors/app-error";
 import type {
+  HotelCardData,
   HotelSiteDb,
   PublishHotelInput,
 } from "../../application/ports/hotel-site-db.port";
@@ -112,6 +113,50 @@ export class MssqlHotelSiteDbAdapter implements HotelSiteDb, OnModuleDestroy {
         WHERE m.HotelId = @hotelId AND d.Slug = @destinationSlug;
       `);
     });
+  }
+
+  async findCardsForDestination(destinationSlug: string, take: number): Promise<HotelCardData[]> {
+    const rows = await this.runWithRetry<Array<Record<string, unknown>>>(async (pool) => {
+      const request = pool.request();
+      request.input("destinationSlug", destinationSlug);
+      request.input("take", take);
+      const result = await request.query<Record<string, unknown>>(`
+        SELECT TOP (@take) h.Id, h.Name, h.Address, h.PriceFrom, h.Rating, h.ReviewCount,
+          h.ThumbnailUrl, h.AffiliateUrl, h.SourceUrl, h.LinkStatus
+        FROM v2.HotelDestinationMap m
+        JOIN v2.Hotel h ON h.Id = m.HotelId
+        JOIN v2.Destination d ON d.Id = m.DestinationId
+        WHERE d.Slug = @destinationSlug AND h.Status = 1
+        ORDER BY h.Rating DESC
+      `);
+      return result.recordset;
+    });
+    return rows.map((r) => ({
+      id: r.Id as number,
+      name: r.Name as string,
+      address: (r.Address as string | null) ?? null,
+      priceFrom: r.PriceFrom === null ? null : Number(r.PriceFrom),
+      rating: r.Rating === null ? null : Number(r.Rating),
+      reviewCount: (r.ReviewCount as number | null) ?? null,
+      thumbnailUrl: (r.ThumbnailUrl as string | null) ?? null,
+      affiliateUrl: (r.AffiliateUrl as string | null) ?? null,
+      sourceUrl: r.SourceUrl as string,
+      linkStatus: r.LinkStatus as string,
+    }));
+  }
+
+  async findDestinationSlugsForHotel(hotelSiteId: number): Promise<string[]> {
+    const rows = await this.runWithRetry<Array<{ Slug: string }>>(async (pool) => {
+      const request = pool.request();
+      request.input("hotelId", hotelSiteId);
+      const result = await request.query<{ Slug: string }>(`
+        SELECT d.Slug FROM v2.HotelDestinationMap m
+        JOIN v2.Destination d ON d.Id = m.DestinationId
+        WHERE m.HotelId = @hotelId
+      `);
+      return result.recordset;
+    });
+    return rows.map((r) => r.Slug);
   }
 
   async onModuleDestroy(): Promise<void> {

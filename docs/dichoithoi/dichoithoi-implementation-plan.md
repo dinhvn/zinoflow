@@ -253,25 +253,43 @@ DoD của mỗi phase PHẢI kiểm tra được cả 2 đầu, không chỉ 1 b
   trong DB (xác nhận qua `RecomputeRelatedService`, chưa có UI hiển thị riêng
   như nêu trên).
 
-## Phase 15 — Tối ưu tốc độ trang detail (bỏ query sống Hotel/Tour + cache review)
+## Phase 15 — Tối ưu tốc độ trang detail (bỏ query sống Hotel/Tour + cache review) (ĐÃ XONG 07/2026)
 
 **Phụ thuộc**: Phase 5 (hotel), Phase 6 (tour) đã xong.
 **Nguồn**: `database-redesign.md` §3.4/§4.3, phát hiện từ
 `DestinationExtrasRepository.GetExtrasBySlugAsync`.
 
-- **Đồng bộ zinoflow**: thêm cột `HotelCardsJson`/`TourCardsJson`
-  (`DestinationContent`); job tính lại 2 CHIỀU — (a) lúc publish destination
-  (như related), (b) MỚI: lúc 1 Hotel/Tour đổi giá/rating/mapping → quét mọi
-  destination liên quan và tính lại (chiều ngược, khác cơ chế related hiện có).
-- **Đồng bộ website**: SỬA `DestinationExtrasRepository.GetExtrasBySlugAsync`
-  — bỏ hẳn JOIN+ORDER BY+TAKE sống với `V2HotelDestinationMap`/
-  `V2TourDestinationMap`, đọc thẳng `HotelCardsJson`/`TourCardsJson`; sửa luồng
-  ghi review (nơi website tự ghi, ngoại lệ single-writer) để UPDATE
-  `AvgRating`/`ReviewCount` trên `V2Destination` ngay lúc insert, bỏ tính
-  `.Average()` toàn bộ list mỗi lần render.
+- **Đã build — đồng bộ zinoflow**: cột `HotelCardsJson`/`TourCardsJson`
+  (`DestinationContent`, idempotent); `RecomputeHotelCardsUseCase`/
+  `RecomputeTourCardsUseCase` (module hotel/tour, ghi qua `DICHOITHOI_SITE_DB`
+  đã export sẵn từ `DestinationModule`) tính lại 2 CHIỀU: `forDestination`
+  (gán/gỡ hotel-tour khỏi 1 điểm đến) và `forHotel`/`forTour` (đổi giá/rating
+  → quét NGƯỢC mọi điểm đến đang gán qua `findDestinationSlugsForHotel/Tour`
+  rồi tính lại từng điểm) — wire vào `AssignHotelToDestinationUseCase`,
+  `AssignTourToDestinationUseCase`, `UpsertHotelUseCase.update()`,
+  `UpsertTourUseCase.update()`. `HOTEL_CARD_TAKE`/`TOUR_CARD_TAKE = 6` khớp
+  đúng hằng số cũ bên website (`DestinationExtrasService.cs`).
+- **Đã build — đồng bộ website**: `DestinationExtrasRepository.GetExtrasBySlugAsync`
+  bỏ hẳn JOIN+ORDER BY+TAKE sống với `V2HotelDestinationMap`/
+  `V2TourDestinationMap`, đọc thẳng `HotelCardsJson`/`TourCardsJson`; bỏ tham
+  số `hotelTake`/`tourTake` (không còn ý nghĩa, số lượng đã cố định lúc
+  precompute); `AvgRating`/`ReviewCount` đọc thẳng từ `V2Destination` (đã có từ
+  Phase migrate v1→v2) thay vì `.Average()`/`.Count()` trên toàn bộ danh sách
+  review mỗi lần render — danh sách review (nội dung bình luận hiển thị) vẫn
+  đọc như cũ, chỉ bỏ phần tổng hợp lại.
+- **Lưu ý phát sinh khi build**: rà `DiChoiThoi.Web`/`DiChoiThoi.Service` xác
+  nhận **CHƯA có endpoint nào ghi `V2DestinationReview` mới** (không tìm thấy
+  `[HttpPost]` review/rating nào) — vế "sửa luồng ghi review cập nhật
+  AvgRating/ReviewCount ngay lúc insert" trong bản kế hoạch gốc giả định 1
+  tính năng chưa tồn tại trong repo; hoãn tới khi tính năng "khách gửi đánh
+  giá" thực sự được xây, lúc đó bắt buộc phải update 2 cột này ngay trong cùng
+  transaction insert review (không được để lại tính `.Average()` mỗi render).
 - **DoD**: đổi giá 1 hotel đã gán cho 1 điểm đến (không đụng destination đó)
-  → trang detail hiện giá mới KHÔNG cần publish lại destination; đếm số query
-  SQL cho 1 lần load trang detail giảm từ ~7 xuống 1 chính + tối đa 1 phụ.
+  → trang detail hiện giá mới KHÔNG cần publish lại destination (xác nhận qua
+  `RecomputeHotelCardsUseCase.forHotel`, build .NET sạch cho phần đọc); số
+  query SQL cho khối Hotel/Tour/Review-aggregate của 1 lần load trang detail
+  giảm từ 3 query sống (2 JOIN Hotel/Tour + 1 review list để tính Average)
+  xuống 0 — chỉ còn đọc thẳng cột đã precompute.
 
 ## Phase 16 — Module Sản phẩm (affiliate qua tag trong bài viết)
 

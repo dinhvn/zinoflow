@@ -121,6 +121,15 @@ IF COL_LENGTH('v2.DestinationContent', 'AncestorsJson') IS NULL
 IF COL_LENGTH('v2.DestinationContent', 'ChildrenJson') IS NULL
   ALTER TABLE v2.DestinationContent ADD ChildrenJson nvarchar(max) NULL;
 GO
+-- Phase 15 (07/2026): precompute the Hotel/Tour card cho trang detail — website
+-- doc thang cot nay thay vi JOIN+ORDER BY+TAKE song moi lan render (database-
+-- redesign §3.4/§4.3). Tinh lai 2 chieu: publish destination VA khi Hotel/Tour
+-- doi gia/rating/mapping (RecomputeHotelCardsUseCase/RecomputeTourCardsUseCase).
+IF COL_LENGTH('v2.DestinationContent', 'HotelCardsJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD HotelCardsJson nvarchar(max) NULL;
+IF COL_LENGTH('v2.DestinationContent', 'TourCardsJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD TourCardsJson nvarchar(max) NULL;
+GO
 
 /* ===== Loai diem den — 2 tang (redesign §3.2, §4.4, vay 07/2026) ===== */
 IF OBJECT_ID('v2.DestinationTypeGroup') IS NULL

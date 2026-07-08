@@ -9,6 +9,7 @@ import {
 import { HOTEL_SITE_DB, type HotelSiteDb } from "../ports/hotel-site-db.port";
 import { ResolveAffiliateLinkUseCase } from "../../../affiliate/application/use-cases/resolve-affiliate-link.usecase";
 import { hotelToDto } from "./list-hotels.usecase";
+import { RecomputeHotelCardsUseCase } from "./recompute-hotel-cards.usecase";
 
 /**
  * Tao moi / sua khach san — publish THANG xuong SQL Server ngay (hotel-spec §2/§4:
@@ -23,6 +24,7 @@ export class UpsertHotelUseCase {
     @Inject(HOTEL_REPOSITORY) private readonly hotels: HotelRepository,
     @Inject(HOTEL_SITE_DB) private readonly siteDb: HotelSiteDb,
     private readonly resolveLink: ResolveAffiliateLinkUseCase,
+    private readonly recomputeCards: RecomputeHotelCardsUseCase,
   ) {}
 
   async create(request: UpsertHotelRequest): Promise<Hotel> {
@@ -42,6 +44,11 @@ export class UpsertHotelUseCase {
     await this.publish(id, existing.siteId, input);
     const updated = await this.hotels.findById(id);
     if (!updated) throw new DomainRuleError("Khách sạn biến mất ngay sau khi cập nhật");
+    // Gia/rating doi -> mọi diem den dang gan hotel nay can tinh lai HotelCardsJson
+    // (chieu nguoc — khac han recompute khi publish destination, Phase 15)
+    if (updated.siteId !== null) {
+      await this.recomputeCards.forHotel(updated.siteId);
+    }
     const counts = await this.hotels.countDestinationsByHotel();
     return hotelToDto(updated, counts.get(id) ?? 0);
   }

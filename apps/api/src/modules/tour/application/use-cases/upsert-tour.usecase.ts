@@ -9,6 +9,7 @@ import {
 import { TOUR_SITE_DB, type TourSiteDb } from "../ports/tour-site-db.port";
 import { ResolveAffiliateLinkUseCase } from "../../../affiliate/application/use-cases/resolve-affiliate-link.usecase";
 import { tourToDto } from "./list-tours.usecase";
+import { RecomputeTourCardsUseCase } from "./recompute-tour-cards.usecase";
 
 /**
  * Tao moi / sua tour — publish THANG xuong SQL Server ngay (tour-spec §2/§4:
@@ -22,6 +23,7 @@ export class UpsertTourUseCase {
     @Inject(TOUR_REPOSITORY) private readonly tours: TourRepository,
     @Inject(TOUR_SITE_DB) private readonly siteDb: TourSiteDb,
     private readonly resolveLink: ResolveAffiliateLinkUseCase,
+    private readonly recomputeCards: RecomputeTourCardsUseCase,
   ) {}
 
   async create(request: UpsertTourRequest): Promise<Tour> {
@@ -41,6 +43,10 @@ export class UpsertTourUseCase {
     await this.publish(id, existing.siteId, input);
     const updated = await this.tours.findById(id);
     if (!updated) throw new DomainRuleError("Tour biến mất ngay sau khi cập nhật");
+    // Gia/rating doi -> mọi diem den dang gan tour nay can tinh lai TourCardsJson
+    if (updated.siteId !== null) {
+      await this.recomputeCards.forTour(updated.siteId);
+    }
     const counts = await this.tours.countDestinationsByTour();
     return tourToDto(updated, counts.get(id) ?? 0);
   }

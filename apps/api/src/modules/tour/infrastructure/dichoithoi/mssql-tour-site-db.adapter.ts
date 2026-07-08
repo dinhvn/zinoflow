@@ -1,7 +1,11 @@
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import type * as sql from "mssql";
 import { UpstreamApiError } from "../../../shared/errors/app-error";
-import type { PublishTourInput, TourSiteDb } from "../../application/ports/tour-site-db.port";
+import type {
+  PublishTourInput,
+  TourCardData,
+  TourSiteDb,
+} from "../../application/ports/tour-site-db.port";
 
 function isLocalDbHost(host: string): boolean {
   return host.toLowerCase().startsWith("(localdb)");
@@ -110,6 +114,52 @@ export class MssqlTourSiteDbAdapter implements TourSiteDb, OnModuleDestroy {
         WHERE m.TourId = @tourId AND d.Slug = @destinationSlug;
       `);
     });
+  }
+
+  async findCardsForDestination(destinationSlug: string, take: number): Promise<TourCardData[]> {
+    const rows = await this.runWithRetry<Array<Record<string, unknown>>>(async (pool) => {
+      const request = pool.request();
+      request.input("destinationSlug", destinationSlug);
+      request.input("take", take);
+      const result = await request.query<Record<string, unknown>>(`
+        SELECT TOP (@take) t.Id, t.Name, t.ShortDescription, t.DurationDays, t.DurationNights,
+          t.PriceFrom, t.Rating, t.ReviewCount, t.ThumbnailUrl, t.AffiliateUrl, t.SourceUrl, t.LinkStatus
+        FROM v2.TourDestinationMap m
+        JOIN v2.Tour t ON t.Id = m.TourId
+        JOIN v2.Destination d ON d.Id = m.DestinationId
+        WHERE d.Slug = @destinationSlug AND t.Status = 1
+        ORDER BY t.Rating DESC
+      `);
+      return result.recordset;
+    });
+    return rows.map((r) => ({
+      id: r.Id as number,
+      name: r.Name as string,
+      shortDescription: (r.ShortDescription as string | null) ?? null,
+      durationDays: (r.DurationDays as number | null) ?? null,
+      durationNights: (r.DurationNights as number | null) ?? null,
+      priceFrom: r.PriceFrom === null ? null : Number(r.PriceFrom),
+      rating: r.Rating === null ? null : Number(r.Rating),
+      reviewCount: (r.ReviewCount as number | null) ?? null,
+      thumbnailUrl: (r.ThumbnailUrl as string | null) ?? null,
+      affiliateUrl: (r.AffiliateUrl as string | null) ?? null,
+      sourceUrl: r.SourceUrl as string,
+      linkStatus: r.LinkStatus as string,
+    }));
+  }
+
+  async findDestinationSlugsForTour(tourSiteId: number): Promise<string[]> {
+    const rows = await this.runWithRetry<Array<{ Slug: string }>>(async (pool) => {
+      const request = pool.request();
+      request.input("tourId", tourSiteId);
+      const result = await request.query<{ Slug: string }>(`
+        SELECT d.Slug FROM v2.TourDestinationMap m
+        JOIN v2.Destination d ON d.Id = m.DestinationId
+        WHERE m.TourId = @tourId
+      `);
+      return result.recordset;
+    });
+    return rows.map((r) => r.Slug);
   }
 
   async onModuleDestroy(): Promise<void> {

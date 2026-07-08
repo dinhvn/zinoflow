@@ -6,6 +6,7 @@ import {
   DESTINATION_MIRROR_REPOSITORY,
   type DestinationMirrorRepository,
 } from "../../../destination/application/ports/destination-mirror.repository";
+import { RecomputeHotelCardsUseCase } from "./recompute-hotel-cards.usecase";
 
 /** Gan/go 1 khach san khoi 1 diem den — gan tay (hotel-spec §3/§6 MVP) */
 @Injectable()
@@ -15,6 +16,7 @@ export class AssignHotelToDestinationUseCase {
     @Inject(HOTEL_SITE_DB) private readonly siteDb: HotelSiteDb,
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly destinationRepo: DestinationMirrorRepository,
+    private readonly recomputeCards: RecomputeHotelCardsUseCase,
   ) {}
 
   async assign(hotelId: string, destinationSlug: string): Promise<void> {
@@ -34,6 +36,7 @@ export class AssignHotelToDestinationUseCase {
     }
     await this.hotels.assignToDestination(hotelId, destinationSlug);
     await this.siteDb.assignToDestination(hotel.siteId, destinationSlug, null, true);
+    await this.recomputeCards.forDestination(destinationSlug);
   }
 
   async unassign(hotelId: string, destinationSlug: string): Promise<void> {
@@ -43,5 +46,6 @@ export class AssignHotelToDestinationUseCase {
     if (hotel.siteId !== null) {
       await this.siteDb.unassignFromDestination(hotel.siteId, destinationSlug);
     }
+    await this.recomputeCards.forDestination(destinationSlug);
   }
 }

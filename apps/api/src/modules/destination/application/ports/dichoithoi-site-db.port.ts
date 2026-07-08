@@ -134,6 +134,13 @@ export interface DichoithoiSiteDb {
     ancestorsJson: string,
     childrenJson: string,
   ): Promise<boolean>;
+  /**
+   * Ghi HotelCardsJson/TourCardsJson (Phase 15) — goi tu module hotel/tour
+   * (khong phai module nay tinh du lieu, chi ghi cot dung chung DestinationContent).
+   * CHI ghi khi khac gia tri cu — tra ve true neu co ghi.
+   */
+  updateHotelCards(siteId: number, hotelCardsJson: string): Promise<boolean>;
+  updateTourCards(siteId: number, tourCardsJson: string): Promise<boolean>;
   /** Cap nhat rieng cot Thumbnail (metadata — sua truc tiep, khong qua publish) */
   updateThumbnail(siteId: number, thumbnail: string | null): Promise<void>;
   /**

@@ -6,6 +6,7 @@ import {
   DESTINATION_MIRROR_REPOSITORY,
   type DestinationMirrorRepository,
 } from "../../../destination/application/ports/destination-mirror.repository";
+import { RecomputeTourCardsUseCase } from "./recompute-tour-cards.usecase";
 
 /** Gan/go 1 tour khoi 1 diem den — 1 tour co the gan NHIEU diem den (tour-spec §3/§6) */
 @Injectable()
@@ -15,6 +16,7 @@ export class AssignTourToDestinationUseCase {
     @Inject(TOUR_SITE_DB) private readonly siteDb: TourSiteDb,
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly destinationRepo: DestinationMirrorRepository,
+    private readonly recomputeCards: RecomputeTourCardsUseCase,
   ) {}
 
   async assign(tourId: string, destinationSlug: string, isPrimary: boolean): Promise<void> {
@@ -34,6 +36,7 @@ export class AssignTourToDestinationUseCase {
     }
     await this.tours.assignToDestination(tourId, destinationSlug, isPrimary);
     await this.siteDb.assignToDestination(tour.siteId, destinationSlug, isPrimary, true);
+    await this.recomputeCards.forDestination(destinationSlug);
   }
 
   async unassign(tourId: string, destinationSlug: string): Promise<void> {
@@ -43,5 +46,6 @@ export class AssignTourToDestinationUseCase {
     if (tour.siteId !== null) {
       await this.siteDb.unassignFromDestination(tour.siteId, destinationSlug);
     }
+    await this.recomputeCards.forDestination(destinationSlug);
   }
 }

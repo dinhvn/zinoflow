@@ -7,6 +7,7 @@ import { ListHotelsUseCase } from "./application/use-cases/list-hotels.usecase";
 import { UpsertHotelUseCase } from "./application/use-cases/upsert-hotel.usecase";
 import { AssignHotelToDestinationUseCase } from "./application/use-cases/assign-hotel-to-destination.usecase";
 import { ListHotelsForDestinationUseCase } from "./application/use-cases/list-hotels-for-destination.usecase";
+import { RecomputeHotelCardsUseCase } from "./application/use-cases/recompute-hotel-cards.usecase";
 import { HotelAffiliateReapplyService } from "./application/services/hotel-affiliate-reapply.service";
 import { HOTEL_REPOSITORY } from "./application/ports/hotel.repository";
 import { HOTEL_SITE_DB } from "./application/ports/hotel-site-db.port";
@@ -32,6 +33,7 @@ import { HotelDestinationMapEntity } from "./infrastructure/entities/hotel-desti
     UpsertHotelUseCase,
     AssignHotelToDestinationUseCase,
     ListHotelsForDestinationUseCase,
+    RecomputeHotelCardsUseCase,
     HotelAffiliateReapplyService,
     { provide: HOTEL_REPOSITORY, useClass: TypeOrmHotelRepository },
     { provide: HOTEL_SITE_DB, useClass: MssqlHotelSiteDbAdapter },
