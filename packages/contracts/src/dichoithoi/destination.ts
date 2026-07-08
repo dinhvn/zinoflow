@@ -439,6 +439,19 @@ export const checkImageResponseSchema = z.object({
 });
 export type CheckImageResponse = z.infer<typeof checkImageResponseSchema>;
 
+/** Tach lat/lng tu link Google Maps dan vao (spec destination-spec §2.1.1) */
+export const parseMapsLinkRequestSchema = z.object({
+  url: z.string().min(1).max(2048),
+});
+export type ParseMapsLinkRequest = z.infer<typeof parseMapsLinkRequestSchema>;
+
+export const parseMapsLinkResponseSchema = z.object({
+  /** null khi khong parse duoc (link sai dinh dang/khong phai Google Maps) */
+  lat: z.number().nullable(),
+  lng: z.number().nullable(),
+});
+export type ParseMapsLinkResponse = z.infer<typeof parseMapsLinkResponseSchema>;
+
 /** Taxonomy cho form/filter */
 export const destinationTaxonomySchema = z.object({
   provinces: z.array(

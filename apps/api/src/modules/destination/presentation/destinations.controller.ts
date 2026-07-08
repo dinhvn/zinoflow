@@ -16,6 +16,7 @@ import {
   fetchSheetRequestSchema,
   importDestinationsRequestSchema,
   listDestinationsQuerySchema,
+  parseMapsLinkRequestSchema,
   saveAiInputsRequestSchema,
   relinkAllRequestSchema,
   suggestDestinationMetaRequestSchema,
@@ -38,6 +39,8 @@ import {
   type ImportDestinationsResult,
   type ListDestinationsQuery,
   type ListDestinationsResponse,
+  type ParseMapsLinkRequest,
+  type ParseMapsLinkResponse,
   type PublishDestinationResult,
   type RecomputeRelatedReport,
   type RelinkAllRequest,
@@ -67,6 +70,7 @@ import { UpdateTicketLinksUseCase } from "../application/use-cases/update-ticket
 import { UploadDestinationImageUseCase } from "../application/use-cases/upload-destination-image.usecase";
 import { MigrateDestinationImagesUseCase } from "../application/use-cases/migrate-destination-images.usecase";
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
+import { ParseMapsLinkUseCase } from "../application/use-cases/parse-maps-link.usecase";
 import { UpsertDestinationUseCase } from "../application/use-cases/upsert-destination.usecase";
 import { ImportDestinationsUseCase } from "../application/use-cases/import-destinations.usecase";
 import { ListAddressMappingsUseCase } from "../application/use-cases/list-address-mappings.usecase";
@@ -102,6 +106,7 @@ export class DestinationsController {
     private readonly importDestinations: ImportDestinationsUseCase,
     private readonly listAddressMappings: ListAddressMappingsUseCase,
     private readonly suggestMeta: SuggestDestinationMetaUseCase,
+    private readonly parseMapsLink: ParseMapsLinkUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
     @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
@@ -249,6 +254,14 @@ export class DestinationsController {
     @Body(new ZodValidationPipe(checkImageRequestSchema)) request: CheckImageRequest,
   ): Promise<CheckImageResponse> {
     return this.imageChecker.check(request.path);
+  }
+
+  /** Tach lat/lng tu link Google Maps dan vao (spec §2.1.1) */
+  @Post("parse-maps-link")
+  parseMapsLinkUrl(
+    @Body(new ZodValidationPipe(parseMapsLinkRequestSchema)) request: ParseMapsLinkRequest,
+  ): Promise<ParseMapsLinkResponse> {
+    return this.parseMapsLink.execute(request.url);
   }
 
   /** Cap nhat duong dan thumbnail cho 1 diem den (spec §14.3) */

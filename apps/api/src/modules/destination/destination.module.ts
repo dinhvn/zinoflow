@@ -20,8 +20,11 @@ import { IMAGE_CHECKER } from "./application/ports/image-checker.port";
 import { IMAGE_PROCESSOR } from "./application/ports/image-processor.port";
 import { IMAGE_UPLOADER } from "./application/ports/image-uploader.port";
 import { SHEET_CSV_FETCHER } from "./application/ports/sheet-csv-fetcher.port";
+import { URL_RESOLVER } from "./application/ports/url-resolver.port";
 import { HttpReferenceFetcher } from "./infrastructure/reference/http-reference-fetcher";
 import { HttpImageChecker } from "./infrastructure/reference/http-image-checker";
+import { HttpUrlResolver } from "./infrastructure/reference/http-url-resolver";
+import { ParseMapsLinkUseCase } from "./application/use-cases/parse-maps-link.usecase";
 import { SharpImageProcessor } from "./infrastructure/image/sharp-image-processor";
 import { FtpsImageUploader } from "./infrastructure/dichoithoi/ftps-image-uploader";
 import { GoogleSheetCsvFetcher } from "./infrastructure/reference/google-sheet-csv-fetcher";
@@ -82,10 +85,12 @@ import {
     UpsertDestinationUseCase,
     ImportDestinationsUseCase,
     ListAddressMappingsUseCase,
+    ParseMapsLinkUseCase,
     RecomputeRelatedService,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
     { provide: IMAGE_CHECKER, useClass: HttpImageChecker },
+    { provide: URL_RESOLVER, useClass: HttpUrlResolver },
     { provide: IMAGE_PROCESSOR, useClass: SharpImageProcessor },
     { provide: IMAGE_UPLOADER, useClass: FtpsImageUploader },
     { provide: IMAGE_DOWNLOADER, useClass: LocalFileImageDownloader },

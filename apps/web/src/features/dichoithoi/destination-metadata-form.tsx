@@ -6,6 +6,7 @@ import {
   checkImageResponseSchema,
   destinationMetaSuggestionSchema,
   destinationTaxonomySchema,
+  parseMapsLinkResponseSchema,
   type DestinationKind,
   type UpsertDestinationRequest,
 } from "@zinoflow/contracts";
@@ -106,6 +107,7 @@ export function DestinationMetadataForm({
 }) {
   const [v, setV] = useState<DestinationMetaValues>(initial);
   const [imageCheck, setImageCheck] = useState<{ exists: boolean } | null>(null);
+  const [mapsLink, setMapsLink] = useState("");
   const [error, setError] = useState<{ message: string; details: string[] } | null>(null);
   // Khi tao moi: tu sinh slug tu ten cho toi khi nguoi dung tu sua slug
   const [slugTouched, setSlugTouched] = useState(!isNew);
@@ -139,6 +141,18 @@ export function DestinationMetadataForm({
     },
     onSuccess: (s) => {
       setV((prev) => ({ ...prev, shortDescription: s.shortDescription, kind: s.suggestedKind }));
+    },
+  });
+
+  // Tach lat/lng tu link Google Maps dan vao (spec §2.1.1) — van sua tay duoc sau khi dien
+  const parseMapsLink = useMutation({
+    mutationFn: async () =>
+      parseMapsLinkResponseSchema.parse(
+        await apiSend("POST", "/destinations/parse-maps-link", { url: mapsLink.trim() }),
+      ),
+    onSuccess: (r) => {
+      if (r.lat === null || r.lng === null) return;
+      setV((prev) => ({ ...prev, lat: String(r.lat), lng: String(r.lng) }));
     },
   });
 
@@ -303,6 +317,35 @@ export function DestinationMetadataForm({
             className={`mt-1 text-xs ${imageCheck.exists ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}
           >
             {imageCheck.exists ? "✅ Ảnh tồn tại" : "⚠️ Chưa tìm thấy ảnh"}
+          </p>
+        )}
+      </Field>
+
+      <Field label="Dán link Google Maps (tự động điền toạ độ bên dưới)">
+        <div className="flex gap-2">
+          <input
+            value={mapsLink}
+            onChange={(e) => setMapsLink(e.target.value)}
+            placeholder="vd: https://www.google.com/maps/place/...@10.87,106.81,17z"
+            className={inputCls}
+          />
+          <Button
+            className="whitespace-nowrap"
+            loading={parseMapsLink.isPending}
+            disabled={!mapsLink.trim()}
+            onClick={() => mapsLink.trim() && parseMapsLink.mutate()}
+          >
+            Tự động điền
+          </Button>
+        </div>
+        {parseMapsLink.isSuccess && parseMapsLink.data.lat === null && (
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+            ⚠️ Không đọc được toạ độ từ link này — kiểm tra lại link hoặc nhập tay bên dưới
+          </p>
+        )}
+        {parseMapsLink.isSuccess && parseMapsLink.data.lat !== null && (
+          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+            ✅ Đã điền — kiểm tra lại trước khi lưu
           </p>
         )}
       </Field>
