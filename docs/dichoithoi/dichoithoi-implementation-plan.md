@@ -305,6 +305,28 @@ danh sách con). Nên làm SAU Phase 17 (cache) để không phải cache lại 
   tiết); mọi nội dung quan trọng có mặt đầy đủ trên mobile (không ẩn khỏi DOM
   chỉ vì hẹp màn hình, trừ `<details>` gấp — vẫn nằm trong DOM).
 
+## Phase 19 — Search trong RAM (thay live `LIKE` query)
+
+**Phụ thuộc**: không phụ thuộc phase nào, có thể làm bất kỳ lúc nào — độc lập
+với 12-18. **Nguồn**: `database-redesign.md` §1.3/§6.
+
+Phát hiện lúc rà soát 07/2026: `/search` hiện tại
+(`DestinationRepository.GetListAsync`) chạy `SearchKeyword.Contains(keyword)`
+→ dịch ra SQL `LIKE '%keyword%'` (có `%` đầu, KHÔNG dùng được index, full table
+scan mỗi lần search) + `RemoveUnicode()` tính lại mỗi request — chậm dần khi số
+điểm đến tăng, độc lập với việc tách bảng nóng/lạnh đã làm.
+
+- **Đồng bộ zinoflow**: đảm bảo cột `NameUnaccented` đã ghi sẵn lúc publish
+  (đã có trên `Destination` — chỉ cần xác nhận không NULL cho dữ liệu cũ).
+- **Đồng bộ website**: load 1 lần lúc app start (hoặc lúc cache invalidate)
+  đúng 6 cột nhẹ (`Id, Slug, Name, NameUnaccented, Kind, ProvinceId,
+  Thumbnail`) vào `IMemoryCache`/static list; sửa `/search` chạy prefix/contains
+  TRÊN RAM, bỏ hẳn query `LIKE` xuống SQL Server; refresh danh sách khi có
+  publish mới (dùng cùng cơ chế invalidate cache đã có — Phase 17).
+- **DoD**: search 1 từ khoá bất kỳ → không có query SQL nào chạy (xác nhận qua
+  log/profiler); thêm 1 điểm đến mới + publish → search ra ngay sau khi cache
+  refresh, không cần restart app; đo thời gian phản hồi `/search` trước/sau.
+
 ---
 
 ## Còn treo — CHƯA đủ điều kiện đưa vào phase code (cần bạn quyết định trước)
@@ -342,4 +364,5 @@ Phase 17 (cache hạ tầng)            — nên sau 14+15
 Phase 18 (đập đi làm lại UI)        — cần 14, nên sau 17
   └─ 1 phần bị CHẶN bởi quyết định "kind=cluster 2 biến thể + vùng/miền"
      chưa xác nhận (xem mục "Còn treo" phía trên)
+Phase 19 (search trong RAM)         — độc lập, làm bất kỳ lúc nào
 ```

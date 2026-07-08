@@ -700,6 +700,16 @@ root/cài dịch vụ hệ thống như Redis server):
    tiên sau mỗi lần recycle bị chậm — CHƯA xác nhận gói Advance có tính năng
    này hay không.
 
+**Phong cách thiết kế — Flat, hiện đại** (chốt 07/2026, áp dụng cho MỌI UI mới
+của dichoithoi — website lẫn các khối quản lý liên quan): ưu tiên flat design,
+KHÔNG dùng gradient/đổ bóng nặng/hiệu ứng 3D/bo góc quá dày kiểu skeuomorphism
+cũ — màu khối đặc (solid), viền mảnh hoặc không viền (dùng khoảng trắng/tương
+phản màu nền để phân tách thay vì border nặng), bóng đổ (nếu có) chỉ rất nhẹ
+(vd `shadow-sm`) cho card/dropdown, bo góc vừa phải nhất quán (không quá tròn
+kiểu "bubbly"). Đúng tinh thần đã chốt ở stack nhẹ (không framework nặng) —
+flat design vốn cũng ít CSS hơn (không cần nhiều layer gradient/shadow phức
+tạp), khớp mục tiêu file nhỏ nhất/tốc độ đã đặt ra.
+
 **Bảng màu** (giữ tinh thần màu thương hiệu cũ trong `common.css`, chuẩn hoá lại
 tối giản — chỉ 7 màu để CSS compile ra nhỏ nhất):
 
