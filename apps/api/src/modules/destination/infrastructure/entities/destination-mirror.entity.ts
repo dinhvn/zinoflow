@@ -1,5 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn } from "typeorm";
-import type { AffiliateLinkItem } from "@zinoflow/contracts";
+import type { AffiliateLinkItem, PracticalNoteItem, PriceBreakdownItem } from "@zinoflow/contracts";
 
 /**
  * Mirror metadata diem den dichoithoi (spec dichoithoi-destination-spec §3.2, §12.1).
@@ -61,6 +61,14 @@ export class DestinationMirrorEntity {
   /** Nhieu link mua ve — affiliateUrl da tinh san (redesign §4.2/§4.3, thay booking_url cu) */
   @Column({ name: "ticket_links", type: "jsonb", default: () => "'[]'" })
   ticketLinks!: AffiliateLinkItem[];
+
+  /** Gia ve theo doi tuong, nhap tay hoan toan (content-seo-ux-plan §5.5a, Phase 12) */
+  @Column({ name: "price_breakdown", type: "jsonb", default: () => "'[]'" })
+  priceBreakdown!: PriceBreakdownItem[];
+
+  /** Luu y thuc te — AI goi y, nguoi dung duyet (content-seo-ux-plan §5.7, Phase 12) */
+  @Column({ name: "practical_notes", type: "jsonb", default: () => "'[]'" })
+  practicalNotes!: PracticalNoteItem[];
 
   @Column({ name: "hotel_group_id", type: "varchar", length: 50, nullable: true })
   hotelGroupId!: string | null;

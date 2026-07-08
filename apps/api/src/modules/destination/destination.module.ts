@@ -30,6 +30,9 @@ import { FtpsImageUploader } from "./infrastructure/dichoithoi/ftps-image-upload
 import { GoogleSheetCsvFetcher } from "./infrastructure/reference/google-sheet-csv-fetcher";
 import { UpdateThumbnailUseCase } from "./application/use-cases/update-thumbnail.usecase";
 import { UpdateTicketLinksUseCase } from "./application/use-cases/update-ticket-links.usecase";
+import { UpdatePriceBreakdownUseCase } from "./application/use-cases/update-price-breakdown.usecase";
+import { UpdatePracticalNotesUseCase } from "./application/use-cases/update-practical-notes.usecase";
+import { SuggestPracticalNotesUseCase } from "./application/use-cases/suggest-practical-notes.usecase";
 import { DestinationAffiliateReapplyService } from "./application/services/destination-affiliate-reapply.service";
 import { UploadDestinationImageUseCase } from "./application/use-cases/upload-destination-image.usecase";
 import { MigrateDestinationImagesUseCase } from "./application/use-cases/migrate-destination-images.usecase";
@@ -78,6 +81,9 @@ import {
     RelinkAllUseCase,
     UpdateThumbnailUseCase,
     UpdateTicketLinksUseCase,
+    UpdatePriceBreakdownUseCase,
+    UpdatePracticalNotesUseCase,
+    SuggestPracticalNotesUseCase,
     DestinationAffiliateReapplyService,
     UploadDestinationImageUseCase,
     MigrateDestinationImagesUseCase,

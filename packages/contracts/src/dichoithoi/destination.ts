@@ -33,6 +33,30 @@ export type DestinationProductionState = z.infer<typeof destinationProductionSta
 export const destinationSyncFlagSchema = z.enum(["edited-outside", "conflict", "orphan"]);
 export type DestinationSyncFlag = z.infer<typeof destinationSyncFlagSchema>;
 
+/**
+ * Gia ve CO DINH CHINH THUC theo doi tuong (nguoi lon/tre em/...), do chinh
+ * diem den quy dinh — nhap tay HOAN TOAN, AI khong duoc tu sinh/doan so nay
+ * (content-seo-ux-plan §5.5a). Khac han gia tung nha cung cap trong ticketLinks[].
+ */
+export const priceBreakdownItemSchema = z.object({
+  audience: z.string().min(1).max(64),
+  price: z.number().nonnegative(),
+  note: z.string().max(200).nullable(),
+});
+export type PriceBreakdownItem = z.infer<typeof priceBreakdownItemSchema>;
+
+/**
+ * Luu y thuc te gop 1 khoi (bai do xe, nha ve sinh, phu hop tre em/nguoi gia,
+ * quy dinh tai cho, an toan) — content-seo-ux-plan §5.7. AI chi goi y draft,
+ * BAT BUOC nguoi dung duyet/sua truoc khi luu (anh huong an toan thuc te).
+ */
+export const practicalNoteItemSchema = z.object({
+  icon: z.string().max(8).nullable(),
+  label: z.string().min(1).max(80),
+  note: z.string().min(1).max(300),
+});
+export type PracticalNoteItem = z.infer<typeof practicalNoteItemSchema>;
+
 /** 1 dong mirror diem den (Postgres) tra ve cho UI */
 export const destinationMirrorSchema = z.object({
   /** Id int ben SQL Server (null khi diem tao moi trong AI tool, chua publish lan nao) */
@@ -55,6 +79,10 @@ export const destinationMirrorSchema = z.object({
   contactWebsite: z.string().nullable(),
   /** Nhieu link mua ve (Klook, TripVision...) — thay BookingUrl 1 link cu (redesign §4.2/§4.3) */
   ticketLinks: z.array(affiliateLinkItemSchema),
+  /** Gia ve theo doi tuong, nhap tay hoan toan (content-seo-ux-plan §5.5a) */
+  priceBreakdown: z.array(priceBreakdownItemSchema),
+  /** Luu y thuc te — AI goi y, nguoi dung duyet (content-seo-ux-plan §5.7) */
+  practicalNotes: z.array(practicalNoteItemSchema),
   hotelGroupId: z.string().nullable(),
   isFeatured: z.boolean(),
   /** 0 draft, 1 published, 2 hidden — theo cot Status SQL Server */
@@ -418,11 +446,31 @@ export const updateTicketLinksRequestSchema = z.object({
         provider: z.string().min(1).max(64),
         label: z.string().max(128).nullable().optional(),
         sourceUrl: z.url().max(1024),
+        /** Gia tham khao rieng nha cung cap nay — tuy chon (content-seo-ux-plan §5.5b) */
+        price: z.number().nonnegative().nullable().optional(),
       }),
     )
     .max(10),
 });
 export type UpdateTicketLinksRequest = z.infer<typeof updateTicketLinksRequestSchema>;
+
+/** Cap nhat gia ve theo doi tuong — nhap tay hoan toan (content-seo-ux-plan §5.5a) */
+export const updatePriceBreakdownRequestSchema = z.object({
+  priceBreakdown: z.array(priceBreakdownItemSchema).max(10),
+});
+export type UpdatePriceBreakdownRequest = z.infer<typeof updatePriceBreakdownRequestSchema>;
+
+/** Cap nhat khoi luu y thuc te — sau khi nguoi dung duyet/sua ban AI goi y (content-seo-ux-plan §5.7) */
+export const updatePracticalNotesRequestSchema = z.object({
+  practicalNotes: z.array(practicalNoteItemSchema).max(10),
+});
+export type UpdatePracticalNotesRequest = z.infer<typeof updatePracticalNotesRequestSchema>;
+
+/** Ket qua goi y luu y thuc te (chua luu) — nguoi dung xem/sua/xoa truoc khi luu that */
+export const suggestPracticalNotesResponseSchema = z.object({
+  suggestions: z.array(practicalNoteItemSchema),
+});
+export type SuggestPracticalNotesResponse = z.infer<typeof suggestPracticalNotesResponseSchema>;
 
 /** Kiem tra anh ton tai tren hosting (HEAD request — spec §14.3) */
 export const checkImageRequestSchema = z.object({

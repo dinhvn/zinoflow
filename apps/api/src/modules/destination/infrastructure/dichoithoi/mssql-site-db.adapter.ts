@@ -162,6 +162,8 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       request.input("tip", input.tip);
       request.input("faqJson", input.faqJson);
       request.input("ticketLinksJson", input.ticketLinksJson);
+      request.input("priceBreakdownJson", input.priceBreakdownJson);
+      request.input("practicalNotesJson", input.practicalNotesJson);
       request.input("metaTitle", input.metaTitle);
       request.input("metaDescription", input.metaDescription);
       targets.forEach((id, i) => request.input(`target${i}`, id));
@@ -182,15 +184,18 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
           ContentHtml = @contentHtml, OpeningTime = @openingTime, TicketPrice = @ticketPrice,
           Transport = @transport, Food = @food, HotelText = @hotel, Tip = @tip,
           FaqJson = @faqJson, TicketLinksJson = @ticketLinksJson,
+          PriceBreakdownJson = @priceBreakdownJson, PracticalNotesJson = @practicalNotesJson,
           MetaTitle = @metaTitle, MetaDescription = @metaDescription
         WHERE DestinationId = @siteId;
         IF @@ROWCOUNT = 0
           INSERT INTO v2.DestinationContent
             (DestinationId, ContentHtml, OpeningTime, TicketPrice, Transport, Food, HotelText,
-             Tip, FaqJson, TicketLinksJson, MetaTitle, MetaDescription)
+             Tip, FaqJson, TicketLinksJson, PriceBreakdownJson, PracticalNotesJson,
+             MetaTitle, MetaDescription)
           VALUES
             (@siteId, @contentHtml, @openingTime, @ticketPrice, @transport, @food, @hotel,
-             @tip, @faqJson, @ticketLinksJson, @metaTitle, @metaDescription);
+             @tip, @faqJson, @ticketLinksJson, @priceBreakdownJson, @practicalNotesJson,
+             @metaTitle, @metaDescription);
 
         -- Quan he mentioned tu auto-link: thay toan bo dong auto cu cua nguon nay
         DELETE FROM v2.DestinationRelation
@@ -430,6 +435,28 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       request.input("ticketLinksJson", ticketLinksJson);
       return request.query(
         `UPDATE v2.DestinationContent SET TicketLinksJson = @ticketLinksJson WHERE DestinationId = @siteId`,
+      );
+    });
+  }
+
+  async updatePriceBreakdown(siteId: number, priceBreakdownJson: string): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("priceBreakdownJson", priceBreakdownJson);
+      return request.query(
+        `UPDATE v2.DestinationContent SET PriceBreakdownJson = @priceBreakdownJson WHERE DestinationId = @siteId`,
+      );
+    });
+  }
+
+  async updatePracticalNotes(siteId: number, practicalNotesJson: string): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("practicalNotesJson", practicalNotesJson);
+      return request.query(
+        `UPDATE v2.DestinationContent SET PracticalNotesJson = @practicalNotesJson WHERE DestinationId = @siteId`,
       );
     });
   }

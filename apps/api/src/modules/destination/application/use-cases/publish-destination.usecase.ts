@@ -143,6 +143,8 @@ export class PublishDestinationUseCase {
       tip: article.quickFacts.tip,
       faqJson: buildFaqJson(article),
       ticketLinksJson: JSON.stringify(destination.ticketLinks),
+      priceBreakdownJson: JSON.stringify(destination.priceBreakdown),
+      practicalNotesJson: JSON.stringify(destination.practicalNotes),
       metaTitle: article.metadata.metaTitle,
       metaDescription: article.metadata.metaDescription,
       mentionedTargetSiteIds: addedLinks

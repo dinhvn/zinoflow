@@ -106,6 +106,13 @@ IF COL_LENGTH('v2.DestinationContent', 'GalleryJson') IS NULL
 IF COL_LENGTH('v2.DestinationContent', 'TicketPriceFrom') IS NULL
   ALTER TABLE v2.DestinationContent ADD TicketPriceFrom decimal(12,0) NULL;
 GO
+-- Phase 12 (07/2026): gia ve theo doi tuong (nhap tay) + luu y thuc te (AI goi y,
+-- nguoi dung duyet) — content-seo-ux-plan §5.5a/§5.7. Idempotent cho install cu.
+IF COL_LENGTH('v2.DestinationContent', 'PriceBreakdownJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD PriceBreakdownJson nvarchar(max) NULL;
+IF COL_LENGTH('v2.DestinationContent', 'PracticalNotesJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD PracticalNotesJson nvarchar(max) NULL;
+GO
 
 /* ===== Loai diem den — 2 tang (redesign §3.2, §4.4, vay 07/2026) ===== */
 IF OBJECT_ID('v2.DestinationTypeGroup') IS NULL

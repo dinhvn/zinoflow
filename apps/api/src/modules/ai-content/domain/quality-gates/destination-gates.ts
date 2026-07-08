@@ -34,6 +34,20 @@ const BANNED_TRAVEL_PHRASES: readonly string[] = [
 const MISSING_DATA_MARKERS = ["cần kiểm tra", "không áp dụng", "miễn phí"];
 
 /**
+ * 1 trong cac tu khoa nay phai xuat hien trong 1 heading section — bat buoc co
+ * khoi "cau chuyen/y nghia van hoa - lich su" (content-seo-ux-plan §5.6, don bay
+ * E-E-A-T that su, khong chi nhoi tu khoa kho khan gio mo cua/gia ve).
+ */
+const CULTURAL_STORY_HEADING_KEYWORDS: readonly string[] = [
+  "văn hoá",
+  "văn hóa",
+  "lịch sử",
+  "câu chuyện",
+  "truyền thuyết",
+  "ý nghĩa",
+];
+
+/**
  * Structure gate (§6.1): 1 H1, >=3 section du noi dung, FAQ >=3,
  * quick facts khong bo trong, neu input co dia chi cu + moi thi bai phai neu ca 2.
  */
@@ -61,6 +75,15 @@ export function evaluateDestinationStructureGate(input: DestinationGateInput): Q
   }
   if (article.faq.length < 3) {
     details.push(`FAQ cần ít nhất 3 câu hỏi (hiện có ${article.faq.length})`);
+  }
+
+  const hasCulturalStorySection = article.sections.some((section) =>
+    CULTURAL_STORY_HEADING_KEYWORDS.some((kw) => containsNormalized(section.heading, kw)),
+  );
+  if (!hasCulturalStorySection) {
+    details.push(
+      'Thiếu section "câu chuyện/ý nghĩa văn hoá - lịch sử" (bắt buộc theo khung bài §5.6)',
+    );
   }
 
   return { gateName: "structure", passed: details.length === 0, details };

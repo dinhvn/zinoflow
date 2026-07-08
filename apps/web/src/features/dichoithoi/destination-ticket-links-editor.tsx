@@ -13,6 +13,7 @@ interface Row {
   provider: string;
   label: string;
   sourceUrl: string;
+  price: string;
 }
 
 const LINK_STATUS_LABEL: Record<AffiliateLinkItem["linkStatus"], string> = {
@@ -28,7 +29,12 @@ const LINK_STATUS_TONE: Record<AffiliateLinkItem["linkStatus"], BadgeTone> = {
 };
 
 function toRows(links: readonly AffiliateLinkItem[]): Row[] {
-  return links.map((l) => ({ provider: l.provider, label: l.label ?? "", sourceUrl: l.sourceUrl }));
+  return links.map((l) => ({
+    provider: l.provider,
+    label: l.label ?? "",
+    sourceUrl: l.sourceUrl,
+    price: l.price != null ? String(l.price) : "",
+  }));
 }
 
 /**
@@ -57,6 +63,7 @@ export function DestinationTicketLinksEditor({
             provider: r.provider.trim() || "other",
             label: r.label.trim() || null,
             sourceUrl: r.sourceUrl.trim(),
+            price: r.price.trim() ? Number(r.price) : null,
           })),
       };
       return z
@@ -96,7 +103,7 @@ export function DestinationTicketLinksEditor({
           const saved = ticketLinks[i];
           return (
             <div key={i} className="rounded border border-zinc-300 p-2 dark:border-zinc-700">
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
                 <Input
                   value={row.provider}
                   onChange={(e) => update(i, { provider: e.target.value })}
@@ -111,6 +118,13 @@ export function DestinationTicketLinksEditor({
                   value={row.sourceUrl}
                   onChange={(e) => update(i, { sourceUrl: e.target.value })}
                   placeholder="https://... (link gốc)"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  value={row.price}
+                  onChange={(e) => update(i, { price: e.target.value })}
+                  placeholder="Giá tham khảo (tuỳ chọn)"
                 />
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
@@ -149,7 +163,9 @@ export function DestinationTicketLinksEditor({
         <Button
           size="sm"
           className="px-2 py-1 text-xs"
-          onClick={() => setRows((prev) => [...prev, { provider: "", label: "", sourceUrl: "" }])}
+          onClick={() =>
+            setRows((prev) => [...prev, { provider: "", label: "", sourceUrl: "", price: "" }])
+          }
         >
           + Thêm link
         </Button>

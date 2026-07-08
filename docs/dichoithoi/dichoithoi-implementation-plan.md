@@ -172,11 +172,24 @@ trong cùng 1 lần merge** — không rơi vào tình trạng đã phát hiện
 (cột `RelatedJson` zinoflow ghi đúng nhưng website chưa đọc, gây lệch 2 bên).
 DoD của mỗi phase PHẢI kiểm tra được cả 2 đầu, không chỉ 1 bên.
 
-## Phase 12 — Giá vé 2 nguồn + 3 khối nội dung mới cho Destination
+## Phase 12 — Giá vé 2 nguồn + 3 khối nội dung mới cho Destination (ĐÃ XONG 07/2026)
 
 **Phụ thuộc**: Phase 2 (destination), Phase 4 (ticketLinks) đã xong.
 **Nguồn**: `content-seo-ux-plan.md` §5.4-§5.7, `destination-spec.md` §2.2,
 `database-redesign.md` §4.3, `affiliate-link-conversion-spec.md` §2.
+
+**Đã build**: contracts (`priceBreakdownItemSchema`, `practicalNoteItemSchema`,
+`price` trong `affiliateLinkItemSchema`) + migration Postgres
+`1781950000000-DestinationPriceBreakdownPracticalNotes` + cột SQL Server
+(`scripts/dichoithoi-sqlserver/01-create-new-schema.sql`) + use-cases
+(`update-price-breakdown`, `update-practical-notes`, `suggest-practical-notes`
+— goi y RULE-BASED theo tu khoa ten/mo ta, chua goi LLM, xem
+`domain/practical-notes-suggester.ts`) + prompt pack bat buoc heading
+"văn hoá - lịch sử" + structure gate check heading nay + UI 2 editor moi
+(`destination-price-breakdown-editor.tsx`, `destination-practical-notes-editor.tsx`)
++ website .NET (`DestinationExtrasModel`/`DestinationExtrasRepository`/
+`Detail.cshtml`) render bảng giá, giá riêng ticketLinks, so sánh 2 số thật,
+"Chi phí tham khảo", khối "Lưu ý thực tế".
 
 - **Đồng bộ zinoflow**: thêm cột `PriceBreakdownJson`/`PracticalNotesJson`
   (Postgres mirror + migration + SQL Server `DestinationContent`); thêm field

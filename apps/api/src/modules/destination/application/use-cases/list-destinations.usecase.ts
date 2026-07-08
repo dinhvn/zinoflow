@@ -89,6 +89,8 @@ export class ListDestinationsUseCase {
       contactPhone: e.contactPhone,
       contactWebsite: e.contactWebsite,
       ticketLinks: e.ticketLinks,
+      priceBreakdown: e.priceBreakdown,
+      practicalNotes: e.practicalNotes,
       hotelGroupId: e.hotelGroupId,
       isFeatured: e.isFeatured,
       siteStatus: e.siteStatus,

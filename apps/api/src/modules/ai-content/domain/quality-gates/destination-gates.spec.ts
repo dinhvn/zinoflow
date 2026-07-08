@@ -31,6 +31,7 @@ function validArticle(overrides: Partial<DestinationArticle> = {}): DestinationA
       { heading: "Giới thiệu tổng quan", content: longContent("Vịnh Hạ Long") },
       { heading: "Chơi gì ở Vịnh Hạ Long", content: longContent("Hang Sửng Sốt") },
       { heading: "Thời điểm đẹp nhất để đi", content: longContent("Mùa thu") },
+      { heading: "Câu chuyện văn hoá - lịch sử Vịnh Hạ Long", content: longContent("Truyền thuyết rồng hạ") },
     ],
     faq: [
       { question: "Đi Vịnh Hạ Long mùa nào đẹp?", answer: "Tháng 9-11 trời mát, biển lặng." },
@@ -76,6 +77,15 @@ describe("destination gates (spec dichoithoi §6)", () => {
     );
     expect(result.passed).toBe(false);
     expect(result.details.join(" ")).toContain("ít nhất 3 section");
+  });
+
+  it("structure: fail khi thieu section cau chuyen van hoa - lich su", () => {
+    const article = validArticle();
+    const result = evaluateDestinationStructureGate(
+      gateInput({ ...article, sections: article.sections.slice(0, 3) }),
+    );
+    expect(result.passed).toBe(false);
+    expect(result.details.join(" ")).toContain("văn hoá - lịch sử");
   });
 
   it("seo: fail khi ten diem den khong co trong H1 (keyword mac dinh la ten)", () => {

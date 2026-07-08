@@ -5,6 +5,8 @@ import type {
   AddressMappingsQuery,
   AffiliateLinkItem,
   ListDestinationsQuery,
+  PracticalNoteItem,
+  PriceBreakdownItem,
 } from "@zinoflow/contracts";
 import { DestinationMirrorEntity } from "../entities/destination-mirror.entity";
 import { AdminProvinceEntity, AdminWardMappingEntity } from "../entities/admin-units.entity";
@@ -214,6 +216,20 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
 
   async setTicketLinks(slug: string, ticketLinks: readonly AffiliateLinkItem[]): Promise<void> {
     await this.repo.update({ slug }, { ticketLinks: [...ticketLinks] });
+  }
+
+  async setPriceBreakdown(
+    slug: string,
+    priceBreakdown: readonly PriceBreakdownItem[],
+  ): Promise<void> {
+    await this.repo.update({ slug }, { priceBreakdown: [...priceBreakdown] });
+  }
+
+  async setPracticalNotes(
+    slug: string,
+    practicalNotes: readonly PracticalNoteItem[],
+  ): Promise<void> {
+    await this.repo.update({ slug }, { practicalNotes: [...practicalNotes] });
   }
 
   async saveAiInputs(

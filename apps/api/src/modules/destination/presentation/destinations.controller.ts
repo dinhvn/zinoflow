@@ -22,11 +22,16 @@ import {
   suggestDestinationMetaRequestSchema,
   updateThumbnailRequestSchema,
   updateTicketLinksRequestSchema,
+  updatePriceBreakdownRequestSchema,
+  updatePracticalNotesRequestSchema,
   upsertDestinationRequestSchema,
   type AddressMappingProvinces,
   type AddressMappingsQuery,
   type AddressMappingsResponse,
   type AffiliateLinkItem,
+  type PriceBreakdownItem,
+  type PracticalNoteItem,
+  type SuggestPracticalNotesResponse,
   type CheckImageRequest,
   type CheckImageResponse,
   type CreateDestinationJobRequest,
@@ -54,6 +59,8 @@ import {
   type MigrateDestinationImagesRequest,
   type UpdateThumbnailRequest,
   type UpdateTicketLinksRequest,
+  type UpdatePriceBreakdownRequest,
+  type UpdatePracticalNotesRequest,
   type UploadDestinationImageResponse,
   type UpsertDestinationRequest,
 } from "@zinoflow/contracts";
@@ -67,6 +74,9 @@ import { PublishDestinationUseCase } from "../application/use-cases/publish-dest
 import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
 import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnail.usecase";
 import { UpdateTicketLinksUseCase } from "../application/use-cases/update-ticket-links.usecase";
+import { UpdatePriceBreakdownUseCase } from "../application/use-cases/update-price-breakdown.usecase";
+import { UpdatePracticalNotesUseCase } from "../application/use-cases/update-practical-notes.usecase";
+import { SuggestPracticalNotesUseCase } from "../application/use-cases/suggest-practical-notes.usecase";
 import { UploadDestinationImageUseCase } from "../application/use-cases/upload-destination-image.usecase";
 import { MigrateDestinationImagesUseCase } from "../application/use-cases/migrate-destination-images.usecase";
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
@@ -99,6 +109,9 @@ export class DestinationsController {
     private readonly relinkAll: RelinkAllUseCase,
     private readonly updateThumbnail: UpdateThumbnailUseCase,
     private readonly updateTicketLinks: UpdateTicketLinksUseCase,
+    private readonly updatePriceBreakdown: UpdatePriceBreakdownUseCase,
+    private readonly updatePracticalNotes: UpdatePracticalNotesUseCase,
+    private readonly suggestPracticalNotes: SuggestPracticalNotesUseCase,
     private readonly uploadImage: UploadDestinationImageUseCase,
     private readonly migrateImages: MigrateDestinationImagesUseCase,
     private readonly getDetail: GetDestinationDetailUseCase,
@@ -281,6 +294,34 @@ export class DestinationsController {
     @Body(new ZodValidationPipe(updateTicketLinksRequestSchema)) request: UpdateTicketLinksRequest,
   ): Promise<AffiliateLinkItem[]> {
     return this.updateTicketLinks.execute(slug, request);
+  }
+
+  /** Cap nhat gia ve theo doi tuong — nhap tay hoan toan (content-seo-ux-plan §5.5a) */
+  @Post(":slug/price-breakdown")
+  setPriceBreakdown(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updatePriceBreakdownRequestSchema))
+    request: UpdatePriceBreakdownRequest,
+  ): Promise<PriceBreakdownItem[]> {
+    return this.updatePriceBreakdown.execute(slug, request);
+  }
+
+  /** Goi y ban nhap "Luu y thuc te" (content-seo-ux-plan §5.7) — CHUA luu */
+  @Get(":slug/practical-notes/suggest")
+  suggestPracticalNotesForSlug(
+    @Param("slug") slug: string,
+  ): Promise<SuggestPracticalNotesResponse> {
+    return this.suggestPracticalNotes.execute(slug);
+  }
+
+  /** Luu ban "Luu y thuc te" nguoi dung DA duyet/sua (content-seo-ux-plan §5.7) */
+  @Post(":slug/practical-notes")
+  setPracticalNotes(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updatePracticalNotesRequestSchema))
+    request: UpdatePracticalNotesRequest,
+  ): Promise<PracticalNoteItem[]> {
+    return this.updatePracticalNotes.execute(slug, request);
   }
 
   /**

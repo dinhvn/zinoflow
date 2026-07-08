@@ -53,6 +53,9 @@ export const affiliateLinkItemSchema = z.object({
   sourceUrl: z.url().max(1024),
   affiliateUrl: z.string().max(1024),
   linkStatus: affiliateLinkStatusSchema,
+  /** Gia tham khao rieng cua nha cung cap nay — tuy chon, nhieu noi khong hien
+   *  gia truoc khi bam link ngoai (content-seo-ux-plan §5.5b). KHONG suy dien. */
+  price: z.number().nonnegative().nullable(),
 });
 export type AffiliateLinkItem = z.infer<typeof affiliateLinkItemSchema>;
 

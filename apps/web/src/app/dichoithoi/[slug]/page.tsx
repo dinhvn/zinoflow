@@ -19,6 +19,8 @@ import {
 } from "@/features/dichoithoi/destination-metadata-form";
 import { DestinationImageUploader } from "@/features/dichoithoi/destination-image-uploader";
 import { DestinationTicketLinksEditor } from "@/features/dichoithoi/destination-ticket-links-editor";
+import { DestinationPriceBreakdownEditor } from "@/features/dichoithoi/destination-price-breakdown-editor";
+import { DestinationPracticalNotesEditor } from "@/features/dichoithoi/destination-practical-notes-editor";
 import { DestinationHotelPanel } from "@/features/dichoithoi/destination-hotel-panel";
 import { DestinationTourPanel } from "@/features/dichoithoi/destination-tour-panel";
 import { Button, buttonClasses } from "@/shared/ui/button";
@@ -520,6 +522,24 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         <DestinationTicketLinksEditor
           slug={d.slug}
           ticketLinks={d.ticketLinks}
+          onSaved={() => invalidate()}
+        />
+      </Group>
+
+      {/* Gia ve theo doi tuong (content-seo-ux-plan §5.5a, Phase 12) */}
+      <Group title="Giá vé theo đối tượng">
+        <DestinationPriceBreakdownEditor
+          slug={d.slug}
+          priceBreakdown={d.priceBreakdown}
+          onSaved={() => invalidate()}
+        />
+      </Group>
+
+      {/* Luu y thuc te (content-seo-ux-plan §5.7, Phase 12) */}
+      <Group title="Lưu ý thực tế">
+        <DestinationPracticalNotesEditor
+          slug={d.slug}
+          practicalNotes={d.practicalNotes}
           onSaved={() => invalidate()}
         />
       </Group>

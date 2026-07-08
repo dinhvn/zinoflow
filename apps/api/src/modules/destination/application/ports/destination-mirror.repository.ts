@@ -3,6 +3,8 @@ import type {
   AddressMappingsQuery,
   AffiliateLinkItem,
   ListDestinationsQuery,
+  PracticalNoteItem,
+  PriceBreakdownItem,
 } from "@zinoflow/contracts";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
@@ -62,6 +64,10 @@ export interface DestinationMirrorRepository {
   setThumbnail(slug: string, thumbnail: string | null): Promise<void>;
   /** Cap nhat danh sach link mua ve (affiliateUrl da tinh san — spec affiliate-link §2) */
   setTicketLinks(slug: string, ticketLinks: readonly AffiliateLinkItem[]): Promise<void>;
+  /** Cap nhat gia ve theo doi tuong — nhap tay hoan toan (content-seo-ux-plan §5.5a) */
+  setPriceBreakdown(slug: string, priceBreakdown: readonly PriceBreakdownItem[]): Promise<void>;
+  /** Cap nhat khoi luu y thuc te — sau khi nguoi dung duyet (content-seo-ux-plan §5.7) */
+  setPracticalNotes(slug: string, practicalNotes: readonly PracticalNoteItem[]): Promise<void>;
   /** Luu thong tin nguoi dung cung cap cho AI (ghi chu + URL nguon) — tai dung lan sau */
   saveAiInputs(
     slug: string,

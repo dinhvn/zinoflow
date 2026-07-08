@@ -40,6 +40,7 @@ export class UpdateTicketLinksUseCase {
           sourceUrl: link.sourceUrl,
           affiliateUrl: resolved.affiliateUrl,
           linkStatus: resolved.linkStatus,
+          price: link.price ?? null,
         };
       }),
     );

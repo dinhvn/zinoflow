@@ -50,6 +50,10 @@ export interface PublishDestinationInput {
   faqJson: string;
   /** JSON AffiliateLinkItem[] — carry gia tri mirror hien tai vao lan publish (spec affiliate-link §2) */
   ticketLinksJson: string;
+  /** JSON PriceBreakdownItem[] — carry gia tri mirror hien tai vao lan publish (Phase 12) */
+  priceBreakdownJson: string;
+  /** JSON PracticalNoteItem[] — carry gia tri mirror hien tai vao lan publish (Phase 12) */
+  practicalNotesJson: string;
   metaTitle: string;
   metaDescription: string;
   /** SiteId cac diem duoc auto-link nhac toi — ghi DestinationRelation (mentioned) */
@@ -128,6 +132,10 @@ export interface DichoithoiSiteDb {
    * ton tai), khong can publish lai toan bai (affiliate-link-conversion-spec §5).
    */
   updateTicketLinks(siteId: number, ticketLinksJson: string): Promise<void>;
+  /** Ghi de PriceBreakdownJson — doc lap voi publish (Phase 12, content-seo-ux-plan §5.5a) */
+  updatePriceBreakdown(siteId: number, priceBreakdownJson: string): Promise<void>;
+  /** Ghi de PracticalNotesJson — doc lap voi publish (Phase 12, content-seo-ux-plan §5.7) */
+  updatePracticalNotes(siteId: number, practicalNotesJson: string): Promise<void>;
   /** Insert diem den MOI (resolve ParentId/ProvinceId tu slug/code) -> tra ve siteId */
   createDestination(meta: SiteDestinationMeta): Promise<{ siteId: number }>;
   /** Cap nhat metadata diem den da ton tai (khong dong cham content/quan he) */
