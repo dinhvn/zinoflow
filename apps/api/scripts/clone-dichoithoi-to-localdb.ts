@@ -96,6 +96,34 @@ const TABLE_DDL: Record<string, string> = {
     DateCreated datetime NOT NULL DEFAULT GETDATE(),
     DateApproved datetime NULL
   )`,
+  // Hotel/HotelGroup: website doc o trang chu (HomeController.Index) va trang
+  // khach san — them vao day de dev local khong bi loi "Invalid object name".
+  HotelGroup: `CREATE TABLE dbo.HotelGroup (
+    Id nvarchar(50) NOT NULL PRIMARY KEY,
+    [Order] int NOT NULL DEFAULT 0,
+    IsPopular bit NOT NULL DEFAULT 0,
+    DestinationName nvarchar(50) NULL,
+    Title nvarchar(256) NULL,
+    Description nvarchar(512) NULL,
+    Content nvarchar(max) NULL
+  )`,
+  Hotel: `CREATE TABLE dbo.Hotel (
+    Id int NOT NULL PRIMARY KEY,
+    Name nvarchar(128) NOT NULL,
+    SupplierName nvarchar(50) NOT NULL,
+    HotelGroupId nvarchar(50) NOT NULL,
+    DestinationName nvarchar(50) NULL,
+    Address nvarchar(128) NULL,
+    ImageUrl nvarchar(512) NULL,
+    Link nvarchar(256) NOT NULL,
+    Star int NOT NULL DEFAULT 0,
+    Price money NOT NULL DEFAULT 0,
+    SalePrice money NULL,
+    SaleRate int NOT NULL DEFAULT 0,
+    Description nvarchar(512) NULL,
+    BookingDate datetime NOT NULL DEFAULT GETDATE(),
+    InsertDate datetime NOT NULL DEFAULT GETDATE()
+  )`,
 };
 
 async function main(): Promise<void> {
@@ -154,7 +182,9 @@ async function main(): Promise<void> {
                 (SELECT COUNT(*) FROM dbo.DestinationDetail) AS Detail,
                 (SELECT COUNT(*) FROM dbo.DestinationGroup) AS Grp,
                 (SELECT COUNT(*) FROM dbo.Province) AS Prov,
-                (SELECT COUNT(*) FROM dbo.DestinationReview) AS Rev`,
+                (SELECT COUNT(*) FROM dbo.DestinationReview) AS Rev,
+                (SELECT COUNT(*) FROM dbo.HotelGroup) AS HotelGrp,
+                (SELECT COUNT(*) FROM dbo.Hotel) AS Hotel`,
       );
     console.log("4) Kiem tra LocalDB:", check.recordset[0]);
     console.log(`XONG — sandbox: ${LOCAL_SERVER} / ${LOCAL_DB}. Production KHONG bi dong toi.`);
