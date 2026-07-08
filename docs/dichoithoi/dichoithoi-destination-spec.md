@@ -87,7 +87,7 @@ AI dựa trên input + kiến thức nền để viết, KHÔNG bịa dữ liệ
 |---|---|
 | Tên | nhập tay |
 | Địa chỉ — **cả cũ VÀ mới sau sáp nhập tỉnh/thành** | nhập tay |
-| Vị trí (lat/lng) + khoảng cách tới trung tâm | nhập tay / lấy từ mirror |
+| Vị trí (lat/lng) + khoảng cách tới trung tâm | nhập tay / lấy từ mirror / **dán link Google Maps → tự parse** (đề xuất 07/2026, xem §2.1.1) |
 | Liên hệ (điện thoại, website chính thức) | nhập tay |
 | Giờ mở cửa | nhập tay HOẶC đưa URL tham khảo để tool tự lấy |
 | Giá vé | nhập tay HOẶC đưa URL tham khảo để tool tự lấy |
@@ -98,6 +98,59 @@ AI dựa trên input + kiến thức nền để viết, KHÔNG bịa dữ liệ
 
 Lưu ý "địa chỉ cũ và mới": sau đợt sáp nhập tỉnh/thành, bài viết phải ghi rõ cả 2
 để người đọc tra cứu — đưa vào prompt và structure gate (§6.1).
+
+### 2.1.1 Nhập toạ độ qua link Google Maps (chốt scope 07/2026)
+
+Vấn đề: nhập tay lat/lng từng điểm đến bất tiện (phải tự tra rồi copy 2 số).
+Giải pháp đã chốt — **CHỈ làm phần parse link, KHÔNG dùng Google Places API**:
+
+- Thêm 1 ô "Dán link Google Maps" trong form sửa điểm đến, cạnh 2 ô lat/lng
+  hiện có (vẫn giữ 2 ô này để sửa tay/fallback).
+- Parse thuần bằng regex trên chuỗi URL công khai (không gọi API, không tốn
+  phí, không vi phạm ToS Google — chỉ đọc cấu trúc URL):
+  - Ưu tiên đọc cặp `!3d{lat}!4d{lng}` trong tham số `data=` nếu có (toạ độ
+    chính xác của ghim/marker).
+  - Fallback về `@{lat},{lng},{zoom}z` nếu không có `!3d!4d`.
+  - Link rút gọn (`maps.app.goo.gl/...`) không chứa toạ độ trong chuỗi — cần
+    1 request HTTP theo redirect để lấy URL đầy đủ trước khi parse (vẫn hợp
+    lệ: chỉ theo redirect công khai, không scrape nội dung trang).
+- Kết quả tự điền vào 2 ô lat/lng có sẵn — người dùng vẫn xem/sửa được trước
+  khi lưu, không tự động ghi thẳng không qua kiểm tra.
+- Các thông tin khác của điểm đến (tên, địa chỉ, giờ mở cửa...) vẫn **nhập tay
+  hoàn toàn** như hiện tại — không tự động điền từ Google Maps ở scope này.
+
+### 2.1.2 Ý tưởng nâng cao — Google Places API (ưu tiên THẤP, ghi lại để làm sau)
+
+⚠️ **CHƯA làm, chỉ ghi lại mục đích để tham khảo khi có nhu cầu/ngân sách API.**
+Khác §2.1.1 (parse URL miễn phí), nhóm này cần gọi **Google Places API chính
+thức** (trả phí theo lượt, cần tài khoản Google Cloud + billing) — KHÔNG được
+scrape trực tiếp trang Google Maps (vi phạm ToS, rủi ro bị chặn/pháp lý).
+
+Các mục đích dự kiến dùng API này khi triển khai:
+1. **Tự điền field còn trống** (Place Details): giờ mở cửa, địa chỉ chuẩn,
+   loại hình — chỉ điền field TRỐNG, không ghi đè field đã có, hiển thị rõ
+   "gợi ý từ Google Maps — cần xác nhận" để người dùng duyệt trước khi lưu
+   (không tự động publish thẳng).
+2. **Lấy thêm thông tin tham khảo**: rating/số lượt đánh giá của Google (khác
+   nguồn với `DestinationReview` nội bộ site — không được trộn 2 số này làm 1
+   khi hiển thị).
+3. **Gợi ý điểm đến con trong cùng khu** (Nearby Search): với điểm đến kiểu
+   khu phức hợp (vd Suối Tiên có nhiều khu nhỏ), gợi ý danh sách địa điểm
+   Google tìm thấy gần đó cho người biên tập cân nhắc tạo thành điểm đến con
+   (dùng quan hệ `parent`/`children` đã có) — chỉ là công cụ gợi ý nội bộ,
+   KHÔNG tự động tạo/publish điểm đến mới.
+4. **Lưu `place_id`** cạnh lat/lng khi có gọi API lần đầu — Google cho phép
+   cache `place_id` vô thời hạn (khác các field khác có giới hạn cache), giúp
+   lần sau không cần tìm kiếm lại bằng tên/toạ độ.
+
+Ảnh từ Google Maps: **KHÔNG tải/lưu ảnh của Google về server** (rủi ro bản
+quyền/ToS) — chỉ hiển thị 1 link/nút "Xem ảnh & đánh giá trên Google Maps" dẫn
+thẳng ra trang địa điểm đó, đặt cạnh khối bản đồ nhúng đã có. Nếu cần ảnh xem
+trước trên site, dùng ảnh tự upload (`GalleryJson`), không lấy từ Google.
+
+Thiết kế khi triển khai (để tránh tốn phí không kiểm soát): nút bấm thủ công
+"Lấy thông tin từ Google Maps" trong form, gọi 1 lượt duy nhất khi người dùng
+chủ động bấm — KHÔNG chạy job nền tự động/định kỳ gọi lại API.
 
 ### 2.2 Khung thông tin "ai cũng cần" của 1 bài điểm đến
 Phân tích theo search intent du lịch (người đọc trước chuyến đi cần gì) + các cột
@@ -115,9 +168,16 @@ DB website đang render thành mục riêng:
 | Mẹo & lưu ý | tiết kiệm, an toàn, quy định | Tip |
 | FAQ | câu hỏi thực tế theo search intent | Content (cuối bài) |
 | Điểm đến gần đó | đi kèm trong cùng chuyến | auto-link + quan hệ (§3.7) |
+| Câu chuyện văn hoá - lịch sử *(đề xuất 07/2026, chưa build)* | truyền thuyết, ý nghĩa văn hoá/lịch sử — tạo cảm xúc, khác dữ liệu khô khan | Content (section mới, không cột riêng — content-seo-ux-plan §5.6). **AI viết, người duyệt** — không có form nhập tay riêng. |
+| Chi phí ước tính *(đề xuất 07/2026, chưa build)* | tổng chi phí tham khảo cho 1 chuyến (vé + khách sạn + tour cộng dồn) | Tính lúc render từ `TicketPriceFrom`/Hotel/Tour `PriceFrom` đã có, không cột mới (content-seo-ux-plan §5.4). **Không nhập gì** — tự tính, không phải form/AI. |
+| Giá vé theo đối tượng *(đề xuất 07/2026, chưa build)* | (a) giá cố định người lớn/trẻ em/sinh viên/cao tuổi theo quy định điểm đến; (b) giá riêng từng nhà cung cấp booking | (a) cột mới `PriceBreakdownJson`; (b) thêm field `price` vào `ticketLinks[]` — 2 nguồn khác nhau, xem content-seo-ux-plan §5.5. **Cả 2 đều nhập tay** trong màn sửa điểm đến — AI không được tự bịa giá. |
+| Lưu ý thực tế *(đề xuất 07/2026, chưa build)* | bãi xe, nhà vệ sinh, phù hợp trẻ em/người già/xe lăn, quy định tại chỗ, an toàn | Cột mới `PracticalNotesJson` (content-seo-ux-plan §5.7). **AI gợi ý draft, bắt buộc người dùng duyệt/sửa** trước khi lưu (ảnh hưởng an toàn thực tế). |
 
 Prompt pack ép đủ các khối này; khối nào không áp dụng (vd điểm miễn phí không có
-giá vé) phải ghi rõ thay vì bỏ trống — structure gate kiểm tra (§6).
+giá vé) phải ghi rõ thay vì bỏ trống — structure gate kiểm tra (§6). 4 dòng đánh
+dấu "đề xuất 07/2026, chưa build" là kết quả phân tích vai khách du lịch (xem
+`dichoithoi-content-seo-ux-plan.md` §5.4-§5.7 để biết chi tiết field/schema) —
+CHƯA đưa vào prompt pack/structure gate hiện tại, chỉ ghi nhận để làm sau.
 
 ### 2.3 Kiếm tiền trên bài điểm đến (khách sạn + vé online + tour)
 Mô hình: bài điểm đến kéo organic traffic → chuyển đổi qua 3 kênh affiliate:

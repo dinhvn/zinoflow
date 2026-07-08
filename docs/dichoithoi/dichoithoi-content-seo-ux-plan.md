@@ -182,6 +182,85 @@ Khi có ≥1 `ticketLinks[]` VÀ `TicketPrice`, hiển thị gợi ý ngắn ki�
 đặt online có thể rẻ hơn/tránh xếp hàng" cạnh nút CTA. Chỉ hiện khi có cả 2 nguồn
 dữ liệu, không suy diễn nếu thiếu (đúng nguyên tắc "AI không bịa dữ liệu cứng").
 
+### 5.4 Chi phí ước tính cho 1 chuyến (đề xuất 07/2026, phân tích vai khách du lịch)
+Gộp dữ liệu ĐÃ CÓ (`TicketPriceFrom`, `Hotel.PriceFrom` thấp nhất trong card gợi ý,
+`Tour.PriceFrom` thấp nhất) thành 1 dòng tổng "Chi phí tham khảo: từ ~X đ/người"
+hiển thị gần đầu trang (cạnh giá vé) — trả lời câu hỏi đầu tiên của khách: "đi
+chuyến này tốn khoảng bao nhiêu". **Không cần cột DB mới** — tính lúc render ở
+website (cộng các `PriceFrom` đang đọc sẵn), giống cách tính bên `dichoithoi-flight-
+spec.md`/`dichoithoi-bus-spec.md` không cần trang riêng. Chỉ hiện khi có ≥1 nguồn
+giá thật (không suy diễn nếu thiếu, đúng nguyên tắc §3.5 destination-spec).
+**Nhập ở zinoflow**: không nhập gì cả — không có field/form nào trong màn sửa
+điểm đến cho mục này, chỉ là công thức tính lúc render ở website từ các
+`PriceFrom` đã có sẵn.
+
+### 5.5 Giá vé — 2 NGUỒN khác nhau, không gộp làm 1 (đề xuất 07/2026, sửa sau khi
+trao đổi với chủ dự án)
+
+Giá vé tham quan thực ra có 2 nguồn dữ liệu khác bản chất, cần tách rõ:
+
+**(a) Giá cố định chính thức** — do chính điểm đến quy định (giá vé người lớn/
+trẻ em/sinh viên/người cao tuổi niêm yết tại cổng), admin/AI tool tự nhập/cập
+nhật khi biết thông tin mới, KHÔNG qua affiliate. `TicketPrice` hiện là 1 chuỗi
+text tự do ("50.000đ/người") — không đủ khi khách hỏi giá theo từng đối tượng.
+Đề xuất thêm field cấu trúc `PriceBreakdownJson` dạng `[{audience, price, note}]`
+(vd `{audience:"Người lớn", price:50000}`, `{audience:"Trẻ em 6-12 tuổi",
+price:25000}`) — hiển thị dạng bảng nhỏ ngay dưới `TicketPrice` khi có dữ liệu,
+ẩn hoàn toàn khi không có (không suy diễn giá theo tỷ lệ). CẦN cột DB mới
+(`DestinationContent.PriceBreakdownJson`, database-redesign §4.3) — chưa build.
+**Nhập ở zinoflow**: nhập tay hoàn toàn trong màn sửa điểm đến (thêm 1 khối
+"Giá vé theo đối tượng" — bảng {đối tượng, giá, ghi chú}, thêm/xoá dòng tự do).
+AI KHÔNG được tự sinh/đoán số này — đây là số liệu chính thức của điểm đến,
+sai là sai tiền thật của khách.
+
+**(b) Giá theo từng nhà cung cấp booking** — đã có sẵn cơ chế `ticketLinks[]`
+(§2.3 destination-spec, mỗi dòng 1 nhà cung cấp như Klook/TripVision) nhưng
+HIỆN CHƯA có field giá riêng cho từng link — chỉ có
+`{provider, label, sourceUrl, affiliateUrl, linkStatus}`. Đề xuất thêm field
+`price` TUỲ CHỌN vào item schema đó (nullable — nhiều nhà cung cấp không hiện
+giá trước khi bấm vào link ngoài), để mỗi nút "Đặt vé qua {provider}" có thể
+hiện kèm giá tham khảo của riêng nhà đó. CẦN sửa `affiliateLinkItemSchema`
+(`packages/contracts/src/dichoithoi/affiliate.ts`) + cột `TicketLinksJson`
+(cùng cấu trúc, database-redesign §4.3) — chưa build. Xem thêm ghi chú ở
+`dichoithoi-affiliate-link-conversion-spec.md`.
+**Nhập ở zinoflow**: nhập tay, thêm 1 ô "Giá tham khảo" vào form "Link vé tham
+quan" đã có sẵn (cùng chỗ nhập `sourceUrl`) — tuỳ chọn, để trống nếu nhà cung
+cấp không hiện giá trước khi bấm link ngoài.
+
+**Hệ quả cho §5.3 (so sánh giá tại quầy vs online)**: khi có (a) và (b) cùng
+lúc, so sánh nên đổi từ "TicketPrice text vs có ticketLinks hay không" sang so
+sánh CỤ THỂ giữa `PriceBreakdownJson` (giá tại quầy) và `ticketLinks[].price`
+theo từng nhà cung cấp (giá online) — chính xác hơn bản đang chạy (chỉ so
+sánh định tính, không có 2 con số thật để đối chiếu).
+
+### 5.6 Câu chuyện văn hoá - lịch sử (đề xuất 07/2026)
+Khối "ai cũng cần" đã có sẵn trong khung nội dung (destination-spec §2.2, dòng
+"Thời điểm đẹp") nhưng KHÔNG có mục kể chuyện/truyền thuyết — đây là phần tạo cảm
+xúc, khác hẳn dữ liệu khô khan (giờ mở cửa, giá vé), và là đòn bẩy E-E-A-T thật sự
+(§8.5) chứ không chỉ nhồi từ khoá. Đề xuất: thêm 1 section bắt buộc trong prompt
+pack AI ("Câu chuyện/ý nghĩa văn hoá - lịch sử của {tên điểm đến}"), render như 1
+phần của `ContentHtml` (KHÔNG cần field/cột riêng — giống cách "thời điểm đẹp"
+đã quyết định giữ dạng văn xuôi, database-redesign §4.2). Chỉ cần cập nhật prompt
+pack + structure gate (bắt buộc có mục này), không đổi schema.
+**Nhập ở zinoflow**: KHÔNG có form/field riêng — AI tự viết đoạn này như 1
+phần `ContentHtml` trong lúc generate bài (giống mọi section văn xuôi khác),
+người dùng duyệt/sửa qua 2-gate review có sẵn, không phải nhập tay từ đầu.
+
+### 5.7 Khối "Lưu ý thực tế" gộp (đề xuất 07/2026, phân tích vai khách du lịch)
+Các câu hỏi thực tế khách hay hỏi nhưng không đáng tách field riêng từng cái: bãi
+đậu xe (có phí không), nhà vệ sinh công cộng, phù hợp trẻ em/người già/xe lăn hay
+không, quy định tại chỗ (cấm flycam/mang đồ ăn riêng/hút thuốc...), lưu ý an toàn
+(đường trơn, sóng lớn, có cứu hộ không). Đề xuất GỘP thành 1 field JSON duy nhất
+`PracticalNotesJson` dạng `[{icon, label, note}]` (tự do, không ép cấu trúc chi
+tiết từng loại) — render thành 1 khối danh sách ngắn, giống cách `FaqJson` đang
+hoạt động. CẦN cột DB mới (`DestinationContent.PracticalNotesJson`, database-
+redesign §4.3) — chưa build.
+**Nhập ở zinoflow**: AI gợi ý draft trước (dựa trên loại điểm đến — vd biển thì
+gợi ý mục "sóng lớn/cứu hộ", núi thì gợi ý "đường trơn/độ cao") trong 1 khối
+riêng ở màn sửa điểm đến, nhưng KHÔNG tự publish thẳng — bắt buộc người dùng
+xem/sửa/xoá từng dòng trước khi lưu, vì đây là thông tin ảnh hưởng an toàn
+thực tế, không phải văn phong thuần tuý.
+
 ## 6) Việc phát sinh cần chốt trước khi build UI mới
 
 | # | Việc | Thuộc về |
@@ -213,9 +292,26 @@ dữ liệu, không suy diễn nếu thiếu (đúng nguyên tắc "AI không b�
 9. So sánh giá tại quầy vs online.
 10. `TicketPriceFrom` cho JSON-LD offers.
 
+**Mới đề xuất — phân tích vai khách du lịch, 07/2026 (CHƯA build, chưa vào
+implementation-plan chính thức):**
+11. Chi phí ước tính cho 1 chuyến (§5.4) — không cần cột DB mới, ROI cao nhất
+    trong nhóm này vì chỉ là logic tổng hợp dữ liệu đã có.
+12. Giá vé theo đối tượng (§5.5) — cần cột `PriceBreakdownJson` mới.
+13. Câu chuyện văn hoá - lịch sử (§5.6) — không cần cột mới, chỉ sửa prompt pack.
+14. Khối "Lưu ý thực tế" gộp (§5.7) — cần cột `PracticalNotesJson` mới.
+
+1-10 ở trên (trừ #1 Review/Rating, #2 FAQ, #3 landing Loại/Tỉnh, #4 SSR khách
+sạn, #6 bản đồ, #7 rel=sponsored, #9 so sánh giá, #10 TicketPriceFrom — đã build
+Phase 9, xem `dichoithoi-backlog.md`) vẫn giữ nguyên để tra cứu lịch sử quyết
+định; trạng thái build mới nhất luôn tra ở `dichoithoi-backlog.md`.
+
 Tài liệu này không thay thế phần thiết kế backend/schema đã chốt ở
 `dichoithoi-database-redesign.md` và `dichoithoi-destination-spec.md` — mọi thay
 đổi schema đề xuất ở §6 cần chốt riêng trước khi đưa vào migration.
+
+⚠️ **Toàn bộ tài liệu này phải tuân theo** `dichoithoi-seo-principles.md` (ưu
+tiên cao nhất) — mọi đề xuất SEO/UX ở đây là ÁP DỤNG của nguyên tắc đó, nếu
+phát hiện mâu thuẫn thì `dichoithoi-seo-principles.md` thắng.
 
 ---
 
@@ -406,4 +502,292 @@ dụng cho thiết kế đã đề xuất ở §2-3:
 - Lỗi tải dữ liệu (vd khối khách sạn/tour không load) trên production: ẩn hẳn
   khối đó thay vì hiện khung lỗi xấu — nguyên tắc "degrade mềm" đã áp dụng cho
   cache invalidation (system-overview §2) nên áp dụng nhất quán ở UI luôn.
+
+## 10) Layout mobile-first — thiết kế lại toàn bộ (đề xuất 07/2026)
+
+Thiết kế mới hoàn toàn, KHÔNG dựa trên layout hiện có — được phép đập đi làm lại
+theo mục tiêu §0 (giá trị người dùng + tốc độ + SEO), ưu tiên **mobile-first**:
+viết CSS base cho mobile trước, desktop chỉ thêm bằng `min-width` (không phải
+ngược lại) — vì phần lớn traffic tìm kiếm du lịch là mobile, base payload phải
+nhẹ nhất cho nhóm đông nhất. Áp dụng cho cả 3 loại trang: trang chủ, trang danh
+mục (Loại/Tỉnh), trang chi tiết điểm đến.
+
+### 10.1 Menu/điều hướng
+
+**Mobile (< 768px)** — header sticky cao ~56px:
+```
+┌─────────────────────────────┐
+│ ☰   [Logo dichoithoi]   🔍  │
+└─────────────────────────────┘
+```
+- `☰` mở drawer trượt từ trái: Trang chủ / Điểm đến (accordion: theo Loại, theo
+  Tỉnh) / Cẩm nang / Về chúng tôi.
+- `🔍` mở ô tìm kiếm full-width đè lên header (không chuyển trang riêng), gợi ý
+  ngay khi gõ (điểm đến/tỉnh).
+- KHÔNG dùng mega-menu hover (không có hover trên mobile) — mọi thứ tap +
+  accordion.
+
+**Desktop (≥ 1024px)** — `☰` biến mất, nav ngang đầy đủ:
+```
+[Logo]   Trang chủ   Điểm đến ▾   Cẩm nang        [Tìm kiếm...........]
+```
+"Điểm đến ▾" hover ra mega-menu 2 cột: cột trái = Loại (nhóm + loại con), cột
+phải = Tỉnh/Thành (chia theo miền Bắc/Trung/Nam) — đây là internal-link quan
+trọng nhất của site nên liệt kê đủ, không chỉ vài mục "nổi bật".
+
+**Thanh hành động dính đáy (chỉ trang chi tiết điểm đến, mobile only)** — pattern
+chuyển đổi tốt nhất cho content du lịch, thay thế vai trò 2 nút CTA đã nằm sẵn
+trong khối "quyết định nhanh" ở đầu trang trên desktop:
+```
+┌─────────────────────────────┐
+│  [📍 Chỉ đường]  [🎟 Mua vé] │  ← sticky bottom, luôn hiện khi cuộn
+└─────────────────────────────┘
+```
+Giới hạn chiều cao thanh này KHÔNG quá 15-20% chiều cao màn hình mobile (đúng
+nguyên tắc chống "intrusive interstitial" ở §9.5).
+
+### 10.2 Trang chủ
+
+**Mobile** — 1 cột dọc theo đúng thứ tự ưu tiên §... (mục §0 mục tiêu sản
+phẩm), 2 khối cuối dùng carousel vuốt ngang thay vì kéo dài trang:
+```
+[Ô tìm kiếm nổi bật]
+[Lưới danh mục 2 cột — icon Loại]
+[Điểm đến nổi bật — carousel vuốt ngang, 6-8 thẻ biên tập tay]
+[Cẩm nang mới — carousel vuốt ngang]
+[Gợi ý khách sạn/tour — carousel vuốt ngang]
+[Footer: link đủ ~34 tỉnh + ~18 loại, dạng list gọn]
+```
+**Desktop** — carousel mở rộng thành lưới tĩnh (4-6 cột), danh mục thành lưới
+6-8 cột; vẫn giữ 1 cột chính (không chia sidebar) vì trang chủ không cần điều
+hướng phụ.
+
+Vai trò trang chủ: KHÔNG phải nơi hứng traffic SEO chính (traffic tìm kiếm rơi
+thẳng vào trang danh mục/chi tiết) — vai trò là crawl-hub điều hướng toàn site +
+điểm giữ chân traffic trực tiếp/quay lại + tín hiệu freshness (cẩm nang mới).
+
+### 10.3 Trang danh mục (`/loai`, `/loai/{group}`, `/loai/{group}/{type}`, `/tinh/{slug}`)
+
+Trang SEO ưu tiên cao nhất (long-tail: "địa điểm tâm linh miền Bắc", "du lịch Đà
+Lạt có gì chơi") — khác biệt lớn nhất so với listing thông thường: **mỗi trang
+phải có đoạn văn bản riêng**, không chỉ là 1 lưới card (tránh thin content).
+
+**Mobile:**
+```
+[Breadcrumb rút gọn: Tỉnh > Đà Lạt]
+[H1 + đoạn giới thiệu ngắn riêng cho trang này]
+[Nút "Bộ lọc ▾"] → mở bottom-sheet (không sidebar, tốn ngang màn hình nhỏ)
+[Lưới card 1 cột, ảnh full-width]
+[Phân trang: ‹ Trang 2/8 › — URL riêng từng trang, crawl được]
+[FAQ cấp danh mục — accordion]
+```
+**Desktop:** sidebar lọc bên trái (~25% width) luôn hiện thay vì bottom-sheet,
+lưới card 3-4 cột bên phải — màn desktop đủ rộng để lọc song song không che
+nội dung. Kết quả mặc định (không filter) PHẢI luôn SSR sẵn ở cả 2 kích thước;
+filter chỉ là tăng cường phía client, giữ trạng thái trên URL (§9.3).
+
+### 10.4 Trang chi tiết điểm đến
+
+Trang dài nhất — mobile cần công cụ điều hướng trong-trang để không bắt cuộn mù:
+
+**Mobile:**
+```
+[Breadcrumb]
+[Ảnh hero full-width]
+[Thanh chip vuốt ngang: Giá vé | Vị trí | Trải nghiệm | Ăn uống | Lưu trú | FAQ]
+   ← bấm nhảy neo tới section
+[Card "Quyết định nhanh": địa chỉ, giờ mở cửa, giá vé, chi phí ước tính]
+[Tổng quan]
+[Câu chuyện văn hoá - lịch sử]
+[Trải nghiệm/chơi gì]
+[Bản đồ nhúng + Flight/Bus tới tỉnh này]
+[Gallery — carousel vuốt ngang]
+[Ăn uống]
+[Lưu trú — card carousel]
+[Tour — card carousel]
+[Lưu ý thực tế — <details> gấp mặc định]
+[Mẹo & lưu ý — <details>]
+[Thời điểm đẹp]
+[FAQ — <details> từng câu]
+[Review/rating]
+[Điểm gần đó — carousel]
+[Bài cẩm nang liên quan]
+                                    [📍 Chỉ đường][🎟 Mua vé] ← sticky đáy (§10.1)
+```
+Dùng `<details>` gốc HTML (không phải JS ẩn/hiện) cho khối dài (lưu ý thực tế,
+mẹo, FAQ) — gọn trang mobile nhưng vẫn nằm trong DOM để Google đọc được, không
+mất nội dung SEO (đúng nguyên tắc §9.4 — crawler đọc DOM/ARIA để hiểu ngữ nghĩa).
+
+**Desktop:** chia 2 cột — cột chính (~70%) chứa toàn bộ nội dung theo đúng thứ
+tự trên nhưng KHÔNG cần gấp `<details>` (đủ chỗ hiện hết); cột phụ bên phải
+(~30%) sticky theo scroll chứa: card "Quyết định nhanh" + 2 nút hành động + bản
+đồ thu nhỏ — thay cho thanh sticky đáy của mobile.
+
+Thứ tự nội dung ở cả 2 kích thước đi theo hành trình quyết định của khách: tiền/
+hành động lên trên (giá vé, chi phí, CTA), cảm xúc/khám phá ở giữa (câu chuyện
+văn hoá, trải nghiệm, gallery), thực tế/liên quan ở cuối (lưu ý, FAQ, điểm gần
+đó) — nhất quán với khung nội dung đã chốt ở §1 và các khối mới §5.4-§5.7.
+
+### 10.5 Technical stack — tối ưu Lighthouse/PageSpeed tối đa (chốt 07/2026)
+
+Hiện trạng (`wwwroot/css/*.css`): Bootstrap + jQuery + icon font (`icon-navigation`,
+`btn btn-outline-primary`...) — nặng hơn cần thiết cho 1 site chủ yếu nội dung
+tĩnh. Khi đập đi làm lại, **KHÔNG dùng framework UI runtime nào** (không
+Bootstrap, không React/Vue/Alpine cho website công khai — Razor vẫn server-render
+HTML như hiện tại, đúng cho SEO/LCP, chỉ đổi tầng CSS/JS):
+
+1. **CSS**: viết bằng Tailwind nhưng **compile 1 lần lúc build/deploy** (PostCSS
+   purge hết class không dùng) → ra 1 file CSS tĩnh duy nhất, không cần Node.js
+   chạy runtime trên server production. Bảng màu khai báo CỐ ĐỊNH trong config
+   (chỉ 7 màu, xem bảng dưới) — không dùng bảng màu mặc định khổng lồ của
+   Tailwind, giữ file CSS nhỏ nhất.
+2. **JS**: bỏ hẳn jQuery. Vanilla JS thuần cho tương tác (drawer menu mobile
+   §10.1, carousel vuốt ngang, bottom-sheet filter §10.3, accordion FAQ/lưu ý
+   thực tế §10.4) — không cần bundler phức tạp.
+3. **Icon**: bỏ icon font hiện tại (tải cả bộ ký tự chỉ để dùng vài icon) →
+   SVG inline trực tiếp trong HTML.
+4. **Font chữ**: system font stack (`-apple-system, "Segoe UI", Roboto,...`) —
+   không tải gì cả, không FOUT/FOIT, không ảnh hưởng CLS/LCP. Nếu sau này cần
+   font riêng cho thương hiệu: self-host 1 font variable, subset tiếng Việt có
+   dấu, `font-display: swap`.
+5. **Ảnh**: WebP/AVIF, `srcset` theo kích thước màn hình, `width`/`height` cố
+   định (chống CLS), lazy-load mọi ảnh dưới màn hình đầu (đã áp dụng 1 phần,
+   giữ nguyên — xem §9.6 khung giữ chỗ ảnh).
+6. **Critical CSS**: inline phần CSS above-the-fold vào `<head>`, phần còn lại
+   load không chặn render (`media="print" onload=...` hoặc tương đương).
+7. **Nén + cache**: bật Brotli ở tầng IIS/Kestrel; cache header dài hạn cho
+   CSS/JS/ảnh kèm fingerprint tên file để cache-bust đúng lúc đổi nội dung.
+8. **Bên thứ 3**: Google Maps giữ nguyên iframe embed (`maps?q=...&output=embed`,
+   đã dùng — nhẹ nhất), KHÔNG chuyển sang Maps JavaScript SDK. Analytics (nếu
+   có) load `async`/`defer`, không chặn render.
+
+### 10.5.1 Tối ưu thêm — hosting SmarterASP .NET Advance (đề xuất 07/2026)
+
+Rà soát sau khi đã có bản thiết kế trên, phát hiện thêm các điểm tối ưu chưa
+xử lý — điều chỉnh cho đúng ràng buộc hosting shared/Advance (KHÔNG có quyền
+root/cài dịch vụ hệ thống như Redis server):
+
+1. **Output/HTTP cache — 2 tầng**: (a) ASP.NET Core `OutputCache` middleware
+   (in-memory, không cần cài gì thêm ở server) làm tầng 1; (b) **Cloudflare
+   (free tier)** đặt trước hosting qua DNS làm tầng 2 — cách thực tế nhất để
+   có CDN/edge cache thật trên shared hosting không có quyền server. Bật
+   "Cache Everything" (Page Rule/Cache Rule) cho `/diem-den/*`, `/tinh/*`,
+   `/loai/*`. ⚠️ IIS Application Pool bị recycle định kỳ trên shared hosting →
+   cache tầng 1 mất theo, Cloudflare (ngoài server) không bị ảnh hưởng — đây
+   là lý do BẮT BUỘC có tầng 2, không chỉ dựa tầng 1.
+2. **Invalidate cache khi publish**: mở rộng endpoint "invalidate cache" đã có
+   (database-redesign) — thêm bước gọi **Cloudflare Purge Cache API** theo
+   đúng URL vừa đổi, cần 1 API token Cloudflare cấu hình trong zinoflow.
+3. ✅ **Resize ảnh ở zinoflow, KHÔNG ở hosting** — đã có kế hoạch chi tiết từ
+   trước ở `destination-spec.md` §14 (3 cỡ cố định hero/medium/thumb, Cloudflare
+   free đã nhắc ở §14.2, tool tự convert WebP + resize bằng `sharp` + FTP ở
+   §14.3 giai đoạn 2) — KHÔNG phải đề xuất mới, chỉ xác nhận đúng hướng và
+   nhắc lại vì liên quan trực tiếp ràng buộc hosting Advance đang phân tích ở
+   đây.
+4. **Đo Lighthouse thực tế — chạy từ BÊN NGOÀI hosting**: 1 GitHub Actions
+   workflow (miễn phí) chạy định kỳ, gọi PageSpeed Insights API/Lighthouse CI
+   nhắm vài URL chính (trang chủ, 1 trang tỉnh, 1 trang điểm đến), lưu kết quả
+   theo thời gian để phát hiện regression — không phụ thuộc gói hosting.
+5. **`noindex`/canonical cho filter**: `<link rel="canonical">` trỏ về URL
+   không filter trong layout Razor khi có query string filter — tránh loãng
+   crawl budget khi nhiều tổ hợp tham số.
+6. **Sitemap chia nhỏ theo ngưỡng**: hiện ghi thẳng file tĩnh `wwwroot/*.xml`
+   — thêm ngưỡng (vd 40.000 URL/file, an toàn dưới giới hạn 50.000 của Google)
+   rồi tự tách nhiều file + `sitemap_index.xml`.
+7. **Warm-up sau App Pool recycle** (cần bạn kiểm tra control panel): nếu gói
+   Advance có tính năng "Task Scheduler"/"Cron Job", cấu hình gọi 1 URL "ping"
+   định kỳ (vd mỗi 10-15 phút) giữ app pool sống + cache ấm, tránh khách đầu
+   tiên sau mỗi lần recycle bị chậm — CHƯA xác nhận gói Advance có tính năng
+   này hay không.
+
+**Bảng màu** (giữ tinh thần màu thương hiệu cũ trong `common.css`, chuẩn hoá lại
+tối giản — chỉ 7 màu để CSS compile ra nhỏ nhất):
+
+| Vai trò | Mã màu | Ghi chú |
+|---|---|---|
+| Primary (thương hiệu, header, link) | `#015B93` | Giữ nguyên từ site cũ |
+| Primary hover/dark | `#013C60` | Giữ nguyên từ site cũ |
+| Accent (CTA affiliate: "Mua vé", "Đặt phòng") | `#F97316` | **Đổi từ đỏ `#D0021B` cũ** — cam tạo cảm giác hành động/ưu đãi, không liên tưởng lỗi/cảnh báo, tách biệt rõ với primary xanh dương (quyết định 07/2026) |
+| Success (giá tốt, đã xác nhận) | `#34A853` | Giữ nguyên từ site cũ |
+| Text chính | `#03121A` | Giữ nguyên từ site cũ |
+| Text phụ/border | `#5F6368` / `#CFD8DC` | Giữ nguyên từ site cũ |
+| Nền / nền phụ | `#FFFFFF` / `#F1F1F1` | Giữ nguyên từ site cũ |
+
+**Logo** (chốt 07/2026): **giữ nguyên** logo hiện tại (`wwwroot/images/logo.svg`,
+wordmark "DiChoiThoi" + icon máy bay giấy, SVG ~4.8KB) — màu nhấn đã khớp chính
+xác `#015B93` (Primary mới), không cần vẽ lại. Việc nhỏ đáng làm khi build: (1)
+chạy qua SVGO để nén path data (~giảm thêm 20-30%); (2) cân nhắc thêm 1 bản rút
+gọn chỉ icon (không phải logo mới, chỉ cắt từ path có sẵn) dùng riêng cho header
+mobile 56px/favicon — logo đầy đủ (wordmark dài) vẫn dùng cho header desktop +
+footer. Xem xét vẽ lại chỉ khi phát sinh nhu cầu thật sau này.
+
+### 10.6 Trang chi tiết theo `kind` — poi/cluster/province, và trục vùng/miền (phân tích 07/2026, CHƯA xác nhận cuối)
+
+⚠️ Phần này mới ở mức phân tích, chưa được xác nhận rõ ràng (khác §10.7 dưới —
+đã chốt) — ghi lại để không mất, cần bạn duyệt lại khi quay lại chủ đề này.
+
+- **`kind=poi`** (điểm con, lá cây): trang đầy đủ đúng §10.4 (giá vé, giờ mở
+  cửa, câu chuyện văn hoá, trải nghiệm, ăn uống, lưu trú, tour, lưu ý thực tế,
+  FAQ, review, điểm gần đó).
+- **`kind=cluster`** (khu vực/cụm) — 2 biến thể khác nhau, phân biệt bằng có
+  hay không `OpeningTime`/`TicketPrice`/`ContentHtml` thật (không cần cột mới):
+  1. Cụm CÓ vé/giờ riêng (vd Suối Tiên): render như POI đầy đủ + thêm khối
+     "Các khu trong [tên]" (dùng `ChildrenJson` — database-redesign §3.4) ngay
+     sau "Trải nghiệm/chơi gì".
+  2. Cụm THUẦN địa lý (vd Đà Lạt, Di Linh — huyện/thành phố): ẩn khối "quyết
+     định nhanh" (không áp dụng giá vé/giờ mở cửa), cấu trúc gần giống trang
+     danh mục (§10.3): breadcrumb, H1 + giới thiệu riêng, khối "Các điểm
+     trong [tên]" (toàn bộ `ChildrenJson`), rồi đặc sản/lưu trú/tour/FAQ cấp
+     khu vực.
+- **`kind=province`** (tỉnh) — ⚠️ đề xuất KHÔNG có trang chi tiết riêng ở
+  `/diem-den/{slug}`, vì trùng vai trò với `/tinh/{slug}` đã build Phase 9
+  (2 URL cùng nội dung 1 tỉnh → duplicate content, hại SEO). Đề xuất
+  `/diem-den/{provinceSlug}` redirect 301 sang `/tinh/{provinceSlug}`; node
+  `kind=province` trong cây chỉ giữ vai trò cấu trúc (gốc cho
+  `parentSlug`/`AncestorsJson`/`ChildrenJson`).
+- **Vùng/miền** (lớn hơn tỉnh, vd Tây Nguyên, Miền Bắc) — đề xuất KHÔNG thêm
+  làm `kind` thứ 4 trong cây destination (không phải 1 điểm du lịch vật lý,
+  không có giá vé/giờ mở cửa/toạ độ riêng) — thêm 1 trục phân loại độc lập mới
+  (giống `DestinationTypeGroup`): bảng `Region` (`Id`, `Slug`, `Name`) +
+  `Province.RegionId` FK, trang `/vung/{slug}` dùng đúng pattern trang danh
+  mục (§10.3): breadcrumb, H1 + giới thiệu riêng, danh sách tỉnh trong vùng,
+  điểm nổi bật toàn vùng, FAQ cấp vùng.
+
+### 10.7 Cấu trúc URL điểm đến — slug PHẲNG, không theo cấp bậc (chốt 07/2026)
+
+Quyết định: **giữ nguyên cách làm hiện tại** — `/diem-den/{slug}` phẳng
+(`slug` là khoá tự nhiên, unique toàn cục, KHÔNG nhúng đường dẫn cha/cụm/tỉnh
+vào URL, vd KHÔNG làm `/diem-den/lam-dong/da-lat/ho-xuan-huong`). Lý do (áp
+dụng chung cho mọi route điểm đến, không riêng trường hợp cụ thể nào):
+
+1. Google không tính độ sâu URL là yếu tố xếp hạng trực tiếp — quan trọng là từ
+   khoá trong URL + nội dung khớp intent, không phải số cấp thư mục.
+2. Cấp bậc đã truyền tải đủ qua Breadcrumb + JSON-LD `BreadcrumbList` (dùng
+   `AncestorsJson` — database-redesign §3.4) — không cần lặp lại trong URL.
+3. URL phẳng ổn định hơn nhiều khi tổ chức lại cây (đổi 1 điểm từ cụm này sang
+   cụm khác — thực tế hay xảy ra): URL nested bắt buộc đổi theo (mất link
+   equity, phải redirect + cập nhật sitemap); URL phẳng không bao giờ cần đổi
+   trừ khi chính bạn đổi tên/slug điểm đó.
+4. URL ngắn có CTR tốt hơn trên SERP (Google có thể cắt URL quá dài khi hiển
+   thị; URL ngắn nhìn "sạch", đáng tin hơn).
+5. Slug đã là khoá tự nhiên unique toàn cục (không phụ thuộc cha) — giữ đơn
+   giản, không cần đảm bảo unique-trong-phạm-vi-cha.
+
+**Không mâu thuẫn** với `/loai/{group}/{type}` (đang nested 2 tầng) — taxonomy
+loại hình ổn định/ít đổi cấu trúc theo thời gian (curated tay), khác cây
+destination (dễ tổ chức lại) — nguyên tắc chung: **nested URL chỉ dùng cho cấu
+trúc ổn định, ít đổi**; cây địa lý điểm đến giữ phẳng.
+
+**Quy ước đặt slug**: ngắn nhưng đủ từ khoá chính (tên điểm đến, không dấu) —
+KHÔNG lặp lại thông tin đã có ở breadcrumb/title (vd dùng `thac-datanla`, không
+`thac-nuoc-datanla-da-lat-lam-dong-viet-nam`). Chỉ thêm hậu tố phân biệt (vd
+`-da-lat`) khi THẬT SỰ trùng tên với 1 điểm khác, không mặc định thêm mọi lúc.
+
+### 10.8 Trạng thái — chưa build, chờ chốt
+
+⚠️ Đây là bản thiết kế MỚI, thay thế hoàn toàn cách trình bày hiện có trên
+website dichoithoi — **chưa vào `dichoithoi-implementation-plan.md`**, cần bạn
+duyệt lần cuối trước khi đưa vào lộ trình build (đúng nguyên tắc "phân tích xong
+hết mới code sau"). Khi chốt: thêm vào `dichoithoi-backlog.md` §B (thứ tự build)
+và implementation-plan.
 

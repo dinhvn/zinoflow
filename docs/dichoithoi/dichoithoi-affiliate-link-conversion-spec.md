@@ -1,11 +1,12 @@
 # Dichoithoi — Chuyển đổi link gốc → link affiliate (spec tạo 07/2026)
 
-Cơ chế dùng CHUNG cho 3 loại link kiếm tiền: vé điểm đến (`ticketLinks[]` —
+Cơ chế dùng CHUNG cho 4 loại link kiếm tiền: vé điểm đến (`ticketLinks[]` —
 `dichoithoi-destination-spec.md` §2.3), khách sạn (`dichoithoi-hotel-spec.md`),
-tour (`dichoithoi-tour-spec.md`). Quyết định 07/2026: mọi nơi CHỈ nhập **link
-gốc** (trang khách sạn/tour/vé thật); link affiliate được **tự động sinh** theo
-quy tắc cấu hình sẵn, không nhập tay (tránh sai, khó đổi hàng loạt khi đổi mã
-affiliate/campaign).
+tour (`dichoithoi-tour-spec.md`), sản phẩm (`dichoithoi-product-spec.md`, thêm
+07/2026 — chèn qua tag trong bài viết, KHÔNG gắn theo điểm đến). Quyết định
+07/2026: mọi nơi CHỈ nhập **link gốc** (trang khách sạn/tour/vé/sản phẩm thật);
+link affiliate được **tự động sinh** theo quy tắc cấu hình sẵn, không nhập tay
+(tránh sai, khó đổi hàng loạt khi đổi mã affiliate/campaign).
 
 ## 1) Nguyên tắc thiết kế
 
@@ -46,6 +47,19 @@ Mọi link (item trong `ticketLinks[]`, khách sạn, tour) đều mang 4 field 
 | `sourceUrl` | link gốc — BẮT BUỘC, người dùng nhập/dán |
 | `affiliateUrl` | link đã convert — TÍNH SẴN, đây là link thực sự render ra web |
 | `linkStatus` | `converted` (đã áp rule) \| `no-rule` (chưa có rule khớp, affiliateUrl=sourceUrl) \| `manual-override` (tự sửa tay, bỏ qua rule) |
+
+**Riêng Product** (`dichoithoi-product-spec.md` §3): sẽ dùng NHIỀU sàn TMĐT
+(Shopee/Lazada/Tiki...) — chỉ cần thêm rule mới vào `affiliate_link_rules`
+(data, không phải code) khi có mã affiliate từng sàn, không chặn việc build các
+phần khác của module Product. Thứ tự sàn nào cấu hình trước chưa chốt (07/2026).
+
+**Riêng `ticketLinks[]`** (đề xuất 07/2026, chưa build — xem
+`dichoithoi-content-seo-ux-plan.md` §5.5): thêm field thứ 5 `price` (numeric,
+TUỲ CHỌN/nullable) — giá tham khảo riêng của nhà cung cấp đó, KHÁC với
+`PriceBreakdownJson` (giá cố định chính thức do điểm đến quy định, không qua
+affiliate — xem destination-spec §2.2). Hotel/Tour KHÔNG cần field này vì đã có
+`price_from` ở cấp entity (1 khách sạn/tour = 1 giá, không phải nhiều link
+cùng 1 mục như ticketLinks).
 
 ## 3) Thuật toán convert
 

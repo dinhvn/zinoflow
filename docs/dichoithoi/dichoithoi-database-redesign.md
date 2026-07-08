@@ -137,6 +137,40 @@ vào `DestinationContent.RelatedJson` (mảng `{slug, name, thumbnail, badge}`).
 → Trang detail = **1 query duy nhất**. Bảng `DestinationRelation` là nguồn sự thật
 để tính lại; RelatedJson là read-model. Đổi quan hệ → job re-publish RelatedJson.
 
+**Đề xuất bổ sung 07/2026 (phân tích cây phân cấp tỉnh → khu vực → điểm con, vd
+Lâm Đồng → Đà Lạt/Di Linh/Đức Trọng → điểm cụ thể) — CHƯA thêm vào DDL thật, chỉ
+ghi nhận**: `RelatedJson` phục vụ mục đích "gợi ý" (trộn nhiều tiêu chí, cắt 8
+mục) — KHÁC mục đích với việc **liệt kê đầy đủ cây cấu trúc** (breadcrumb + danh
+sách con không giới hạn). Đề xuất thêm 2 cột JSON riêng, cùng tính lúc publish
+trong `RecomputeRelatedService` (tái dùng job/trigger đã có, không tạo job mới):
+- `AncestorsJson` — mảng từ gốc đến chính nó `[{slug,name,kind}]` (vd điểm ở Đà
+  Lạt → `[{Lâm Đồng},{Đà Lạt}]`) — render breadcrumb ngay, không cần query đệ
+  quy (`ParentId`/`parentSlug`) lúc load trang.
+- `ChildrenJson` — danh sách **đầy đủ** con trực tiếp (không cắt 8 như
+  `RelatedJson`) — dùng cho trang tỉnh/cụm cần liệt kê hết khu vực con/điểm con.
+
+Cây `kind` (`province`/`cluster`/`poi`) + `ParentId`/`parentSlug` + `ProvinceId`
+hiện có đã đủ mô hình hoá đúng ví dụ trên, không cần đổi cấu trúc — chỉ thêm 2
+cột đọc-nhanh này. Không khuyến nghị lồng quá 1 cấp `cluster` trong `cluster`
+(dù `ParentId` tự tham chiếu không giới hạn được) — giữ breadcrumb/URL/sitemap
+đơn giản, thực tế du lịch hiếm khi cần sâu hơn 3 tầng.
+
+**Đề xuất bổ sung 07/2026 (rà soát tốc độ trang detail — phát hiện website đang
+JOIN+ORDER BY+TAKE bảng Hotel/Tour SỐNG lúc render, sai nguyên tắc "website chỉ
+đọc, không xử lý" — system-design §5 mục 1)**: thêm `HotelCardsJson`/
+`TourCardsJson` (xem DDL §4.3) — tính sẵn danh sách khách sạn/tour gợi ý (đã
+JOIN, sort, cắt limit) ngay lúc publish/khi Hotel-Tour-DestinationMap đổi, thay
+vì query sống. Trigger tính lại: (a) lúc publish destination (như RelatedJson),
+(b) THÊM trigger mới khi 1 Hotel/Tour đổi giá/rating hoặc đổi mapping — quét
+mọi destination liên quan tới Hotel/Tour đó và tính lại (khác RelatedJson chỉ
+trigger theo destination, ở đây phải trigger theo chiều ngược — từ Hotel/Tour
+ra danh sách destination bị ảnh hưởng).
+
+**URL vẫn giữ PHẲNG bất kể độ sâu cây** (chốt 07/2026 — chi tiết + lý do đầy đủ
+xem `content-seo-ux-plan.md` §10.7): `/diem-den/{slug}`, KHÔNG nhúng đường dẫn
+cha/cụm/tỉnh vào URL. Cấp bậc truyền tải qua Breadcrumb + JSON-LD
+`BreadcrumbList` dùng `AncestorsJson` ở trên, không phải qua cấu trúc URL.
+
 ---
 
 ## 4) Schema mới (DDL)
@@ -220,13 +254,43 @@ CREATE TABLE DestinationContent (
   HotelText      nvarchar(max) NULL,
   FaqJson        nvarchar(max) NULL,          -- [{q,a}] → render FAQ + JSON-LD FAQPage (SEO)
   RelatedJson    nvarchar(max) NULL,          -- §3.4 — precomputed, render 0 join
-  TicketLinksJson nvarchar(max) NULL,         -- [{provider,label,sourceUrl,affiliateUrl,linkStatus}] — nhiều link mua vé (Klook, TripVision...), thay BookingUrl 1 link cũ; affiliateUrl tính sẵn qua dichoithoi-affiliate-link-conversion-spec.md
+  TicketLinksJson nvarchar(max) NULL,         -- [{provider,label,sourceUrl,affiliateUrl,linkStatus}] — nhiều link mua vé (Klook, TripVision...), thay BookingUrl 1 link cũ; affiliateUrl tính sẵn qua dichoithoi-affiliate-link-conversion-spec.md. Ke hoach them field "price" tuy chon/nullable (de xuat 07/2026, chua build — content-seo-ux-plan §5.5, affiliate-conversion-spec §2) — gia rieng tung nha cung cap, KHAC PriceBreakdownJson (gia chinh thuc dia diem quy dinh).
   GalleryJson    nvarchar(max) NULL,          -- [{path,altText,caption,credit}] — CÙNG TÊN FIELD với bảng soạn destination_images (Postgres, destination-spec §14.4) để khỏi phải map đổi tên; path TƯƠNG ĐỐI giống quy ước Thumbnail (base URL riêng, destination-spec §14.2). Vá gap 07/2026: content-seo-ux-plan §5.1 đã đề xuất gallery nhưng chưa có chỗ lưu để website render.
   TicketPriceFrom decimal(12,0) NULL,         -- vá gap 07/2026: giá số cho JSON-LD offers/priceRange (content-seo-ux-plan §6 #4) — TicketPrice vẫn giữ text tự do cho hiển thị, cột này CHỈ dùng khi giá quy về 1 con số được, NULL nếu không (vd giá theo gói)
   MetaTitle      nvarchar(150) NULL,          -- SEO do AI tool quản, hết string.Format ở controller
   MetaDescription nvarchar(300) NULL
 );
 ```
+**Kế hoạch thêm cột sau (đề xuất 07/2026, phân tích vai khách du lịch — CHƯA thêm
+vào DDL thật, chỉ ghi nhận)**: `PriceBreakdownJson` (giá vé theo đối tượng —
+`content-seo-ux-plan.md` §5.5) và `PracticalNotesJson` (bãi xe/nhà vệ sinh/an
+toàn/quy định — §5.7), cùng dạng `nvarchar(max)` JSON như `FaqJson`. "Chi phí ước
+tính" (§5.4) và "câu chuyện văn hoá" (§5.6) KHÔNG cần cột mới — xem 2 mục đó để
+biết vì sao.
+
+Cũng CHƯA thêm vào DDL thật (đề xuất 07/2026, phân tích cây phân cấp — xem §3.4):
+`AncestorsJson` (`[{slug,name,kind}]` — breadcrumb precomputed, không query đệ
+quy) và `ChildrenJson` (danh sách đầy đủ con trực tiếp, không cắt 8 mục như
+`RelatedJson`) — cùng dạng `nvarchar(max)` JSON, cùng nguồn tính (`ParentId`,
+`Kind`) đã có sẵn trên `Destination`.
+
+Cũng CHƯA thêm vào DDL thật (đề xuất 07/2026, phát hiện lúc rà soát tốc độ —
+xem §3.4): `HotelCardsJson`/`TourCardsJson` (danh sách khách sạn/tour gợi ý đã
+JOIN+sort+cắt limit sẵn — THAY query sống hiện tại của website qua
+`V2HotelDestinationMap`/`V2TourDestinationMap` JOIN `V2Hotel`/`V2Tour` ORDER BY
+Rating). Đây là việc SỬA (đổi từ live query sang precompute), không phải thêm
+tính năng mới.
+
+Về review (`AvgRating`/`ReviewCount` đã có sẵn cột cache trên `V2Destination`
+— redesign §4.2/`V2Destination.cs`): đề xuất SỬA CÁCH GHI, không cần cột mới —
+hiện website đang load TOÀN BỘ list review rồi tính `.Average()` mỗi lần render
+(`DestinationExtrasRepository.GetExtrasBySlugAsync`), đúng ra phải UPDATE 2 cột
+cache này NGAY lúc ghi review mới (website là single-writer của bảng Review —
+system-design §5 mục 2, ngoại lệ duy nhất website được ghi), rồi trang detail
+đọc thẳng 2 cột cache, KHÔNG tính `.Average()` lúc render. Chỉ query full list
+review riêng khi cần hiện chi tiết từng review (tách khỏi phần trên, không
+chặn render phần chính).
+
 Phân tích "chi tiết nên lưu thế nào" — 3 lựa chọn đã cân nhắc:
 1. *Tất cả thành 1 HTML*: render nhanh nhất nhưng mất khả năng hiện quick-facts
    thành card/bảng riêng + không cập nhật lẻ giá vé.
@@ -312,6 +376,14 @@ cột flags `IsGroup/IsArea/IsProvince`, cột CSV `Type`, các cột denormaliz
 Lớp cache phía .NET (giữ pattern IMemoryCache sẵn có): taxonomy (Province, Type)
 cache vĩnh viễn + invalidate khi AI tool gọi webhook/endpoint refresh; trang detail
 cache theo slug với sliding expiration như hiện tại; thêm response caching/ETag.
+
+**Bổ sung 07/2026 (ràng buộc hosting SmarterASP .NET Advance — shared, không có
+quyền root/Redis)**: thêm tầng 2 **Cloudflare (free tier)** làm CDN/edge cache
+ngoài server, đặt trước IIS qua DNS — vì `IMemoryCache` mất theo mỗi lần IIS
+Application Pool recycle (shared hosting recycle định kỳ), Cloudflare không bị
+ảnh hưởng. Endpoint invalidate cache hiện có (gọi lúc publish — mục 3 dưới)
+cần gọi THÊM Cloudflare Purge Cache API theo đúng URL vừa đổi, không chỉ xoá
+`IMemoryCache` phía .NET. Chi tiết đầy đủ: `content-seo-ux-plan.md` §10.5.1.
 
 ## 6) Search nhanh
 Quy mô vài nghìn điểm đến → **search trong memory** nhanh hơn mọi giải pháp DB:

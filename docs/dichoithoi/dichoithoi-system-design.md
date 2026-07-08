@@ -10,6 +10,10 @@ hết 10 file kia trước. Mỗi mục trỏ lại spec gốc để biết chi 
 trò 3 thành phần). Kế hoạch triển khai theo file này: xem
 [dichoithoi-implementation-plan.md](dichoithoi-implementation-plan.md).
 
+⚠️ **Đọc TRƯỚC TIÊN, ưu tiên cao hơn mọi spec khác**:
+[dichoithoi-seo-principles.md](dichoithoi-seo-principles.md) — vai trò/tư duy
+bắt buộc + quy trình 3 câu hỏi trước khi thêm bất kỳ tính năng/thông tin nào.
+
 ## 1) Bản đồ module
 
 zinoflow (NestJS) có **5 module** phục vụ dichoithoi, cấu trúc 4 lớp chuẩn
@@ -157,10 +161,20 @@ POST   /api/affiliate/rules/:id/reapply
 
 ## 5) Nguyên tắc kỹ thuật áp dụng XUYÊN SUỐT (không lặp lại giải thích — chỉ liệt kê)
 
-1. **Ghi đắt, đọc rẻ** — mọi thứ tính được lúc ghi thì tính sẵn: `RelatedJson`,
-   `affiliateUrl`, `ContentHtml` (kể cả khối động của Article) đều precompute,
-   KHÔNG có logic nào chạy lúc website render (database-redesign §2.1,
-   affiliate-conversion-spec §6, article-spec §2).
+1. **Ghi đắt, đọc rẻ — website CHỈ đọc và hiển thị, không xử lý logic**
+   (nguyên tắc kiến trúc bao trùm, phát biểu lại rõ ràng 07/2026): zinoflow xử
+   lý TOÀN BỘ — tính toán, join, sắp xếp, lọc, gộp dữ liệu — ngay lúc ghi/publish;
+   website .NET chỉ làm 2 việc: SELECT theo khoá (slug/id) và render template,
+   KHÔNG JOIN nhiều bảng lúc render, KHÔNG tính aggregate (`AVG`, `COUNT`) lúc
+   render, KHÔNG sort/filter phức tạp lúc render. Mọi danh sách hiển thị
+   (related, gallery, FAQ, hotel/tour gợi ý, ticket links, ancestors/children)
+   đều là 1 cột JSON đã tính sẵn — trang detail lý tưởng chỉ cần **1 query
+   chính** đọc 1 dòng đã chứa mọi thứ, cộng tối đa 1 query phụ cho phần bắt
+   buộc phải sống (xem mục 2). Ví dụ cụ thể: `RelatedJson`, `affiliateUrl`,
+   `ContentHtml` (kể cả khối động của Article), và mới bổ sung `HotelCardsJson`/
+   `TourCardsJson` (thay JOIN+ORDER BY+TAKE lúc render — database-redesign §4.3)
+   đều precompute (database-redesign §2.1, affiliate-conversion-spec §6,
+   article-spec §2).
 2. **Single-writer per table** — website chỉ ghi `DestinationReview`, mọi bảng
    khác chỉ AI tool ghi (system-overview §1).
 3. **Không bịa dữ liệu cứng** — AI không tự sinh lat/lng/địa chỉ/link affiliate/
@@ -175,6 +189,19 @@ POST   /api/affiliate/rules/:id/reapply
    theo TTL; UI ẩn khối lỗi thay vì hiện lỗi xấu (content-seo-ux-plan §9.6).
 7. **Dev không đụng production** — LocalDB clone (`pnpm clone:dichoithoi`),
    chỉ bật connection production lúc go-live thật (system-overview §6.6).
+8. **Frontend nhẹ nhất có thể (chốt 07/2026, khi đập đi làm lại UI)** — KHÔNG
+   framework UI runtime (bỏ Bootstrap/jQuery/icon font hiện tại), Tailwind
+   compile-time purge + vanilla JS + SVG inline + system font + ảnh
+   WebP/AVIF + Brotli/cache — mục tiêu Lighthouse Performance 90+. Bảng màu cố
+   định 7 màu (giữ tinh thần thương hiệu cũ, đổi CTA sang cam). Chi tiết đầy đủ
+   + lý do từng lựa chọn: `content-seo-ux-plan.md` §10.5.
+9. **Cache 2 tầng phù hợp hosting shared (SmarterASP .NET Advance — không có
+   quyền root/cài Redis)**: output cache in-memory (ASP.NET Core
+   `OutputCache`) + Cloudflare free tier làm CDN/edge cache ngoài server —
+   invalidate cả 2 khi publish (mở rộng endpoint invalidate cache đã có, thêm
+   gọi Cloudflare Purge API). Resize ảnh làm ở zinoflow lúc publish (sinh sẵn
+   nhiều size, upload qua FTP), KHÔNG resize lúc request trên hosting shared.
+   Chi tiết: `content-seo-ux-plan.md` §10.5.1.
 
 ## 6) Điểm rủi ro kỹ thuật cần nhớ khi build (tổng hợp, xem chi tiết ở backlog §C)
 

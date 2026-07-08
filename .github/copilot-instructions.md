@@ -17,6 +17,10 @@ Key docs (read before making design decisions):
 - `docs/idea.md` — business context + final direction (11/06/2026)
 - `docs/tech-recommendation-web-mvp.md` — tech decision record (frozen, do not re-litigate)
 - `docs/specs/ai-content-technical-spec.md` — main spec (state machine, quality gates, 8-block article framework)
+- `docs/dichoithoi/dichoithoi-seo-principles.md` — **HIGHEST PRIORITY for any dichoithoi work**:
+  mandatory SEO-owner mindset + 3-question checklist (useful to user? SEO-correct structure?
+  what extra signal increases SEO?) to run BEFORE designing/coding any dichoithoi feature or
+  displayed field. Overrides other dichoithoi specs on conflict.
 - `docs/dichoithoi/dichoithoi-destination-spec.md` — destination content for dichoithoi.com (M6)
 - `docs/specs/folder-structure.md` — monorepo layout
 - `docs/clean-architecture-playbook.md` — architecture rules

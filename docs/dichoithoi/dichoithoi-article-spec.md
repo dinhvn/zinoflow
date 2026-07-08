@@ -87,6 +87,8 @@ cần thiết (đúng như bạn nhận xét).
 [[block:hotels province=lam-dong limit=6]]
 [[block:tours destination=da-lat limit=4]]
 [[block:destination slug=thac-datanla]]   -- 1 điểm cụ thể, card đơn lẻ inline
+[[block:products tag=leu-trai,giay-di-bo limit=4]]   -- sản phẩm affiliate theo tag (đề xuất 07/2026, xem dichoithoi-product-spec.md)
+[[block:product id=xxx-xxx-xxx]]          -- 1 sản phẩm cụ thể, card đơn lẻ inline
 ```
 
 - Mỗi token nằm RIÊNG 1 dòng trong markdown nguồn (không lồng trong đoạn văn) —
@@ -104,6 +106,8 @@ cần thiết (đúng như bạn nhận xét).
 | `hotels` | bảng Hotel (`dichoithoi-hotel-spec.md`) theo Province | giống card "khách sạn gợi ý" |
 | `tours` | bảng Tour (`dichoithoi-tour-spec.md`) theo destination/Province | giống card "tour gợi ý" |
 | `destination` (số ít) | 1 slug cụ thể | card đơn — dùng khi nhắc 1 nơi giữa đoạn văn |
+| `products` *(đề xuất 07/2026, chưa build)* | bảng `products` theo `tag` (OR, khớp bất kỳ) + `category` tuỳ chọn | card sản phẩm affiliate — xem `dichoithoi-product-spec.md` §4 |
+| `product` (số ít) *(đề xuất 07/2026, chưa build)* | 1 `id` cụ thể | card đơn — dùng khi nhắc 1 sản phẩm giữa đoạn văn |
 
 ## 4) Thuật toán compile (lúc Approve→Publish HOẶC bấm "Làm mới khối động")
 
@@ -204,9 +208,11 @@ mọi version + token gốc nằm ở Postgres draft; SQL Server chỉ giữ b�
    repo dichoithoi, song song các route landing khác (`/loai/...`, `/tinh/...`).
 3. Bộ khối hỗ trợ MVP chỉ 4 loại ở §3.1 — có cần thêm (vd khối "món ăn/quán ăn"
    riêng, khác `destinations`) khi có module riêng cho ẩm thực sau này không?
-4. AI có tự đề xuất chèn khối động lúc generate không (dựa chủ đề bài, tool tự
-   gợi ý `[[block:...]]` vào đúng vị trí trong outline) hay MVP chỉ để người
-   dùng tự chèn tay qua editor (§9)? Ảnh hưởng độ phức tạp prompt pack.
+4. ✅ **CHỐT 07/2026**: AI **tự gợi ý** chèn khối động lúc generate (dựa chủ đề
+   bài, chèn sẵn `[[block:...]]` vào outline draft) nhưng chỉ là gợi ý — người
+   dùng xem/sửa/xoá trong màn review trước khi Approve→Publish, không tự động
+   publish thẳng không qua duyệt. Áp dụng cho MỌI kind kể cả `products` mới
+   (`dichoithoi-product-spec.md` §7).
 5. Luồng "Viết tay" (§1.1) là thay đổi ở tầng CORE module `ai-content` (state
    machine + use case mới), không nằm gọn trong module destination/article —
    cần làm TRƯỚC hoặc CÙNG lúc với phần publisher/khối động của Article, vì

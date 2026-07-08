@@ -162,6 +162,162 @@ Hotel/Tour nếu khối lượng đủ lớn (backlog A.7).
 
 ---
 
+# Phase 12+ — Tổng hợp phân tích 07/2026 (chưa commit lúc viết phase này)
+
+Toàn bộ Phase 12-18 dưới đây tổng hợp các phân tích MỚI trong phiên làm việc
+07/2026 (sau khi Phase 9 website đã chạy phần lớn) — đang ở dạng doc/spec,
+CHƯA có dòng code nào. Nguyên tắc bắt buộc cho MỌI phase dưới: **mỗi phase phải
+đổi ĐỒNG BỘ cả zinoflow (nơi tính/ghi) VÀ website dichoithoi (nơi đọc/hiển thị)
+trong cùng 1 lần merge** — không rơi vào tình trạng đã phát hiện ở backlog
+(cột `RelatedJson` zinoflow ghi đúng nhưng website chưa đọc, gây lệch 2 bên).
+DoD của mỗi phase PHẢI kiểm tra được cả 2 đầu, không chỉ 1 bên.
+
+## Phase 12 — Giá vé 2 nguồn + 3 khối nội dung mới cho Destination
+
+**Phụ thuộc**: Phase 2 (destination), Phase 4 (ticketLinks) đã xong.
+**Nguồn**: `content-seo-ux-plan.md` §5.4-§5.7, `destination-spec.md` §2.2,
+`database-redesign.md` §4.3, `affiliate-link-conversion-spec.md` §2.
+
+- **Đồng bộ zinoflow**: thêm cột `PriceBreakdownJson`/`PracticalNotesJson`
+  (Postgres mirror + migration + SQL Server `DestinationContent`); thêm field
+  `price` (nullable) vào `affiliateLinkItemSchema` (chỉ ảnh hưởng
+  `ticketLinks[]`, KHÔNG lan sang Hotel/Tour — đã xác nhận qua grep); form sửa
+  điểm đến thêm khối "Giá vé theo đối tượng" (nhập tay, bảng {đối tượng, giá,
+  ghi chú}) + ô giá cho từng `ticketLinks[]` item; prompt pack thêm mục bắt
+  buộc "câu chuyện văn hoá - lịch sử" (không cột mới, chỉ prompt + structure
+  gate); khối "Lưu ý thực tế" — AI gợi ý draft trong form, người dùng duyệt
+  trước khi lưu.
+- **Đồng bộ website**: render bảng giá theo đối tượng dưới `TicketPrice`; hiện
+  giá riêng từng nút CTA ticketLinks nếu có; sửa §5.3 so sánh giá tại quầy vs
+  online dùng 2 số thật (`PriceBreakdownJson` vs `ticketLinks[].price`) thay
+  so sánh định tính hiện tại; render khối "Lưu ý thực tế" (đọc
+  `PracticalNotesJson`); tính "Chi phí ước tính cho 1 chuyến" (thuần Razor,
+  cộng `TicketPriceFrom`/Hotel/Tour `PriceFrom` đã đọc sẵn, KHÔNG cột DB mới).
+- **DoD**: nhập giá theo đối tượng + giá 2 ticketLinks cho 1 điểm đến → publish
+  → trang detail hiện đúng bảng giá + 2 nút CTA có giá riêng + dòng so sánh
+  đúng 2 số thật + dòng chi phí ước tính đúng tổng.
+
+## Phase 13 — Nhập toạ độ qua link Google Maps (chỉ zinoflow)
+
+**Phụ thuộc**: không phụ thuộc phase nào khác, làm độc lập bất kỳ lúc nào.
+**Nguồn**: `destination-spec.md` §2.1.1.
+
+- **Đồng bộ zinoflow**: ô "Dán link Google Maps" trong form sửa điểm đến, parse
+  regex (`!3d!4d` ưu tiên, fallback `@lat,lng`), resolve link rút gọn qua
+  theo-redirect (1 HTTP request), điền vào 2 ô lat/lng có sẵn (vẫn sửa tay
+  được).
+- **Đồng bộ website**: KHÔNG đổi gì — lat/lng đã đồng bộ sẵn qua cột hiện có.
+- **DoD**: dán link Suối Tiên mẫu ở đầu bài này → 2 ô lat/lng tự điền đúng
+  `10.8661916, 106.8005929` (ưu tiên đọc từ `!3d!4d` nếu link mẫu có).
+
+## Phase 14 — `AncestorsJson`/`ChildrenJson` (breadcrumb + danh sách con precompute)
+
+**Phụ thuộc**: Phase 2 (destination, đã có `kind`/`ParentId`/`ProvinceId`).
+**Nguồn**: `database-redesign.md` §3.4/§4.3.
+
+- **Đồng bộ zinoflow**: thêm 2 cột JSON (Postgres + SQL Server
+  `DestinationContent`); mở rộng `RecomputeRelatedService`/`related-builder.ts`
+  tính thêm `AncestorsJson` (đi từ `parentSlug` lên gốc) và `ChildrenJson`
+  (toàn bộ con trực tiếp, không cắt 8 như `RelatedJson`); trigger tính lại khi
+  publish HOẶC khi đổi `parentSlug` của chính nó/con nó.
+- **Đồng bộ website**: render breadcrumb từ `AncestorsJson` (thay vì không có/
+  query đệ quy nếu đang làm vậy); render lưới "Các khu/điểm trong [tên]" từ
+  `ChildrenJson` trên trang cluster.
+- **DoD**: đổi 1 điểm từ cụm A sang cụm B → publish → breadcrumb đúng cụm mới,
+  `ChildrenJson` của CẢ cụm A (mất con) và cụm B (thêm con) đều cập nhật đúng.
+
+## Phase 15 — Tối ưu tốc độ trang detail (bỏ query sống Hotel/Tour + cache review)
+
+**Phụ thuộc**: Phase 5 (hotel), Phase 6 (tour) đã xong.
+**Nguồn**: `database-redesign.md` §3.4/§4.3, phát hiện từ
+`DestinationExtrasRepository.GetExtrasBySlugAsync`.
+
+- **Đồng bộ zinoflow**: thêm cột `HotelCardsJson`/`TourCardsJson`
+  (`DestinationContent`); job tính lại 2 CHIỀU — (a) lúc publish destination
+  (như related), (b) MỚI: lúc 1 Hotel/Tour đổi giá/rating/mapping → quét mọi
+  destination liên quan và tính lại (chiều ngược, khác cơ chế related hiện có).
+- **Đồng bộ website**: SỬA `DestinationExtrasRepository.GetExtrasBySlugAsync`
+  — bỏ hẳn JOIN+ORDER BY+TAKE sống với `V2HotelDestinationMap`/
+  `V2TourDestinationMap`, đọc thẳng `HotelCardsJson`/`TourCardsJson`; sửa luồng
+  ghi review (nơi website tự ghi, ngoại lệ single-writer) để UPDATE
+  `AvgRating`/`ReviewCount` trên `V2Destination` ngay lúc insert, bỏ tính
+  `.Average()` toàn bộ list mỗi lần render.
+- **DoD**: đổi giá 1 hotel đã gán cho 1 điểm đến (không đụng destination đó)
+  → trang detail hiện giá mới KHÔNG cần publish lại destination; đếm số query
+  SQL cho 1 lần load trang detail giảm từ ~7 xuống 1 chính + tối đa 1 phụ.
+
+## Phase 16 — Module Sản phẩm (affiliate qua tag trong bài viết)
+
+**Phụ thuộc**: Phase 3 (affiliate), Phase 8 (article + block compiler) đã xong.
+**Nguồn**: `dichoithoi-product-spec.md`.
+
+- **Đồng bộ zinoflow**: module `product` mới đủ 4 lớp (domain/application/
+  infrastructure/presentation); bảng `products` (Postgres, KHÔNG đồng bộ SQL
+  Server); thêm kind `products`/`product` vào `BLOCK_KINDS`
+  (`block-token.ts`) + resolver trong `article-block-compiler.service.ts`
+  (match tag kiểu OR, sort theo số tag khớp); UI màn "Sản phẩm" (list, form
+  category/tags/affiliate); AI gợi ý chèn khối lúc generate bài (áp dụng
+  chung mọi kind, không riêng Product).
+- **Đồng bộ website**: KHÔNG cần đổi gì — card sản phẩm nằm sẵn trong
+  `ContentHtml` đã compile lúc publish bài, website chỉ render HTML như mọi
+  bài khác.
+- **DoD**: thêm 2-3 sản phẩm mẫu (tag `phuot`), viết bài chèn
+  `[[block:products tag=phuot limit=4]]` → publish → bài hiện đúng card sản
+  phẩm kèm giá + link affiliate.
+
+## Phase 17 — Cache hạ tầng cho hosting SmarterASP .NET Advance
+
+**Phụ thuộc**: Phase 9 (website) đã có route chính; nên làm SAU Phase 14/15
+(tránh cache dữ liệu sắp đổi cấu trúc).
+**Nguồn**: `content-seo-ux-plan.md` §10.5.1, `system-design.md` §5 mục 9.
+
+- **Đồng bộ zinoflow**: mở rộng endpoint/job "invalidate cache" hiện có — gọi
+  THÊM Cloudflare Purge Cache API (theo đúng URL vừa đổi) sau khi publish,
+  cần thêm config API token Cloudflare.
+- **Đồng bộ website**: bật ASP.NET Core `OutputCache` middleware (in-memory,
+  TTL vài giờ) cho các route content-heavy; cấu hình Cloudflare (DNS + Page
+  Rule "Cache Everything" cho `/diem-den/*`, `/tinh/*`, `/loai/*`); thêm
+  `<link rel="canonical">` cho tổ hợp filter; sitemap tách file khi vượt
+  ngưỡng 40.000 URL/file.
+- **Việc cần bạn tự kiểm tra trước phase này**: gói SmarterASP Advance có tính
+  năng Task Scheduler/Cron trong control panel không (warm-up app pool sau
+  recycle) — chưa xác nhận được từ xa.
+- **DoD**: publish 1 điểm đến → gọi thử URL đó thấy nội dung mới (cache đã bị
+  xoá đúng URL ở cả 2 tầng); các URL KHÔNG liên quan vẫn giữ cache cũ (không
+  xoá nhầm toàn bộ); đo Lighthouse trước/sau xác nhận Performance tăng.
+
+## Phase 18 — Đập đi làm lại UI website (mobile-first, stack nhẹ, theme mới)
+
+**Phụ thuộc**: Phase 14 (cần `AncestorsJson`/`ChildrenJson` cho breadcrumb +
+danh sách con). Nên làm SAU Phase 17 (cache) để không phải cache lại 2 lần.
+**Nguồn**: `content-seo-ux-plan.md` §10 (toàn bộ), `seo-principles.md`
+(bắt buộc áp dụng checklist 3 câu hỏi cho từng mảnh UI khi code).
+
+- **Đồng bộ website (module này gần như thuần website, zinoflow không đổi)**:
+  bỏ Bootstrap/jQuery/icon font hiện tại; dựng pipeline Tailwind compile-time
+  (purge) + theme 7 màu (§10.5); vanilla JS cho drawer/carousel/accordion;
+  SVG inline; layout mobile-first cho trang chủ (§10.2), trang danh mục
+  (§10.3), trang chi tiết theo `kind` — RIÊNG phần render khác nhau theo
+  `kind=poi`/`cluster` (2 biến thể)/`province` (redirect) **CHƯA xác nhận
+  cuối** (§10.6) — cần bạn chốt lại trước khi code đúng phần này, có thể tách
+  build sau các phần đã chắc chắn (§10.1/10.2/10.3/10.5/10.7).
+- **DoD**: Lighthouse Performance ≥ 90 trên 3 trang mẫu (chủ, danh mục, chi
+  tiết); mọi nội dung quan trọng có mặt đầy đủ trên mobile (không ẩn khỏi DOM
+  chỉ vì hẹp màn hình, trừ `<details>` gấp — vẫn nằm trong DOM).
+
+---
+
+## Còn treo — CHƯA đủ điều kiện đưa vào phase code (cần bạn quyết định trước)
+
+- **`kind=cluster` 2 biến thể + trục vùng/miền** (§10.6) — chưa xác nhận cuối,
+  chặn 1 phần Phase 18.
+- **Rà soát lại `DestinationType`/`DestinationTypeMap`** đã gắn cho từng điểm
+  đến (backlog §A.8) — chưa chọn AI đánh giá hay tự tay chuẩn hoá.
+- **Chuẩn hoá danh sách `category` cho Product** (product-spec §8.5) — chặn 1
+  phần nhỏ Phase 16 (màn quản lý), không chặn phần block compiler.
+
+---
+
 ## Bảng tổng hợp phụ thuộc (đọc nhanh)
 
 ```
@@ -176,4 +332,14 @@ Phase 0 (dev env)
 Phase 9 (website .NET)  — song song từ sớm, không chặn ai
 Phase 10 (go-live)      — cần 1-9 ổn định
 Phase 11 (giai đoạn 2)  — sau go-live
+
+Phase 12 (giá vé + 4 khối content)  — cần 2+4, độc lập với 13-18
+Phase 13 (Google Maps link parser)  — độc lập hoàn toàn
+Phase 14 (Ancestors/ChildrenJson)   — cần 2 (kind/ParentId có sẵn)
+Phase 15 (bỏ query sống Hotel/Tour) — cần 5+6
+Phase 16 (module Sản phẩm)          — cần 3+8
+Phase 17 (cache hạ tầng)            — nên sau 14+15
+Phase 18 (đập đi làm lại UI)        — cần 14, nên sau 17
+  └─ 1 phần bị CHẶN bởi quyết định "kind=cluster 2 biến thể + vùng/miền"
+     chưa xác nhận (xem mục "Còn treo" phía trên)
 ```
