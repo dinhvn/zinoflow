@@ -7,6 +7,19 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- **Gate "originality" (thứ 5) cho quality gates AI content** (`dichoithoi-
+  seo-principles.md` §3.3/§3.4, phân tích 07/2026 — xác minh trực tiếp tài
+  liệu Google `using-gen-ai-content`/`spam-policies`/`creating-helpful-
+  content`): 4 gate hiện có (structure/SEO/policy/data,
+  `destination-gates.ts`) đã đúng hướng chống "scaled content abuse" nhưng
+  CHƯA có gate kiểm tra trùng lặp NỘI BỘ (nhiều bài cùng khung dễ lặp công
+  thức, nhất là đoạn "câu chuyện văn hoá", "lưu ý thực tế", giới thiệu trang
+  cluster/tỉnh). Đề xuất: so sánh similarity với bài đã publish cùng loại/
+  tỉnh, chặn publish nếu vượt ngưỡng — CHƯA code, cần chọn phương pháp đo
+  similarity (full-text search đơn giản hay embedding) trước khi build.
+  Đồng thời chốt: KHÔNG dùng AI-detector (GPTZero/Originality.ai) làm tiêu
+  chuẩn pass/fail — không phải cơ chế Google dùng, chỉ tham khảo phụ.
+
 - **Sim du lịch — gợi ý/gắn link sản phẩm liên quan** (repo `dichoithoi`, ghi
   nhận 07/2026, CHƯA phân tích): mục đích gợi ý và gắn link sản phẩm liên quan
   tới sim du lịch — dự kiến có thể tái dùng chính module Article/Product mới

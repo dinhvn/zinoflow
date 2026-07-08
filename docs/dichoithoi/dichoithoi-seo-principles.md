@@ -88,7 +88,128 @@ lời rõ ràng 3 câu sau (không phải sau khi code xong mới nghĩ tới):
   ràng (`rel="sponsored"`, dòng thông báo) — minh bạch với người đọc VÀ đúng
   yêu cầu Google với nội dung có liên kết thương mại.
 
-## 3) Cách áp dụng khi làm việc
+## 3) Nội dung AI vs Google — sự thật đã kiểm chứng (07/2026, YẾU TỐ SỐNG CÒN)
+
+⚠️ Phần này được xác minh trực tiếp từ tài liệu chính thức của Google
+(`developers.google.com/search/docs/fundamentals/using-gen-ai-content`,
+`developers.google.com/search/docs/essentials/spam-policies`,
+`developers.google.com/search/docs/fundamentals/creating-helpful-content`,
+đọc lại 07/2026) — không suy đoán, không tin đồn SEO. Đọc kỹ trước khi viết
+bất kỳ bài AI nào cho dichoithoi.
+
+### 3.1 Sự thật quan trọng nhất — sửa 1 hiểu lầm phổ biến
+
+**Google KHÔNG có "máy dò AI" chấm điểm/phạt nội dung vì nó do AI viết.**
+Nguyên văn định hướng chính thức: cách nội dung được TẠO RA (người viết tay,
+AI hỗ trợ, AI viết hoàn toàn, tự động hoá) **không phải** là tín hiệu xếp hạng.
+Google nói rõ AI hữu ích khi "research chủ đề và thêm cấu trúc cho nội dung
+gốc", và tự động hoá đã được dùng lâu nay cho nội dung hữu ích (kết quả thể
+thao, thời tiết, transcript).
+
+**Cái BỊ phạt** không phải "dùng AI", mà là chính sách spam tên
+**"Scaled content abuse"** (gộp từ chính sách "auto-generated content" cũ,
+cập nhật 2024, siết chặt thêm ở đợt cập nhật lõi tháng 3/2026): *"tạo ra rất
+nhiều trang với mục đích CHÍNH là thao túng thứ hạng tìm kiếm, không giúp ích
+người dùng — bất kể tạo bằng cách nào"*. Nguyên văn ví dụ vi phạm Google liệt
+kê: "dùng công cụ AI tạo ra nhiều trang mà không thêm giá trị cho người dùng";
+cào feed/kết quả tìm kiếm để tạo nhiều trang giá trị thấp; ghép/nối nội dung
+từ nhiều trang khác mà không thêm giá trị; tạo nhiều trang có từ khoá nhưng
+nội dung vô nghĩa.
+
+→ Kết luận thực dụng: **KHÔNG cần "che giấu" là AI viết, KHÔNG cần cố làm văn
+bản "giống người" để qua mặt 1 detector không tồn tại.** Việc cần làm là đảm
+bảo MỖI bài AI viết ra thật sự đáp ứng nhu cầu người đọc, không phải bài thứ
+1000 rập khuôn cùng 1 khung không có gì mới.
+
+### 3.2 Khung "Who — How — Why" (tự đánh giá chính thức của Google)
+
+Google công bố 3 câu hỏi để tự đánh giá nội dung có phải "người-đầu-tiên"
+(people-first) hay "công cụ-tìm-kiếm-đầu-tiên" (search-engine-first — dấu hiệu
+xấu). Áp dụng cho MỌI bài dichoithoi trước khi Approve:
+
+1. **Who (Ai tạo ra)**: có tác giả/nguồn rõ ràng không, có thể hiện chuyên môn/
+   trải nghiệm thật không? → khớp thẳng với khối "câu chuyện văn hoá - lịch
+   sử" + review thật đã thiết kế (content-seo-ux-plan §5.6).
+2. **How (Tạo thế nào)**: có minh bạch về việc dùng tự động hoá/AI không (không
+   bắt buộc công khai trên trang, nhưng KHÔNG được tạo cảm giác giả tạo là
+   "phóng viên đã đến tận nơi" nếu không có input thật) — đây là lý do
+   destination-spec §3.5 cấm AI tự bịa dữ liệu cứng (lat/lng/giá/địa chỉ).
+3. **Why (Tạo để làm gì)**: mục đích chính phải là GIÚP NGƯỜI ĐỌC, không phải
+   để "hứng traffic tìm kiếm". Dấu hiệu XẤU Google nêu rõ: viết theo số từ cố
+   định vì "nghe nói Google thích độ dài đó", sản xuất hàng loạt chủ đề mong
+   1 vài bài lên hạng, tóm tắt lại nguồn khác mà không thêm giá trị, dùng
+   "automation quy mô lớn" để viết nhiều chủ đề không có chuyên môn thật.
+
+Câu hỏi chất lượng cụ thể Google dùng để tự chấm (áp cho mọi bài dichoithoi):
+- Nội dung có cung cấp thông tin/phân tích **gốc** không, hay chỉ tóm tắt lại
+  nguồn khác?
+- Có mô tả **đầy đủ, toàn diện** về chủ đề không (đúng tinh thần "8 khối nội
+  dung đầy đủ" đã thiết kế ở destination-spec §2.2)?
+- Người đọc có muốn **lưu lại/giới thiệu cho người khác** không?
+- Nội dung có khiến người đọc **tin tưởng** không (ai viết, có vẻ hiểu chủ đề
+  thật không)?
+
+### 3.3 Vì sao pipeline hiện tại (2-gate review + quality gates) đã đúng hướng — nhưng cần thêm 1 lớp
+
+Cơ chế đã có (`ai-content` module, `destination-gates.ts`): structure gate
+(≥3 section, ≥60 từ/section, FAQ ≥3), SEO gate (từ khoá trong H1/mở bài/meta),
+policy gate (cấm claim tuyệt đối kiểu "đẹp nhất Việt Nam", bắt buộc ghi ngày
+cập nhật), data gate (không field rỗng/bịa) — đây CHÍNH XÁC là cơ chế chống
+"scaled content abuse" và "low-effort content" (SQRG §4.6.5/§4.6.6) mà Google
+nói tới, dù lúc thiết kế ban đầu không đặt tên vậy. **Giữ nguyên, không bỏ.**
+
+**Lớp còn thiếu**: chưa có gate kiểm tra **tính nguyên bản** (originality) —
+rủi ro thật với AI viết hàng loạt bài cùng khung (vd nhiều điểm đến na ná
+nhau) là tạo ra nội dung **trùng lặp NỘI BỘ** (các bài tự giống nhau, chính là
+dấu hiệu "scaled content abuse" dù không sao chép từ ngoài). Đề xuất (CHƯA
+build, ghi nhận để phân tích/code sau — xem backlog): thêm **gate "originality"**
+thứ 5, so sánh đoạn văn mới với các bài ĐÃ publish cùng loại/tỉnh (similarity
+threshold, chặn publish nếu quá giống) — đặc biệt áp cho các đoạn dễ bị lặp
+khuôn: "câu chuyện văn hoá - lịch sử", "lưu ý thực tế", đoạn giới thiệu trang
+cluster/tỉnh.
+
+### 3.4 Kiểm tra TRƯỚC KHI publish — cách làm thực tế
+
+1. **Gate tự động đã có** (structure/SEO/policy/data) — bắt buộc pass 100%,
+   không có "publish tạm rồi sửa sau".
+2. **Tự kiểm tra trùng lặp NỘI BỘ** (so với bài khác trên chính site mình) —
+   cách đơn giản không cần công cụ trả phí: lấy 2-3 câu đặc trưng nhất của bài
+   mới, tìm trong chính database các bài đã publish (full-text search hoặc so
+   sánh embedding) xem có đoạn gần giống không. Đây là rủi ro THỰC TẾ NHẤT với
+   dichoithoi vì nhiều bài cùng khung (destination) dễ lặp công thức.
+3. **Tự kiểm tra trùng lặp BÊN NGOÀI** (so với nội dung đã có trên mạng) —
+   copy 2-3 câu đặc trưng, tìm kiếm Google để trong ngoặc kép ("..."), nếu ra
+   kết quả gần giống y hệt ở nguồn khác → viết lại đoạn đó. Không cần công cụ
+   trả phí cho quy mô hiện tại; nếu khối lượng bài tăng nhiều, cân nhắc
+   Copyscape/Originality.ai để tự động hoá bước này.
+4. **KHÔNG dùng "AI-detector" (GPTZero, Originality.ai...) làm tiêu chuẩn
+   pass/fail** — các công cụ này KHÔNG phải thứ Google dùng, và có tỷ lệ sai
+   (false positive/negative) đáng kể. Có thể dùng làm gợi ý phụ "đoạn này đọc
+   hơi khuôn mẫu, nên biên tập lại cho tự nhiên hơn" — nhưng quyết định cuối
+   cùng luôn là con người đọc và duyệt (đúng gate "review con người" đã có).
+5. **Kiểm tra kỹ thuật SEO của chính bài đó trước khi bấm Publish**: Rich
+   Results Test (structured data JSON-LD hợp lệ), Mobile-Friendly Test,
+   PageSpeed Insights cho URL staging nếu có — không chỉ tin thiết kế trên
+   giấy (đã nhắc ở content-seo-ux-plan §10.5.1 mục 4, nhưng đó là đo tổng thể
+   định kỳ; đây là kiểm tra TỪNG BÀI trước khi publish).
+6. **Câu hỏi Who/How/Why (§3.2) là bước duyệt cuối cùng của người review** —
+   không chỉ tick "gate pass" mà phải tự hỏi "bài này có thật sự giúp người
+   đọc, hay chỉ để có bài mới cho SEO".
+
+### 3.5 Điều KHÔNG được làm (rủi ro thật, đã có tiền lệ Google phạt)
+
+- KHÔNG viết nhiều bài gần giống nhau chỉ đổi tên địa điểm/từ khoá (khuôn mẫu
+  cứng) — đúng định nghĩa "scaled content abuse".
+- KHÔNG tóm tắt/diễn giải lại nội dung từ 1-2 nguồn có sẵn mà không có thông
+  tin/góc nhìn mới — đây là "low-effort content" bị SQRG chấm điểm thấp.
+- KHÔNG đặt mục tiêu "ra bài nhanh, nhiều" làm ưu tiên cao hơn "bài này có thật
+  sự tốt không" — đúng dấu hiệu xấu "search-engine-first" Google cảnh báo.
+- KHÔNG bỏ qua bước review con người dù áp lực tiến độ — đây là lớp bảo vệ
+  quan trọng nhất, không phải thủ tục hình thức.
+- KHÔNG cố "làm giả" trải nghiệm thật (viết như thể "tôi đã tới tận nơi") khi
+  input chỉ là dữ liệu tổng hợp — vi phạm chính tinh thần "Who/How" minh bạch.
+
+## 4) Cách áp dụng khi làm việc
 
 - Trước khi bắt tay code 1 tính năng mới (kể cả nhỏ), trả lời nhanh 3 câu ở
   mục 1 trong phản hồi với người dùng — không âm thầm bỏ qua bước này.
