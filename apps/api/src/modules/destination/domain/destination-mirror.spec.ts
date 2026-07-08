@@ -24,7 +24,6 @@ function siteRow(overrides: Partial<SiteDestinationRow> = {}): SiteDestinationRo
     addressOld: null,
     contactPhone: null,
     contactWebsite: null,
-    bookingUrl: null,
     hotelGroupId: null,
     isFeatured: false,
     siteStatus: 1,

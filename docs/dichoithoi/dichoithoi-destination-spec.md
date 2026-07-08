@@ -93,8 +93,8 @@ AI dựa trên input + kiến thức nền để viết, KHÔNG bịa dữ liệ
 | Giá vé | nhập tay HOẶC đưa URL tham khảo để tool tự lấy |
 | Thông tin tổng quát / ghi chú | nhập tay (tùy chọn) |
 | URL tham khảo chung | 0-n link, mỗi trường có thể có nguồn riêng |
-| Link affiliate mua vé online (`bookingUrl`) | nhập tay (tùy chọn — xem §2.3) |
-| Nhóm khách sạn (`HotelGroupId`) | chọn từ taxonomy (kiếm tiền khách sạn — §2.3) |
+| Link mua vé online (`ticketLinks[]` — nhiều nhà cung cấp: Klook, TripVision...) | nhập tay (tùy chọn, 0-n dòng — xem §2.3, thay cho `bookingUrl` 1 link cũ) |
+| Khách sạn gợi ý | quản lý ở module Hotel riêng, gán qua `HotelDestinationMap` — không nhập ở form này (kiếm tiền khách sạn — §2.3, xem `dichoithoi-hotel-spec.md`) |
 
 Lưu ý "địa chỉ cũ và mới": sau đợt sáp nhập tỉnh/thành, bài viết phải ghi rõ cả 2
 để người đọc tra cứu — đưa vào prompt và structure gate (§6.1).
@@ -111,7 +111,7 @@ DB website đang render thành mục riêng:
 | Trải nghiệm / chơi gì | hoạt động chính, khu vực nổi bật, check-in | Content (sections) |
 | Món ăn / đặc sản | ăn gì tại chỗ và gần đó | Food |
 | Thời điểm đẹp | mùa/giờ nên đi, tránh đông | Content (section) |
-| Lưu trú | ở khu nào tiện, gợi ý khách sạn | Hotel + HotelGroupId |
+| Lưu trú | ở khu nào tiện, gợi ý khách sạn | HotelText + module Hotel (`HotelDestinationMap`) |
 | Mẹo & lưu ý | tiết kiệm, an toàn, quy định | Tip |
 | FAQ | câu hỏi thực tế theo search intent | Content (cuối bài) |
 | Điểm đến gần đó | đi kèm trong cùng chuyến | auto-link + quan hệ (§3.7) |
@@ -119,18 +119,33 @@ DB website đang render thành mục riêng:
 Prompt pack ép đủ các khối này; khối nào không áp dụng (vd điểm miễn phí không có
 giá vé) phải ghi rõ thay vì bỏ trống — structure gate kiểm tra (§6).
 
-### 2.3 Kiếm tiền trên bài điểm đến (khách sạn + vé online)
-Mô hình: bài điểm đến kéo organic traffic → chuyển đổi qua 2 kênh affiliate:
-1. **Khách sạn**: website dichoithoi ĐÃ có module hotel (bảng Hotel/HotelGroup,
-   MyTourHotelSetting) render theo `HotelGroupId` của điểm đến. AI tool chỉ cần
-   gán đúng `HotelGroupId` khi tạo/cập nhật (chọn trong form, không để AI sinh)
-   và mục "Lưu trú" trong bài dẫn người đọc xuống khu khách sạn.
-2. **Vé online / tour**: thêm input `bookingUrl` (link affiliate vé — BestPrice,
-   Klook, ... do người dùng cung cấp). Có bookingUrl → bài chèn CTA "Mua vé online"
-   ngay cạnh mục giá vé. Data gate: bookingUrl phải là URL hợp lệ; KHÔNG có thì
-   không chèn CTA (không để AI tự chế link).
+### 2.3 Kiếm tiền trên bài điểm đến (khách sạn + vé online + tour)
+Mô hình: bài điểm đến kéo organic traffic → chuyển đổi qua 3 kênh affiliate:
+1. **Khách sạn**: module Hotel riêng (`dichoithoi-hotel-spec.md`) — zinoflow là
+   CMS (cào/nhập tay), render theo `HotelDestinationMap` gán cho điểm đến (§4
+   của spec đó — thay cho `HotelGroupId` cũ). Việc gán khách sạn nằm ở màn
+   quản lý Hotel, không phải form điểm đến; mục "Lưu trú" trong bài chỉ dẫn
+   người đọc xuống khu khách sạn hiển thị.
+2. **Vé online**: thêm input `ticketLinks[]` — DANH SÁCH 0-n link affiliate
+   (quyết định 07/2026, thay cho `bookingUrl` 1 link cũ), mỗi dòng gồm
+   `{provider, label, sourceUrl, affiliateUrl, linkStatus}` (`provider` gợi ý
+   sẵn: `klook` | `tripvision` | `bestprice` | `other`; `label` hiển thị trên
+   nút, vd "Đặt vé qua Klook") — người dùng chỉ nhập `sourceUrl` (link gốc),
+   `affiliateUrl` TỰ SINH theo rule cấu hình sẵn, KHÔNG nhập tay link affiliate
+   (xem cơ chế chung `dichoithoi-affiliate-link-conversion-spec.md`). Có ≥1
+   dòng `linkStatus != 'no-rule'` (hoặc chấp nhận dùng `sourceUrl` khi chưa có
+   rule) → bài chèn khối CTA "Mua vé online" (1 nút cho mỗi link, xem thứ tự
+   hiển thị ở `dichoithoi-content-seo-ux-plan.md` §2) ngay cạnh mục giá vé.
+   Data gate: mỗi `sourceUrl` phải hợp lệ (http/https); KHÔNG có dòng nào hợp
+   lệ thì không chèn khối CTA.
+3. **Tour**: module Tour riêng (`dichoithoi-tour-spec.md`, quyết định 07/2026)
+   — tour gắn vào 1 HOẶC NHIỀU điểm đến (kể cả điểm liên quan, không chỉ điểm
+   đang xem), hiển thị dạng card gợi ý "Tour {tên}" tương tự khối khách sạn,
+   dùng chung cơ chế `sourceUrl → affiliateUrl` ở trên. AI tool KHÔNG generate
+   nội dung tour, chỉ hiển thị data đã nhập/cào.
 Nguyên tắc policy: CTA trung thực, không cam kết "giá rẻ nhất"; giá hiển thị luôn
-kèm lưu ý thay đổi (§6.3).
+kèm lưu ý thay đổi (§6.3); nhiều nhà cung cấp không sắp xếp theo "rẻ nhất trước"
+trừ khi có dữ liệu giá thật kèm theo — mặc định giữ thứ tự người dùng nhập.
 
 ## 3) Quyết định thiết kế
 
@@ -194,22 +209,33 @@ chính thức, giờ mở cửa từ website điểm đến):
 4. MVP: fetch tĩnh (không headless browser); trang chặn bot → người dùng nhập tay.
 
 ### 3.7 Quan hệ điểm đến — lưu ở đâu
-DB website hiện KHÔNG có bảng quan hệ riêng; quan hệ thể hiện qua:
-DestinationGroupId / ProvinceId / Type (cùng nhóm, cùng tỉnh, cùng loại — website đã
-dùng để render "điểm đến liên quan" qua `GetRelationDestinationAsync(id, groupId)`)
-+ link nội bộ trong Content (auto-link §1.3).
 
-Quyết định (cập nhật 12/06/2026 — đi cùng nâng cấp schema §11):
+> Cập nhật 07/2026: mục này viết lúc 12/06/2026 (trước quyết định đại tu schema)
+> mô tả model CŨ (`relationType` dạng chuỗi, đồng bộ qua phụ lục §11.3 đã bị
+> thay thế). Model THẬT SỰ áp dụng là bản 2 chữ số nguyên (`nearby(1)/related(2)/
+> mentioned(3)`) theo `dichoithoi-database-redesign.md` §3.3/§4.5 — xem §12.2-12.3
+> dưới đây để biết chi tiết đúng, đoạn dưới giữ lại nguyên tắc chung, đã sửa cho
+> khớp model thật.
+
+DB website (schema v2) có bảng quan hệ tường minh `DestinationRelation` — chỉ
+lưu 3 loại KHÔNG suy ra được từ cây/loại (database-redesign §3.3): `nearby`(1),
+`related`(2), `mentioned`(3). "Cùng nhóm" (ParentId) và "cùng loại"
+(DestinationTypeMap) KHÔNG nằm trong bảng này vì suy ra được bằng index, không
+cần lưu thêm.
+
 1. Nguồn sự thật quan hệ nằm ở AI tool (Postgres): bảng `destination_relations`
-   (sourceId, targetId, relationType: `same-group` | `nearby` | `mentioned-in-content`,
-   source: `auto` | `manual`).
-2. Quan hệ `mentioned-in-content` sinh tự động từ engine auto-link mỗi lần publish —
-   vừa là log link đã chèn, vừa là data cho tính năng gợi ý sau này.
-3. Khi generate, danh sách điểm liên quan (cùng nhóm/tỉnh từ mirror + quan hệ manual)
-   đưa vào prompt để AI chủ động nhắc tới → tăng mật độ internal link tự nhiên.
-4. Đồng bộ xuống website: bảng mới `DestinationRelation` bên SQL Server (§11.3),
-   publish lúc nào ghi quan hệ lúc đó — website đổi cách render "điểm liên quan"
-   từ suy diễn theo group sang đọc bảng quan hệ (có fallback group khi bảng trống).
+   (sourceId, targetId, relationType: `nearby` | `related` | `mentioned`,
+   source: `auto` | `manual`) — phản chiếu đúng enum của `DestinationRelation`
+   bên SQL Server.
+2. Quan hệ `mentioned` sinh tự động từ engine auto-link mỗi lần publish/re-link
+   (§12.2) — vừa là log link đã chèn, vừa là data cho gợi ý sau này.
+3. Khi generate, danh sách điểm liên quan (con/nearby/related/cùng loại-tỉnh từ
+   mirror, xem §12.3 quy tắc trộn) đưa vào prompt để AI chủ động nhắc tới →
+   tăng mật độ internal link tự nhiên.
+4. Đồng bộ xuống website: bảng `DestinationRelation` bên SQL Server
+   (database-redesign §4.5) là nguồn để TÍNH LẠI; trang detail KHÔNG query bảng
+   này lúc render — đọc thẳng `RelatedJson` đã precompute (§12.3, database-redesign
+   §3.4). Publish/recompute lúc nào ghi lại `RelatedJson` lúc đó.
 
 ## 4) Contracts — schema `destinationArticle` (Zod, packages/contracts)
 
@@ -270,8 +296,10 @@ Publish chỉ chấp nhận draft trạng thái **Approved** (tái dùng rule M3
 
 ## 6) Quality gates travel (thay bộ affiliate)
 1. **Structure**: có intro, ≥3 section, có đủ openingTime/ticketPrice/transport
-   (hoặc đánh dấu rõ "không áp dụng" — vd điểm đến miễn phí), FAQ ≥3;
-   nếu input có địa chỉ cũ + mới (sau sáp nhập) thì bài phải nêu cả 2.
+   (hoặc đánh dấu rõ "không áp dụng" — vd điểm đến miễn phí), FAQ ≥3; thân bài
+   (không tính quick-facts/FAQ) ≥800 từ — tránh thin content (bổ sung 07/2026,
+   xem `dichoithoi-content-seo-ux-plan.md` §8.3); nếu input có địa chỉ cũ + mới
+   (sau sáp nhập) thì bài phải nêu cả 2.
 2. **SEO**: keyword chính ("du lịch {tên}" hoặc "{tên}") trong H1 + mở bài;
    description ≤950 ký tự và chứa keyword; slug hợp lệ (a-z0-9-).
 3. **Travel policy** (spec chính §19.5): có dòng thời điểm cập nhật thông tin;
@@ -321,7 +349,13 @@ list ở `/content` thêm filter theo site để tách bài dichoithoi khỏi b�
 ### 7.3 Màn chi tiết điểm đến `/dichoithoi/[id]` — 4 tab
 1. **Thông tin**: form metadata — tên, slug (cảnh báo đổi slug → tạo redirect),
    kind + cha (chọn trong cây), tỉnh, loại (multi), lat/lng, địa chỉ mới/cũ,
-   liên hệ, bookingUrl, hotelGroup, thumbnail, featured/order.
+   liên hệ, **danh sách ticketLinks** (thêm/xóa/sắp xếp từng dòng, dán `sourceUrl`
+   → preview `affiliateUrl` ngay theo cơ chế chung
+   `dichoithoi-affiliate-link-conversion-spec.md`), thumbnail, featured/order —
+   KHÔNG có trường chọn khách sạn ở đây (`HotelGroupId` legacy, đã thay bằng
+   `HotelDestinationMap`). Khách sạn/tour gợi ý cho điểm đến này quản lý ở module
+   riêng (`dichoithoi-hotel-spec.md` §6, `dichoithoi-tour-spec.md` §6), không nằm
+   trong form này.
 2. **Nội dung**: draft hiện tại + lịch sử version, nút "Tạo bài AI"/"Cập nhật bài"
    (mở form job §7.4), preview HTML sẽ publish.
 3. **Quan hệ**: con trực thuộc (từ cây) · nearby (tự tính, kèm khoảng cách) ·
@@ -339,7 +373,7 @@ list ở `/content` thêm filter theo site để tách bài dichoithoi khỏi b�
 
 ### 7.5 Màn review draft (tái dùng `/content/[id]`)
 Thêm cho job dichoithoi: panel phải hiển thị nổi bật quick-facts (giờ mở cửa,
-giá vé, di chuyển, bookingUrl) — phần dữ liệu dễ sai cần duyệt tay; checklist
+giá vé, di chuyển, danh sách ticketLinks) — phần dữ liệu dễ sai cần duyệt tay; checklist
 gates travel thay gates affiliate. Sau Approve: nút **"Publish lên dichoithoi"**
 + preview các link nội bộ sẽ chèn; publish xong hiện link mở web kiểm tra.
 
@@ -520,18 +554,20 @@ Người dùng TỰ tạo ảnh (AI chỉ gợi ý, không sinh ảnh — Image 
    Ảnh gốc (chưa nén) giữ ở máy local làm source of truth + backup
    (thư mục data riêng, không nằm trong repo nào).
 2. **DB lưu đường dẫn, không suy từ slug**: cột `Thumbnail` (+ ảnh hero/trong bài
-   lưu path trong content) — đường dẫn TƯƠNG ĐỐI (`diem-den/{slug}/hero.webp`),
+   lưu path trong content) — đường dẫn TƯƠNG ĐỐI (`diem-den/{slug}/{slug}-hero.webp`),
    base URL để trong config website → sau này dời sang CDN/storage khác chỉ đổi
    1 dòng config. Hết hardcode `Id + ".webp"` trong repository.
-3. **Convention mới — folder theo slug** (chuẩn bị cho bài có nhiều ảnh):
+3. **Convention mới — folder theo slug, tên file giữ slug** (SEO ảnh dựa vào cả
+   filename lẫn folder, không chỉ folder; chuẩn bị cho bài có nhiều ảnh):
    ```
    contents/diem-den/{slug}/
-     hero.webp          1200-1600w — ảnh đầu bài + og:image
-     thumb.webp         400w       — card danh sách / related / search
-     01-{mo-ta}.webp    800w       — ảnh trong thân bài (mô tả không dấu, SEO filename)
+     {slug}-hero.webp    1200-1600w — ảnh đầu bài + og:image
+     {slug}-medium.webp  800w       — card danh sách responsive (srcset)
+     {slug}-thumb.webp   400w       — card danh sách / related / search
+     01-{mo-ta}.webp     800w       — ảnh trong thân bài (mô tả không dấu, SEO filename)
    ```
-   Migration 278 ảnh cũ: script copy `x.webp` → `x/hero.webp`, `thumbnail/x.webp`
-   → `x/thumb.webp` + điền cột Thumbnail — chạy 1 lần lúc migration DB.
+   Migration 278 ảnh cũ: script copy `x.webp` → `x/x-hero.webp`, `thumbnail/x.webp`
+   → `x/x-thumb.webp` + điền cột Thumbnail — chạy 1 lần lúc migration DB.
 
 ### 14.2 Tốc độ (website ưu tiên tốc độ nhất)
 - 3 cỡ cố định như trên; render `<img>` có `width/height` (chống CLS),

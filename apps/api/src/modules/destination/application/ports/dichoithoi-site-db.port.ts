@@ -48,6 +48,8 @@ export interface PublishDestinationInput {
   tip: string;
   /** JSON [{q,a}] — website render FAQ + JSON-LD */
   faqJson: string;
+  /** JSON AffiliateLinkItem[] — carry gia tri mirror hien tai vao lan publish (spec affiliate-link §2) */
+  ticketLinksJson: string;
   metaTitle: string;
   metaDescription: string;
   /** SiteId cac diem duoc auto-link nhac toi — ghi DestinationRelation (mentioned) */
@@ -70,9 +72,25 @@ export interface SiteDestinationMeta {
   addressOld: string | null;
   contactPhone: string | null;
   contactWebsite: string | null;
-  bookingUrl: string | null;
   hotelGroupId: string | null;
   isFeatured: boolean;
+}
+
+/** 1 dong the du de render card (article-spec §5) — dung chung cho khoi destinations/destination */
+export interface DestinationCardRow {
+  slug: string;
+  name: string;
+  shortDescription: string | null;
+  thumbnail: string | null;
+  kind: "province" | "cluster" | "poi";
+}
+
+export interface DestinationCardFilter {
+  typeSlug?: string;
+  provinceSlug?: string;
+  parentSlug?: string;
+  limit: number;
+  sort: "featured" | "newest" | "order";
 }
 
 export interface DichoithoiSiteDb {
@@ -82,6 +100,8 @@ export interface DichoithoiSiteDb {
   fetchAllDestinations(): Promise<SiteDestinationRow[]>;
   /** Danh sach loai diem den (cho taxonomy form/filter) */
   fetchTypes(): Promise<SiteTypeRow[]>;
+  /** Danh sach tinh/thanh (slug+code+name) — validate tham so province=... o khoi dong (article-spec §4) */
+  fetchProvinceSlugs(): Promise<Array<{ slug: string; code: string; name: string }>>;
   /** Noi dung hien tai cua 1 diem den (null neu chua co bai) — cho mode update */
   fetchDestinationContent(siteId: number): Promise<SiteDestinationContent | null>;
   /**
@@ -103,8 +123,20 @@ export interface DichoithoiSiteDb {
   updateRelatedJson(siteId: number, relatedJson: string): Promise<boolean>;
   /** Cap nhat rieng cot Thumbnail (metadata — sua truc tiep, khong qua publish) */
   updateThumbnail(siteId: number, thumbnail: string | null): Promise<void>;
+  /**
+   * Ghi de TicketLinksJson (DestinationContent) — dung khi diem DA co bai (siteId
+   * ton tai), khong can publish lai toan bai (affiliate-link-conversion-spec §5).
+   */
+  updateTicketLinks(siteId: number, ticketLinksJson: string): Promise<void>;
   /** Insert diem den MOI (resolve ParentId/ProvinceId tu slug/code) -> tra ve siteId */
   createDestination(meta: SiteDestinationMeta): Promise<{ siteId: number }>;
   /** Cap nhat metadata diem den da ton tai (khong dong cham content/quan he) */
   updateMetadata(siteId: number, meta: SiteDestinationMeta): Promise<void>;
+  /**
+   * Card diem den theo bo loc (article-spec §3.1 khoi `destinations`) — CHI diem
+   * da published (Status=1). typeSlug khop qua DestinationTypeMap+DestinationType.
+   */
+  findDestinationCards(filter: DestinationCardFilter): Promise<DestinationCardRow[]>;
+  /** 1 diem cu the theo slug (khoi `destination` so it) — null neu khong ton tai/chua publish */
+  findDestinationCardBySlug(slug: string): Promise<DestinationCardRow | null>;
 }

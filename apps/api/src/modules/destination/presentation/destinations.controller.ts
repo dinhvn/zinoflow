@@ -20,10 +20,12 @@ import {
   relinkAllRequestSchema,
   suggestDestinationMetaRequestSchema,
   updateThumbnailRequestSchema,
+  updateTicketLinksRequestSchema,
   upsertDestinationRequestSchema,
   type AddressMappingProvinces,
   type AddressMappingsQuery,
   type AddressMappingsResponse,
+  type AffiliateLinkItem,
   type CheckImageRequest,
   type CheckImageResponse,
   type CreateDestinationJobRequest,
@@ -48,6 +50,7 @@ import {
   type MigrateDestinationImagesReport,
   type MigrateDestinationImagesRequest,
   type UpdateThumbnailRequest,
+  type UpdateTicketLinksRequest,
   type UploadDestinationImageResponse,
   type UpsertDestinationRequest,
 } from "@zinoflow/contracts";
@@ -60,6 +63,7 @@ import { CreateDestinationJobUseCase } from "../application/use-cases/create-des
 import { PublishDestinationUseCase } from "../application/use-cases/publish-destination.usecase";
 import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
 import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnail.usecase";
+import { UpdateTicketLinksUseCase } from "../application/use-cases/update-ticket-links.usecase";
 import { UploadDestinationImageUseCase } from "../application/use-cases/upload-destination-image.usecase";
 import { MigrateDestinationImagesUseCase } from "../application/use-cases/migrate-destination-images.usecase";
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
@@ -90,6 +94,7 @@ export class DestinationsController {
     private readonly publishDestination: PublishDestinationUseCase,
     private readonly relinkAll: RelinkAllUseCase,
     private readonly updateThumbnail: UpdateThumbnailUseCase,
+    private readonly updateTicketLinks: UpdateTicketLinksUseCase,
     private readonly uploadImage: UploadDestinationImageUseCase,
     private readonly migrateImages: MigrateDestinationImagesUseCase,
     private readonly getDetail: GetDestinationDetailUseCase,
@@ -254,6 +259,15 @@ export class DestinationsController {
   ): Promise<{ ok: true }> {
     await this.updateThumbnail.execute(slug, request.thumbnail);
     return { ok: true };
+  }
+
+  /** Cap nhat danh sach link mua ve (affiliate-link-conversion-spec §5) */
+  @Post(":slug/ticket-links")
+  setTicketLinks(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updateTicketLinksRequestSchema)) request: UpdateTicketLinksRequest,
+  ): Promise<AffiliateLinkItem[]> {
+    return this.updateTicketLinks.execute(slug, request);
   }
 
   /**

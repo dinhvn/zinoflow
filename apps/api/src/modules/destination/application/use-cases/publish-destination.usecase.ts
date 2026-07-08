@@ -111,7 +111,6 @@ export class PublishDestinationUseCase {
         addressOld: destination.addressOld,
         contactPhone: destination.contactPhone,
         contactWebsite: destination.contactWebsite,
-        bookingUrl: destination.bookingUrl,
         hotelGroupId: destination.hotelGroupId,
         isFeatured: destination.isFeatured,
       });
@@ -143,6 +142,7 @@ export class PublishDestinationUseCase {
       hotel: article.quickFacts.hotel,
       tip: article.quickFacts.tip,
       faqJson: buildFaqJson(article),
+      ticketLinksJson: JSON.stringify(destination.ticketLinks),
       metaTitle: article.metadata.metaTitle,
       metaDescription: article.metadata.metaDescription,
       mentionedTargetSiteIds: addedLinks

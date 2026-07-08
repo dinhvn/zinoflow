@@ -1,4 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn } from "typeorm";
+import type { AffiliateLinkItem } from "@zinoflow/contracts";
 
 /**
  * Mirror metadata diem den dichoithoi (spec dichoithoi-destination-spec §3.2, §12.1).
@@ -57,8 +58,9 @@ export class DestinationMirrorEntity {
   @Column({ name: "contact_website", type: "varchar", length: 256, nullable: true })
   contactWebsite!: string | null;
 
-  @Column({ name: "booking_url", type: "varchar", length: 512, nullable: true })
-  bookingUrl!: string | null;
+  /** Nhieu link mua ve — affiliateUrl da tinh san (redesign §4.2/§4.3, thay booking_url cu) */
+  @Column({ name: "ticket_links", type: "jsonb", default: () => "'[]'" })
+  ticketLinks!: AffiliateLinkItem[];
 
   @Column({ name: "hotel_group_id", type: "varchar", length: 50, nullable: true })
   hotelGroupId!: string | null;

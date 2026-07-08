@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { articleSchema } from "./article";
 import { destinationArticleSchema } from "../dichoithoi/destination-article";
+import { articleCamNangSchema } from "../dichoithoi/article-content";
 import { cmsArticleSchema } from "../khuyenmai/cms-article";
 
 /**
@@ -18,6 +19,7 @@ export const draftOutlineSchema = z
 export const draftArticleSchema = z.union([
   articleSchema,
   destinationArticleSchema,
+  articleCamNangSchema,
   cmsArticleSchema,
 ]);
 export type DraftArticle = z.infer<typeof draftArticleSchema>;

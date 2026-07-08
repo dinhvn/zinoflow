@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AiContentModule } from "../ai-content/ai-content.module";
+import { AffiliateModule } from "../affiliate/affiliate.module";
 import { DestinationsController } from "./presentation/destinations.controller";
 import { ListDestinationsUseCase } from "./application/use-cases/list-destinations.usecase";
 import { SyncDestinationsUseCase } from "./application/use-cases/sync-destinations.usecase";
@@ -25,10 +26,12 @@ import { SharpImageProcessor } from "./infrastructure/image/sharp-image-processo
 import { FtpsImageUploader } from "./infrastructure/dichoithoi/ftps-image-uploader";
 import { GoogleSheetCsvFetcher } from "./infrastructure/reference/google-sheet-csv-fetcher";
 import { UpdateThumbnailUseCase } from "./application/use-cases/update-thumbnail.usecase";
+import { UpdateTicketLinksUseCase } from "./application/use-cases/update-ticket-links.usecase";
+import { DestinationAffiliateReapplyService } from "./application/services/destination-affiliate-reapply.service";
 import { UploadDestinationImageUseCase } from "./application/use-cases/upload-destination-image.usecase";
 import { MigrateDestinationImagesUseCase } from "./application/use-cases/migrate-destination-images.usecase";
 import { IMAGE_DOWNLOADER } from "./application/ports/image-downloader.port";
-import { HttpImageDownloader } from "./infrastructure/reference/http-image-downloader";
+import { LocalFileImageDownloader } from "./infrastructure/reference/local-file-image-downloader";
 import { GetDestinationDetailUseCase } from "./application/use-cases/get-destination-detail.usecase";
 import { UpsertDestinationUseCase } from "./application/use-cases/upsert-destination.usecase";
 import { ImportDestinationsUseCase } from "./application/use-cases/import-destinations.usecase";
@@ -46,13 +49,14 @@ import {
 
 /**
  * Module Dichoithoi (M4) — AI tool dong vai CMS cho noi dung diem den.
- * Kien truc: docs/specs/dichoithoi-system-overview.md;
- * tinh nang: docs/specs/dichoithoi-destination-spec.md.
+ * Kien truc: docs/dichoithoi/dichoithoi-system-overview.md;
+ * tinh nang: docs/dichoithoi/dichoithoi-destination-spec.md.
  * Generate bai van di qua module ai-content — module nay KHONG goi AI provider.
  */
 @Module({
   imports: [
     AiContentModule,
+    AffiliateModule,
     TypeOrmModule.forFeature([
       DestinationMirrorEntity,
       DestinationRelationEntity,
@@ -70,6 +74,8 @@ import {
     PublishDestinationUseCase,
     RelinkAllUseCase,
     UpdateThumbnailUseCase,
+    UpdateTicketLinksUseCase,
+    DestinationAffiliateReapplyService,
     UploadDestinationImageUseCase,
     MigrateDestinationImagesUseCase,
     GetDestinationDetailUseCase,
@@ -82,7 +88,7 @@ import {
     { provide: IMAGE_CHECKER, useClass: HttpImageChecker },
     { provide: IMAGE_PROCESSOR, useClass: SharpImageProcessor },
     { provide: IMAGE_UPLOADER, useClass: FtpsImageUploader },
-    { provide: IMAGE_DOWNLOADER, useClass: HttpImageDownloader },
+    { provide: IMAGE_DOWNLOADER, useClass: LocalFileImageDownloader },
     { provide: SHEET_CSV_FETCHER, useClass: GoogleSheetCsvFetcher },
     { provide: DESTINATION_MIRROR_REPOSITORY, useClass: TypeOrmDestinationMirrorRepository },
     { provide: DESTINATION_RELATION_REPOSITORY, useClass: TypeOrmDestinationRelationRepository },

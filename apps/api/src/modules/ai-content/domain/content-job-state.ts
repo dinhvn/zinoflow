@@ -8,9 +8,12 @@ import { DomainRuleError } from "../../shared/errors/app-error";
  * Failed: tu cac buoc generate; Failed -> GeneratingOutline (retry policy).
  * Approved -> InReview: sua noi dung draft da approve se tao version moi
  * va bat buoc review lai (transition rule trong spec §5).
+ * Created -> DraftReady: CHI danh cho job sourceType=Manual (viet tay, khong qua
+ * AI) — CreateManualDraftUseCase la noi DUY NHAT goi transition nay (§4.1,
+ * dichoithoi-article-spec.md §1.1). Job AI thuong khong bao gio di canh nay.
  */
 const ALLOWED_TRANSITIONS: Record<ContentJobStatus, readonly ContentJobStatus[]> = {
-  Created: ["GeneratingOutline", "Failed"],
+  Created: ["GeneratingOutline", "DraftReady", "Failed"],
   GeneratingOutline: ["DraftReady", "Failed"],
   DraftReady: ["InReview", "GeneratingOutline"], // cho phep generate lai truoc khi review
   InReview: ["Approved", "Rejected", "DraftReady"], // DraftReady = RequestChange (yeu cau sua)

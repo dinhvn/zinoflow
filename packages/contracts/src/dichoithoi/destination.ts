@@ -1,8 +1,9 @@
 import { z } from "zod/v4";
+import { affiliateLinkItemSchema } from "./affiliate";
 
 /**
  * Contracts cho khu Dichoithoi (M4) — mirror diem den + sync.
- * Schema DB dich (SQL Server) xem docs/specs/dichoithoi-database-redesign.md;
+ * Schema DB dich (SQL Server) xem docs/dichoithoi/dichoithoi-database-redesign.md;
  * mirror Postgres phan chieu metadata de UI list/filter + auto-link.
  */
 
@@ -52,7 +53,8 @@ export const destinationMirrorSchema = z.object({
   addressOld: z.string().nullable(),
   contactPhone: z.string().nullable(),
   contactWebsite: z.string().nullable(),
-  bookingUrl: z.string().nullable(),
+  /** Nhieu link mua ve (Klook, TripVision...) — thay BookingUrl 1 link cu (redesign §4.2/§4.3) */
+  ticketLinks: z.array(affiliateLinkItemSchema),
   hotelGroupId: z.string().nullable(),
   isFeatured: z.boolean(),
   /** 0 draft, 1 published, 2 hidden — theo cot Status SQL Server */
@@ -86,8 +88,9 @@ export type UploadDestinationImageResponse = z.infer<typeof uploadDestinationIma
 
 /**
  * Migrate anh layout CU ({slug}.webp + thumbnail/{slug}.webp) sang solution moi
- * ({slug}/hero|medium|thumb.webp) — tai full cu ve, tao 3 co WebP, FTP len,
- * dien cot Thumbnail. KHONG xoa anh cu (website con fallback path cu).
+ * ({slug}/{slug}-hero|medium|thumb.webp — giu slug trong ten file cho SEO anh)
+ * — tai full cu ve, tao 3 co WebP, FTP len, dien cot Thumbnail. KHONG xoa anh cu
+ * (website con fallback path cu).
  */
 export const migrateDestinationImagesRequestSchema = z.object({
   /** true = chi quet + liet ke diem se migrate, khong tai/ghi gi */
@@ -103,7 +106,7 @@ export const migrateDestinationImagesReportSchema = z.object({
   dryRun: z.boolean(),
   /** Tong so diem trong mirror */
   scanned: z.number().int(),
-  /** Da o dinh dang moi ({slug}/thumb.webp) — bo qua */
+  /** Da o dinh dang moi ({slug}/{slug}-thumb.webp) — bo qua */
   alreadyNew: z.number().int(),
   /** Tong so diem CAN migrate (truoc lan chay nay) */
   candidates: z.number().int(),
@@ -319,7 +322,6 @@ export const upsertDestinationRequestSchema = z.object({
   addressOld: z.string().max(256).nullable().optional(),
   contactPhone: z.string().max(32).nullable().optional(),
   contactWebsite: z.string().max(256).nullable().optional(),
-  bookingUrl: z.string().max(512).nullable().optional(),
   hotelGroupId: z.string().max(50).nullable().optional(),
   isFeatured: z.boolean().optional(),
 });
@@ -347,7 +349,6 @@ export const destinationImportRowSchema = z.object({
   addressOld: z.string().max(256).nullable().optional(),
   contactPhone: z.string().max(32).nullable().optional(),
   contactWebsite: z.string().max(256).nullable().optional(),
-  bookingUrl: z.string().max(512).nullable().optional(),
   hotelGroupId: z.string().max(50).nullable().optional(),
   isFeatured: z.boolean().optional(),
   aiNotes: z.string().max(10_000).nullable().optional(),
@@ -400,10 +401,28 @@ export type DestinationMetaSuggestion = z.infer<typeof destinationMetaSuggestion
 
 /** Cap nhat duong dan thumbnail cho 1 diem den (spec §14.3 — MVP) */
 export const updateThumbnailRequestSchema = z.object({
-  /** Duong dan TUONG DOI (vd "nui-ham-rong-sapa.webp" | "diem-den/{slug}/thumb.webp") */
+  /** Duong dan TUONG DOI (vd "nui-ham-rong-sapa.webp" | "diem-den/{slug}/{slug}-thumb.webp") */
   thumbnail: z.string().max(256).nullable(),
 });
 export type UpdateThumbnailRequest = z.infer<typeof updateThumbnailRequestSchema>;
+
+/**
+ * Cap nhat danh sach link mua ve cho 1 diem den (affiliate-link-conversion-spec §5).
+ * Nguoi dung chi nhap provider/label/sourceUrl — affiliateUrl/linkStatus server
+ * tu tinh qua AffiliateLinkResolver luc luu (khong nhan tu client).
+ */
+export const updateTicketLinksRequestSchema = z.object({
+  ticketLinks: z
+    .array(
+      z.object({
+        provider: z.string().min(1).max(64),
+        label: z.string().max(128).nullable().optional(),
+        sourceUrl: z.url().max(1024),
+      }),
+    )
+    .max(10),
+});
+export type UpdateTicketLinksRequest = z.infer<typeof updateTicketLinksRequestSchema>;
 
 /** Kiem tra anh ton tai tren hosting (HEAD request — spec §14.3) */
 export const checkImageRequestSchema = z.object({

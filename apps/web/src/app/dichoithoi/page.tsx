@@ -7,6 +7,7 @@ import {
   listDestinationsResponseSchema,
   migrateDestinationImagesReportSchema,
   recomputeRelatedReportSchema,
+  refreshAllDynamicBlocksReportSchema,
   relinkAllReportSchema,
   syncDestinationsResultSchema,
   type MigrateDestinationImagesReport,
@@ -16,6 +17,7 @@ import {
   type DestinationProductionState,
   type DestinationSortBy,
   type RecomputeRelatedReport,
+  type RefreshAllDynamicBlocksReport,
   type RelinkAllReport,
   type SyncDestinationsResult,
 } from "@zinoflow/contracts";
@@ -165,6 +167,22 @@ export default function DichoithoiPage() {
       setSyncError(err instanceof Error ? err.message : "Tính lại khối liên quan thất bại"),
   });
 
+  const [refreshBlocksReport, setRefreshBlocksReport] = useState<RefreshAllDynamicBlocksReport | null>(
+    null,
+  );
+  const refreshAllBlocksMutation = useMutation({
+    mutationFn: async () =>
+      refreshAllDynamicBlocksReportSchema.parse(
+        await apiSend("POST", "/articles/refresh-all-blocks", {}),
+      ),
+    onSuccess: (report) => {
+      setRefreshBlocksReport(report);
+      setSyncError(null);
+    },
+    onError: (err) =>
+      setSyncError(err instanceof Error ? err.message : "Làm mới khối động thất bại"),
+  });
+
   // Migrate anh layout cu -> {slug}/3 co WebP (chay theo batch, idempotent)
   const [migrateReport, setMigrateReport] = useState<MigrateDestinationImagesReport | null>(null);
   const migrateMutation = useMutation({
@@ -181,6 +199,27 @@ export default function DichoithoiPage() {
     },
     onError: (err) => setSyncError(err instanceof Error ? err.message : "Migrate ảnh thất bại"),
   });
+
+  // Chay lien tiep nhieu batch 20 anh toi khi het (nut "Migrate tat ca") — tranh 1 request
+  // qua dai (moi anh: doc file + resize + 3 lan FTP upload), moi batch van cap nhat report
+  // de thay tien do dan.
+  const [migrateAllRunning, setMigrateAllRunning] = useState(false);
+  async function runMigrateAll() {
+    setMigrateAllRunning(true);
+    try {
+      let remaining = 1;
+      while (remaining > 0) {
+        const report = await migrateMutation.mutateAsync(false);
+        remaining = report.remaining;
+        // Khong migrate them duoc diem nao (vd loi FTP lien tuc) -> dung, tranh vong lap vo han
+        if (report.migrated.length === 0) break;
+      }
+    } catch {
+      // Loi da duoc migrateMutation.onError xu ly (hien syncError)
+    } finally {
+      setMigrateAllRunning(false);
+    }
+  }
 
   const data = listQuery.data;
 
@@ -306,6 +345,18 @@ export default function DichoithoiPage() {
           <a href="/dichoithoi/import" className={buttonClasses({ variant: "secondary" })}>
             Nhập từ file
           </a>
+          <a href="/dichoithoi/khach-san" className={buttonClasses({ variant: "secondary" })}>
+            Khách sạn
+          </a>
+          <a href="/dichoithoi/tour" className={buttonClasses({ variant: "secondary" })}>
+            Tour
+          </a>
+          <a href="/dichoithoi/articles/new" className={buttonClasses({ variant: "secondary" })}>
+            + Bài cẩm nang
+          </a>
+          <a href="/dichoithoi/affiliate" className={buttonClasses({ variant: "secondary" })}>
+            Quy tắc affiliate
+          </a>
           <Button
             variant="primary"
             loading={syncMutation.isPending}
@@ -362,20 +413,38 @@ export default function DichoithoiPage() {
           </Button>
           <Button
             size="sm"
+            loading={refreshAllBlocksMutation.isPending}
+            onClick={() => refreshAllBlocksMutation.mutate()}
+          >
+            {refreshAllBlocksMutation.isPending ? "Đang làm mới..." : "Làm mới toàn bộ khối động"}
+          </Button>
+          <Button
+            size="sm"
             loading={migrateMutation.isPending && migrateMutation.variables === true}
             onClick={() => migrateMutation.mutate(true)}
           >
             Migrate ảnh cũ (xem trước)
           </Button>
           {migrateReport && migrateReport.remaining > 0 && (
-            <Button
-              size="sm"
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              loading={migrateMutation.isPending && migrateMutation.variables === false}
-              onClick={() => migrateMutation.mutate(false)}
-            >
-              Migrate 20 ảnh tiếp theo ({migrateReport.remaining} còn lại)
-            </Button>
+            <>
+              <Button
+                size="sm"
+                className="bg-blue-600 text-white hover:bg-blue-700"
+                loading={!migrateAllRunning && migrateMutation.isPending && migrateMutation.variables === false}
+                disabled={migrateAllRunning}
+                onClick={() => migrateMutation.mutate(false)}
+              >
+                Migrate 20 ảnh tiếp theo ({migrateReport.remaining} còn lại)
+              </Button>
+              <Button
+                size="sm"
+                variant="primary"
+                loading={migrateAllRunning}
+                onClick={runMigrateAll}
+              >
+                Migrate tất cả ({migrateReport.remaining} ảnh)
+              </Button>
+            </>
           )}
         </div>
 
@@ -406,6 +475,17 @@ export default function DichoithoiPage() {
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             ✅ Khối liên quan: quét {relatedReport.scanned} bài, cập nhật {relatedReport.updated}{" "}
             bài ({(relatedReport.durationMs / 1000).toFixed(1)}s).
+          </p>
+        )}
+        {refreshBlocksReport && (
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            ✅ Khối động: kiểm tra {refreshBlocksReport.totalChecked} bài, làm mới{" "}
+            {refreshBlocksReport.totalRefreshed} bài
+            {refreshBlocksReport.failures.length > 0 &&
+              ` (${refreshBlocksReport.failures.length} lỗi: ${refreshBlocksReport.failures
+                .map((f) => f.slug)
+                .join(", ")})`}
+            .
           </p>
         )}
         {migrateReport && (

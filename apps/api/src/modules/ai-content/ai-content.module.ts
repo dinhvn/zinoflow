@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { ContentController } from "./presentation/content.controller";
 import { CreateContentJobUseCase } from "./application/use-cases/create-content-job.usecase";
+import { CreateManualDraftUseCase } from "./application/use-cases/create-manual-draft.usecase";
 import { GenerateContentUseCase } from "./application/use-cases/generate-content.usecase";
 import { RetryContentJobUseCase } from "./application/use-cases/retry-content-job.usecase";
 import { EditContentJobUseCase } from "./application/use-cases/edit-content-job.usecase";
@@ -66,6 +67,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
   controllers: [ContentController],
   providers: [
     CreateContentJobUseCase,
+    CreateManualDraftUseCase,
     GenerateContentUseCase,
     RetryContentJobUseCase,
     EditContentJobUseCase,
@@ -130,6 +132,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
   // truc tiep); publish diem den can doc job (kiem tra Approved) + draft da duyet.
   exports: [
     CreateContentJobUseCase,
+    CreateManualDraftUseCase,
     SuggestDestinationMetaUseCase,
     GetAiUsageSummaryUseCase,
     CONTENT_JOB_REPOSITORY,

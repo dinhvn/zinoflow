@@ -1,6 +1,6 @@
 ﻿/*
   Dichoithoi — DAI TU SCHEMA (buoc 1/2): tao bang MOI trong schema [v2].
-  Theo docs/specs/dichoithoi-database-redesign.md §4.
+  Theo docs/dichoithoi/dichoithoi-database-redesign.md §4.
 
   - CHI TAO MOI, khong dung vao bang cu — website hien tai van chay binh thuong.
   - Chay TRUOC: backup toan bo DB.
@@ -91,19 +91,55 @@ CREATE TABLE v2.DestinationContent (
   HotelText       nvarchar(max) NULL,
   FaqJson         nvarchar(max) NULL,           -- [{q,a}] -> render FAQ + JSON-LD FAQPage
   RelatedJson     nvarchar(max) NULL,           -- precompute khoi lien quan (redesign §3.4)
+  TicketLinksJson nvarchar(max) NULL,           -- [{provider,label,sourceUrl,affiliateUrl,linkStatus}] (redesign §4.3, vay 07/2026)
+  GalleryJson     nvarchar(max) NULL,           -- [{path,altText,caption,credit}] (redesign §4.3, vay 07/2026)
+  TicketPriceFrom decimal(12,0) NULL,           -- gia so cho JSON-LD offers/priceRange (redesign §4.3, vay 07/2026)
   MetaTitle       nvarchar(150) NULL,
   MetaDescription nvarchar(300) NULL
 );
 GO
+-- Vay 07/2026 cho install cu da co bang truoc khi them 3 cot tren (idempotent)
+IF COL_LENGTH('v2.DestinationContent', 'TicketLinksJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD TicketLinksJson nvarchar(max) NULL;
+IF COL_LENGTH('v2.DestinationContent', 'GalleryJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD GalleryJson nvarchar(max) NULL;
+IF COL_LENGTH('v2.DestinationContent', 'TicketPriceFrom') IS NULL
+  ALTER TABLE v2.DestinationContent ADD TicketPriceFrom decimal(12,0) NULL;
+GO
 
-/* ===== Loai diem den (redesign §4.4) ===== */
-IF OBJECT_ID('v2.DestinationType') IS NULL
-CREATE TABLE v2.DestinationType (
+/* ===== Loai diem den — 2 tang (redesign §3.2, §4.4, vay 07/2026) ===== */
+IF OBJECT_ID('v2.DestinationTypeGroup') IS NULL
+CREATE TABLE v2.DestinationTypeGroup (
   Id      int IDENTITY PRIMARY KEY,
-  Slug    varchar(64)   NOT NULL UNIQUE,        -- /loai/{slug}
+  Slug    varchar(64)   NOT NULL UNIQUE,        -- /loai/{slug} — trang nhom (pillar)
   Name    nvarchar(128) NOT NULL,
   [Order] int NOT NULL DEFAULT 0
 );
+GO
+
+IF OBJECT_ID('v2.DestinationType') IS NULL
+CREATE TABLE v2.DestinationType (
+  Id      int IDENTITY PRIMARY KEY,
+  GroupId int NOT NULL REFERENCES v2.DestinationTypeGroup(Id),
+  Slug    varchar(64)   NOT NULL UNIQUE,        -- /loai/{groupSlug}/{slug}
+  Name    nvarchar(128) NOT NULL,
+  [Order] int NOT NULL DEFAULT 0
+);
+GO
+-- Vay 07/2026 cho install cu da co v2.DestinationType truoc khi co GroupId (idempotent)
+IF COL_LENGTH('v2.DestinationType', 'GroupId') IS NULL
+BEGIN
+  ALTER TABLE v2.DestinationType ADD GroupId int NULL;
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_v2DestinationType_Group')
+BEGIN
+  ALTER TABLE v2.DestinationType WITH NOCHECK ADD CONSTRAINT FK_v2DestinationType_Group
+    FOREIGN KEY (GroupId) REFERENCES v2.DestinationTypeGroup(Id);
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_v2DestinationType_Group')
+  CREATE INDEX IX_v2DestinationType_Group ON v2.DestinationType(GroupId, [Order]);
 GO
 
 IF OBJECT_ID('v2.DestinationTypeMap') IS NULL
@@ -156,6 +192,100 @@ BEGIN
   CREATE INDEX IX_v2Review_Destination ON v2.DestinationReview(DestinationId, IsApproved)
     INCLUDE (Name, Rating, DateCreated);
 END
+GO
+
+/* ===== Hotel — khoi goi y tren trang diem den (hotel-spec §3/§4, them 07/2026) =====
+   Card gia tri: khong can trang rieng, khong qua 2 chot duyet — publish thang. */
+IF OBJECT_ID('v2.Hotel') IS NULL
+CREATE TABLE v2.Hotel (
+  Id            int IDENTITY PRIMARY KEY,
+  Name          nvarchar(256) NOT NULL,
+  Address       nvarchar(512) NULL,
+  Lat           decimal(9,6)  NULL,
+  Lng           decimal(9,6)  NULL,
+  ProvinceId    int NULL REFERENCES v2.Province(Id),
+  PriceFrom     decimal(12,0) NULL,
+  Rating        decimal(2,1)  NULL,
+  ReviewCount   int NULL,
+  ThumbnailUrl  varchar(512)  NULL,
+  ImagesJson    nvarchar(max) NULL,
+  Provider      varchar(64)   NULL,
+  SourceUrl     varchar(512)  NOT NULL,
+  AffiliateUrl  varchar(512)  NULL,
+  LinkStatus    varchar(20)   NOT NULL DEFAULT 'no-rule',
+  Status        tinyint       NOT NULL DEFAULT 1,  -- 0 nhap, 1 published, 2 an
+  CreatedAt     datetime2 NOT NULL DEFAULT SYSUTCDATETIME(),
+  UpdatedAt     datetime2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
+GO
+
+IF OBJECT_ID('v2.HotelDestinationMap') IS NULL
+CREATE TABLE v2.HotelDestinationMap (
+  HotelId       int NOT NULL REFERENCES v2.Hotel(Id),
+  DestinationId int NOT NULL REFERENCES v2.Destination(Id),
+  DistanceM     int NULL,
+  IsManual      bit NOT NULL DEFAULT 0,
+  PRIMARY KEY (HotelId, DestinationId)
+);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_v2HotelMap_Destination')
+  CREATE INDEX IX_v2HotelMap_Destination ON v2.HotelDestinationMap(DestinationId)
+    INCLUDE (HotelId, DistanceM, IsManual);
+GO
+
+/* ===== Tour — khoi goi y tren trang diem den (tour-spec §3/§4, them 07/2026) =====
+   Giong Hotel nhung KHONG co lat/lng rieng (gan qua map), them thoi luong/diem khoi hanh. */
+IF OBJECT_ID('v2.Tour') IS NULL
+CREATE TABLE v2.Tour (
+  Id              int IDENTITY PRIMARY KEY,
+  Name            nvarchar(256) NOT NULL,
+  ShortDescription nvarchar(500) NULL,
+  DurationDays    smallint NULL,
+  DurationNights  smallint NULL,
+  DepartureFrom   nvarchar(256) NULL,
+  ProvinceId      int NULL REFERENCES v2.Province(Id),
+  PriceFrom       decimal(12,0) NULL,
+  Rating          decimal(2,1)  NULL,
+  ReviewCount     int NULL,
+  ThumbnailUrl    varchar(512)  NULL,
+  ImagesJson      nvarchar(max) NULL,
+  Provider        varchar(64)   NULL,
+  SourceUrl       varchar(512)  NOT NULL,
+  AffiliateUrl    varchar(512)  NULL,
+  LinkStatus      varchar(20)   NOT NULL DEFAULT 'no-rule',
+  Status          tinyint       NOT NULL DEFAULT 1,  -- 0 nhap, 1 published, 2 an
+  CreatedAt       datetime2 NOT NULL DEFAULT SYSUTCDATETIME(),
+  UpdatedAt       datetime2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
+GO
+
+IF OBJECT_ID('v2.TourDestinationMap') IS NULL
+CREATE TABLE v2.TourDestinationMap (
+  TourId        int NOT NULL REFERENCES v2.Tour(Id),
+  DestinationId int NOT NULL REFERENCES v2.Destination(Id),
+  IsPrimary     bit NOT NULL DEFAULT 0,
+  IsManual      bit NOT NULL DEFAULT 0,
+  PRIMARY KEY (TourId, DestinationId)
+);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_v2TourMap_Destination')
+  CREATE INDEX IX_v2TourMap_Destination ON v2.TourDestinationMap(DestinationId)
+    INCLUDE (TourId, IsPrimary);
+GO
+
+/* ===== Article — bai cam nang/listicle, khoi dong compile san (article-spec §8) ===== */
+IF OBJECT_ID('v2.Article') IS NULL
+CREATE TABLE v2.Article (
+  Id              int IDENTITY PRIMARY KEY,
+  Slug            varchar(128)  NOT NULL UNIQUE,     -- /cam-nang/{slug}
+  Title           nvarchar(200) NOT NULL,
+  ShortDescription nvarchar(500) NULL,
+  Thumbnail       varchar(256)  NULL,
+  ContentHtml     nvarchar(max) NOT NULL,             -- DA compile khoi dong — website chi doc field nay
+  MetaTitle       nvarchar(150) NULL,
+  MetaDescription nvarchar(300) NULL,
+  Status          tinyint       NOT NULL DEFAULT 1,   -- 0 draft, 1 published, 2 hidden
+  PublishedAt     datetime2     NULL,
+  UpdatedAt       datetime2     NOT NULL DEFAULT SYSUTCDATETIME()
+);
 GO
 
 PRINT N'01-create-new-schema.sql: xong — schema v2 da san sang. Chay tiep 02-migrate-data.sql';

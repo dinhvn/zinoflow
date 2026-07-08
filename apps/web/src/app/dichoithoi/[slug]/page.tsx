@@ -18,6 +18,9 @@ import {
   type DestinationMetaValues,
 } from "@/features/dichoithoi/destination-metadata-form";
 import { DestinationImageUploader } from "@/features/dichoithoi/destination-image-uploader";
+import { DestinationTicketLinksEditor } from "@/features/dichoithoi/destination-ticket-links-editor";
+import { DestinationHotelPanel } from "@/features/dichoithoi/destination-hotel-panel";
+import { DestinationTourPanel } from "@/features/dichoithoi/destination-tour-panel";
 import { Button, buttonClasses } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
@@ -68,7 +71,6 @@ function detailToFormValues(d: DestinationDetail): DestinationMetaValues {
     addressOld: d.addressOld ?? "",
     contactPhone: d.contactPhone ?? "",
     contactWebsite: d.contactWebsite ?? "",
-    bookingUrl: d.bookingUrl ?? "",
     hotelGroupId: d.hotelGroupId ?? "",
     isFeatured: d.isFeatured,
   };
@@ -511,6 +513,25 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           isNew={false}
           onSaved={() => invalidate()}
         />
+      </Group>
+
+      {/* Link mua ve (affiliate-link-conversion-spec §5) */}
+      <Group title="Link mua vé">
+        <DestinationTicketLinksEditor
+          slug={d.slug}
+          ticketLinks={d.ticketLinks}
+          onSaved={() => invalidate()}
+        />
+      </Group>
+
+      {/* Khach san goi y (hotel-spec §6) */}
+      <Group title="Khách sạn gợi ý">
+        <DestinationHotelPanel slug={d.slug} />
+      </Group>
+
+      {/* Tour goi y (tour-spec §6) */}
+      <Group title="Tour gợi ý">
+        <DestinationTourPanel slug={d.slug} />
       </Group>
 
       {/* Quan he (spec §7.3 tab 3) */}

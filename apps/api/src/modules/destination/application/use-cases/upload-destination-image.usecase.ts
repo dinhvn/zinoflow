@@ -14,8 +14,11 @@ import { UpdateThumbnailUseCase } from "./update-thumbnail.usecase";
  * anh nguon -> 3 co WebP (hero/medium/thumb) -> FTP len contents/diem-den/{slug}/
  * -> ghi path thumb vao cot Thumbnail (mirror + SQL Server neu da co siteId).
  *
+ * Ten file giu slug ("{slug}-hero.webp"...) thay vi ten chung — SEO anh dua vao
+ * ca filename lan folder, khong chi folder.
+ *
  * Path luu la TUONG DOI voi DICHOITHOI_IMAGE_BASE_URL (da tro san toi .../diem-den/),
- * nen path = "{slug}/thumb.webp" va FTP BASE_DIR cung tro toi thu muc diem-den do.
+ * nen path = "{slug}/{slug}-thumb.webp" va FTP BASE_DIR cung tro toi thu muc diem-den do.
  */
 @Injectable()
 export class UploadDestinationImageUseCase {
@@ -39,9 +42,9 @@ export class UploadDestinationImageUseCase {
 
     const variants = await this.processor.toWebpVariants(source);
     const paths = {
-      hero: `${slug}/hero.webp`,
-      medium: `${slug}/medium.webp`,
-      thumb: `${slug}/thumb.webp`,
+      hero: `${slug}/${slug}-hero.webp`,
+      medium: `${slug}/${slug}-medium.webp`,
+      thumb: `${slug}/${slug}-thumb.webp`,
     };
 
     await this.uploader.upload([

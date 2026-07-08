@@ -86,7 +86,6 @@ function toMeta(row: DestinationImportRow): DestinationMetadataInput {
     addressOld: row.addressOld ?? null,
     contactPhone: row.contactPhone ?? null,
     contactWebsite: row.contactWebsite ?? null,
-    bookingUrl: row.bookingUrl ?? null,
     hotelGroupId: row.hotelGroupId ?? null,
     isFeatured: row.isFeatured ?? false,
   };

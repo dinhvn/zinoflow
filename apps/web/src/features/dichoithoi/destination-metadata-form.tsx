@@ -47,7 +47,6 @@ export interface DestinationMetaValues {
   addressOld: string;
   contactPhone: string;
   contactWebsite: string;
-  bookingUrl: string;
   hotelGroupId: string;
   isFeatured: boolean;
 }
@@ -66,7 +65,6 @@ export const EMPTY_META: DestinationMetaValues = {
   addressOld: "",
   contactPhone: "",
   contactWebsite: "",
-  bookingUrl: "",
   hotelGroupId: "",
   isFeatured: false,
 };
@@ -88,7 +86,6 @@ function toRequest(v: DestinationMetaValues): UpsertDestinationRequest {
     addressOld: str(v.addressOld),
     contactPhone: str(v.contactPhone),
     contactWebsite: str(v.contactWebsite),
-    bookingUrl: str(v.bookingUrl),
     hotelGroupId: str(v.hotelGroupId),
     isFeatured: v.isFeatured,
   };
@@ -289,7 +286,7 @@ export function DestinationMetadataForm({
               set("thumbnail", e.target.value);
               setImageCheck(null);
             }}
-            placeholder="vd: slug.webp hoặc diem-den/slug/thumb.webp"
+            placeholder="vd: slug.webp hoặc diem-den/slug/slug-thumb.webp"
             className={inputCls}
           />
           <Button
@@ -328,9 +325,6 @@ export function DestinationMetadataForm({
         </Field>
         <Field label="Website chính thức">
           <input value={v.contactWebsite} onChange={(e) => set("contactWebsite", e.target.value)} className={inputCls} />
-        </Field>
-        <Field label="Link đặt vé/phòng (booking)">
-          <input value={v.bookingUrl} onChange={(e) => set("bookingUrl", e.target.value)} className={inputCls} />
         </Field>
         <Field label="Nhóm khách sạn (hotelGroupId)">
           <input value={v.hotelGroupId} onChange={(e) => set("hotelGroupId", e.target.value)} className={inputCls} />

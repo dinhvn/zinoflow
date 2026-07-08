@@ -67,16 +67,16 @@ export function DestinationImageUploader({ slug, imageUrl, onUploaded }: Props) 
       {/* Cac co phai khop WIDTHS trong sharp-image-processor.ts (BE la nguon su that) */}
       <ul className="mt-2 space-y-0.5 text-xs text-zinc-500 dark:text-zinc-400">
         <li>
-          <b className="text-zinc-700 dark:text-zinc-300">hero.webp</b> — rộng 1600px · ảnh đầu bài
-          &amp; og:image
+          <b className="text-zinc-700 dark:text-zinc-300">{"{slug}"}-hero.webp</b> — rộng 1600px ·
+          ảnh đầu bài &amp; og:image
         </li>
         <li>
-          <b className="text-zinc-700 dark:text-zinc-300">medium.webp</b> — rộng 800px · dùng cho
-          srcset
+          <b className="text-zinc-700 dark:text-zinc-300">{"{slug}"}-medium.webp</b> — rộng 800px ·
+          dùng cho srcset
         </li>
         <li>
-          <b className="text-zinc-700 dark:text-zinc-300">thumb.webp</b> — rộng 400px · card danh
-          sách / liên quan / tìm kiếm (lưu vào cột Thumbnail)
+          <b className="text-zinc-700 dark:text-zinc-300">{"{slug}"}-thumb.webp</b> — rộng 400px ·
+          card danh sách / liên quan / tìm kiếm (lưu vào cột Thumbnail)
         </li>
       </ul>
 

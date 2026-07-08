@@ -110,7 +110,7 @@ export class GetDestinationDetailUseCase {
       addressOld: entity.addressOld,
       contactPhone: entity.contactPhone,
       contactWebsite: entity.contactWebsite,
-      bookingUrl: entity.bookingUrl,
+      ticketLinks: entity.ticketLinks,
       hotelGroupId: entity.hotelGroupId,
       isFeatured: entity.isFeatured,
       siteStatus: entity.siteStatus,

@@ -26,11 +26,19 @@ Module boundaries:
 ### 4.1 Entities
 1. ContentJob
 - id
-- sourceType (Topic, Campaign, ProductSet)
+- sourceType (Topic, Campaign, ProductSet, Manual — mo rong 07/2026, xem duoi)
 - sourceRef
 - status (Created, GeneratingOutline, DraftReady, InReview, Approved, Rejected, Failed)
 - createdAt
 - createdBy
+
+> **Mo rong 07/2026 (chua build)**: `sourceType=Manual` cho phep tao draft KHONG
+> qua AI (viet tay tu dau) — dung dau tien cho content type Article cua dichoithoi
+> (xem `docs/dichoithoi/dichoithoi-article-spec.md` §1.1). Can them use case
+> `CreateManualDraftUseCase` + 1 transition moi o state machine (§5): job voi
+> `sourceType=Manual` di thang `Created → DraftReady`, bo qua `GeneratingOutline`
+> (khong enqueue pg-boss, khong goi AI provider). Moi thu sau DraftReady (edit,
+> review, quality gates, Approve, Publish) dung nguyen luong hien co, khong doi.
 
 2. ContentDraft
 - id

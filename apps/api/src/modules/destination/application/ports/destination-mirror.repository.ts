@@ -1,4 +1,9 @@
-import type { AddressMapping, AddressMappingsQuery, ListDestinationsQuery } from "@zinoflow/contracts";
+import type {
+  AddressMapping,
+  AddressMappingsQuery,
+  AffiliateLinkItem,
+  ListDestinationsQuery,
+} from "@zinoflow/contracts";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
 
@@ -33,7 +38,6 @@ export interface DestinationMetadataInput {
   addressOld: string | null;
   contactPhone: string | null;
   contactWebsite: string | null;
-  bookingUrl: string | null;
   hotelGroupId: string | null;
   isFeatured: boolean;
 }
@@ -56,6 +60,8 @@ export interface DestinationMirrorRepository {
   setSiteId(slug: string, siteId: number): Promise<void>;
   /** Cap nhat duong dan thumbnail (spec §14.3) */
   setThumbnail(slug: string, thumbnail: string | null): Promise<void>;
+  /** Cap nhat danh sach link mua ve (affiliateUrl da tinh san — spec affiliate-link §2) */
+  setTicketLinks(slug: string, ticketLinks: readonly AffiliateLinkItem[]): Promise<void>;
   /** Luu thong tin nguoi dung cung cap cho AI (ghi chu + URL nguon) — tai dung lan sau */
   saveAiInputs(
     slug: string,

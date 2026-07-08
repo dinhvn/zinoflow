@@ -83,6 +83,32 @@ export default function ContentPage() {
     },
   });
 
+  /** Tao draft VIET TAY — bo qua AI, di thang DraftReady (article-spec §1.1) */
+  const createManualDraft = useMutation({
+    mutationFn: () =>
+      apiSend("POST", "/content/jobs/manual", {
+        siteCode,
+        sourceRef: "manual",
+        topic,
+        articleType,
+        keywordSeed: keywords
+          .split(",")
+          .map((k) => k.trim())
+          .filter(Boolean),
+      }),
+    onSuccess: () => {
+      setTopic("");
+      setKeywords("");
+      setFormError(null);
+      void queryClient.invalidateQueries({ queryKey: ["content-jobs"] });
+    },
+    onError: (error) => {
+      setFormError(
+        error instanceof ApiError ? `${error.message}: ${error.details.join("; ")}` : String(error),
+      );
+    },
+  });
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedProvider || !selectedModel) {
@@ -195,14 +221,29 @@ export default function ContentPage() {
 
         {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
 
-        <Button
-          type="submit"
-          variant="primary"
-          loading={createJob.isPending}
-          disabled={!selectedProvider}
-        >
-          {createJob.isPending ? "Đang tạo..." : "Tạo bài viết"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="submit"
+            variant="primary"
+            loading={createJob.isPending}
+            disabled={!selectedProvider}
+          >
+            {createJob.isPending ? "Đang tạo..." : "✨ Tạo bằng AI"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            loading={createManualDraft.isPending}
+            disabled={topic.trim().length < 5}
+            onClick={() => createManualDraft.mutate()}
+          >
+            {createManualDraft.isPending ? "Đang tạo..." : "✍️ Viết tay"}
+          </Button>
+        </div>
+        <p className="text-xs text-zinc-500">
+          &quot;Viết tay&quot; tạo ngay 1 khung bài gợi ý cấu trúc (không qua AI) để bạn tự viết —
+          sau đó vẫn qua đủ các bước sửa/duyệt/publish như bài AI.
+        </p>
       </form>
 
       {/* Danh sach jobs */}

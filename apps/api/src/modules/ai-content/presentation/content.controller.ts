@@ -4,6 +4,7 @@ import {
   aiProviderKeySchema,
   aiUsageSummaryQuerySchema,
   createContentJobRequestSchema,
+  createManualDraftRequestSchema,
   createPromptVersionRequestSchema,
   reviewDraftRequestSchema,
   updateAiProviderSettingRequestSchema,
@@ -19,6 +20,7 @@ import {
   type CreatePromptVersionResponse,
   type CreateContentJobRequest,
   type CreateContentJobResponse,
+  type CreateManualDraftRequest,
   type ListAiProvidersResponse,
   type PromptTemplateDetail,
   type PromptTemplateListResponse,
@@ -30,6 +32,7 @@ import {
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { CreateContentJobUseCase } from "../application/use-cases/create-content-job.usecase";
+import { CreateManualDraftUseCase } from "../application/use-cases/create-manual-draft.usecase";
 import { RetryContentJobUseCase } from "../application/use-cases/retry-content-job.usecase";
 import { EditContentJobUseCase } from "../application/use-cases/edit-content-job.usecase";
 import { RunQualityChecksUseCase } from "../application/use-cases/run-quality-checks.usecase";
@@ -102,6 +105,7 @@ const PROVIDER_CATALOG: Array<Omit<AiProviderInfo, "isConfigured" | "isEnabled">
 export class ContentController {
   constructor(
     private readonly createContentJob: CreateContentJobUseCase,
+    private readonly createManualDraft: CreateManualDraftUseCase,
     private readonly retryContentJob: RetryContentJobUseCase,
     private readonly editContentJob: EditContentJobUseCase,
     private readonly runQualityChecks: RunQualityChecksUseCase,
@@ -127,6 +131,15 @@ export class ContentController {
     request: CreateContentJobRequest,
   ): Promise<CreateContentJobResponse> {
     return this.createContentJob.execute(request);
+  }
+
+  /** Tao draft VIET TAY, khong qua AI (dichoithoi-article-spec.md §1.1) */
+  @Post("jobs/manual")
+  async createManual(
+    @Body(new ZodValidationPipe(createManualDraftRequestSchema))
+    request: CreateManualDraftRequest,
+  ): Promise<CreateContentJobResponse> {
+    return this.createManualDraft.execute(request);
   }
 
   /** Retry job Failed / generate lai job DraftReady — trang thai khac bi 422 (state machine). */

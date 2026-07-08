@@ -65,7 +65,6 @@ export class UpsertDestinationUseCase {
         addressOld: meta.addressOld,
         contactPhone: meta.contactPhone,
         contactWebsite: meta.contactWebsite,
-        bookingUrl: meta.bookingUrl,
         hotelGroupId: meta.hotelGroupId,
         isFeatured: meta.isFeatured,
       });
@@ -106,7 +105,6 @@ function toMeta(request: UpsertDestinationRequest): DestinationMetadataInput {
     addressOld: request.addressOld ?? null,
     contactPhone: request.contactPhone ?? null,
     contactWebsite: request.contactWebsite ?? null,
-    bookingUrl: request.bookingUrl ?? null,
     hotelGroupId: request.hotelGroupId ?? null,
     isFeatured: request.isFeatured ?? false,
   };

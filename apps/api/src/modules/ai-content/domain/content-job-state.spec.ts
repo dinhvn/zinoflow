@@ -22,6 +22,12 @@ describe("ContentJob state machine (spec §5)", () => {
     });
   });
 
+  describe("manual draft rule (sourceType=Manual — dichoithoi-article-spec.md §1.1)", () => {
+    it("allows Created -> DraftReady directly (bo qua GeneratingOutline)", () => {
+      expect(canTransition("Created", "DraftReady")).toBe(true);
+    });
+  });
+
   describe("retry rules", () => {
     it("allows retry from Failed back to GeneratingOutline", () => {
       expect(canTransition("Failed", "GeneratingOutline")).toBe(true);
@@ -44,7 +50,7 @@ describe("ContentJob state machine (spec §5)", () => {
     ];
     // Bang ky vong doc lap voi implementation — sua state machine thi PHAI sua bang nay co y thuc
     const EXPECTED_ALLOWED: Record<ContentJobStatus, ContentJobStatus[]> = {
-      Created: ["GeneratingOutline", "Failed"],
+      Created: ["GeneratingOutline", "DraftReady", "Failed"],
       GeneratingOutline: ["DraftReady", "Failed"],
       DraftReady: ["InReview", "GeneratingOutline"],
       InReview: ["Approved", "Rejected", "DraftReady"], // DraftReady = RequestChange

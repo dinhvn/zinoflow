@@ -128,7 +128,7 @@ const sqlOut = `/*
 
   Yeu cau: da chay 01-create-new-schema.sql; DA BACKUP toan bo DB.
   Script chay trong 1 transaction — loi o dau rollback toan bo.
-  Theo docs/specs/dichoithoi-database-redesign.md §7.
+  Theo docs/dichoithoi/dichoithoi-database-redesign.md §7.
 */
 SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
@@ -221,19 +221,93 @@ JOIN v2.Province p ON p.Id = vd.ProvinceId
 WHERE vd.Kind IN (2, 3) AND vd.ParentId IS NULL
   AND p.DestinationId IS NOT NULL AND p.DestinationId <> vd.Id;
 
-/* ===== 6) Type CSV -> DestinationType + Map + PrimaryTypeId ===== */
-;WITH SplitTypes AS (
-  SELECT d.Id AS OldSlug, LTRIM(RTRIM(value)) AS TypeName
-  FROM dbo.Destination d
-  CROSS APPLY STRING_SPLIT(d.Type, ',')
-  WHERE d.Type IS NOT NULL AND LTRIM(RTRIM(value)) <> ''
-)
-INSERT INTO v2.DestinationType (Slug, Name)
-SELECT DISTINCT LOWER(REPLACE(TypeName, ' ', '-')), TypeName
-FROM SplitTypes
-WHERE NOT EXISTS (
-  SELECT 1 FROM v2.DestinationType t WHERE t.Slug = LOWER(REPLACE(SplitTypes.TypeName, ' ', '-'))
-);
+/* ===== 6) Loai diem den: 3 nhom + 18 loai chuan (redesign §3.2/§9.2),
+   map tu CSV tu do cu (best-effort — ra soat lai truoc khi len production, §9.2) ===== */
+INSERT INTO v2.DestinationTypeGroup (Slug, Name, [Order]) VALUES
+  ('thien-nhien', N'Thiên nhiên', 1),
+  ('van-hoa-lich-su', N'Văn hóa - Lịch sử', 2),
+  ('vui-choi-trai-nghiem', N'Vui chơi - Trải nghiệm', 3);
+
+INSERT INTO v2.DestinationType (GroupId, Slug, Name, [Order]) VALUES
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'thien-nhien'), 'bien-dao', N'Biển - Đảo', 1),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'thien-nhien'), 'nui-cao-nguyen', N'Núi - Cao nguyên', 2),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'thien-nhien'), 'thac-ho-suoi', N'Sông - Suối - Hồ - Thác', 3),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'thien-nhien'), 'hang-dong', N'Hang động', 4),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'thien-nhien'), 'rung-vuon-quoc-gia', N'Rừng - Vườn quốc gia', 5),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'thien-nhien'), 'dong-que-mien-tay', N'Đồng quê - Sông nước miền Tây', 6),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'van-hoa-lich-su'), 'di-tich-lich-su', N'Di tích lịch sử', 1),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'van-hoa-lich-su'), 'chua-den', N'Chùa - Đền - Miếu', 2),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'van-hoa-lich-su'), 'nha-tho', N'Nhà thờ', 3),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'van-hoa-lich-su'), 'lang-nghe-truyen-thong', N'Làng nghề truyền thống', 4),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'van-hoa-lich-su'), 'bao-tang', N'Bảo tàng', 5),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'van-hoa-lich-su'), 'cong-trinh-kien-truc', N'Công trình kiến trúc', 6),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'vui-choi-trai-nghiem'), 'khu-vui-choi', N'Khu vui chơi - Giải trí', 1),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'vui-choi-trai-nghiem'), 'check-in-song-ao', N'Check-in sống ảo', 2),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'vui-choi-trai-nghiem'), 'cho-pho-dem', N'Chợ - Phố đêm', 3),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'vui-choi-trai-nghiem'), 'am-thuc', N'Khu - Phố ẩm thực', 4),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'vui-choi-trai-nghiem'), 'pho-co-pho-di-bo', N'Phố cổ - Phố đi bộ', 5),
+  ((SELECT Id FROM v2.DestinationTypeGroup WHERE Slug = 'vui-choi-trai-nghiem'), 'nghi-duong', N'Nghỉ dưỡng', 6);
+
+-- Ten loai TU DO trong CSV cu -> slug loai MOI. Nhieu bien the/loai khong con y nghia
+-- (admin: xã/tỉnh/thị trấn/thành phố; hoat dong: phượt/khám phá; tinh trang: tuyết/lãng mạn)
+-- CHU Y khong map — dong nao khong khop bang nay se KHONG co DestinationTypeMap (bo qua).
+CREATE TABLE #TypeMap (OldName nvarchar(128) PRIMARY KEY, NewSlug varchar(64) NOT NULL);
+INSERT INTO #TypeMap (OldName, NewSlug) VALUES
+  (N'lâu đài', 'cong-trinh-kien-truc'),
+  (N'nhà hát', 'cong-trinh-kien-truc'),
+  (N'làng chài', 'dong-que-mien-tay'),
+  (N'đầm', 'thac-ho-suoi'),
+  (N'dầm', 'thac-ho-suoi'),
+  (N'kiến trúc', 'cong-trinh-kien-truc'),
+  (N'nhà tù', 'di-tich-lich-su'),
+  (N'phong cảnh', 'check-in-song-ao'),
+  (N'khu du lịch', 'khu-vui-choi'),
+  (N'hòn', 'bien-dao'),
+  (N'di sản', 'di-tich-lich-su'),
+  (N'nhà thờ', 'nha-tho'),
+  (N'chùa', 'chua-den'),
+  (N'miếu', 'chua-den'),
+  (N'di tích', 'di-tich-lich-su'),
+  (N'cánh đồng', 'dong-que-mien-tay'),
+  (N'quảng trường', 'cong-trinh-kien-truc'),
+  (N'sông', 'thac-ho-suoi'),
+  (N'đình thờ', 'chua-den'),
+  (N'hồ', 'thac-ho-suoi'),
+  (N'hang', 'hang-dong'),
+  (N'tâm linh', 'chua-den'),
+  (N'tháp', 'cong-trinh-kien-truc'),
+  (N'danh thắng', 'check-in-song-ao'),
+  (N'điểm tham quan', 'khu-vui-choi'),
+  (N'suối', 'thac-ho-suoi'),
+  (N'đảo', 'bien-dao'),
+  (N'phố đi bộ', 'pho-co-pho-di-bo'),
+  (N'đình', 'chua-den'),
+  (N'núi', 'nui-cao-nguyen'),
+  (N'lịch sử', 'di-tich-lich-su'),
+  (N'rừng', 'rung-vuon-quoc-gia'),
+  (N'thác', 'thac-ho-suoi'),
+  (N'tứ đại đỉnh đèo', 'nui-cao-nguyen'),
+  (N'đi bộ', 'pho-co-pho-di-bo'),
+  (N'vịnh', 'bien-dao'),
+  (N'biển', 'bien-dao'),
+  (N'rượu', 'am-thuc'),
+  (N'điểm cực bắc', 'check-in-song-ao'),
+  (N'hải đăng', 'cong-trinh-kien-truc'),
+  (N'cao nguyên', 'nui-cao-nguyen'),
+  (N'nhà cổ', 'lang-nghe-truyen-thong'),
+  (N'đèo', 'nui-cao-nguyen'),
+  (N'đồi cát', 'bien-dao'),
+  (N'chợ', 'cho-pho-dem'),
+  (N'cầu', 'cong-trinh-kien-truc'),
+  (N'lang', 'dong-que-mien-tay'),
+  (N'làng', 'dong-que-mien-tay'),
+  (N'thắng cảnh', 'check-in-song-ao'),
+  (N'phố cổ', 'pho-co-pho-di-bo'),
+  (N'mua sắm', 'cho-pho-dem'),
+  (N'bản làng', 'dong-que-mien-tay'),
+  (N'ăn uống', 'am-thuc'),
+  (N'thung lũng', 'nui-cao-nguyen'),
+  (N'bảo tàng', 'bao-tang');
 
 ;WITH SplitTypes AS (
   SELECT d.Id AS OldSlug, LTRIM(RTRIM(value)) AS TypeName
@@ -244,20 +318,27 @@ WHERE NOT EXISTS (
 INSERT INTO v2.DestinationTypeMap (DestinationId, TypeId)
 SELECT DISTINCT vd.Id, t.Id
 FROM SplitTypes s
+JOIN #TypeMap tm ON LOWER(tm.OldName) = LOWER(s.TypeName)
 JOIN v2.Destination vd ON vd.Slug = s.OldSlug
-JOIN v2.DestinationType t ON t.Slug = LOWER(REPLACE(s.TypeName, ' ', '-'));
+JOIN v2.DestinationType t ON t.Slug = tm.NewSlug;
 
--- PrimaryTypeId = loai dau tien trong CSV cu
+-- PrimaryTypeId = loai dau tien trong CSV cu co map duoc; neu khong, lay bat ky loai da map
 ;WITH FirstType AS (
   SELECT d.Id AS OldSlug,
          LTRIM(RTRIM(LEFT(d.Type, CHARINDEX(',', d.Type + ',') - 1))) AS TypeName
   FROM dbo.Destination d
   WHERE d.Type IS NOT NULL AND d.Type <> ''
 )
-UPDATE vd SET vd.PrimaryTypeId = t.Id
-FROM v2.Destination vd
-JOIN FirstType f ON f.OldSlug = vd.Slug
-JOIN v2.DestinationType t ON t.Slug = LOWER(REPLACE(f.TypeName, ' ', '-'));
+UPDATE vd SET vd.PrimaryTypeId = COALESCE(
+  (SELECT t.Id FROM FirstType f
+   JOIN #TypeMap tm ON LOWER(tm.OldName) = LOWER(f.TypeName)
+   JOIN v2.DestinationType t ON t.Slug = tm.NewSlug
+   WHERE f.OldSlug = vd.Slug),
+  (SELECT TOP 1 t.Id FROM v2.DestinationTypeMap m
+   JOIN v2.DestinationType t ON t.Id = m.TypeId
+   WHERE m.DestinationId = vd.Id)
+)
+FROM v2.Destination vd;
 
 /* ===== 7) DestinationDetail -> DestinationContent (+ Phone -> ContactPhone) ===== */
 INSERT INTO v2.DestinationContent

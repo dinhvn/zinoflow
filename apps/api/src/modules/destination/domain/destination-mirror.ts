@@ -27,7 +27,6 @@ export interface SiteDestinationRow {
   addressOld: string | null;
   contactPhone: string | null;
   contactWebsite: string | null;
-  bookingUrl: string | null;
   hotelGroupId: string | null;
   isFeatured: boolean;
   siteStatus: number;
@@ -117,7 +116,7 @@ export function deriveProductionState(
 
 /**
  * Anh da theo convention MOI chua? (spec §14.1.3 — folder theo slug)
- * Moi = "{slug}/thumb.webp" (co "/"); cu = ten file phang "{slug}.webp" hoac null.
+ * Moi = "{slug}/{slug}-thumb.webp" (co "/"); cu = ten file phang "{slug}.webp" hoac null.
  * Dung de job migrate anh bo qua diem da chuyen (idempotent).
  */
 export function isNewImagePath(thumbnail: string | null): boolean {

@@ -7,9 +7,13 @@ import {
   contentJobSchema,
   draftArticleSchema,
   listAiProvidersResponseSchema,
+  publishArticleResultSchema,
   publishDestinationResultSchema,
+  refreshDynamicBlocksResultSchema,
   runQualityChecksResponseSchema,
+  type PublishArticleResult,
   type PublishDestinationResult,
+  type RefreshDynamicBlocksResult,
   type ReviewAction,
   type UpdateContentJobRequest,
 } from "@zinoflow/contracts";
@@ -252,6 +256,31 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     onError: (error) => setActionError(toActionError(error)),
   });
 
+  const [articleResult, setArticleResult] = useState<PublishArticleResult | null>(null);
+  const publishArticle = useMutation({
+    mutationFn: async () =>
+      publishArticleResultSchema.parse(await apiSend("POST", `/articles/${id}/publish`, {})),
+    onSuccess: (result) => {
+      setActionError(null);
+      setArticleResult(result);
+      invalidateAll();
+    },
+    onError: (error) => setActionError(toActionError(error)),
+  });
+
+  const [refreshResult, setRefreshResult] = useState<RefreshDynamicBlocksResult | null>(null);
+  const refreshBlocks = useMutation({
+    mutationFn: async () =>
+      refreshDynamicBlocksResultSchema.parse(
+        await apiSend("POST", `/articles/${id}/refresh-blocks`, {}),
+      ),
+    onSuccess: (result) => {
+      setActionError(null);
+      setRefreshResult(result);
+    },
+    onError: (error) => setActionError(toActionError(error)),
+  });
+
   const isDirty = draft?.draftMarkdown != null && editorText !== draft.draftMarkdown;
   const checks = checksQuery.data?.checks ?? [];
 
@@ -277,7 +306,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 ? "Top-list"
                 : job.articleType === "review"
                   ? "Review đơn"
-                  : "Điểm đến (dichoithoi)"}
+                  : job.articleType === "cam-nang"
+                    ? "Cẩm nang (dichoithoi)"
+                    : "Điểm đến (dichoithoi)"}
             </span>
             <span>AI: {job.aiProvider}/{job.aiModel}</span>
             {draft && <span>Version: v{draft.version}</span>}
@@ -439,6 +470,24 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     : "Đăng lên dichoithoi"}
                 </button>
               )}
+              {job.status === "Approved" && job.articleType === "cam-nang" && (
+                <Button
+                  variant="primary"
+                  loading={publishArticle.isPending}
+                  onClick={() => publishArticle.mutate()}
+                >
+                  {publishArticle.isPending ? "Đang đăng..." : "Đăng bài cẩm nang"}
+                </Button>
+              )}
+              {job.articleType === "cam-nang" && (
+                <Button
+                  variant="secondary"
+                  loading={refreshBlocks.isPending}
+                  onClick={() => refreshBlocks.mutate()}
+                >
+                  {refreshBlocks.isPending ? "Đang làm mới..." : "Làm mới khối động"}
+                </Button>
+              )}
             </div>
           )}
 
@@ -453,6 +502,37 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 <p className="mt-1">
                   Link nội bộ đã chèn: {publishResult.addedLinks.map((l) => l.targetName).join(", ")}
                 </p>
+              )}
+            </div>
+          )}
+
+          {articleResult && (
+            <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+              <p className="font-medium">
+                ✅ Đã đăng bài “{articleResult.slug}” ({(articleResult.durationMs / 1000).toFixed(1)}s) —{" "}
+                {articleResult.blockCount} khối động.
+              </p>
+              {articleResult.warnings.length > 0 && (
+                <ul className="mt-1 list-inside list-disc text-amber-700 dark:text-amber-400">
+                  {articleResult.warnings.map((w, i) => (
+                    <li key={i}>{w.message}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {refreshResult && (
+            <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+              <p className="font-medium">
+                ✅ Đã làm mới khối động cho “{refreshResult.slug}” — {refreshResult.blockCount} khối.
+              </p>
+              {refreshResult.warnings.length > 0 && (
+                <ul className="mt-1 list-inside list-disc text-amber-700 dark:text-amber-400">
+                  {refreshResult.warnings.map((w, i) => (
+                    <li key={i}>{w.message}</li>
+                  ))}
+                </ul>
               )}
             </div>
           )}

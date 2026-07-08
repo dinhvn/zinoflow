@@ -86,11 +86,11 @@ export async function apiUpload<TSchema extends z.ZodType>(
   return schema.parse(await res.json());
 }
 
-/** POST/PATCH/PUT voi JSON body. Tra ve response da parse (unknown neu khong can schema). */
+/** POST/PATCH/PUT/DELETE voi JSON body (tuy chon). Tra ve response da parse. */
 export async function apiSend(
-  method: "POST" | "PATCH" | "PUT",
+  method: "POST" | "PATCH" | "PUT" | "DELETE",
   path: string,
-  body: unknown,
+  body?: unknown,
 ): Promise<unknown> {
   const url = `${API_BASE_URL}/api${path}`;
   const res = await fetchOrThrow(

@@ -3,7 +3,7 @@ import { contentSectionSchema, faqItemSchema } from "../ai-content/article";
 
 /**
  * Bai viet DIEM DEN du lich (articleType "guide-diem-den") —
- * spec docs/specs/dichoithoi-destination-spec.md §4.
+ * spec docs/dichoithoi/dichoithoi-destination-spec.md §4.
  * Output AI map THANG sang cot v2.DestinationContent (redesign doc §4.3):
  * quickFacts -> cot rieng, intro + sections + faq -> ContentHtml,
  * metadata -> MetaTitle/MetaDescription + Destination.ShortDescription/SearchKeyword.

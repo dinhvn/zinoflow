@@ -1,7 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import type { AddressMappingsQuery, ListDestinationsQuery } from "@zinoflow/contracts";
+import type {
+  AddressMappingsQuery,
+  AffiliateLinkItem,
+  ListDestinationsQuery,
+} from "@zinoflow/contracts";
 import { DestinationMirrorEntity } from "../entities/destination-mirror.entity";
 import { AdminProvinceEntity, AdminWardMappingEntity } from "../entities/admin-units.entity";
 import type {
@@ -80,7 +84,6 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       addressOld: meta.addressOld,
       contactPhone: meta.contactPhone,
       contactWebsite: meta.contactWebsite,
-      bookingUrl: meta.bookingUrl,
       hotelGroupId: meta.hotelGroupId,
       isFeatured: meta.isFeatured,
     };
@@ -181,7 +184,6 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       addressOld: row.addressOld,
       contactPhone: row.contactPhone,
       contactWebsite: row.contactWebsite,
-      bookingUrl: row.bookingUrl,
       hotelGroupId: row.hotelGroupId,
       isFeatured: row.isFeatured,
       siteStatus: row.siteStatus,
@@ -208,6 +210,10 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
 
   async setThumbnail(slug: string, thumbnail: string | null): Promise<void> {
     await this.repo.update({ slug }, { thumbnail });
+  }
+
+  async setTicketLinks(slug: string, ticketLinks: readonly AffiliateLinkItem[]): Promise<void> {
+    await this.repo.update({ slug }, { ticketLinks: [...ticketLinks] });
   }
 
   async saveAiInputs(

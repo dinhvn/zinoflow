@@ -17,6 +17,8 @@ function loadMssqlDriver(host: string): typeof sql {
 }
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
 import type {
+  DestinationCardFilter,
+  DestinationCardRow,
   DichoithoiSiteDb,
   PublishDestinationInput,
   SiteContentRow,
@@ -24,6 +26,12 @@ import type {
   SiteDestinationMeta,
   SiteTypeRow,
 } from "../../application/ports/dichoithoi-site-db.port";
+
+const SORT_COLUMN: Record<DestinationCardFilter["sort"], string> = {
+  featured: "d.IsFeatured DESC, d.[Order] ASC",
+  newest: "d.CreatedAt DESC",
+  order: "d.[Order] ASC",
+};
 
 const KIND_BY_NUMBER: Record<number, SiteDestinationRow["kind"]> = {
   1: "province",
@@ -57,7 +65,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       SELECT
         d.Id, d.Slug, d.Kind, d.Name, d.ShortDescription, d.Thumbnail,
         d.Lat, d.Lng, d.AddressNew, d.AddressOld, d.ContactPhone, d.ContactWebsite,
-        d.BookingUrl, d.HotelGroupId, d.IsFeatured, d.Status, d.ContentSource, d.UpdatedAt,
+        d.HotelGroupId, d.IsFeatured, d.Status, d.ContentSource, d.UpdatedAt,
         p.Code AS ProvinceCode,
         par.Slug AS ParentSlug,
         CONVERT(varchar(64), HASHBYTES('SHA2_256', CAST(c.ContentHtml AS nvarchar(max))), 2) AS ContentHash
@@ -81,7 +89,6 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       addressOld: (r.AddressOld as string | null) ?? null,
       contactPhone: (r.ContactPhone as string | null) ?? null,
       contactWebsite: (r.ContactWebsite as string | null) ?? null,
-      bookingUrl: (r.BookingUrl as string | null) ?? null,
       hotelGroupId: (r.HotelGroupId as string | null) ?? null,
       isFeatured: Boolean(r.IsFeatured),
       siteStatus: Number(r.Status),
@@ -107,6 +114,13 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       hotel: (r.HotelText as string | null) ?? null,
       tip: (r.Tip as string | null) ?? null,
     };
+  }
+
+  async fetchProvinceSlugs(): Promise<Array<{ slug: string; code: string; name: string }>> {
+    const rows = await this.queryWithRetry<{ Slug: string; Code: string; Name: string }>(
+      `SELECT Slug, Code, Name FROM v2.Province ORDER BY Name`,
+    );
+    return rows.map((r) => ({ slug: r.Slug, code: r.Code, name: r.Name }));
   }
 
   async fetchTypes(): Promise<SiteTypeRow[]> {
@@ -147,6 +161,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       request.input("hotel", input.hotel);
       request.input("tip", input.tip);
       request.input("faqJson", input.faqJson);
+      request.input("ticketLinksJson", input.ticketLinksJson);
       request.input("metaTitle", input.metaTitle);
       request.input("metaDescription", input.metaDescription);
       targets.forEach((id, i) => request.input(`target${i}`, id));
@@ -166,15 +181,16 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         UPDATE v2.DestinationContent SET
           ContentHtml = @contentHtml, OpeningTime = @openingTime, TicketPrice = @ticketPrice,
           Transport = @transport, Food = @food, HotelText = @hotel, Tip = @tip,
-          FaqJson = @faqJson, MetaTitle = @metaTitle, MetaDescription = @metaDescription
+          FaqJson = @faqJson, TicketLinksJson = @ticketLinksJson,
+          MetaTitle = @metaTitle, MetaDescription = @metaDescription
         WHERE DestinationId = @siteId;
         IF @@ROWCOUNT = 0
           INSERT INTO v2.DestinationContent
             (DestinationId, ContentHtml, OpeningTime, TicketPrice, Transport, Food, HotelText,
-             Tip, FaqJson, MetaTitle, MetaDescription)
+             Tip, FaqJson, TicketLinksJson, MetaTitle, MetaDescription)
           VALUES
             (@siteId, @contentHtml, @openingTime, @ticketPrice, @transport, @food, @hotel,
-             @tip, @faqJson, @metaTitle, @metaDescription);
+             @tip, @faqJson, @ticketLinksJson, @metaTitle, @metaDescription);
 
         -- Quan he mentioned tu auto-link: thay toan bo dong auto cu cua nguon nay
         DELETE FROM v2.DestinationRelation
@@ -277,12 +293,12 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         DECLARE @provinceId int = (SELECT Id FROM v2.Province WHERE Code = @provinceCode);
         INSERT INTO v2.Destination
           (Slug, Kind, ParentId, ProvinceId, Name, NameUnaccented, ShortDescription, Thumbnail,
-           Lat, Lng, AddressNew, AddressOld, ContactPhone, ContactWebsite, BookingUrl,
+           Lat, Lng, AddressNew, AddressOld, ContactPhone, ContactWebsite,
            HotelGroupId, IsFeatured, Status, ContentSource)
         VALUES
           (@slug, @kind, @parentId, @provinceId, @name, @nameUnaccented,
            COALESCE(@shortDescription, N''), @thumbnail, @lat, @lng, @addressNew, @addressOld,
-           @contactPhone, @contactWebsite, @bookingUrl, @hotelGroupId, @isFeatured, 1, 1);
+           @contactPhone, @contactWebsite, @hotelGroupId, @isFeatured, 1, 1);
         SELECT CAST(SCOPE_IDENTITY() AS int) AS SiteId;
       `);
       return result.recordset;
@@ -306,7 +322,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
           Name = @name, NameUnaccented = @nameUnaccented,
           ShortDescription = COALESCE(@shortDescription, N''), Thumbnail = @thumbnail,
           Lat = @lat, Lng = @lng, AddressNew = @addressNew, AddressOld = @addressOld,
-          ContactPhone = @contactPhone, ContactWebsite = @contactWebsite, BookingUrl = @bookingUrl,
+          ContactPhone = @contactPhone, ContactWebsite = @contactWebsite,
           HotelGroupId = @hotelGroupId, IsFeatured = @isFeatured, UpdatedAt = SYSUTCDATETIME()
         WHERE Id = @siteId;
       `);
@@ -329,10 +345,70 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     request.input("addressOld", meta.addressOld);
     request.input("contactPhone", meta.contactPhone);
     request.input("contactWebsite", meta.contactWebsite);
-    request.input("bookingUrl", meta.bookingUrl);
     request.input("hotelGroupId", meta.hotelGroupId);
     request.input("isFeatured", meta.isFeatured);
     return request;
+  }
+
+  /** article-spec §3.1 khoi `destinations` — CHI diem da published (Status=1) */
+  async findDestinationCards(filter: DestinationCardFilter): Promise<DestinationCardRow[]> {
+    const conditions: string[] = ["d.Status = 1"];
+    const rows = await this.runWithRetry<Array<Record<string, unknown>>>(async (pool) => {
+      const request = pool.request();
+      if (filter.typeSlug) {
+        conditions.push(
+          "EXISTS (SELECT 1 FROM v2.DestinationTypeMap m JOIN v2.DestinationType t ON t.Id = m.TypeId " +
+            "WHERE m.DestinationId = d.Id AND t.Slug = @typeSlug)",
+        );
+        request.input("typeSlug", filter.typeSlug);
+      }
+      if (filter.provinceSlug) {
+        conditions.push("p.Slug = @provinceSlug");
+        request.input("provinceSlug", filter.provinceSlug);
+      }
+      if (filter.parentSlug) {
+        conditions.push("par.Slug = @parentSlug");
+        request.input("parentSlug", filter.parentSlug);
+      }
+      request.input("limit", filter.limit);
+      const result = await request.query<Record<string, unknown>>(`
+        SELECT TOP (@limit) d.Slug, d.Name, d.ShortDescription, d.Thumbnail, d.Kind
+        FROM v2.Destination d
+        LEFT JOIN v2.Province p ON p.Id = d.ProvinceId
+        LEFT JOIN v2.Destination par ON par.Id = d.ParentId
+        WHERE ${conditions.join(" AND ")}
+        ORDER BY ${SORT_COLUMN[filter.sort]}
+      `);
+      return result.recordset;
+    });
+    return rows.map((r) => ({
+      slug: r.Slug as string,
+      name: r.Name as string,
+      shortDescription: (r.ShortDescription as string | null) ?? null,
+      thumbnail: (r.Thumbnail as string | null) ?? null,
+      kind: KIND_BY_NUMBER[r.Kind as number] ?? "poi",
+    }));
+  }
+
+  async findDestinationCardBySlug(slug: string): Promise<DestinationCardRow | null> {
+    const rows = await this.runWithRetry<Array<Record<string, unknown>>>(async (pool) => {
+      const request = pool.request();
+      request.input("slug", slug);
+      const result = await request.query<Record<string, unknown>>(`
+        SELECT Slug, Name, ShortDescription, Thumbnail, Kind
+        FROM v2.Destination WHERE Slug = @slug AND Status = 1
+      `);
+      return result.recordset;
+    });
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      slug: r.Slug as string,
+      name: r.Name as string,
+      shortDescription: (r.ShortDescription as string | null) ?? null,
+      thumbnail: (r.Thumbnail as string | null) ?? null,
+      kind: KIND_BY_NUMBER[r.Kind as number] ?? "poi",
+    };
   }
 
   async updateThumbnail(siteId: number, thumbnail: string | null): Promise<void> {
@@ -343,6 +419,17 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       return request.query(
         `UPDATE v2.Destination SET Thumbnail = @thumbnail, UpdatedAt = SYSUTCDATETIME()
          WHERE Id = @siteId`,
+      );
+    });
+  }
+
+  async updateTicketLinks(siteId: number, ticketLinksJson: string): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("ticketLinksJson", ticketLinksJson);
+      return request.query(
+        `UPDATE v2.DestinationContent SET TicketLinksJson = @ticketLinksJson WHERE DestinationId = @siteId`,
       );
     });
   }

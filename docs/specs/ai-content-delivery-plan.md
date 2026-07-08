@@ -77,7 +77,7 @@ Gate sang M4:
 - [x] Review history hien day du actor + note + thoi gian (verify E2E).
 
 ### M4 — Dichoithoi destination content (Tuan 4-5) — UU TIEN LEN TRUOC (12/06/2026)
-Spec rieng: `docs/specs/dichoithoi-destination-spec.md`. Tao + cap nhat bai diem den
+Spec rieng: `docs/dichoithoi/dichoithoi-destination-spec.md`. Tao + cap nhat bai diem den
 du lich bang AI, publish TRUC TIEP vao SQL Server cua dichoithoi.com (bo CMS import).
 
 Ly do lam truoc WordPress: gia tri kinh doanh uu tien (dichoithoi can content),
@@ -88,7 +88,7 @@ dung prompt_templates DB san co; SiteProfile tong quat lui ve M5).
 Dieu kien tien quyet:
 - [x] Ket noi duoc SQL Server site4now.net tu may local — XAC NHAN 12/06/2026.
 - [ ] Backup toan bo DB dichoithoi.
-- [ ] DAI TU schema theo `docs/specs/dichoithoi-database-redesign.md` (12/06/2026):
+- [ ] DAI TU schema theo `docs/dichoithoi/dichoithoi-database-redesign.md` (12/06/2026):
       tao bang moi + migration data (script ben repo dichoithoi) — publisher/mirror
       cua AI tool build theo schema MOI ngay tu dau.
 - [ ] Chot 3 viec o redesign doc §9: map tinh cu→34 tinh moi, bo DestinationType

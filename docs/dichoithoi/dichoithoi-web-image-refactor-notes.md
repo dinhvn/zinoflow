@@ -2,7 +2,8 @@
 
 Ghi chú cho người sửa repo `D:\Gits\mmo\dichoithoi` (zinoflow KHÔNG sửa repo đó).
 Mục tiêu: website đọc đường dẫn ảnh từ **cột DB Thumbnail** thay vì suy từ Id,
-để khớp convention mới `diem-den/{slug}/hero|medium|thumb.webp` mà zinoflow upload
+để khớp convention mới `diem-den/{slug}/{slug}-hero|medium|thumb.webp` (giữ slug
+trong tên file, không chỉ trong folder — tốt cho SEO ảnh) mà zinoflow upload
 qua FTP (spec §14 — `dichoithoi-destination-spec.md`).
 
 ## Hiện trạng (soi code 07/2026)
@@ -18,9 +19,9 @@ qua FTP (spec §14 — `dichoithoi-destination-spec.md`).
 | `Utilities/SchemaUtil.cs:69,104` | JSON-LD image = `{host}/diem-den/{Id}.webp` |
 | `<img>` mọi nơi | không `width/height`, không `loading="lazy"`, không `srcset` |
 
-Convention MỚI (zinoflow FTP lên): `contents/diem-den/{slug}/hero.webp` (1600w),
-`{slug}/medium.webp` (800w), `{slug}/thumb.webp` (400w). Cột `Thumbnail` trong DB
-lưu path TƯƠNG ĐỐI dạng `{slug}/thumb.webp`.
+Convention MỚI (zinoflow FTP lên): `contents/diem-den/{slug}/{slug}-hero.webp` (1600w),
+`{slug}/{slug}-medium.webp` (800w), `{slug}/{slug}-thumb.webp` (400w). Cột `Thumbnail`
+trong DB lưu path TƯƠNG ĐỐI dạng `{slug}/{slug}-thumb.webp`.
 
 ## Việc cần sửa (theo thứ tự)
 
@@ -45,11 +46,11 @@ ALTER TABLE Destination ADD Thumbnail nvarchar(256) NULL;
 Image = x.des.Id + ".webp",
 
 // MỚI — ưu tiên cột DB, fallback layout cũ khi chưa migrate ảnh:
-Thumbnail = x.des.Thumbnail,                       // "{slug}/thumb.webp" hoặc NULL
+Thumbnail = x.des.Thumbnail,                       // "{slug}/{slug}-thumb.webp" hoặc NULL
 // Ở tầng model/helper (không làm trong SQL):
 //   ThumbUrl = Thumbnail != null ? $"/diem-den/{Thumbnail}"
 //                                : $"/diem-den/thumbnail/{Id}.webp";
-//   HeroUrl  = Thumbnail != null ? $"/diem-den/{Thumbnail.Replace("thumb.webp","hero.webp")}"
+//   HeroUrl  = Thumbnail != null ? $"/diem-den/{Thumbnail.Replace("-thumb.webp","-hero.webp")}"
 //                                : $"/diem-den/{Id}.webp";
 ```
 Khuyến nghị viết 1 helper duy nhất (vd `ImageUrlUtils.Thumb(model)` /

@@ -11,13 +11,13 @@ generate articles with AI (human review required) and publish to WordPress
 Build order: AI Content Tool first, Image Tool (Remotion) later.
 Extension (M4 — prioritized 12/06/2026): travel destination articles for dichoithoi.com —
 published by direct UPSERT into that site's SQL Server DB (never wipe; schema owned by
-dichoithoi, no migrations from this repo). See `docs/specs/dichoithoi-destination-spec.md`.
+dichoithoi, no migrations from this repo). See `docs/dichoithoi/dichoithoi-destination-spec.md`.
 
 Key docs (read before making design decisions):
 - `docs/idea.md` — business context + final direction (11/06/2026)
 - `docs/tech-recommendation-web-mvp.md` — tech decision record (frozen, do not re-litigate)
 - `docs/specs/ai-content-technical-spec.md` — main spec (state machine, quality gates, 8-block article framework)
-- `docs/specs/dichoithoi-destination-spec.md` — destination content for dichoithoi.com (M6)
+- `docs/dichoithoi/dichoithoi-destination-spec.md` — destination content for dichoithoi.com (M6)
 - `docs/specs/folder-structure.md` — monorepo layout
 - `docs/clean-architecture-playbook.md` — architecture rules
 

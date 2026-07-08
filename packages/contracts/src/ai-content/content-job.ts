@@ -16,7 +16,12 @@ export const contentJobStatusSchema = z.enum([
 ]);
 export type ContentJobStatus = z.infer<typeof contentJobStatusSchema>;
 
-export const contentSourceTypeSchema = z.enum(["Topic", "Campaign", "ProductSet"]);
+/**
+ * Manual = tao draft KHONG qua AI (viet tay tu dau) — mo rong 07/2026, xem
+ * dichoithoi-article-spec.md §1.1. Job Manual di thang Created -> DraftReady,
+ * khong enqueue pg-boss, khong goi AI provider (content-job-state.ts).
+ */
+export const contentSourceTypeSchema = z.enum(["Topic", "Campaign", "ProductSet", "Manual"]);
 export type ContentSourceType = z.infer<typeof contentSourceTypeSchema>;
 
 /**
@@ -25,7 +30,7 @@ export type ContentSourceType = z.infer<typeof contentSourceTypeSchema>;
  * km-<postType>: bai CMS khuyenmai laruki/dochoi3s (schema cms-article.ts, prompt theo
  * site x postType — resolve trong prompt-builder).
  */
-export const KNOWN_ARTICLE_TYPES = ["toplist", "review", "guide-diem-den"] as const;
+export const KNOWN_ARTICLE_TYPES = ["toplist", "review", "guide-diem-den", "cam-nang"] as const;
 export const articleTypeSchema = z.union([
   z.enum(KNOWN_ARTICLE_TYPES),
   z.string().regex(/^km-[a-z0-9-]+$/, "articleType khuyenmai phải dạng km-<slug>"),
@@ -90,3 +95,18 @@ export const createContentJobResponseSchema = z.object({
   status: contentJobStatusSchema,
 });
 export type CreateContentJobResponse = z.infer<typeof createContentJobResponseSchema>;
+
+/**
+ * Tao draft VIET TAY (khong qua AI) — dichoithoi-article-spec.md §1.1.
+ * Tra ve ngay DraftReady voi 1 khung bai goi y cau truc (nguoi dung sua tiep
+ * qua man edit thong thuong — khong co duong tat bo qua quality gate/review).
+ */
+export const createManualDraftRequestSchema = z.object({
+  siteCode: z.string().min(1),
+  sourceRef: z.string(),
+  topic: z.string().min(5),
+  articleType: articleTypeSchema.default("toplist"),
+  keywordSeed: z.array(z.string()).default([]),
+  sourceContext: z.string().max(60_000).optional(),
+});
+export type CreateManualDraftRequest = z.infer<typeof createManualDraftRequestSchema>;

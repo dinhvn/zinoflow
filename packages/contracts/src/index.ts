@@ -4,6 +4,11 @@ export * from "./common/error";
 // Dichoithoi (M4)
 export * from "./dichoithoi/destination";
 export * from "./dichoithoi/destination-article";
+export * from "./dichoithoi/affiliate";
+export * from "./dichoithoi/hotel";
+export * from "./dichoithoi/tour";
+export * from "./dichoithoi/article-content";
+export * from "./dichoithoi/article";
 
 // Khuyenmai — laruki/dochoi3s (M5)
 export * from "./khuyenmai/cms-site";

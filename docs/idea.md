@@ -177,7 +177,7 @@ Cap nhat 12/06/2026 (chot sau phan tich):
   trong `docs/specs/ai-content-delivery-plan.md` (WordPress lui ve M5, hardening M6).
 - DAI TU website dichoithoi: thiet ke lai database tu dau (uu tien toc do render),
   nguoi dung se viet lai website hien thi theo schema moi —
-  chi tiet `docs/specs/dichoithoi-database-redesign.md`.
+  chi tiet `docs/dichoithoi/dichoithoi-database-redesign.md`.
   (Phuong an additive trong spec §11 da bi thay the boi quyet dinh dai tu nay.)
 - Da xac nhan ket noi duoc SQL Server site4now.net tu may local.
 
@@ -203,6 +203,6 @@ Cac quyet dinh chi tiet da chot trong cung ngay (chi tiet o specs):
   giai doan 2: tab "Anh" upload + AI goi y danh sach anh/alt text;
   LAM SAU: remark tren anh (watermark/caption) — destination-spec §14.
 
-Tai lieu vao cua: `docs/specs/dichoithoi-system-overview.md` (kien truc 3 thanh phan,
+Tai lieu vao cua: `docs/dichoithoi/dichoithoi-system-overview.md` (kien truc 3 thanh phan,
 lo trinh) → `dichoithoi-database-redesign.md` (schema moi) →
 `dichoithoi-destination-spec.md` (tinh nang trong AI tool).

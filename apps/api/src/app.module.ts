@@ -6,6 +6,10 @@ import { HealthModule } from "./modules/shared/health/health.module";
 import { JobsModule } from "./modules/shared/jobs/jobs.module";
 import { AiContentModule } from "./modules/ai-content/ai-content.module";
 import { DestinationModule } from "./modules/destination/destination.module";
+import { AffiliateModule } from "./modules/affiliate/affiliate.module";
+import { HotelModule } from "./modules/hotel/hotel.module";
+import { TourModule } from "./modules/tour/tour.module";
+import { ArticleModule } from "./modules/article/article.module";
 import { CmsContentModule } from "./modules/cms-content/cms-content.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { ImageModule } from "./modules/image/image.module";
@@ -29,7 +33,11 @@ import { ApiTokenGuard } from "./modules/shared/auth/api-token.guard";
     JobsModule,
     HealthModule,
     AiContentModule,
+    AffiliateModule,
     DestinationModule,
+    HotelModule,
+    TourModule,
+    ArticleModule,
     CmsContentModule,
     DashboardModule,
     ImageModule,

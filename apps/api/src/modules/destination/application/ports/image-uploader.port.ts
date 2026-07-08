@@ -6,7 +6,7 @@ export const IMAGE_UPLOADER = Symbol("IMAGE_UPLOADER");
 
 /** 1 file can day len — path TUONG DOI voi thu muc goc anh (DICHOITHOI_FTP_BASE_DIR) */
 export interface UploadFile {
-  /** VD "nui-ham-rong/thumb.webp" — se tao thu muc con neu chua co */
+  /** VD "nui-ham-rong/nui-ham-rong-thumb.webp" — se tao thu muc con neu chua co */
   path: string;
   body: Buffer;
   contentType: string;

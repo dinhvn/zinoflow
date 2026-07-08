@@ -93,10 +93,31 @@ ghi, không bao giờ đổi trừ sáp nhập) để lọc "mọi điểm thu�
 không phải duyệt cây lúc render. Cây tối đa 3 cấp (province → cluster → poi),
 KHÔNG cho cluster lồng cluster (ràng buộc ở AI tool, giữ query đơn giản).
 
-### 3.2 Cùng loại (biển, núi, chùa, phố cổ...)
-- `DestinationType` (int PK, slug — mở được trang landing `/loai/bien-dao`).
+### 3.2 Cùng loại (biển, núi, chùa, phố cổ...) — 2 tầng, cập nhật 07/2026
+
+Phát hiện khi đối chiếu nhu cầu tìm kiếm thật ("sông suối", "tự nhiên", "kiến
+trúc"): người dùng nghĩ theo 2 tầng khác nhau — **nhóm lớn** (tự nhiên, văn hóa,
+vui chơi — 3-5 nhóm) và **loại cụ thể** (sông suối, thác, hang động... — vài
+chục loại). Thiết kế ban đầu (§9.2 cũ) chỉ có "nhóm" trong TÀI LIỆU, không có
+cột DB — không mở được trang gộp theo nhóm, mất 1 tầng điều hướng + 1 tầng silo
+SEO (pillar page nhóm → cluster page loại → bài điểm đến). Thêm bảng cha:
+
+```sql
+CREATE TABLE DestinationTypeGroup (
+  Id      int IDENTITY PRIMARY KEY,
+  Slug    varchar(64)  NOT NULL UNIQUE,   -- /loai/{slug} — trang pillar theo nhóm
+  Name    nvarchar(128) NOT NULL,          -- "Thiên nhiên", "Văn hóa - Lịch sử", "Vui chơi - Trải nghiệm"
+  [Order] int NOT NULL DEFAULT 0
+);
+```
+- `DestinationType` thêm cột `GroupId int NOT NULL` (FK `DestinationTypeGroup`) —
+  mỗi loại cụ thể thuộc ĐÚNG 1 nhóm (nhóm là phân loại thô, không cần M:N).
 - `DestinationTypeMap` (DestinationId, TypeId) — M:N thay CSV, lọc bằng index seek.
 - `Destination.PrimaryTypeId` — loại chính để hiện badge/sort mà không join map.
+- URL 2 tầng: `/loai/{groupSlug}` (trang nhóm — liệt kê điểm đến từ MỌI loại
+  trong nhóm, vd mọi điểm "Thiên nhiên") và `/loai/{groupSlug}/{typeSlug}`
+  (trang loại cụ thể, vd `/loai/thien-nhien/thac-ho-suoi`) — cấu trúc URL lồng
+  thể hiện đúng quan hệ cha-con, tốt cho breadcrumb + internal link theo silo.
 
 ### 3.3 Quan hệ tường minh — bảng `DestinationRelation`
 Chỉ 3 loại KHÔNG suy ra được từ cây/loại:
@@ -134,6 +155,12 @@ CREATE TABLE Province (
 ```
 
 ### 4.2 `Destination` — bảng nóng (chỉ cột cần cho list/card/filter)
+
+Cập nhật 07/2026: bỏ cột `BookingUrl` (1 link) khỏi bảng này — chuyển thành danh
+sách nhiều link (`TicketLinksJson`) trên `DestinationContent` (§4.3), vì cùng đặc
+điểm với `FaqJson`/`RelatedJson`: dữ liệu có cấu trúc lặp (nhiều dòng), chỉ trang
+detail cần, không dùng để lọc/sort ở trang danh sách.
+
 ```sql
 CREATE TABLE Destination (
   Id            int IDENTITY PRIMARY KEY,
@@ -152,8 +179,7 @@ CREATE TABLE Destination (
   AddressOld    nvarchar(256) NULL,           -- website hiển thị CẢ HAI (spec §13.3); build từ mapping dvhcvn
   ContactPhone  varchar(32)   NULL,
   ContactWebsite varchar(256) NULL,
-  BookingUrl    varchar(512)  NULL,           -- affiliate vé online
-  HotelGroupId  nvarchar(50)  NULL,           -- nối module hotel hiện có (đại tu sau)
+  HotelGroupId  nvarchar(50)  NULL,           -- LEGACY/fallback — thay bằng bảng HotelDestinationMap (dichoithoi-hotel-spec.md §4, sửa 07/2026), giữ tạm khi chuyển đổi rồi bỏ
   IsFeatured    bit NOT NULL DEFAULT 0,       -- thay cho "load cả bảng rồi Take"
   [Order]       int NOT NULL DEFAULT 0,
   Status        tinyint NOT NULL DEFAULT 1,   -- 0 draft, 1 published, 2 hidden
@@ -175,6 +201,12 @@ CREATE INDEX IX_Destination_Featured ON Destination(IsFeatured, [Order])
 `INCLUDE` biến các index trên thành **covering index**: trang danh sách/tỉnh/cha-con
 trả thẳng từ index, không lookup về bảng.
 
+**Đã cân nhắc và KHÔNG thêm** (quyết định 07/2026, giữ schema gọn): cột liên hệ
+mở rộng (`ContactZalo`/`ContactFacebook` — mô hình kiếm tiền chính là affiliate,
+không cần kênh liên hệ trực tiếp điểm đến); dữ liệu "thời điểm đẹp" có cấu trúc
+(vd `BestMonths` cho landing theo mùa — giữ dạng văn xuôi trong `ContentHtml`,
+không thêm cột/model mới vì chưa có nhu cầu landing theo mùa cụ thể).
+
 ### 4.3 `DestinationContent` — bảng lạnh (chỉ trang detail đọc), 1-1
 ```sql
 CREATE TABLE DestinationContent (
@@ -188,6 +220,9 @@ CREATE TABLE DestinationContent (
   HotelText      nvarchar(max) NULL,
   FaqJson        nvarchar(max) NULL,          -- [{q,a}] → render FAQ + JSON-LD FAQPage (SEO)
   RelatedJson    nvarchar(max) NULL,          -- §3.4 — precomputed, render 0 join
+  TicketLinksJson nvarchar(max) NULL,         -- [{provider,label,sourceUrl,affiliateUrl,linkStatus}] — nhiều link mua vé (Klook, TripVision...), thay BookingUrl 1 link cũ; affiliateUrl tính sẵn qua dichoithoi-affiliate-link-conversion-spec.md
+  GalleryJson    nvarchar(max) NULL,          -- [{path,altText,caption,credit}] — CÙNG TÊN FIELD với bảng soạn destination_images (Postgres, destination-spec §14.4) để khỏi phải map đổi tên; path TƯƠNG ĐỐI giống quy ước Thumbnail (base URL riêng, destination-spec §14.2). Vá gap 07/2026: content-seo-ux-plan §5.1 đã đề xuất gallery nhưng chưa có chỗ lưu để website render.
+  TicketPriceFrom decimal(12,0) NULL,         -- vá gap 07/2026: giá số cho JSON-LD offers/priceRange (content-seo-ux-plan §6 #4) — TicketPrice vẫn giữ text tự do cho hiển thị, cột này CHỈ dùng khi giá quy về 1 con số được, NULL nếu không (vd giá theo gói)
   MetaTitle      nvarchar(150) NULL,          -- SEO do AI tool quản, hết string.Format ở controller
   MetaDescription nvarchar(300) NULL
 );
@@ -202,20 +237,32 @@ Phân tích "chi tiết nên lưu thế nào" — 3 lựa chọn đã cân nhắ
    và hiển thị dạng card (giá vé, giờ mở cửa...) = cột riêng — update lẻ được,
    tương lai còn dùng cho so sánh/lọc.
 
-### 4.4 Loại điểm đến
+### 4.4 Loại điểm đến — 2 tầng (§3.2)
 ```sql
-CREATE TABLE DestinationType (
-  Id    int IDENTITY PRIMARY KEY,
-  Slug  varchar(64)  NOT NULL UNIQUE,         -- /loai/{slug}
-  Name  nvarchar(128) NOT NULL,
+CREATE TABLE DestinationTypeGroup (
+  Id      int IDENTITY PRIMARY KEY,
+  Slug    varchar(64)  NOT NULL UNIQUE,        -- /loai/{slug} — trang nhóm (pillar)
+  Name    nvarchar(128) NOT NULL,
   [Order] int NOT NULL DEFAULT 0
 );
+CREATE TABLE DestinationType (
+  Id      int IDENTITY PRIMARY KEY,
+  GroupId int NOT NULL REFERENCES DestinationTypeGroup(Id),
+  Slug    varchar(64)  NOT NULL UNIQUE,        -- /loai/{groupSlug}/{slug} — trang loại cụ thể (cluster)
+  Name    nvarchar(128) NOT NULL,
+  [Order] int NOT NULL DEFAULT 0
+);
+CREATE INDEX IX_DestinationType_Group ON DestinationType(GroupId, [Order]);
 CREATE TABLE DestinationTypeMap (
   DestinationId int NOT NULL,
   TypeId        int NOT NULL,
   PRIMARY KEY (TypeId, DestinationId)         -- thứ tự PK phục vụ "mọi điểm thuộc loại X"
 );
 ```
+Trang nhóm `/loai/{groupSlug}` query qua `DestinationType.GroupId` rồi
+`DestinationTypeMap` (2 query nhỏ, hoặc 1 query JOIN — vẫn giữ nguyên tắc
+≤2 query/trang ở §2.2); trang loại cụ thể `/loai/{groupSlug}/{typeSlug}` query
+thẳng `DestinationTypeMap WHERE TypeId=@id`.
 
 ### 4.5 Quan hệ + redirect
 ```sql
@@ -257,7 +304,8 @@ cột flags `IsGroup/IsArea/IsProvince`, cột CSV `Type`, các cột denormaliz
 | Trang tỉnh | con trực thuộc: `WHERE ProvinceId=@p AND Status=1` | IX_Province (covering) |
 | Trang cluster | `WHERE ParentId=@id AND Status=1` | IX_Parent (covering) |
 | Home / Top | `WHERE IsFeatured=1 ORDER BY [Order]` | IX_Featured (filtered) |
-| Trang loại `/loai/{slug}` | `TypeMap JOIN Destination` | PK(TypeId,...) |
+| Trang nhóm loại `/loai/{groupSlug}` | `DestinationType WHERE GroupId=@g` → `TypeMap JOIN Destination` | IX_DestinationType_Group |
+| Trang loại cụ thể `/loai/{groupSlug}/{typeSlug}` | `TypeMap JOIN Destination WHERE TypeId=@t` | PK(TypeId,...) |
 | Search | in-memory (§6), 0 query | — |
 | Slug cũ | miss UX_Slug → check SlugRedirect → 301 | PK |
 
@@ -288,7 +336,8 @@ Thứ tự (chạy trong transaction, sau khi backup):
    - `Slug` = Id cũ (URL không đổi); `Thumbnail` = `{slug}.webp` (ghi tường minh
      giá trị mà trước đây hardcode); `Lat/Lng` parse decimal (log dòng parse fail);
      `ShortDescription` = Description cũ; `NameUnaccented` generate.
-4. `Type` CSV: split distinct → `DestinationType` + `DestinationTypeMap`;
+4. `Type` CSV: split distinct → seed `DestinationTypeGroup` (3 nhóm, §9.2) trước,
+   rồi `DestinationType` (mỗi loại gán đúng `GroupId`) + `DestinationTypeMap`;
    giá trị xuất hiện nhiều nhất của mỗi điểm → `PrimaryTypeId`.
 5. `DestinationDetail` → `DestinationContent` (Content cũ đã có sẵn link nội bộ —
    giữ nguyên; Phone cũ → `ContactPhone`; Hotel → HotelText). `RelatedJson`/`FaqJson`
@@ -309,26 +358,36 @@ nội dung; sitemap diff = 0 URL mất.
 3. Mirror Postgres phản chiếu schema mới (Id int + Slug).
 4. Bảng quan hệ giờ nằm ở SQL Server làm nguồn render; AI tool vẫn giữ
    `destination_relations` (Postgres) làm nơi soạn/duyệt trước khi đồng bộ.
+5. Ngoài nhóm bảng Destination ở tài liệu này, zinoflow còn ghi thêm 2 bảng mới
+   bên SQL Server nằm NGOÀI phạm vi đợt này: `Hotel`/`HotelGroup` (giữ tên cũ,
+   đổi ai ghi — `dichoithoi-hotel-spec.md`) và `Tour`/`TourDestinationMap` (mới
+   hoàn toàn — `dichoithoi-tour-spec.md`). Cả 2 dùng chung cơ chế
+   `sourceUrl → affiliateUrl` với `ticketLinks` ở §4.3
+   (`dichoithoi-affiliate-link-conversion-spec.md`); bảng `affiliate_link_rules`
+   chỉ tồn tại bên Postgres (zinoflow), KHÔNG cần đồng bộ xuống SQL Server vì
+   website chỉ đọc `AffiliateUrl` đã tính sẵn.
 
 ## 9) Việc cần chốt tiếp (làm cùng nhau trước khi code)
 1. ~~Danh sách map tỉnh cũ → 34 tỉnh mới (rà tay)~~ **ĐÃ CÓ GIẢI PHÁP 12/06/2026**:
    seed dataset dvhcvn (provinces/wards/ward_mappings) vào Postgres của AI tool —
    map tỉnh + phường tự động, chỉ rà các dòng match mờ.
    Chi tiết: `dichoithoi-destination-spec.md` §13.
-2. Bộ `DestinationType` chuẩn — **ĐỀ XUẤT 12/06/2026** (đối chiếu với giá trị CSV
-   thật lúc migration §7.4, dòng nào không map được thì bổ sung/gộp):
+2. Bộ `DestinationType` chuẩn — **ĐỀ XUẤT 12/06/2026, cập nhật 07/2026 thành 2
+   tầng thật trong DB (§3.2, §4.4)** thay vì chỉ trình bày trong tài liệu (đối
+   chiếu với giá trị CSV thật lúc migration §7.4, dòng nào không map được thì
+   bổ sung/gộp):
 
-   | Nhóm thiên nhiên | Nhóm văn hóa - lịch sử | Nhóm vui chơi - trải nghiệm |
-   |---|---|---|
-   | bien-dao (biển - đảo) | di-tich-lich-su | khu-vui-choi (công viên/giải trí) |
-   | nui-cao-nguyen | chua-den (chùa - đền - miếu) | check-in-song-ao |
-   | thac-ho-suoi | nha-tho | cho-pho-dem (chợ - phố đêm) |
-   | hang-dong | lang-nghe-truyen-thong | am-thuc (khu/phố ẩm thực) |
-   | rung-vuon-quoc-gia | bao-tang | pho-co-pho-di-bo |
-   | dong-que-mien-tay (sông nước) | cong-trinh-kien-truc | nghi-duong (resort/suối khoáng) |
+   | `DestinationTypeGroup` (slug) | `DestinationType` con (slug) |
+   |---|---|
+   | `thien-nhien` (Thiên nhiên) | bien-dao (biển - đảo), nui-cao-nguyen, thac-ho-suoi (sông - suối - hồ - thác), hang-dong, rung-vuon-quoc-gia, dong-que-mien-tay (sông nước) |
+   | `van-hoa-lich-su` (Văn hóa - Lịch sử) | di-tich-lich-su, chua-den (chùa - đền - miếu), nha-tho, lang-nghe-truyen-thong, bao-tang, cong-trinh-kien-truc |
+   | `vui-choi-trai-nghiem` (Vui chơi - Trải nghiệm) | khu-vui-choi (công viên/giải trí), check-in-song-ao, cho-pho-dem (chợ - phố đêm), am-thuc (khu/phố ẩm thực), pho-co-pho-di-bo, nghi-duong (resort/suối khoáng) |
 
-   18 loại, slug không dấu làm `DestinationType.Slug` (mở trang `/loai/{slug}`),
-   tên có dấu hiển thị. Mỗi điểm 1-3 loại, loại đầu = PrimaryTypeId.
+   3 nhóm, 18 loại con — slug không dấu cho cả `DestinationTypeGroup.Slug` (mở
+   `/loai/{groupSlug}`) và `DestinationType.Slug` (mở
+   `/loai/{groupSlug}/{typeSlug}`), tên có dấu hiển thị. Mỗi điểm 1-3 loại CON
+   (không gán trực tiếp nhóm — nhóm suy ra qua `Type.GroupId`), loại đầu =
+   `PrimaryTypeId`.
 3. ~~Quy tắc trộn khối "liên quan"~~ **ĐÃ DUYỆT 12/06/2026** theo mặc định ở
    `dichoithoi-destination-spec.md` §12.3 pha 2: con trực tiếp (max 4) → related
    curated → nearby → anh em cùng cha → cùng loại cùng tỉnh; dedupe, published,
@@ -336,5 +395,7 @@ nội dung; sitemap diff = 0 URL mất.
 4. ~~Website mới: giữ .NET hay đổi stack?~~ **ĐÃ CHỐT 12/06/2026: giữ .NET**,
    chỉ sửa tầng đọc theo schema mới; vai trò CMS chuyển sang AI tool —
    xem `dichoithoi-system-overview.md`.
-5. Module Hotel/Tour nối vào cây mới thế nào — đại tu đợt 2
-   (giai đoạn 3 trong system overview).
+5. ~~Module Hotel/Tour nối vào cây mới thế nào — đại tu đợt 2~~ **ĐÃ CHỐT
+   07/2026: làm CÙNG Giai đoạn 1** (không phải giai đoạn 3 như dự kiến ban đầu)
+   — xem `dichoithoi-hotel-spec.md`, `dichoithoi-tour-spec.md`,
+   `dichoithoi-system-overview.md` §5.
