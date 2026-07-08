@@ -2,6 +2,7 @@ import { ArticleBlockCompiler } from "./article-block-compiler.service";
 import type { DichoithoiSiteDb } from "../../../destination/application/ports/dichoithoi-site-db.port";
 import type { HotelRepository } from "../../../hotel/application/ports/hotel.repository";
 import type { TourRepository } from "../../../tour/application/ports/tour.repository";
+import type { ProductRepository } from "../../../product/application/ports/product.repository";
 
 function makeSiteDb(overrides: Partial<DichoithoiSiteDb> = {}): DichoithoiSiteDb {
   return {
@@ -61,9 +62,20 @@ function makeTours(overrides: Partial<TourRepository> = {}): TourRepository {
   } as TourRepository;
 }
 
+function makeProducts(overrides: Partial<ProductRepository> = {}): ProductRepository {
+  return {
+    findAll: async () => [],
+    findById: async () => null,
+    create: async () => { throw new Error("unused"); },
+    update: async () => { throw new Error("unused"); },
+    listDistinctCategories: async () => [],
+    ...overrides,
+  } as ProductRepository;
+}
+
 describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
   it("compile token destinations hop le thanh card HTML, giu nguyen phan van xuoi", async () => {
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours());
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
     const md = [
       "# Các thác đẹp",
       "",
@@ -85,7 +97,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
   });
 
   it("token voi type khong ton tai -> error, chan publish", async () => {
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours());
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
     const md = "## Mục\n\n[[block:destinations type=khong-ton-tai]]";
     const result = await compiler.compile(md);
     expect(result.errors).toHaveLength(1);
@@ -95,7 +107,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
 
   it("token hop le nhung 0 ket qua -> warning, khong render section rong", async () => {
     const siteDb = makeSiteDb({ findDestinationCards: async () => [] });
-    const compiler = new ArticleBlockCompiler(siteDb, makeHotels(), makeTours());
+    const compiler = new ArticleBlockCompiler(siteDb, makeHotels(), makeTours(), makeProducts());
     const md = "## Mục rỗng\n\n[[block:destinations type=thac-ho-suoi]]\n\nVăn xuôi tiếp theo.";
     const result = await compiler.compile(md);
     expect(result.errors).toHaveLength(0);
@@ -105,16 +117,52 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
   });
 
   it("kind khong nhan dien (cu phap sai) -> error", async () => {
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours());
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
     const result = await compiler.compile("[[block:unknown-thing]]");
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]!.message).toContain("Cú pháp");
   });
 
   it("khoi destination (so it) 1 slug cu the render card don", async () => {
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours());
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
     const result = await compiler.compile("[[block:destination slug=thac-datanla]]");
     expect(result.errors).toHaveLength(0);
     expect(result.html).toContain("Thác Datanla");
+  });
+
+  it("khoi products khop tag OR va render card kem gia (product-spec §4)", async () => {
+    const products = makeProducts({
+      findAll: async () => [
+        {
+          id: "p1",
+          name: "Balo phượt 40L",
+          category: "balo",
+          tags: ["phuot", "leo-nui"],
+          thumbnailUrl: "balo.webp",
+          price: 590000,
+          provider: "shopee",
+          sourceUrl: "https://shopee.vn/balo",
+          affiliateUrl: "https://shopee.vn/balo?aff=1",
+          linkStatus: "converted",
+          source: 0,
+          status: 1,
+          createdAt: new Date("2026-01-01"),
+          updatedAt: new Date("2026-01-01"),
+        },
+      ],
+    });
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), products);
+    const result = await compiler.compile("## Chuẩn bị đồ\n\n[[block:products tag=phuot limit=4]]");
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.html).toContain("Balo phượt 40L");
+    expect(result.html).toContain("590.000đ");
+  });
+
+  it("khoi products thieu tham so tag -> error", async () => {
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
+    const result = await compiler.compile("[[block:products limit=4]]");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]!.message).toContain("tham số tag");
   });
 });

@@ -291,24 +291,45 @@ DoD của mỗi phase PHẢI kiểm tra được cả 2 đầu, không chỉ 1 b
   giảm từ 3 query sống (2 JOIN Hotel/Tour + 1 review list để tính Average)
   xuống 0 — chỉ còn đọc thẳng cột đã precompute.
 
-## Phase 16 — Module Sản phẩm (affiliate qua tag trong bài viết)
+## Phase 16 — Module Sản phẩm (affiliate qua tag trong bài viết) (ĐÃ XONG 07/2026)
 
 **Phụ thuộc**: Phase 3 (affiliate), Phase 8 (article + block compiler) đã xong.
 **Nguồn**: `dichoithoi-product-spec.md`.
 
-- **Đồng bộ zinoflow**: module `product` mới đủ 4 lớp (domain/application/
-  infrastructure/presentation); bảng `products` (Postgres, KHÔNG đồng bộ SQL
-  Server); thêm kind `products`/`product` vào `BLOCK_KINDS`
-  (`block-token.ts`) + resolver trong `article-block-compiler.service.ts`
-  (match tag kiểu OR, sort theo số tag khớp); UI màn "Sản phẩm" (list, form
-  category/tags/affiliate); AI gợi ý chèn khối lúc generate bài (áp dụng
-  chung mọi kind, không riêng Product).
+**Quyết định chốt lúc build** (mục #5 "còn treo" của spec — đã hỏi người dùng):
+danh sách `category` = **tự do nhập + gợi ý autocomplete** từ giá trị đã dùng
+(`GET /products/categories`, `DISTINCT category`), KHÔNG bảng quản lý riêng —
+đúng tinh thần MVP nhập tay của cả module.
+
+- **Đã build — đồng bộ zinoflow**: module `product` đủ 4 lớp (domain
+  `product-matcher.ts` — match tag OR + lọc category + sort theo số tag khớp
+  rồi mới nhất, có unit test; application: `ListProductsUseCase`,
+  `UpsertProductUseCase`, `ListProductCategoriesUseCase`; infrastructure:
+  `ProductEntity` + `TypeOrmProductRepository`, bảng `products` Postgres-only,
+  KHÔNG đồng bộ SQL Server; presentation: `products.controller.ts`); thêm
+  `products`/`product` vào `BLOCK_KINDS` (`block-token.ts`) + resolver trong
+  `article-block-compiler.service.ts` (validate tham số bắt buộc `tag`/`id`,
+  card dùng `renderCardGrid` có sẵn — không cần template mới); UI màn "Sản
+  phẩm" (`/dichoithoi/san-pham`) — list + form tên/category (datalist gợi ý)/
+  tags (nhập phẩy)/giá/link gốc; thêm vào sidebar nhóm Dichoithoi (Phase 20).
+- **AI gợi ý chèn khối (áp dụng chung mọi kind)**: xác nhận cơ chế `BLOCK_KINDS`
+  + compiler đã tổng quát cho MỌI kind (không đặc thù Product); việc "AI tự
+  gợi ý" là do prompt của từng `articleType` quyết định — `PromptBuilder` đã
+  ưu tiên đọc prompt từ DB (`/prompts` UI) trước khi rơi về `DEFAULT_PROMPTS`,
+  nên không cần cơ chế mới. Rà soát phát hiện: `cam-nang.outline/section/frame.vi`
+  (bài cẩm nang — nơi chèn khối Product) **CHƯA có prompt mặc định nào trong
+  `DEFAULT_PROMPTS`** lẫn migration seed — nếu chưa từng tạo qua `/prompts` UI,
+  generate bài cẩm nang sẽ throw lỗi "No prompt template". Đây là khoảng trống
+  thuộc Phase 8 (module article), không phải lỗi của Phase 16 — ghi nhận lại,
+  chưa xử lý (không mở rộng scope phase này).
 - **Đồng bộ website**: KHÔNG cần đổi gì — card sản phẩm nằm sẵn trong
   `ContentHtml` đã compile lúc publish bài, website chỉ render HTML như mọi
   bài khác.
-- **DoD**: thêm 2-3 sản phẩm mẫu (tag `phuot`), viết bài chèn
-  `[[block:products tag=phuot limit=4]]` → publish → bài hiện đúng card sản
-  phẩm kèm giá + link affiliate.
+- **DoD**: thêm 2-3 sản phẩm mẫu (tag `phuot`) qua UI → viết bài chèn
+  `[[block:products tag=phuot limit=4]]` → compiler test (`article-block-
+  compiler.service.spec.ts`) xác nhận render đúng card kèm giá + badge category;
+  248→255 test API pass, `tsc` sạch api+web, migration `ProductModule` đã chạy
+  DB dev.
 
 ## Phase 17 — Cache hạ tầng cho hosting SmarterASP .NET Advance
 

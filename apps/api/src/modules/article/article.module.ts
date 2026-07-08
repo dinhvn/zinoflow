@@ -4,6 +4,7 @@ import { AiContentModule } from "../ai-content/ai-content.module";
 import { DestinationModule } from "../destination/destination.module";
 import { HotelModule } from "../hotel/hotel.module";
 import { TourModule } from "../tour/tour.module";
+import { ProductModule } from "../product/product.module";
 import { ArticlesController } from "./presentation/articles.controller";
 import { ArticleBlockCompiler } from "./application/services/article-block-compiler.service";
 import { PublishArticleUseCase } from "./application/use-cases/publish-article.usecase";
@@ -26,6 +27,7 @@ import { ArticlePublicationEntity } from "./infrastructure/entities/article-publ
     DestinationModule,
     HotelModule,
     TourModule,
+    ProductModule,
     TypeOrmModule.forFeature([ArticlePublicationEntity]),
   ],
   controllers: [ArticlesController],

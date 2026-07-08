@@ -4,7 +4,14 @@
  * khong phu thuoc framework/DB, chi xu ly chuoi.
  */
 
-export const BLOCK_KINDS = ["destinations", "hotels", "tours", "destination"] as const;
+export const BLOCK_KINDS = [
+  "destinations",
+  "hotels",
+  "tours",
+  "destination",
+  "products",
+  "product",
+] as const;
 export type BlockKind = (typeof BLOCK_KINDS)[number];
 
 export interface ParsedBlockToken {

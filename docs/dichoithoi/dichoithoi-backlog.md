@@ -152,18 +152,13 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
   Advance có tính năng Task Scheduler/Cron trong control panel không (để
   warm-up app pool sau recycle) — chưa xác nhận được từ xa.
 
-- **Module Sản phẩm (affiliate, chèn qua tag trong bài viết)**
-  (`dichoithoi-product-spec.md`, **PHẦN LỚN ĐÃ CHỐT SCOPE 07/2026**): kiếm tiền
-  affiliate dụng cụ/đồ dùng qua khối động thứ 5+6 (`products`/`product`, số
-  nhiều/số ít giống `destinations`/`destination`) chèn vào bài cẩm nang theo
-  `tag` (KHÔNG theo tỉnh/điểm đến như Hotel/Tour). Đã chốt: (1) match tag kiểu
-  OR — khớp bất kỳ tag nào; (2) KHÔNG có trang catalog sản phẩm công khai, chỉ
-  nhúng card trong bài; (3) AI tự gợi ý chèn khối lúc generate, người dùng
-  duyệt/quyết định trước khi publish — áp dụng chung MỌI kind khối động, không
-  riêng Product (giải quyết luôn câu hỏi mở cũ ở article-spec §10 #4); (4) sẽ
-  dùng nhiều sàn TMĐT (Shopee/Lazada/Tiki...), cấu hình rule affiliate để sau,
-  không chặn build. Còn 1 điểm chưa chốt: chuẩn hoá danh sách `category` (xem
-  product-spec §8 #5). **Data model mới, chưa vào migration thật.**
+- **Module Sản phẩm (affiliate, chèn qua tag trong bài viết)** —
+  **ĐÃ BUILD XONG (Phase 16, 07/2026)**, xem implementation-plan.md Phase 16 để
+  biết chi tiết đầy đủ. Quyết định `category`: tự do nhập + gợi ý autocomplete
+  từ giá trị đã dùng, không bảng quản lý riêng (đã hỏi người dùng khi build).
+  Phát hiện lúc build: prompt mặc định cho `cam-nang.*` (bài cẩm nang, nơi
+  chèn khối Product) chưa tồn tại trong `DEFAULT_PROMPTS` — thuộc khoảng trống
+  Phase 8, chưa xử lý.
 
 ## A) Quyết định CẦN BẠN CHỐT trước khi code (không phải việc kỹ thuật thuần)
 
@@ -171,7 +166,7 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
 |---|---|---|---|
 | 1 | URL bài cẩm nang — đề xuất `/cam-nang/{slug}`, có đổi `/blog/`/`/tin-tuc/` không? | Route website + SEO | article-spec §10.1 |
 | 2 | Bộ khối động MVP chỉ 4 loại (`destinations`/`hotels`/`tours`/`destination`) — cần thêm khối "món ăn/quán ăn" riêng không? | Độ phức tạp compile engine | article-spec §10.3 |
-| 3 | AI có tự đề xuất chèn khối động lúc generate hay chỉ người dùng tự chèn tay (MVP)? | Độ phức tạp prompt pack | article-spec §10.4 |
+| 3 | ✅ AI tự đề xuất chèn khối động lúc generate, người dùng duyệt/sửa trước khi publish (chốt 07/2026, áp dụng mọi kind) | Độ phức tạp prompt pack | article-spec §10.4, product-spec §7 |
 | 4 | Chọn OTA nào cào khách sạn trước (Booking.com/Agoda/Traveloka) | Parser đầu tiên cần build | hotel-spec §7.1 |
 | 5 | Chọn nguồn cào tour trước (Klook/TripVision/khác) | Parser đầu tiên cần build | tour-spec §7.1 |
 | 6 | Mạng affiliate đang/sẽ tham gia đã cấp rule/deep-link dạng nào (theo từng khách sạn/tour hay chỉ link chung)? | Thiết kế `affiliate_link_rules`, ảnh hưởng CTA | hotel-spec §7.2, tour-spec §7.2, affiliate-conversion-spec §2 |

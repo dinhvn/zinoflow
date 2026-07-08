@@ -13,6 +13,11 @@ import {
 } from "../../../destination/application/ports/dichoithoi-site-db.port";
 import { HOTEL_REPOSITORY, type HotelRepository } from "../../../hotel/application/ports/hotel.repository";
 import { TOUR_REPOSITORY, type TourRepository } from "../../../tour/application/ports/tour.repository";
+import {
+  PRODUCT_REPOSITORY,
+  type ProductRepository,
+} from "../../../product/application/ports/product.repository";
+import { matchProducts } from "../../../product/domain/product-matcher";
 import { renderCardGrid, type CardItem } from "../../domain/card-template";
 
 export interface CompiledArticle {
@@ -51,6 +56,7 @@ export class ArticleBlockCompiler {
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(HOTEL_REPOSITORY) private readonly hotels: HotelRepository,
     @Inject(TOUR_REPOSITORY) private readonly tours: TourRepository,
+    @Inject(PRODUCT_REPOSITORY) private readonly products: ProductRepository,
   ) {}
 
   async compile(rawMarkdown: string): Promise<CompiledArticle> {
@@ -123,6 +129,12 @@ export class ArticleBlockCompiler {
     }
     if (token.kind === "destination" && !token.params.slug) {
       return `Khối "destination" cần tham số slug (vd slug=thac-datanla)`;
+    }
+    if (token.kind === "product" && !token.params.id) {
+      return `Khối "product" cần tham số id (vd id=xxxx-xxxx-xxxx)`;
+    }
+    if (token.kind === "products" && !token.params.tag) {
+      return `Khối "products" cần tham số tag (vd tag=phuot,leu-trai)`;
     }
     return null;
   }
@@ -200,6 +212,40 @@ export class ArticleBlockCompiler {
         badge: "Tour",
         meta: t.priceFrom ? `Giá từ ${t.priceFrom.toLocaleString("vi-VN")}đ` : null,
       }));
+    }
+
+    if (token.kind === "product") {
+      const product = await this.products.findById(token.params.id!);
+      if (!product || product.status !== 1) return [];
+      return [
+        {
+          href: product.affiliateUrl ?? product.sourceUrl,
+          name: product.name,
+          thumbnailUrl: product.thumbnailUrl,
+          badge: product.category,
+          meta: product.price ? `${product.price.toLocaleString("vi-VN")}đ` : null,
+        },
+      ];
+    }
+
+    if (token.kind === "products") {
+      const all = await this.products.findAll();
+      const byId = new Map(all.map((p) => [p.id, p]));
+      const matched = matchProducts(all, {
+        tags: token.params.tag!.split(",").map((t) => t.trim()),
+        category: token.params.category,
+        limit,
+      });
+      return matched
+        .map((m) => byId.get(m.id))
+        .filter((p): p is (typeof all)[number] => p !== undefined)
+        .map((p) => ({
+          href: p.affiliateUrl ?? p.sourceUrl,
+          name: p.name,
+          thumbnailUrl: p.thumbnailUrl,
+          badge: p.category,
+          meta: p.price ? `${p.price.toLocaleString("vi-VN")}đ` : null,
+        }));
     }
 
     return [];

@@ -9,6 +9,7 @@ import { DestinationModule } from "./modules/destination/destination.module";
 import { AffiliateModule } from "./modules/affiliate/affiliate.module";
 import { HotelModule } from "./modules/hotel/hotel.module";
 import { TourModule } from "./modules/tour/tour.module";
+import { ProductModule } from "./modules/product/product.module";
 import { ArticleModule } from "./modules/article/article.module";
 import { CmsContentModule } from "./modules/cms-content/cms-content.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
@@ -37,6 +38,7 @@ import { ApiTokenGuard } from "./modules/shared/auth/api-token.guard";
     DestinationModule,
     HotelModule,
     TourModule,
+    ProductModule,
     ArticleModule,
     CmsContentModule,
     DashboardModule,
