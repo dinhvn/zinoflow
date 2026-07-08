@@ -8,6 +8,7 @@ import {
 } from "../ports/destination-mirror.repository";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 import { normalizeVietnamese } from "../../../shared/text/vietnamese";
+import { RecomputeRelatedService } from "../services/recompute-related.service";
 
 /**
  * Tao moi / sua metadata 1 diem den (spec §7.3 tab Thong tin).
@@ -23,6 +24,7 @@ export class UpsertDestinationUseCase {
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly mirrorRepo: DestinationMirrorRepository,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
+    private readonly recomputeRelated: RecomputeRelatedService,
   ) {}
 
   /** Tao moi — slug phai chua ton tai. */
@@ -69,6 +71,18 @@ export class UpsertDestinationUseCase {
         isFeatured: meta.isFeatured,
       });
     }
+
+    // Doi cha -> Ancestors cua ca con chau va Children cua cha cu/moi deu sai
+    // (Phase 14, database-redesign §3.4) — tinh lai tap bi anh huong.
+    if (existing.parentSlug !== meta.parentSlug) {
+      const affected = await this.recomputeRelated.affectedSlugsForParentChange(
+        slug,
+        existing.parentSlug,
+        meta.parentSlug,
+      );
+      await this.recomputeRelated.recomputeFor(affected);
+    }
+
     this.logger.log(`Cap nhat metadata diem den: ${slug}`);
     return { slug };
   }

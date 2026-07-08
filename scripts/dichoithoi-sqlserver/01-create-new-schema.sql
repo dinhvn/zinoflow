@@ -113,6 +113,14 @@ IF COL_LENGTH('v2.DestinationContent', 'PriceBreakdownJson') IS NULL
 IF COL_LENGTH('v2.DestinationContent', 'PracticalNotesJson') IS NULL
   ALTER TABLE v2.DestinationContent ADD PracticalNotesJson nvarchar(max) NULL;
 GO
+-- Phase 14 (07/2026): breadcrumb + danh sach con precompute (database-redesign §3.4).
+-- Tach rieng RelatedJson (goi y, cat 8, tron nhieu nguon) vi day la cay cau truc
+-- THAT, khong cat, khong tron nguon.
+IF COL_LENGTH('v2.DestinationContent', 'AncestorsJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD AncestorsJson nvarchar(max) NULL;
+IF COL_LENGTH('v2.DestinationContent', 'ChildrenJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD ChildrenJson nvarchar(max) NULL;
+GO
 
 /* ===== Loai diem den — 2 tang (redesign §3.2, §4.4, vay 07/2026) ===== */
 IF OBJECT_ID('v2.DestinationTypeGroup') IS NULL

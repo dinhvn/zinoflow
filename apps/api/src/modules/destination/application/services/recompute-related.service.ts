@@ -11,6 +11,7 @@ import {
   computeNearby,
   type RelatedCandidate,
 } from "../../domain/related-builder";
+import { buildAncestors, buildChildren } from "../../domain/ancestors-children-builder";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
 /**
@@ -65,6 +66,35 @@ export class RecomputeRelatedService {
     return [...affected];
   }
 
+  /**
+   * Tap diem BI ANH HUONG khi doi cha cua 1 diem (Phase 14 — database-redesign
+   * §3.4): chinh no + TOAN BO con chau (Ancestors cua tung dua thay doi vi 1 mat
+   * xich giua chuoi thay doi) + cha cu + cha moi (Children cua 2 diem nay thay doi).
+   */
+  async affectedSlugsForParentChange(
+    slug: string,
+    oldParentSlug: string | null,
+    newParentSlug: string | null,
+  ): Promise<string[]> {
+    const all = await this.mirrorRepo.findAll();
+    const affected = new Set<string>([slug]);
+    if (oldParentSlug) affected.add(oldParentSlug);
+    if (newParentSlug) affected.add(newParentSlug);
+
+    // BFS toan bo con chau cua slug (khong chi con truc tiep)
+    const queue = [slug];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const d of all) {
+        if (d.parentSlug === current && !affected.has(d.slug)) {
+          affected.add(d.slug);
+          queue.push(d.slug);
+        }
+      }
+    }
+    return [...affected];
+  }
+
   private async run(
     all: DestinationMirrorEntity[],
     slugs: readonly string[],
@@ -91,8 +121,17 @@ export class RecomputeRelatedService {
         curatedRelatedSlugs: curated.map((r) => r.targetSlug),
         nearby: computeNearby(self, candidates),
       });
-      const changed = await this.siteDb.updateRelatedJson(siteId, JSON.stringify(items));
-      if (changed) updated += 1;
+      const relatedChanged = await this.siteDb.updateRelatedJson(siteId, JSON.stringify(items));
+
+      const ancestors = buildAncestors(self, candidates);
+      const children = buildChildren(self, candidates);
+      const treeChanged = await this.siteDb.updateAncestorsChildren(
+        siteId,
+        JSON.stringify(ancestors),
+        JSON.stringify(children),
+      );
+
+      if (relatedChanged || treeChanged) updated += 1;
     }
 
     this.logger.log(`Recompute related: ${scanned} bai quet, ${updated} bai cap nhat`);

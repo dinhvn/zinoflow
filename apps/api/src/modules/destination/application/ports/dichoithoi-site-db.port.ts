@@ -125,6 +125,15 @@ export interface DichoithoiSiteDb {
   fetchSlugRedirects(): Promise<Map<string, string>>;
   /** Ghi RelatedJson, CHI khi khac gia tri cu (spec §12.3) — tra ve true neu co ghi */
   updateRelatedJson(siteId: number, relatedJson: string): Promise<boolean>;
+  /**
+   * Ghi AncestorsJson + ChildrenJson, CHI khi 1 trong 2 khac gia tri cu (Phase 14,
+   * database-redesign §3.4) — tra ve true neu co ghi.
+   */
+  updateAncestorsChildren(
+    siteId: number,
+    ancestorsJson: string,
+    childrenJson: string,
+  ): Promise<boolean>;
   /** Cap nhat rieng cot Thumbnail (metadata — sua truc tiep, khong qua publish) */
   updateThumbnail(siteId: number, thumbnail: string | null): Promise<void>;
   /**

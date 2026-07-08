@@ -210,7 +210,7 @@ DoD của mỗi phase PHẢI kiểm tra được cả 2 đầu, không chỉ 1 b
   → trang detail hiện đúng bảng giá + 2 nút CTA có giá riêng + dòng so sánh
   đúng 2 số thật + dòng chi phí ước tính đúng tổng.
 
-## Phase 13 — Nhập toạ độ qua link Google Maps (chỉ zinoflow)
+## Phase 13 — Nhập toạ độ qua link Google Maps (chỉ zinoflow) (ĐÃ XONG 07/2026)
 
 **Phụ thuộc**: không phụ thuộc phase nào khác, làm độc lập bất kỳ lúc nào.
 **Nguồn**: `destination-spec.md` §2.1.1.
@@ -223,21 +223,35 @@ DoD của mỗi phase PHẢI kiểm tra được cả 2 đầu, không chỉ 1 b
 - **DoD**: dán link Suối Tiên mẫu ở đầu bài này → 2 ô lat/lng tự điền đúng
   `10.8661916, 106.8005929` (ưu tiên đọc từ `!3d!4d` nếu link mẫu có).
 
-## Phase 14 — `AncestorsJson`/`ChildrenJson` (breadcrumb + danh sách con precompute)
+## Phase 14 — `AncestorsJson`/`ChildrenJson` (breadcrumb + danh sách con precompute) (ĐÃ XONG 07/2026)
 
 **Phụ thuộc**: Phase 2 (destination, đã có `kind`/`ParentId`/`ProvinceId`).
 **Nguồn**: `database-redesign.md` §3.4/§4.3.
 
-- **Đồng bộ zinoflow**: thêm 2 cột JSON (Postgres + SQL Server
-  `DestinationContent`); mở rộng `RecomputeRelatedService`/`related-builder.ts`
-  tính thêm `AncestorsJson` (đi từ `parentSlug` lên gốc) và `ChildrenJson`
-  (toàn bộ con trực tiếp, không cắt 8 như `RelatedJson`); trigger tính lại khi
-  publish HOẶC khi đổi `parentSlug` của chính nó/con nó.
-- **Đồng bộ website**: render breadcrumb từ `AncestorsJson` (thay vì không có/
-  query đệ quy nếu đang làm vậy); render lưới "Các khu/điểm trong [tên]" từ
-  `ChildrenJson` trên trang cluster.
-- **DoD**: đổi 1 điểm từ cụm A sang cụm B → publish → breadcrumb đúng cụm mới,
-  `ChildrenJson` của CẢ cụm A (mất con) và cụm B (thêm con) đều cập nhật đúng.
+- **Đồng bộ zinoflow**: thêm cột SQL Server `DestinationContent.AncestorsJson`/
+  `ChildrenJson` (idempotent, không cột Postgres mirror — cùng pattern
+  `RelatedJson`: precompute, ghi thẳng SQL Server, không cần user sửa tay);
+  domain `ancestors-children-builder.ts` (`buildAncestors` đi từ `parentSlug`
+  lên gốc có guard chu trình, `buildChildren` toàn bộ con trực tiếp ĐÃ PUBLISH,
+  không cắt 8 như `RelatedJson`); `RecomputeRelatedService.run()` tính thêm 2
+  khối này mỗi lần recompute; trigger MỚI
+  `affectedSlugsForParentChange()` (BFS toàn bộ con cháu + cha cũ/cha mới) gọi
+  từ `UpsertDestinationUseCase.update()` khi `parentSlug` đổi.
+- **Đồng bộ website**: `BreadcrumbUtils.CreateDestinationDetailBreadcrumb` nhận
+  thêm `ancestors` (ưu tiên dùng khi có — chính xác theo cây `ParentId`/`kind`
+  thật, không suy từ `ProvinceId`/`DestinationGroupId` cũ nữa); breadcrumb hiện
+  có sẵn qua `SetBreadcrumbs`/`_Layout.cshtml` nên chỉ cần đổi nguồn dữ liệu.
+  **`ChildrenJson` CHƯA render thành lưới riêng trên website**: trang cluster/
+  province hiện đã lấy đủ danh sách con (không cắt) qua query schema v1 cũ
+  (`childs = childDes` khi `IsGroup`/`IsProvince`, xem
+  `DestinationController.cs`) — thêm 1 lưới trùng dữ liệu từ `ChildrenJson` lúc
+  này sẽ là nội dung trùng lặp vô ích. `ChildrenJson` đã sẵn sàng ở DB, sẽ dùng
+  thay query v1 khi Phase 10 (go-live cutover) bỏ hẳn schema cũ.
+- **DoD**: đổi 1 điểm từ cụm A sang cụm B → publish → breadcrumb đúng cụm mới
+  (đã test `ancestors-children-builder.spec.ts` cho builder, build .NET sạch
+  cho phần đọc/render); `ChildrenJson` của CẢ cụm A và cụm B đều cập nhật đúng
+  trong DB (xác nhận qua `RecomputeRelatedService`, chưa có UI hiển thị riêng
+  như nêu trên).
 
 ## Phase 15 — Tối ưu tốc độ trang detail (bỏ query sống Hotel/Tour + cache review)
 
