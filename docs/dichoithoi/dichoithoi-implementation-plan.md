@@ -393,7 +393,7 @@ nào được zinoflow gọi tự động cả — đây là phần mới hoàn 
   Lighthouse trước/sau và test Cloudflare thật CHƯA đo được — phụ thuộc việc cần
   bạn tự làm ở trên.
 
-## Phase 18 — Đập đi làm lại UI website (mobile-first, stack nhẹ, theme mới)
+## Phase 18 — Đập đi làm lại UI website (mobile-first, stack nhẹ, theme mới) (ĐÃ XONG 07/2026)
 
 **Phụ thuộc**: Phase 14 (cần `AncestorsJson`/`ChildrenJson` cho breadcrumb +
 danh sách con). Nên làm SAU Phase 17 (cache) để không phải cache lại 2 lần.
