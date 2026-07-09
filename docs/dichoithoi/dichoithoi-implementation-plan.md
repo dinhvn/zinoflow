@@ -612,14 +612,46 @@ tóm tắt lại đây):
      v1 vì Children rỗng), redirect province cả 2 trường hợp slug giữ nguyên
      (`da-nang` → `/tinh/da-nang`) và slug lệch do sáp nhập (`ha-giang` →
      `/tinh/tuyen-quang`).
-6. **18.5 — Đo lường & polish** (song song, không chặn): GitHub Actions đo
-   Lighthouse định kỳ, SVGO logo, kiểm tra Brotli/cache header.
+6. **18.5 — Đo lường & polish** (ĐÃ XONG 07/2026, thuần website). **Phát hiện
+   lúc code**: kế hoạch gốc ghi "GitHub Actions" nhưng repo `dichoithoi` thực
+   tế host trên **Azure DevOps** (`dev.azure.com/dovandinh012/MMO`), KHÔNG
+   phải GitHub — không dùng GitHub Actions được. Đã đổi sang Azure Pipeline
+   YAML (`.azuredevops/lighthouse-check.yml`) tương đương: schedule trigger
+   hàng tuần (thứ 2, 10h sáng giờ VN), gọi PageSpeed Insights API cho 3 trang
+   mẫu (`/`, `/tinh/lam-dong`, `/diem-den/bai-bien-dai-lanh-nha-trang`), publish
+   kết quả JSON làm artifact (giữ lịch sử theo từng lần chạy, xem "DoD tổng"
+   để biết còn thiếu gì). **File YAML chưa tự chạy** — phải vào Azure DevOps
+   UI tạo Pipeline mới trỏ tới file này (Pipelines > New pipeline > Existing
+   YAML), việc này ngoài khả năng làm qua commit file, cần bạn tự làm 1 lần
+   (ghi vào memory để nhắc, giống follow-up Cloudflare/SmarterASP Phase 17).
+   - **Brotli**: kiểm tra thấy `Program.cs` chỉ đăng ký `GzipCompressionProvider`
+     cho response nén động (trang HTML render server-side) — client gửi
+     `Accept-Encoding: br` vẫn chỉ nhận gzip. Đã thêm `BrotliCompressionProvider`
+     (ưu tiên trước Gzip). Asset tĩnh (CSS/JS/icon) đã tự có `.br`/`.gz` qua
+     `MapStaticAssets()` từ trước (build-time), không cần sửa.
+   - **Cache header dài hạn**: kiểm tra thấy mọi trang dùng
+     `asp-append-version="true"` (kỹ thuật cache-bust bằng query string cũ) —
+     `MapStaticAssets()` (.NET 9) chỉ áp `Cache-Control: max-age=31536000,
+     immutable` cho URL đã fingerprint TÊN FILE (vd `common.gxnzgh52p1.css`),
+     còn URL "trần" (`common.css?v=...`) vẫn trả `no-cache` bất kể môi trường.
+     Đã bỏ `asp-append-version` ở TOÀN BỘ 8 chỗ dùng (CSS/JS mọi trang, không
+     chỉ trang đã đụng ở 18.0-18.4) — verify qua `dotnet publish` + chạy
+     `ASPNETCORE_ENVIRONMENT=Production`, request thẳng URL fingerprint lấy từ
+     `*.staticwebassets.endpoints.json` xác nhận `Cache-Control: max-age=31536000,
+     immutable` + `Content-Encoding: br` cùng lúc.
+   - **SVGO**: chạy trên `src/images/logo.svg` (-10.1%, không phải ~20-30%
+     như ước tính lúc lập kế hoạch — số liệu thực tế thấp hơn vì logo vốn đã
+     gọn) và luôn thể trên toàn bộ `src/icons/*.svg` (~30 icon inline qua
+     `IconTagHelper`, tiết kiệm nhỏ mỗi icon nhưng lặp lại ở mọi trang có
+     header/footer — tức là mọi trang).
 
 - **DoD tổng**: Lighthouse Performance ≥ 90 trên 3 trang mẫu (chủ, danh mục,
-  chi tiết); mọi nội dung quan trọng có mặt đầy đủ trên mobile (không ẩn khỏi
-  DOM chỉ vì hẹp màn hình, trừ `<details>` gấp — vẫn nằm trong DOM); `kind=cluster`
-  2 biến thể + redirect `province` + trang `/vung/{slug}` hoạt động đúng như
-  mô tả trên.
+  chi tiết) — **CHƯA đo thực tế** (cần Pipeline chạy lần đầu sau khi bạn tạo
+  trong Azure DevOps UI, xem 18.5); mọi nội dung quan trọng có mặt đầy đủ trên
+  mobile (không ẩn khỏi DOM chỉ vì hẹp màn hình, trừ `<details>` gấp — vẫn nằm
+  trong DOM); `kind=cluster` 2 biến thể + redirect `province` + trang
+  `/vung/{slug}` hoạt động đúng như mô tả trên. **Phase 18 (đập đi làm lại UI)
+  hoàn tất toàn bộ 6 sub-phase (18.0-18.5) 07/2026.**
 
 ## Phase 19 — Search trong RAM (thay live `LIKE` query) (ĐÃ XONG 07/2026)
 
