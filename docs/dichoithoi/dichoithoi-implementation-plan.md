@@ -417,9 +417,11 @@ duyệt đúng đề xuất, không sửa gì — không còn chặn phase này 
   trong cây chỉ giữ vai trò cấu trúc (gốc cho `parentSlug`/`AncestorsJson`/
   `ChildrenJson`).
 - **Vùng/miền**: KHÔNG thêm làm `kind` thứ 4 (không phải điểm vật lý, không
-  giá vé/giờ/toạ độ) — trục phân loại độc lập mới: bảng `Region`
-  (`Id`,`Slug`,`Name`) + `Province.RegionId` FK, trang `/vung/{slug}` theo
-  đúng pattern trang danh mục (§10.3).
+  giá vé/giờ/toạ độ) — trục phân loại độc lập, trang `/vung/{slug}` theo đúng
+  pattern trang danh mục (§10.3). Dự tính ban đầu cần bảng `Region` mới +
+  `Province.RegionId` FK — **lúc code (18.1) phát hiện KHÔNG cần**:
+  `v2.Province` đã có sẵn cột `Region tinyint` (1/2/3) từ lúc migrate, chỉ
+  website chưa dùng tới. Xem chi tiết ở Phase 18.1 dưới.
 
 **Hiện trạng codebase đã khảo sát 07/2026** (trước khi tách sub-phase dưới):
 `DiChoiThoi.Web` đã có `webpack.config.js`+`package.json` (webpack 5,
@@ -464,8 +466,20 @@ tóm tắt lại đây):
    (`container`/`row`/`col`/`btn`...) cho tới khi 18.2-18.4 viết lại xong.
    `npm run prod` + `dotnet build` sạch, smoke test `/`, `/loai`, `/search`,
    `/api/remove-cache/taxonomy` chạy được không lỗi.
-2. **18.1 — Trục vùng/miền** (`Region` + `/vung/{slug}`) — việc DUY NHẤT cần
-   đổi zinoflow, làm sớm vì mega-menu 18.0 cần data tỉnh-theo-miền.
+2. **18.1 — Trục vùng/miền (`/vung/{slug}`) (ĐÃ XONG 07/2026)**: **phát hiện lúc
+   code** — giả định ban đầu (cần bảng `Region` + `Province.RegionId` FK mới,
+   phải đổi zinoflow) SAI: `v2.Province` đã có sẵn cột `Region tinyint NOT NULL`
+   (1 Bắc/2 Trung/3 Nam) từ lúc migrate (`02-migrate-data.sql`, gán tay trong
+   generator lúc sinh 34 tỉnh) — CHỈ chưa có nơi nào ở website dùng tới. Vì vậy
+   **KHÔNG cần đổi zinoflow/schema** — thuần website: thêm `Region` vào
+   `ProvinceCardModel` + query (`DestinationTaxonomyRepository`); `RegionUtil`
+   (`DiChoiThoi.Web/Utilities`) map CỐ ĐỊNH byte→slug/tên (3 miền không đổi
+   theo thời gian, không cần quản lý qua UI); `RegionController` mới +
+   `/vung/{slug}` (`Views/Region/Detail.cshtml`, Tailwind từ đầu — trang mới,
+   không có Bootstrap cũ phải dọn); mega-menu (`_Header`) + `_Footer` đổi từ
+   danh sách tỉnh phẳng sang nhóm theo miền; thêm `/vung/{slug}` vào
+   `taxonomy-sitemap.xml`. `dotnet build` sạch, smoke test `/vung/mien-nam` +
+   mega-menu render đúng 3 nhóm.
 3. **18.2 — Trang danh mục** (`/loai`, `/tinh/{slug}`) theo §10.3 — ưu tiên SEO
    cao nhất, không phụ thuộc data mới ngoài 18.1.
 4. **18.3 — Trang chủ** (`/`) theo §10.2.
