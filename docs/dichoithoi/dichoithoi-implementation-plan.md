@@ -400,17 +400,41 @@ danh sách con). Nên làm SAU Phase 17 (cache) để không phải cache lại 
 **Nguồn**: `content-seo-ux-plan.md` §10 (toàn bộ), `seo-principles.md`
 (bắt buộc áp dụng checklist 3 câu hỏi cho từng mảnh UI khi code).
 
+**Quyết định `kind=cluster`/`province`/vùng-miền (§10.6) — CHỐT 07/2026**:
+duyệt đúng đề xuất, không sửa gì — không còn chặn phase này nữa:
+- `kind=poi`: trang đầy đủ như §10.4 (giá vé, giờ mở cửa, câu chuyện, ăn uống,
+  lưu trú, tour, lưu ý thực tế, FAQ, review, điểm gần đó).
+- `kind=cluster` — 2 biến thể theo có/không `OpeningTime`/`TicketPrice`/
+  `ContentHtml` thật (không cần cột mới): (1) Cụm CÓ vé/giờ riêng (vd Suối
+  Tiên) → render như `poi` đầy đủ + thêm khối "Các khu trong [tên]"
+  (`ChildrenJson`) sau "Trải nghiệm/chơi gì"; (2) Cụm THUẦN địa lý (vd Đà Lạt,
+  Di Linh) → ẩn khối "quyết định nhanh", cấu trúc gần trang danh mục
+  (breadcrumb, H1 + giới thiệu, khối "Các điểm trong [tên]" toàn bộ
+  `ChildrenJson`, rồi đặc sản/lưu trú/tour/FAQ cấp khu vực).
+- `kind=province`: KHÔNG có trang riêng ở `/diem-den/{slug}` (trùng
+  `/tinh/{slug}` đã build Phase 9 → duplicate content) — `/diem-den/{slug}`
+  301 redirect sang `/tinh/{slug}` khi gặp node `kind=province`; node này
+  trong cây chỉ giữ vai trò cấu trúc (gốc cho `parentSlug`/`AncestorsJson`/
+  `ChildrenJson`).
+- **Vùng/miền**: KHÔNG thêm làm `kind` thứ 4 (không phải điểm vật lý, không
+  giá vé/giờ/toạ độ) — trục phân loại độc lập mới: bảng `Region`
+  (`Id`,`Slug`,`Name`) + `Province.RegionId` FK, trang `/vung/{slug}` theo
+  đúng pattern trang danh mục (§10.3).
+
 - **Đồng bộ website (module này gần như thuần website, zinoflow không đổi)**:
   bỏ Bootstrap/jQuery/icon font hiện tại; dựng pipeline Tailwind compile-time
   (purge) + theme 7 màu (§10.5); vanilla JS cho drawer/carousel/accordion;
   SVG inline; layout mobile-first cho trang chủ (§10.2), trang danh mục
-  (§10.3), trang chi tiết theo `kind` — RIÊNG phần render khác nhau theo
-  `kind=poi`/`cluster` (2 biến thể)/`province` (redirect) **CHƯA xác nhận
-  cuối** (§10.6) — cần bạn chốt lại trước khi code đúng phần này, có thể tách
-  build sau các phần đã chắc chắn (§10.1/10.2/10.3/10.5/10.7).
+  (§10.3), trang chi tiết theo `kind` (đúng 4 nhánh chốt ở trên).
+- **Việc zinoflow cần làm thêm cho quyết định trên** (chưa có, cần schema
+  Postgres + SQL Server mới): bảng `Region`/`Province.RegionId`, UI gán
+  Province vào Region, trang `/vung/{slug}` đọc trực tiếp SQL Server (giống
+  `/tinh`/`/loai` hiện tại, không qua Postgres mirror).
 - **DoD**: Lighthouse Performance ≥ 90 trên 3 trang mẫu (chủ, danh mục, chi
   tiết); mọi nội dung quan trọng có mặt đầy đủ trên mobile (không ẩn khỏi DOM
-  chỉ vì hẹp màn hình, trừ `<details>` gấp — vẫn nằm trong DOM).
+  chỉ vì hẹp màn hình, trừ `<details>` gấp — vẫn nằm trong DOM); `kind=cluster`
+  2 biến thể + redirect `province` + trang `/vung/{slug}` hoạt động đúng như
+  mô tả trên.
 
 ## Phase 19 — Search trong RAM (thay live `LIKE` query) (ĐÃ XONG 07/2026)
 
@@ -506,8 +530,6 @@ hiện hành động trên trang này".
 
 ## Còn treo — CHƯA đủ điều kiện đưa vào phase code (cần bạn quyết định trước)
 
-- **`kind=cluster` 2 biến thể + trục vùng/miền** (§10.6) — chưa xác nhận cuối,
-  chặn 1 phần Phase 18.
 - **Rà soát lại `DestinationType`/`DestinationTypeMap`** đã gắn cho từng điểm
   đến (backlog §A.8) — chưa chọn AI đánh giá hay tự tay chuẩn hoá.
 - **Chuẩn hoá danh sách `category` cho Product** (product-spec §8.5) — chặn 1
@@ -544,8 +566,8 @@ Phase 15 (bỏ query sống Hotel/Tour) — cần 5+6
 Phase 16 (module Sản phẩm)          — cần 3+8
 Phase 17 (cache hạ tầng)            — nên sau 14+15, ĐÃ XONG (07/2026)
 Phase 18 (đập đi làm lại UI)        — cần 14, nên sau 17
-  └─ 1 phần bị CHẶN bởi quyết định "kind=cluster 2 biến thể + vùng/miền"
-     chưa xác nhận (xem mục "Còn treo" phía trên)
+  └─ quyết định "kind=cluster 2 biến thể + vùng/miền" ĐÃ CHỐT (07/2026),
+     sẵn sàng code, chưa bắt tay làm
 Phase 19 (search trong RAM)         — độc lập, ĐÃ XONG (07/2026)
 Phase 20 (sidebar-first nav CMS)    — độc lập, ĐÃ XONG (07/2026)
 ```

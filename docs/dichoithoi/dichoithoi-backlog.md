@@ -115,13 +115,12 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
   tố xếp hạng, breadcrumb+`AncestorsJson` đã truyền tải cấp bậc, URL phẳng ổn
   định hơn khi tổ chức lại cây. Không cần code gì thêm (đã đúng hiện trạng).
 
-  ⚠️ **Trang chi tiết theo `kind` (poi/cluster/province) + trục vùng/miền**
-  (`content-seo-ux-plan.md` §10.6, **PHÂN TÍCH, CHƯA XÁC NHẬN CUỐI** — khác
-  mục slug ở trên đã chốt): cluster có 2 biến thể render khác nhau (có/không
-  vé riêng); đề xuất `kind=province` KHÔNG có trang riêng, redirect sang
-  `/tinh/{slug}` đã build (tránh duplicate content); vùng/miền đề xuất là trục
-  phân loại mới (bảng `Region`, trang `/vung/{slug}`) chứ không phải tầng thứ 4
-  trong cây `kind`. Cần bạn xác nhận lại khi quay lại chủ đề này.
+  **Trang chi tiết theo `kind` (poi/cluster/province) + trục vùng/miền**
+  (`content-seo-ux-plan.md` §10.6, **CHỐT 07/2026**, đưa vào Phase 18 của
+  implementation-plan): cluster có 2 biến thể render khác nhau (có/không vé
+  riêng); `kind=province` KHÔNG có trang riêng, redirect sang `/tinh/{slug}`
+  đã build (tránh duplicate content); vùng/miền là trục phân loại mới (bảng
+  `Region`, trang `/vung/{slug}`) chứ không phải tầng thứ 4 trong cây `kind`.
 
 - **Website chỉ đọc, KHÔNG xử lý logic — rà soát tốc độ phát hiện vi phạm**
   (`dichoithoi-database-redesign.md` §3.4/§4.3, `dichoithoi-system-design.md`

@@ -731,10 +731,10 @@ gọn chỉ icon (không phải logo mới, chỉ cắt từ path có sẵn) dù
 mobile 56px/favicon — logo đầy đủ (wordmark dài) vẫn dùng cho header desktop +
 footer. Xem xét vẽ lại chỉ khi phát sinh nhu cầu thật sau này.
 
-### 10.6 Trang chi tiết theo `kind` — poi/cluster/province, và trục vùng/miền (phân tích 07/2026, CHƯA xác nhận cuối)
+### 10.6 Trang chi tiết theo `kind` — poi/cluster/province, và trục vùng/miền (CHỐT 07/2026)
 
-⚠️ Phần này mới ở mức phân tích, chưa được xác nhận rõ ràng (khác §10.7 dưới —
-đã chốt) — ghi lại để không mất, cần bạn duyệt lại khi quay lại chủ đề này.
+Đã duyệt theo đúng đề xuất dưới đây — đưa vào Phase 18
+(`dichoithoi-implementation-plan.md`).
 
 - **`kind=poi`** (điểm con, lá cây): trang đầy đủ đúng §10.4 (giá vé, giờ mở
   cửa, câu chuyện văn hoá, trải nghiệm, ăn uống, lưu trú, tour, lưu ý thực tế,
@@ -793,11 +793,8 @@ KHÔNG lặp lại thông tin đã có ở breadcrumb/title (vd dùng `thac-data
 `thac-nuoc-datanla-da-lat-lam-dong-viet-nam`). Chỉ thêm hậu tố phân biệt (vd
 `-da-lat`) khi THẬT SỰ trùng tên với 1 điểm khác, không mặc định thêm mọi lúc.
 
-### 10.8 Trạng thái — chưa build, chờ chốt
+### 10.8 Trạng thái — ĐÃ CHỐT 07/2026, sẵn sàng build
 
-⚠️ Đây là bản thiết kế MỚI, thay thế hoàn toàn cách trình bày hiện có trên
-website dichoithoi — **chưa vào `dichoithoi-implementation-plan.md`**, cần bạn
-duyệt lần cuối trước khi đưa vào lộ trình build (đúng nguyên tắc "phân tích xong
-hết mới code sau"). Khi chốt: thêm vào `dichoithoi-backlog.md` §B (thứ tự build)
-và implementation-plan.
+§10.6 đã được duyệt (không sửa gì so với đề xuất) — không còn là điều kiện
+chặn Phase 18 nữa. Xem `dichoithoi-implementation-plan.md` Phase 18.
 
