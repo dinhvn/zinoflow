@@ -480,8 +480,54 @@ tóm tắt lại đây):
    danh sách tỉnh phẳng sang nhóm theo miền; thêm `/vung/{slug}` vào
    `taxonomy-sitemap.xml`. `dotnet build` sạch, smoke test `/vung/mien-nam` +
    mega-menu render đúng 3 nhóm.
-3. **18.2 — Trang danh mục** (`/loai`, `/tinh/{slug}`) theo §10.3 — ưu tiên SEO
-   cao nhất, không phụ thuộc data mới ngoài 18.1.
+3. **18.2 — Trang danh mục** (`/loai`, `/loai/{group}`, `/loai/{group}/{type}`,
+   `/tinh/{slug}`) theo §10.3 (ĐÃ XONG 07/2026): **phát hiện lúc code** — yêu
+   cầu cốt lõi của §10.3 ("mỗi trang phải có đoạn văn bản riêng, tránh thin
+   content") KHÔNG thể làm chỉ bằng UI: `DestinationTypeGroupModel`/
+   `DestinationTypeCardModel`/`ProvinceCardModel` chưa từng có field mô tả nào
+   (chỉ `Id`/`Slug`/`Name`) — khác các phase trước (18.0/18.1), lần này CÓ đổi
+   schema + zinoflow, đã hỏi user chốt 2 quyết định trước khi code:
+   - **Thêm cột `Description` (nvarchar(max), NULL, để trống trước)** cho
+     `v2.DestinationTypeGroup`, `v2.DestinationType`, `v2.Province` (ALTER
+     idempotent trong `scripts/dichoithoi-sqlserver/01-create-new-schema.sql`,
+     cùng file/pattern đã dùng cho `Region` ở 18.1) + EF entities tương ứng.
+     Trang ẨN khối giới thiệu nếu rỗng — không chặn 18.2, điền dần sau.
+   - **Làm phân trang thật ngay** (không để dồn 1 trang): repository đổi
+     `take` → `page`/`pageSize` + `CountAsync()`, model mới `PageInfoModel`
+     (`Page`/`PageSize`/`TotalCount`/`TotalPages`); route nhận `?trang=N`;
+     `PageInfo.Canonical` tự set kèm `?trang=N` khi `trang>1` (khác canonical
+     mặc định ở `_Layout` — bỏ query string — vì đây là trang THẬT khác nhau,
+     không phải biến thể filter).
+   - **zinoflow**: vì group/type/province KHÔNG có dòng mirror Postgres riêng
+     (chỉ đọc thẳng SQL Server qua `siteDb.fetchTypes()`), thêm thẳng vào
+     `DichoithoiSiteDb` port: `fetchTaxonomyContent()` +
+     `updateTaxonomyDescription(target, id, description)` (UPDATE trực tiếp
+     `v2.DestinationTypeGroup`/`DestinationType`/`Province`, cùng adapter
+     `MssqlSiteDbAdapter` dùng cho publish destination). Contracts mới:
+     `TaxonomyContent`, `updateTaxonomyDescriptionRequestSchema`. Endpoint
+     `GET/PATCH /destinations/taxonomy-content` (đặt trước `:slug` như
+     `taxonomy`/`address-mappings`). Trang admin mới `/dichoithoi/danh-muc`
+     (~59 dòng: 7 nhóm + 18 loại + 34 tỉnh, không cần phân trang/tìm kiếm) —
+     liệt kê tất cả kèm textarea sửa Description, lưu qua PATCH; thêm primitive
+     `Textarea` vào `shared/ui/` (chưa có trước đó).
+   - **Website**: rewrite `DestinationType/Index.cshtml`, `TypeList.cshtml`,
+     `Province/Detail.cshtml`, `_DestinationCardList.cshtml` (Tailwind, lưới
+     card responsive `grid-cols-1 sm:2 lg:3 xl:4`, ảnh `aspect-[4/3]`,
+     `line-clamp-2`); breadcrumb thật (4 hàm mới `BreadcrumbUtils.CreateType*`/
+     `CreateProvinceBreadcrumb`, trước đây 2 trang này chưa set breadcrumb) +
+     JSON-LD `BreadcrumbList`; partial `_Pagination.cshtml` dùng chung 3 trang
+     (model tuple `(string BasePath, PageInfoModel Paging)`); badge lọc theo
+     loại (`SiblingTypes`) tái dùng làm bộ lọc thay vì UI mới.
+   - Verify: chạy `scripts/dichoithoi-sqlserver/01-create-new-schema.sql` qua
+     `sqlcmd` lên LocalDB dev (`dichoithoi_dev`, KHÔNG phải tên trong
+     `appsettings.json` gốc — đọc `appsettings.Development.json` mới ra tên
+     đúng), `dotnet build` sạch, `npm run prod` sạch (`line-clamp`/
+     `aspect-[4/3]` compile đúng), smoke test `/loai`, `/loai/{group}`,
+     `/loai/{group}/{type}`, `/tinh/{slug}` + `?trang=2` (canonical/tiêu đề đổi
+     đúng) + set thử 1 Description qua SQL trực tiếp để xác nhận đoạn giới
+     thiệu hiện/ẩn đúng. zinoflow: `tsc --noEmit` (api+web+contracts, phải
+     `pnpm --filter @zinoflow/contracts build` trước vì app dùng `dist`, không
+     phải source) + `jest destination` (64 test, api) đều sạch.
 4. **18.3 — Trang chủ** (`/`) theo §10.2.
 5. **18.4 — Trang chi tiết điểm đến** (lớn nhất, làm sau cùng) — 4 nhánh
    `kind` đã chốt trên, bật lại review/rating, accordion FAQ, gallery/mini

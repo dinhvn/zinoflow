@@ -511,6 +511,51 @@ export const destinationTaxonomySchema = z.object({
 export type DestinationTaxonomy = z.infer<typeof destinationTaxonomySchema>;
 
 /**
+ * Noi dung mo ta rieng cho trang danh muc /loai, /loai/{group}, /loai/{group}/{type},
+ * /tinh/{slug} (Phase 18.2, content-seo-ux-plan §10.3) — tranh thin content, KHONG
+ * phai taxonomy form/filter (khac destinationTaxonomySchema o tren).
+ */
+export const taxonomyContentGroupSchema = z.object({
+  id: z.coerce.number().int(),
+  slug: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+});
+export type TaxonomyContentGroup = z.infer<typeof taxonomyContentGroupSchema>;
+
+export const taxonomyContentTypeSchema = z.object({
+  id: z.coerce.number().int(),
+  groupId: z.coerce.number().int(),
+  slug: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+});
+export type TaxonomyContentType = z.infer<typeof taxonomyContentTypeSchema>;
+
+export const taxonomyContentProvinceSchema = z.object({
+  id: z.coerce.number().int(),
+  slug: z.string(),
+  code: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+});
+export type TaxonomyContentProvince = z.infer<typeof taxonomyContentProvinceSchema>;
+
+export const taxonomyContentSchema = z.object({
+  groups: z.array(taxonomyContentGroupSchema),
+  types: z.array(taxonomyContentTypeSchema),
+  provinces: z.array(taxonomyContentProvinceSchema),
+});
+export type TaxonomyContent = z.infer<typeof taxonomyContentSchema>;
+
+export const updateTaxonomyDescriptionRequestSchema = z.object({
+  target: z.enum(["group", "type", "province"]),
+  id: z.number().int(),
+  description: z.string().max(2000).nullable(),
+});
+export type UpdateTaxonomyDescriptionRequest = z.infer<typeof updateTaxonomyDescriptionRequestSchema>;
+
+/**
  * Tra cuu dia chi cu -> moi (sau sap nhap don vi hanh chinh 2025).
  * Nguon: bang admin_ward_mappings (seed dvhcvn). Chi doc, phuc vu tra cuu.
  */

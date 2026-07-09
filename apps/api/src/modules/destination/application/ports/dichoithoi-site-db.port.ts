@@ -13,6 +13,25 @@ export interface SiteTypeRow {
   name: string;
 }
 
+/** Noi dung mo ta rieng cho trang danh muc (Phase 18.2, content-seo-ux-plan §10.3) */
+export interface TaxonomyContentRows {
+  groups: Array<{ id: number; slug: string; name: string; description: string | null }>;
+  types: Array<{
+    id: number;
+    groupId: number;
+    slug: string;
+    name: string;
+    description: string | null;
+  }>;
+  provinces: Array<{
+    id: number;
+    slug: string;
+    code: string;
+    name: string;
+    description: string | null;
+  }>;
+}
+
 /** Noi dung hien tai cua 1 diem den tren site — ngu canh cho mode update */
 export interface SiteDestinationContent {
   contentHtml: string;
@@ -163,4 +182,12 @@ export interface DichoithoiSiteDb {
   findDestinationCards(filter: DestinationCardFilter): Promise<DestinationCardRow[]>;
   /** 1 diem cu the theo slug (khoi `destination` so it) — null neu khong ton tai/chua publish */
   findDestinationCardBySlug(slug: string): Promise<DestinationCardRow | null>;
+  /** Toan bo group/type/province kem Description — trang admin sua noi dung danh muc (Phase 18.2) */
+  fetchTaxonomyContent(): Promise<TaxonomyContentRows>;
+  /** Ghi de Description cho 1 group/type/province (Phase 18.2, content-seo-ux-plan §10.3) */
+  updateTaxonomyDescription(
+    target: "group" | "type" | "province",
+    id: number,
+    description: string | null,
+  ): Promise<void>;
 }

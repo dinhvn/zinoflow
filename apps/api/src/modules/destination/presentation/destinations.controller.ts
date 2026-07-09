@@ -63,6 +63,9 @@ import {
   type UpdatePracticalNotesRequest,
   type UploadDestinationImageResponse,
   type UpsertDestinationRequest,
+  updateTaxonomyDescriptionRequestSchema,
+  type TaxonomyContent,
+  type UpdateTaxonomyDescriptionRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { ValidationError } from "../../shared/errors/app-error";
@@ -84,6 +87,7 @@ import { ParseMapsLinkUseCase } from "../application/use-cases/parse-maps-link.u
 import { UpsertDestinationUseCase } from "../application/use-cases/upsert-destination.usecase";
 import { ImportDestinationsUseCase } from "../application/use-cases/import-destinations.usecase";
 import { ListAddressMappingsUseCase } from "../application/use-cases/list-address-mappings.usecase";
+import { ManageTaxonomyContentUseCase } from "../application/use-cases/manage-taxonomy-content.usecase";
 import { SuggestDestinationMetaUseCase } from "../../ai-content/application/use-cases/suggest-destination-meta.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
@@ -118,6 +122,7 @@ export class DestinationsController {
     private readonly upsertDestination: UpsertDestinationUseCase,
     private readonly importDestinations: ImportDestinationsUseCase,
     private readonly listAddressMappings: ListAddressMappingsUseCase,
+    private readonly manageTaxonomyContent: ManageTaxonomyContentUseCase,
     private readonly suggestMeta: SuggestDestinationMetaUseCase,
     private readonly parseMapsLink: ParseMapsLinkUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
@@ -199,6 +204,21 @@ export class DestinationsController {
   @Get("address-mappings/provinces")
   addressMappingProvinces(): Promise<AddressMappingProvinces> {
     return this.listAddressMappings.provinces();
+  }
+
+  /** Noi dung danh muc (group/type/province + Description) — trang admin Phase 18.2. Truoc ":slug". */
+  @Get("taxonomy-content")
+  taxonomyContent(): Promise<TaxonomyContent> {
+    return this.manageTaxonomyContent.getContent();
+  }
+
+  /** Sua doan gioi thieu 1 group/type/province (content-seo-ux-plan §10.3). Truoc ":slug". */
+  @Patch("taxonomy-content")
+  updateTaxonomyContent(
+    @Body(new ZodValidationPipe(updateTaxonomyDescriptionRequestSchema))
+    request: UpdateTaxonomyDescriptionRequest,
+  ): Promise<{ ok: true }> {
+    return this.manageTaxonomyContent.updateDescription(request);
   }
 
   /**

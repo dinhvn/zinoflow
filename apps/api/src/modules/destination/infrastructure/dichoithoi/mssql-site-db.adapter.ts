@@ -25,7 +25,14 @@ import type {
   SiteDestinationContent,
   SiteDestinationMeta,
   SiteTypeRow,
+  TaxonomyContentRows,
 } from "../../application/ports/dichoithoi-site-db.port";
+
+const TAXONOMY_TABLE_BY_TARGET: Record<"group" | "type" | "province", string> = {
+  group: "v2.DestinationTypeGroup",
+  type: "v2.DestinationType",
+  province: "v2.Province",
+};
 
 const SORT_COLUMN: Record<DestinationCardFilter["sort"], string> = {
   featured: "d.IsFeatured DESC, d.[Order] ASC",
@@ -414,6 +421,66 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       thumbnail: (r.Thumbnail as string | null) ?? null,
       kind: KIND_BY_NUMBER[r.Kind as number] ?? "poi",
     };
+  }
+
+  /** Phase 18.2 — noi dung /loai, /tinh cho trang admin sua Description danh muc */
+  async fetchTaxonomyContent(): Promise<TaxonomyContentRows> {
+    const [groups, types, provinces] = await Promise.all([
+      this.queryWithRetry<{ Id: number; Slug: string; Name: string; Description: string | null }>(
+        `SELECT Id, Slug, Name, Description FROM v2.DestinationTypeGroup ORDER BY [Order], Name`,
+      ),
+      this.queryWithRetry<{
+        Id: number;
+        GroupId: number;
+        Slug: string;
+        Name: string;
+        Description: string | null;
+      }>(`SELECT Id, GroupId, Slug, Name, Description FROM v2.DestinationType ORDER BY [Order], Name`),
+      this.queryWithRetry<{
+        Id: number;
+        Slug: string;
+        Code: string;
+        Name: string;
+        Description: string | null;
+      }>(`SELECT Id, Slug, Code, Name, Description FROM v2.Province ORDER BY Name`),
+    ]);
+    return {
+      groups: groups.map((r) => ({
+        id: Number(r.Id),
+        slug: r.Slug,
+        name: r.Name,
+        description: r.Description ?? null,
+      })),
+      types: types.map((r) => ({
+        id: Number(r.Id),
+        groupId: Number(r.GroupId),
+        slug: r.Slug,
+        name: r.Name,
+        description: r.Description ?? null,
+      })),
+      provinces: provinces.map((r) => ({
+        id: Number(r.Id),
+        slug: r.Slug,
+        code: r.Code,
+        name: r.Name,
+        description: r.Description ?? null,
+      })),
+    };
+  }
+
+  /** Phase 18.2 — sua doan gioi thieu 1 group/type/province (content-seo-ux-plan §10.3) */
+  async updateTaxonomyDescription(
+    target: "group" | "type" | "province",
+    id: number,
+    description: string | null,
+  ): Promise<void> {
+    const table = TAXONOMY_TABLE_BY_TARGET[target];
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("id", id);
+      request.input("description", description);
+      return request.query(`UPDATE ${table} SET Description = @description WHERE Id = @id`);
+    });
   }
 
   async updateAncestorsChildren(

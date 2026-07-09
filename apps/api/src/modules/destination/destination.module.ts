@@ -44,6 +44,7 @@ import { GetDestinationDetailUseCase } from "./application/use-cases/get-destina
 import { UpsertDestinationUseCase } from "./application/use-cases/upsert-destination.usecase";
 import { ImportDestinationsUseCase } from "./application/use-cases/import-destinations.usecase";
 import { ListAddressMappingsUseCase } from "./application/use-cases/list-address-mappings.usecase";
+import { ManageTaxonomyContentUseCase } from "./application/use-cases/manage-taxonomy-content.usecase";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
 import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
@@ -93,6 +94,7 @@ import {
     UpsertDestinationUseCase,
     ImportDestinationsUseCase,
     ListAddressMappingsUseCase,
+    ManageTaxonomyContentUseCase,
     ParseMapsLinkUseCase,
     RecomputeRelatedService,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },

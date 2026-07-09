@@ -31,6 +31,10 @@ CREATE TABLE v2.Province (
   [Order]       int NOT NULL DEFAULT 0
 );
 GO
+-- Vay 07/2026 (Phase 18.2) — doan gioi thieu rieng cho trang /tinh/{slug}, tranh thin content (content-seo-ux-plan §10.3)
+IF COL_LENGTH('v2.Province', 'Description') IS NULL
+  ALTER TABLE v2.Province ADD Description nvarchar(max) NULL;
+GO
 
 /* ===== Destination — bang nong (redesign §4.2) ===== */
 IF OBJECT_ID('v2.Destination') IS NULL
@@ -164,6 +168,13 @@ END
 GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_v2DestinationType_Group')
   CREATE INDEX IX_v2DestinationType_Group ON v2.DestinationType(GroupId, [Order]);
+GO
+-- Vay 07/2026 (Phase 18.2) — doan gioi thieu rieng cho trang /loai, /loai/{group}, /loai/{group}/{type}
+IF COL_LENGTH('v2.DestinationTypeGroup', 'Description') IS NULL
+  ALTER TABLE v2.DestinationTypeGroup ADD Description nvarchar(max) NULL;
+GO
+IF COL_LENGTH('v2.DestinationType', 'Description') IS NULL
+  ALTER TABLE v2.DestinationType ADD Description nvarchar(max) NULL;
 GO
 
 IF OBJECT_ID('v2.DestinationTypeMap') IS NULL
