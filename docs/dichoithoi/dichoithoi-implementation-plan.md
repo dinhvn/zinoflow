@@ -528,7 +528,35 @@ tóm tắt lại đây):
      thiệu hiện/ẩn đúng. zinoflow: `tsc --noEmit` (api+web+contracts, phải
      `pnpm --filter @zinoflow/contracts build` trước vì app dùng `dist`, không
      phải source) + `jest destination` (64 test, api) đều sạch.
-4. **18.3 — Trang chủ** (`/`) theo §10.2.
+4. **18.3 — Trang chủ** (`/`) theo §10.2 (ĐÃ XONG 07/2026) — thuần website,
+   không đổi zinoflow/schema. Rewrite `Home/Index.cshtml` + các partial dùng
+   chung với `Destination/Index.cshtml` (`_SearchCondition`, `_DestinationGroup`,
+   `_HotelList`, `_HotelGroupList`, `Destination/_DestinationList`) sang
+   Tailwind — carousel vuốt ngang mobile (`flex overflow-x-auto snap-x
+   snap-mandatory`, KHÔNG cần JS) → lưới tĩnh desktop (`lg:grid lg:grid-cols-4
+   lg:overflow-visible`). **Phát hiện lúc rà soát §10.2**: trang chủ đang thiếu
+   2 khối spec yêu cầu — "Lưới danh mục" và "Cẩm nang mới" (tín hiệu
+   freshness) — thêm cả 2:
+   - **Khám phá theo loại**: tái dùng `GetAllTypesAsync()` đã cache sẵn (Phase
+     18.0, không query riêng), group theo `GroupId` lấy danh sách nhóm duy
+     nhất → lưới link `/loai/{group}` (style giống tile ở trang `/loai`, 18.2).
+   - **Cẩm nang mới**: `IArticleService.GetListAsync()` (đã có sẵn, top 24 bài
+     mới nhất theo `PublishedAt`) — thêm cache RAM riêng
+     (`HOME_RECENT_ARTICLES_CACHE_KEY`, TTL 15 phút — ngắn hơn top destination
+     vì đây là tín hiệu "mới" nên cần refresh nhanh hơn) + case
+     `home_articles` mới ở `/api/remove-cache`. Ẩn khối nếu rỗng (dev DB hiện
+     0 bài `v2.Article` published — graceful-empty, không phải lỗi).
+   `TopViewModel` thêm `TypeGroups`/`RecentArticles`. Vì `_DestinationList.cshtml`
+   dùng chung bởi `Destination/Index.cshtml` (trang `/search` + `/diem-den`),
+   rewrite 1 lần áp dụng cho cả 2 route — tiện thể lên khuôn Tailwind luôn
+   phần khung `Destination/Index.cshtml` (trước đó vẫn dùng class Bootstrap
+   `container`/`d-flex` đã hỏng từ 18.0). `Hotel/Index.cshtml`/`Hotel/Detail.cshtml`
+   cũng dùng chung `_HotelList`/`_HotelGroupList` nên được cải thiện lây —
+   KHÔNG phải phạm vi 18.3 (khung trang Hotel vẫn Bootstrap hỏng, để sau).
+   Verify: `dotnet build` sạch, `npm run prod` sạch (`snap-x`/`line-clamp-1`/
+   `aspect-[4/3]` compile đúng), smoke test `/` (đủ 5 khối, lưới danh mục đúng
+   3 nhóm duy nhất — không lẫn link cấp `type` từ mega-menu header), `/diem-den`,
+   `/search?q=bien` đều 200 và render card mới.
 5. **18.4 — Trang chi tiết điểm đến** (lớn nhất, làm sau cùng) — 4 nhánh
    `kind` đã chốt trên, bật lại review/rating, accordion FAQ, gallery/mini
    lịch trình graceful-empty, so sánh giá lên khuôn mới.
