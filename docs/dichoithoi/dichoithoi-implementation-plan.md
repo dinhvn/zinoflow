@@ -442,10 +442,28 @@ chỉ dựng UI graceful-empty, KHÔNG tạo dữ liệu mới; so sánh giá (�
 riêng, DoD chi tiết từng phần xem
 `C:\Users\dinhdv\.claude\plans\nifty-purring-waterfall.md` lúc lập breakdown,
 tóm tắt lại đây):
-1. **18.0 — Nền tảng Tailwind + layout shell**: pipeline Tailwind (build-time,
-   webpack entry mới), `tailwind.config.js` 7 màu cố định, viết lại
-   `_Layout`/`_Header`/`_Footer` (drawer mobile + mega-menu desktop §10.1), bỏ
-   Bootstrap/jQuery/font icon, SVG inline từ `src/icons/*.svg` có sẵn.
+1. **18.0 — Nền tảng Tailwind + layout shell (ĐÃ XONG 07/2026)**: thêm
+   `tailwindcss`/`postcss`/`autoprefixer`/`postcss-loader` vào pipeline webpack
+   sẵn có (KHÔNG cần entry riêng — chỉ thêm `postcss-loader` vào rule
+   `\.s?css$/` hiện có, `common.scss` đổi thành 3 dòng `@tailwind`);
+   `tailwind.config.js` 7 màu cố định + `content` glob `Views/**/*.cshtml` +
+   `src/ts/**/*.ts`. Viết lại `_Layout`/`_Header`/`_Footer` bằng Tailwind:
+   drawer mobile (`<details>`/JS thuần thay `collapse.js`) + mega-menu desktop
+   dùng `group-hover` (KHÔNG cần JS cho hover) — mega-menu cột "Tỉnh/Thành"
+   TẠM thời phẳng (chưa nhóm theo miền, chờ 18.1). SVG inline qua
+   `IconTagHelper` mới (`TagHelpers/IconTagHelper.cs`, đọc
+   `wwwroot/icons/*.svg` copy từ `src/icons` lúc build, cache RAM). Footer
+   đổi từ `StaticLinkUtils` (danh sách cứng, không đồng bộ DB) sang dữ liệu
+   thật (`IDestinationTaxonomyService`) — vì service này giờ gọi ở MỌI trang
+   (header+footer), đã thêm `IMemoryCache` (TTL 6h, case `taxonomy` mới ở
+   `/api/remove-cache`) để tránh query sống mỗi request — lỗ hổng chưa ai để ý
+   trước đó vì trước giờ chỉ `/loai` mới gọi.
+   **Quyết định đã hỏi + user chọn**: cắt hẳn `common.css` (Bootstrap) khỏi
+   `_Layout` ngay trong 18.0 thay vì tải song song 2 file CSS — chấp nhận
+   Trang chủ/Danh mục/Chi tiết (chưa viết lại) tạm mất style Bootstrap
+   (`container`/`row`/`col`/`btn`...) cho tới khi 18.2-18.4 viết lại xong.
+   `npm run prod` + `dotnet build` sạch, smoke test `/`, `/loai`, `/search`,
+   `/api/remove-cache/taxonomy` chạy được không lỗi.
 2. **18.1 — Trục vùng/miền** (`Region` + `/vung/{slug}`) — việc DUY NHẤT cần
    đổi zinoflow, làm sớm vì mega-menu 18.0 cần data tỉnh-theo-miền.
 3. **18.2 — Trang danh mục** (`/loai`, `/tinh/{slug}`) theo §10.3 — ưu tiên SEO
