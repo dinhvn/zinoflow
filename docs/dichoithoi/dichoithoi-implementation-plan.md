@@ -412,7 +412,7 @@ danh sách con). Nên làm SAU Phase 17 (cache) để không phải cache lại 
   tiết); mọi nội dung quan trọng có mặt đầy đủ trên mobile (không ẩn khỏi DOM
   chỉ vì hẹp màn hình, trừ `<details>` gấp — vẫn nằm trong DOM).
 
-## Phase 19 — Search trong RAM (thay live `LIKE` query)
+## Phase 19 — Search trong RAM (thay live `LIKE` query) (ĐÃ XONG 07/2026)
 
 **Phụ thuộc**: không phụ thuộc phase nào, có thể làm bất kỳ lúc nào — độc lập
 với 12-18. **Nguồn**: `database-redesign.md` §1.3/§6.
@@ -423,16 +423,52 @@ Phát hiện lúc rà soát 07/2026: `/search` hiện tại
 scan mỗi lần search) + `RemoveUnicode()` tính lại mỗi request — chậm dần khi số
 điểm đến tăng, độc lập với việc tách bảng nóng/lạnh đã làm.
 
-- **Đồng bộ zinoflow**: đảm bảo cột `NameUnaccented` đã ghi sẵn lúc publish
-  (đã có trên `Destination` — chỉ cần xác nhận không NULL cho dữ liệu cũ).
-- **Đồng bộ website**: load 1 lần lúc app start (hoặc lúc cache invalidate)
-  đúng 6 cột nhẹ (`Id, Slug, Name, NameUnaccented, Kind, ProvinceId,
-  Thumbnail`) vào `IMemoryCache`/static list; sửa `/search` chạy prefix/contains
-  TRÊN RAM, bỏ hẳn query `LIKE` xuống SQL Server; refresh danh sách khi có
-  publish mới (dùng cùng cơ chế invalidate cache đã có — Phase 17).
-- **DoD**: search 1 từ khoá bất kỳ → không có query SQL nào chạy (xác nhận qua
-  log/profiler); thêm 1 điểm đến mới + publish → search ra ngay sau khi cache
-  refresh, không cần restart app; đo thời gian phản hồi `/search` trước/sau.
+**Phát hiện quan trọng lúc code (làm thay đổi cách tiếp cận)**: `/search`,
+`/diem-den`, `/diem-den/{id}` **hiện KHÔNG đọc schema v2** — vẫn đọc thẳng
+bảng CŨ `dbo.Destination`/`dbo.DestinationDetail` (đã ghi nhận từ trước ở
+`dichoithoi-web-page-audit.md` §0, "chưa migrate"). Bảng cũ **không có cột
+`NameUnaccented`** (chỉ `V2Destination` mới có) và cột `SearchKeyword` hiện
+**không có nơi nào trong code ghi giá trị** (rà toàn bộ repo, kể cả
+`CmsDiChoiThoi.Web/Controllers/DestinationController.cs` nơi import Google
+Sheet) — nghĩa là search theo `SearchKeyword` có thể đã âm thầm không khớp cho
+nhiều điểm từ lâu. Vì vậy:
+- KHÔNG cần zinoflow đảm bảo `NameUnaccented` (bullet gốc của plan nhắm nhầm
+  bảng — cột đó thuộc `v2.Destination`, không phải bảng đang phục vụ `/search`
+  thật). Zinoflow không cần đổi gì cho phase này.
+- Tự tính "tên bỏ dấu" 1 LẦN lúc nạp vào RAM từ cột `Name` (luôn có giá trị,
+  `[Required]`) thay vì phụ thuộc `SearchKeyword` — vừa nhanh hơn (không tính
+  lại mỗi request) vừa sửa luôn lỗ hổng khớp thiếu do `SearchKeyword` rỗng.
+- **Writer DUY NHẤT của `dbo.Destination`** là CMS cũ (`CmsDiChoiThoi.Web`,
+  action `import_destination` — import từ Google Sheet, bấm tay) — đây là 1
+  ỨNG DỤNG .NET RIÊNG, KHÁC process với `DiChoiThoi.Web` (website công khai),
+  nên endpoint `/api/remove-cache` (Phase 17, cùng process với `IMemoryCache`
+  của website) không tự được gọi từ đó. Zinoflow (publish qua schema v2) cũng
+  KHÔNG ghi bảng này nên purge cache (Phase 17) không giúp gì cho search index.
+  → Ngoài case `search_index` thủ công (gọi tay khi cần), index có TTL riêng
+  30 phút (`CACHE_EXPIRATION_SEARCH_INDEX`) để tự làm mới, không cần restart
+  app, thay vì cache vĩnh viễn như plan gốc kỳ vọng.
+
+- **Đồng bộ website**: `DestinationRepository` (`DiChoiThoi.Service`) nạp toàn
+  bộ `dbo.Destination` (`AsNoTracking`) + tính sẵn tên bỏ dấu 1 lần vào
+  `IMemoryCache` (key `SEARCH_INDEX_CACHE_KEY`, TTL 30 phút); `GetListAsync`
+  lọc hoàn toàn trên RAM (khớp tên bỏ dấu / `DestinationGroupId` / `Type`),
+  không còn dịch ra SQL `LIKE` nữa. `/api/remove-cache/search_index` (và
+  `all`) xoá cache này để nạp lại ngay khi cần, không đợi hết TTL.
+- **DoD đã xác nhận**: `dotnet build` sạch; search giờ chỉ 1 query SQL lúc
+  cache miss (nạp toàn bộ), các lần search tiếp theo trong TTL 0 query — xác
+  nhận qua code (không còn `.Where(whereClause)` dịch ra SQL, `Where` giờ chạy
+  trên `List<Destination>` đã nạp).
+- **Gap phát hiện, KHÔNG thuộc phạm vi phase này (để dành Phase 10 go-live)**:
+  điểm đến tạo HOÀN TOÀN MỚI qua zinoflow (chưa từng tồn tại ở `dbo.Destination`
+  trước khi migrate sang v2) sẽ KHÔNG xuất hiện ở `/search`, `/diem-den` (top
+  list/danh sách con), và **404 luôn ở `/diem-den/{slug}`** — vì
+  `DestinationController.Detail` gọi `_destinationService.GetDetailAsync(id)`
+  đọc bảng CŨ trước, `Extras` (v2) chỉ là lớp phủ thêm. Mọi điểm đã test thành
+  công trước giờ (vd `cong-troi-bali-green-hills`) đều là điểm ĐÃ tồn tại từ
+  trước khi chạy migration `02-migrate-data.sql` (seed `v2.Destination` từ
+  `dbo.Destination`). Đây là hệ quả của việc CHƯA cắt hẳn sang schema v2
+  (Phase 10), không phải lỗi do Phase 17/19 gây ra — cần nhớ khi test destination
+  hoàn toàn mới qua "+ Thêm điểm đến" trước khi go-live.
 
 ---
 
@@ -476,6 +512,13 @@ hiện hành động trên trang này".
   đến (backlog §A.8) — chưa chọn AI đánh giá hay tự tay chuẩn hoá.
 - **Chuẩn hoá danh sách `category` cho Product** (product-spec §8.5) — chặn 1
   phần nhỏ Phase 16 (màn quản lý), không chặn phần block compiler.
+- **[Bug tiềm ẩn, phát hiện lúc làm Phase 19] Điểm đến hoàn toàn mới qua
+  zinoflow bị 404** trên `/diem-den/{slug}`, không hiện ở `/search`/`/diem-den`
+  — vì các route này còn đọc bảng CŨ `dbo.Destination` (chưa cắt sang v2,
+  Phase 10). Chỉ điểm ĐÃ có sẵn trong `dbo.Destination` trước migration
+  `02-migrate-data.sql` mới hoạt động đầy đủ. Không sửa ở đây vì cần cắt hẳn
+  Detail/Index/Search sang schema v2 — thuộc phạm vi Phase 10 go-live, cần bạn
+  xác nhận thời điểm cắt trước khi code.
 
 ---
 
@@ -503,6 +546,6 @@ Phase 17 (cache hạ tầng)            — nên sau 14+15, ĐÃ XONG (07/2026)
 Phase 18 (đập đi làm lại UI)        — cần 14, nên sau 17
   └─ 1 phần bị CHẶN bởi quyết định "kind=cluster 2 biến thể + vùng/miền"
      chưa xác nhận (xem mục "Còn treo" phía trên)
-Phase 19 (search trong RAM)         — độc lập, làm bất kỳ lúc nào
+Phase 19 (search trong RAM)         — độc lập, ĐÃ XONG (07/2026)
 Phase 20 (sidebar-first nav CMS)    — độc lập, ĐÃ XONG (07/2026)
 ```
