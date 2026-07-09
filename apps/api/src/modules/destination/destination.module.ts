@@ -11,6 +11,8 @@ import { PublishDestinationUseCase } from "./application/use-cases/publish-desti
 import { RelinkAllUseCase } from "./application/use-cases/relink-all.usecase";
 import { RecomputeRelatedService } from "./application/services/recompute-related.service";
 import { DICHOITHOI_SITE_DB } from "./application/ports/dichoithoi-site-db.port";
+import { CACHE_PURGE } from "./application/ports/cache-purge.port";
+import { HttpCachePurgeAdapter } from "./infrastructure/cache/http-cache-purge.adapter";
 import {
   DESTINATION_MIRROR_REPOSITORY,
   DESTINATION_RELATION_REPOSITORY,
@@ -94,6 +96,7 @@ import {
     ParseMapsLinkUseCase,
     RecomputeRelatedService,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
+    { provide: CACHE_PURGE, useClass: HttpCachePurgeAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
     { provide: IMAGE_CHECKER, useClass: HttpImageChecker },
     { provide: URL_RESOLVER, useClass: HttpUrlResolver },

@@ -6,6 +6,7 @@ import {
   type DestinationRelationRepository,
 } from "../ports/destination-mirror.repository";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+import { CACHE_PURGE, type CachePurgePort } from "../ports/cache-purge.port";
 import {
   buildRelatedItems,
   computeNearby,
@@ -29,6 +30,7 @@ export class RecomputeRelatedService {
     @Inject(DESTINATION_RELATION_REPOSITORY)
     private readonly relationRepo: DestinationRelationRepository,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
+    @Inject(CACHE_PURGE) private readonly cachePurge: CachePurgePort,
   ) {}
 
   /** Tinh lai cho danh sach slug cu the. Tra ve so bai co RelatedJson THAY DOI. */
@@ -131,7 +133,11 @@ export class RecomputeRelatedService {
         JSON.stringify(children),
       );
 
-      if (relatedChanged || treeChanged) updated += 1;
+      if (relatedChanged || treeChanged) {
+        updated += 1;
+        // Noi dung trang chi tiet cua slug nay vua doi — purge dung URL do (Phase 17)
+        await this.cachePurge.purgeDestination(slug);
+      }
     }
 
     this.logger.log(`Recompute related: ${scanned} bai quet, ${updated} bai cap nhat`);

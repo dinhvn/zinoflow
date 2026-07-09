@@ -19,6 +19,7 @@ import {
   type DestinationRelationRepository,
 } from "../ports/destination-mirror.repository";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+import { CACHE_PURGE, type CachePurgePort } from "../ports/cache-purge.port";
 import { autoLinkContent, type LinkTarget } from "../../domain/auto-link";
 import {
   buildFaqJson,
@@ -48,6 +49,7 @@ export class PublishDestinationUseCase {
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
     @Inject(CONTENT_DRAFT_REPOSITORY) private readonly draftRepo: ContentDraftRepository,
+    @Inject(CACHE_PURGE) private readonly cachePurge: CachePurgePort,
     private readonly recomputeRelated: RecomputeRelatedService,
   ) {}
 
@@ -159,6 +161,10 @@ export class PublishDestinationUseCase {
     );
 
     await this.mirrorRepo.markPublished(slug, contentHash);
+
+    // ContentHtml vua doi — purge dung URL nay (Phase 17), khong doi ket qua recompute
+    // vi RelatedJson/Ancestors/Children co the KHONG doi dau du noi dung bai da doi
+    await this.cachePurge.purgeDestination(slug);
 
     // Recompute hep: chi cac diem bi anh huong (spec §12.3) — chay sau khi mirror
     // da cap nhat de RelatedJson nhin thay trang thai moi nhat

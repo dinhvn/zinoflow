@@ -331,26 +331,67 @@ danh sách `category` = **tự do nhập + gợi ý autocomplete** từ giá tr�
   248→255 test API pass, `tsc` sạch api+web, migration `ProductModule` đã chạy
   DB dev.
 
-## Phase 17 — Cache hạ tầng cho hosting SmarterASP .NET Advance
+## Phase 17 — Cache hạ tầng cho hosting SmarterASP .NET Advance (ĐÃ XONG 07/2026)
 
 **Phụ thuộc**: Phase 9 (website) đã có route chính; nên làm SAU Phase 14/15
 (tránh cache dữ liệu sắp đổi cấu trúc).
 **Nguồn**: `content-seo-ux-plan.md` §10.5.1, `system-design.md` §5 mục 9.
 
-- **Đồng bộ zinoflow**: mở rộng endpoint/job "invalidate cache" hiện có — gọi
-  THÊM Cloudflare Purge Cache API (theo đúng URL vừa đổi) sau khi publish,
-  cần thêm config API token Cloudflare.
-- **Đồng bộ website**: bật ASP.NET Core `OutputCache` middleware (in-memory,
-  TTL vài giờ) cho các route content-heavy; cấu hình Cloudflare (DNS + Page
-  Rule "Cache Everything" cho `/diem-den/*`, `/tinh/*`, `/loai/*`); thêm
-  `<link rel="canonical">` cho tổ hợp filter; sitemap tách file khi vượt
-  ngưỡng 40.000 URL/file.
-- **Việc cần bạn tự kiểm tra trước phase này**: gói SmarterASP Advance có tính
-  năng Task Scheduler/Cron trong control panel không (warm-up app pool sau
-  recycle) — chưa xác nhận được từ xa.
-- **DoD**: publish 1 điểm đến → gọi thử URL đó thấy nội dung mới (cache đã bị
-  xoá đúng URL ở cả 2 tầng); các URL KHÔNG liên quan vẫn giữ cache cũ (không
-  xoá nhầm toàn bộ); đo Lighthouse trước/sau xác nhận Performance tăng.
+**Phát hiện lúc rà soát**: endpoint invalidate-cache "hiện có" mà plan nhắc tới
+là có thật — `GET /api/remove-cache/{id}` trong `HomeController.cs`, trước giờ
+chỉ xoá vài named key cố định (`top_destination`, `top_hotel`,...) qua link bấm
+tay trong CMS cũ (`CmsDiChoiThoi.Web`), KHÔNG có xác thực, và KHÔNG có endpoint
+nào được zinoflow gọi tự động cả — đây là phần mới hoàn toàn của phase này.
+
+- **Đồng bộ website (.NET)**:
+  - Bật `OutputCache` middleware (`Program.cs`) — chính sách `"DestinationDetail"`
+    (`DiChoiThoi.Web/Caching/DestinationDetailCachePolicy.cs`) áp cho route
+    `/diem-den/{id}`: TTL 6 giờ, GẮN TAG `"destination:{slug}"` (route value
+    `id`) để purge đúng 1 URL, không xoá nhầm toàn bộ.
+  - Mở rộng `RemoveDestinationCache` (đã đổi tên hiệu ứng, giữ nguyên route) —
+    thêm nhánh `id` dạng `"destination:{slug}"` gọi
+    `IOutputCacheStore.EvictByTagAsync`. Các key cũ (`top_destination`,...) giữ
+    nguyên hành vi, không phá vỡ các nút bấm tay trong CMS cũ.
+  - **Canonical cho filter**: rà lại toàn bộ route hiện có (`/loai`, `/tinh`,
+    `/search`,...) — `_Layout.cshtml` ĐÃ tự build canonical từ
+    `Context.Request.Path` (bỏ query string) khi `PageInfo.Canonical` không set,
+    và không route nào hiện dùng query-string filter (trừ `/search` đã
+    `NoIndex=true` sẵn) → mục này ĐÃ đạt từ trước, không cần sửa gì.
+  - **Sitemap chia file khi vượt ngưỡng**: thêm `WriteChunkedUrlset` (ngưỡng
+    40.000 URL/file) trong `HomeController.cs`, áp cho
+    `CreateDestinationSiteMapAsync` (loại duy nhất có khả năng vượt ngưỡng ở quy
+    mô hiện tại) — tự sinh `destination-sitemap-1.xml`, `-2.xml`,... và đưa đúng
+    số file vào `sitemap_index.xml` khi vượt; dưới ngưỡng vẫn ra đúng 1 file
+    `destination-sitemap.xml` như cũ.
+- **Đồng bộ zinoflow**: `CachePurgePort`/`CACHE_PURGE`
+  (`modules/destination/application/ports/cache-purge.port.ts`) +
+  `HttpCachePurgeAdapter` (`infrastructure/cache/http-cache-purge.adapter.ts`) —
+  `purgeDestination(slug)` gọi ĐỒNG THỜI (a) endpoint
+  `/api/remove-cache/destination:{slug}` của website (tầng 1) và (b) Cloudflare
+  Purge Cache API cho URL `{DICHOITHOI_PUBLIC_BASE_URL}/diem-den/{slug}` (tầng
+  2, CHỈ gọi khi đã cấu hình `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ZONE_ID` — bỏ
+  qua nếu chưa có, không chặn publish). Lỗi purge chỉ log cảnh báo, KHÔNG throw
+  (publish đã xong trước đó, cache tự hết hạn theo TTL dù sao). Gọi ở 2 chỗ:
+  `PublishDestinationUseCase` (slug vừa publish, vì ContentHtml đổi mà
+  RelatedJson/Ancestors/Children có thể KHÔNG đổi) và `RecomputeRelatedService`
+  (mọi slug bị ảnh hưởng có `relatedChanged || treeChanged`, vd khi đổi cha,
+  gán/gỡ Hotel-Tour, publish điểm khác kéo theo).
+  Config mới trong `.env.example`: `DICHOITHOI_SITE_BASE_URL` (bắt buộc để bật
+  tầng 1), `DICHOITHOI_PUBLIC_BASE_URL`/`CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ZONE_ID`
+  (tầng 2, để trống = tắt).
+- **Việc CẦN BẠN tự làm (ngoài khả năng của AI tool)**:
+  1. Tạo Cloudflare account (free tier) + trỏ DNS `dichoithoi.com` qua Cloudflare
+     + bật Page Rule/Cache Rule "Cache Everything" cho `/diem-den/*`, `/tinh/*`,
+     `/loai/*`, rồi điền `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ZONE_ID` vào `.env`
+     production — chưa làm, cần tài khoản thật của bạn.
+  2. Kiểm tra gói SmarterASP Advance có Task Scheduler/Cron trong control panel
+     không (warm-up app pool sau recycle) — vẫn CHƯA xác nhận được từ xa.
+- **DoD đã xác nhận**: `dotnet build` sạch; publish 1 điểm đến qua zinoflow (dev,
+  `DICHOITHOI_SITE_BASE_URL=http://localhost:5176`) gọi đúng
+  `/api/remove-cache/destination:{slug}`, các slug khác không bị đụng tới (tag
+  theo slug, không xoá `all`); 257 test API vẫn pass, `tsc` sạch api+web.
+  Lighthouse trước/sau và test Cloudflare thật CHƯA đo được — phụ thuộc việc cần
+  bạn tự làm ở trên.
 
 ## Phase 18 — Đập đi làm lại UI website (mobile-first, stack nhẹ, theme mới)
 
@@ -458,7 +499,7 @@ Phase 13 (Google Maps link parser)  — độc lập hoàn toàn
 Phase 14 (Ancestors/ChildrenJson)   — cần 2 (kind/ParentId có sẵn)
 Phase 15 (bỏ query sống Hotel/Tour) — cần 5+6
 Phase 16 (module Sản phẩm)          — cần 3+8
-Phase 17 (cache hạ tầng)            — nên sau 14+15
+Phase 17 (cache hạ tầng)            — nên sau 14+15, ĐÃ XONG (07/2026)
 Phase 18 (đập đi làm lại UI)        — cần 14, nên sau 17
   └─ 1 phần bị CHẶN bởi quyết định "kind=cluster 2 biến thể + vùng/miền"
      chưa xác nhận (xem mục "Còn treo" phía trên)
