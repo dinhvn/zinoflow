@@ -421,18 +421,45 @@ duyệt đúng đề xuất, không sửa gì — không còn chặn phase này 
   (`Id`,`Slug`,`Name`) + `Province.RegionId` FK, trang `/vung/{slug}` theo
   đúng pattern trang danh mục (§10.3).
 
-- **Đồng bộ website (module này gần như thuần website, zinoflow không đổi)**:
-  bỏ Bootstrap/jQuery/icon font hiện tại; dựng pipeline Tailwind compile-time
-  (purge) + theme 7 màu (§10.5); vanilla JS cho drawer/carousel/accordion;
-  SVG inline; layout mobile-first cho trang chủ (§10.2), trang danh mục
-  (§10.3), trang chi tiết theo `kind` (đúng 4 nhánh chốt ở trên).
-- **Việc zinoflow cần làm thêm cho quyết định trên** (chưa có, cần schema
-  Postgres + SQL Server mới): bảng `Region`/`Province.RegionId`, UI gán
-  Province vào Region, trang `/vung/{slug}` đọc trực tiếp SQL Server (giống
-  `/tinh`/`/loai` hiện tại, không qua Postgres mirror).
-- **DoD**: Lighthouse Performance ≥ 90 trên 3 trang mẫu (chủ, danh mục, chi
-  tiết); mọi nội dung quan trọng có mặt đầy đủ trên mobile (không ẩn khỏi DOM
-  chỉ vì hẹp màn hình, trừ `<details>` gấp — vẫn nằm trong DOM); `kind=cluster`
+**Hiện trạng codebase đã khảo sát 07/2026** (trước khi tách sub-phase dưới):
+`DiChoiThoi.Web` đã có `webpack.config.js`+`package.json` (webpack 5,
+`ts-loader`+`sass-loader`, mỗi trang 1 entry TS/SCSS) — KHÔNG có Tailwind ở đâu
+trong repo (kể cả `CmsDiChoiThoi.Web`), dựng từ đầu. Bootstrap 5.3.3 + jQuery
+3.7.1 (chỉ dùng JS `dropdown.js`/`collapse.js`), 2 hệ icon song song (font
+`dichoithoi.*` + `src/icons/*.svg` ~30 file rời — SVG rời dùng lại được ngay
+cho hướng "SVG inline"). `_Layout.cshtml` rất gọn (77 dòng, không CDN) — nền
+tốt để chuyển thẳng Tailwind. 5 route liên quan + partials ~1000 dòng: Home
+`Index` (41d), Destination `Index` (29d), Destination `Detail` (**289d — lớn
+nhất**), DestinationType `Index`+`TypeList` (15d+32d), Province `Detail` (14d)
+— 2 cái sau dùng chung `_DestinationCardList.cshtml`. Nội dung đã có DATA
+nhưng website CHƯA hiển thị đủ: FAQ đã có `FaqJson`+JSON-LD (Phase 12) nhưng
+thiếu accordion hiển thị; Review/rating code fetch đang **comment out**;
+Gallery/mini lịch trình (§5.1/§5.2) chưa có dữ liệu (để Phase 11) — Phase 18
+chỉ dựng UI graceful-empty, KHÔNG tạo dữ liệu mới; so sánh giá (§5.3) đã xong
+ở Phase 12, chỉ cần lên khuôn Tailwind.
+
+**Chia sub-phase** (quá lớn làm 1 lần — mỗi sub-phase code+build+test+commit
+riêng, DoD chi tiết từng phần xem
+`C:\Users\dinhdv\.claude\plans\nifty-purring-waterfall.md` lúc lập breakdown,
+tóm tắt lại đây):
+1. **18.0 — Nền tảng Tailwind + layout shell**: pipeline Tailwind (build-time,
+   webpack entry mới), `tailwind.config.js` 7 màu cố định, viết lại
+   `_Layout`/`_Header`/`_Footer` (drawer mobile + mega-menu desktop §10.1), bỏ
+   Bootstrap/jQuery/font icon, SVG inline từ `src/icons/*.svg` có sẵn.
+2. **18.1 — Trục vùng/miền** (`Region` + `/vung/{slug}`) — việc DUY NHẤT cần
+   đổi zinoflow, làm sớm vì mega-menu 18.0 cần data tỉnh-theo-miền.
+3. **18.2 — Trang danh mục** (`/loai`, `/tinh/{slug}`) theo §10.3 — ưu tiên SEO
+   cao nhất, không phụ thuộc data mới ngoài 18.1.
+4. **18.3 — Trang chủ** (`/`) theo §10.2.
+5. **18.4 — Trang chi tiết điểm đến** (lớn nhất, làm sau cùng) — 4 nhánh
+   `kind` đã chốt trên, bật lại review/rating, accordion FAQ, gallery/mini
+   lịch trình graceful-empty, so sánh giá lên khuôn mới.
+6. **18.5 — Đo lường & polish** (song song, không chặn): GitHub Actions đo
+   Lighthouse định kỳ, SVGO logo, kiểm tra Brotli/cache header.
+
+- **DoD tổng**: Lighthouse Performance ≥ 90 trên 3 trang mẫu (chủ, danh mục,
+  chi tiết); mọi nội dung quan trọng có mặt đầy đủ trên mobile (không ẩn khỏi
+  DOM chỉ vì hẹp màn hình, trừ `<details>` gấp — vẫn nằm trong DOM); `kind=cluster`
   2 biến thể + redirect `province` + trang `/vung/{slug}` hoạt động đúng như
   mô tả trên.
 
