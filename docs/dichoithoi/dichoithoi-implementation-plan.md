@@ -557,9 +557,61 @@ tóm tắt lại đây):
    `aspect-[4/3]` compile đúng), smoke test `/` (đủ 5 khối, lưới danh mục đúng
    3 nhóm duy nhất — không lẫn link cấp `type` từ mega-menu header), `/diem-den`,
    `/search?q=bien` đều 200 và render card mới.
-5. **18.4 — Trang chi tiết điểm đến** (lớn nhất, làm sau cùng) — 4 nhánh
-   `kind` đã chốt trên, bật lại review/rating, accordion FAQ, gallery/mini
-   lịch trình graceful-empty, so sánh giá lên khuôn mới.
+5. **18.4 — Trang chi tiết điểm đến** (lớn nhất, ĐÃ XONG 07/2026) — thuần
+   website, không đổi zinoflow/schema. **Phát hiện quan trọng lúc code**: `/diem-den/{slug}`
+   VẪN đọc toàn bộ định danh chính (Name/Address/Content/OpeningTime/TicketPrice...)
+   từ bảng v1 `dbo.Destination`/`DestinationDetail` (chưa cutover, Phase 10) —
+   v1 chỉ có 2 cờ `IsGroup`/`IsProvince`, KHÔNG có khái niệm `Kind` 3 nhánh.
+   Ban đầu tưởng có thể suy `Kind` từ `IsGroup`/`IsProvince` nhưng kiểm chứng
+   trên dữ liệu thật thì SAI: cả `Kind=1` (province) lẫn `Kind=2` (cluster) đều
+   có `IsGroup=1` ở v1 như nhau — 2 cờ v1 không phân biệt được province/cluster.
+   Phải đọc thẳng `v2.Destination.Kind` (đã có sẵn field, không cần đổi
+   schema) làm nguồn sự thật duy nhất cho 4 nhánh. Tương tự, review/rating
+   **KHÔNG hề bị comment out** như audit cũ ghi nhận — đã wire đầy đủ qua
+   `DestinationExtrasModel.AvgRating/ReviewCount/Reviews` (Phase 15/9), chỉ
+   cần lên khuôn Tailwind.
+   - **`DestinationExtrasModel`/`DestinationExtrasRepository`** thêm 3 field
+     đọc thêm từ v2 (không tạo cột mới): `Kind` ("province"/"cluster"/"poi"),
+     `ProvinceRedirectSlug` (chỉ set khi Kind=province — **PHẢI** tra
+     `v2.Province.Slug` qua `Province.DestinationId`, KHÔNG được giả định
+     trùng `Destination.Slug`: kiểm chứng thực tế có 4/17 tỉnh Kind=1 lệch
+     slug với Province do sáp nhập hành chính 2025, vd Destination
+     `ha-giang` nhưng Province tương ứng là `tuyen-quang`), `HasOwnVisitInfo`
+     (bool — có `OpeningTime`/`TicketPrice` thật ở `v2.DestinationContent`
+     hay không, tín hiệu phân biệt 2 biến thể cluster; dữ liệu thật có cả 2:
+     `pho-co-hoi-an`/`phu-quoc` = biến thể 1 (có vé/giờ riêng),
+     `da-lat`/`nha-trang`/`sapa` = biến thể 2 (cụm thuần địa lý)).
+   - **`DestinationController.Detail`**: `Kind == "province"` → `RedirectPermanent("/tinh/" + ProvinceRedirectSlug)`.
+   - **View** (`Detail.cshtml` viết lại hoàn toàn theo §10.4): hero ảnh full-width;
+     chip nav vuốt ngang mobile (neo tới section, thuần CSS/HTML không JS);
+     card "Quyết định nhanh" (`_QuickDecisionCard.cshtml` mới, dùng chung
+     mobile-inline + desktop-sticky-sidebar) ẩn/hiện qua `showQuickDecision`
+     (cluster: theo `HasOwnVisitInfo`; poi/null: giữ hành vi cũ `!IsGroup` —
+     đây chính là sửa 1 bug thật: trước đây MỌI destination `IsGroup=1` đều ẩn
+     khối giá vé/giờ mở cửa như nhau, kể cả Hội An/Phú Quốc có giá vé thật);
+     `<details>` cho Lưu ý thực tế/Mẹo/FAQ (SEO đọc được DOM, gấp gọn UI);
+     gallery + hotel + tour carousel vuốt ngang mobile → lưới desktop (CSS
+     `scroll-snap`, không JS); layout desktop 2 cột (`lg:grid-cols-[1fr_320px]`,
+     cột phụ `lg:sticky`) thay sticky-bottom-CTA (chỉ hiện mobile, ẩn hẳn khi
+     `!showQuickDecision` — cụm thuần địa lý như Đà Lạt không có nút "Mua vé"
+     vô nghĩa nữa). `kind=cluster` biến thể 2 (`!HasOwnVisitInfo`): thay
+     block "liên quan" (top-8, dùng quan hệ v1) bằng lưới ĐẦY ĐỦ
+     `extras.Children` (ChildrenJson precompute Phase 14) kiểu trang danh
+     mục — fallback về block quan hệ v1 cũ nếu `Children` rỗng (dữ liệu dev
+     hiện chưa precompute cho vài điểm, ví dụ `da-lat` — graceful, không lỗi).
+     Thêm class `.rich-content` thủ công trong `common.scss` (không cài
+     `@tailwindcss/typography` — giữ đúng §10.5 "không plugin ngoài") để
+     phục hồi margin/list-style cơ bản cho `Html.Raw()` content (Tailwind
+     preflight xoá hết mặc định).
+   - Rewrite kèm theo: `_ChildDestination`/`_HotelCardList`/`_TourCardList.cshtml`
+     (Tailwind, carousel/lưới card).
+   - Verify: `dotnet build` sạch, `npm run prod` sạch; smoke test cả 4 nhánh
+     trên dữ liệu dev thật — poi (`bai-bien-dai-lanh-nha-trang`), cluster biến
+     thể 1 (`pho-co-hoi-an` — quyết định nhanh + sticky CTA hiện), cluster biến
+     thể 2 (`da-lat` — ẩn quyết định nhanh + sticky CTA, fallback lưới quan hệ
+     v1 vì Children rỗng), redirect province cả 2 trường hợp slug giữ nguyên
+     (`da-nang` → `/tinh/da-nang`) và slug lệch do sáp nhập (`ha-giang` →
+     `/tinh/tuyen-quang`).
 6. **18.5 — Đo lường & polish** (song song, không chặn): GitHub Actions đo
    Lighthouse định kỳ, SVGO logo, kiểm tra Brotli/cache header.
 
