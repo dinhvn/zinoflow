@@ -547,20 +547,10 @@ tiếp theo.
    (AND đúng), banner single-facet, noindex, `/search` redirect, phân trang
    giữ facet, `/map`/`/tinh/{slug}` (dùng chung search-index) không bị ảnh
    hưởng — đều đúng. `dotnet build` toàn solution sạch.
-   **CHỦ Ý CHƯA làm (đợt 2, ghi rõ tránh hiểu nhầm đã xong 100% §9.3)**:
-   (a) live-count-instant-client-filter (đổi kết quả ngay khi tick, không
-   cần load lại trang) — hiện MỖI facet click là 1 lần điều hướng URL mới
-   (vẫn đúng UX cơ bản, hoạt động không cần JS, nhưng chưa "tức thì" như
-   spec §9.3 mục 2 yêu cầu — cần 1 index JSON nhỏ đổ xuống client + JS lọc,
-   việc này rủi ro/kích cỡ lớn hơn hẳn phần đã làm nên tách đợt sau);
-   (b) autocomplete ô tìm kiếm header (dropdown 8 gợi ý) — form header vẫn
-   là submit thường về `/diem-den`, chưa có dropdown/API gợi ý riêng;
-   (c) banner "Xem trang đầy đủ" cho facet Loại đơn lẻ — thiếu slug nhóm
-   (`GroupSlug`) trong index hiện tại, cần thêm 1 lookup nữa, để lại tránh
-   phình thêm phạm vi; (d) bottom-sheet mobile thật — tạm dùng `<details>`
-   disclosure (hoạt động tốt, đúng nội dung, nhưng khác animation/UX
-   bottom-sheet spec mô tả); (e) facet Chủ đề (tag) — đúng như spec ghi,
-   đợi tag được gán qua Tag UI trước.
+   **Đợt 2 — ĐÃ XONG (a)-(d), xem chi tiết đầy đủ ở mục "SEO/UX đi kèm" §C
+   bên dưới** (autocomplete header, banner Loại, live client-side instant
+   filter, bottom-sheet mobile thật). Chỉ còn (e) facet Chủ đề (tag) — đợi
+   tag được gán qua Tag UI trước, đúng như spec ghi.
 3. Tắt module Destination + Hotel + Tour trên CMS cũ. ❌ CHƯA làm — đây là
    việc tắt chức năng admin đang chạy thật (`CmsDiChoiThoi.Web`), nên hỏi lại
    trước khi làm thay vì tự ý tắt.
@@ -609,7 +599,7 @@ thì bắt buộc, đúng rủi ro "scaled content abuse" đã phân tích.
   Tỉnh/Khu vực/Loại (+Chủ đề đợt 2), tick nhiều — OR trong nhóm, AND giữa
   nhóm, đếm số sống, lọc client-side tức thì, autocomplete header,
   `/search` 301 về `/diem-den?q=`; có tham số = noindex. Repo dichoithoi (.NET).
-  **Cập nhật 07/2026 (đợt 2, phần 1/2 đã xong)**:
+  **Cập nhật 07/2026 — đợt 2 ĐÃ HOÀN TẤT TOÀN BỘ (trừ facet Chủ đề chờ dữ liệu)**:
   - ✅ Autocomplete header: `GET /api/search-suggest?q=` (tái dùng search-index
     RAM có sẵn), dropdown JS thuần (`nav.ts`, debounce 250ms, phím mũi tên/
     Enter/Escape, bấm ra ngoài đóng) tối đa 8 gợi ý (tên+tỉnh+loại+thumbnail),
