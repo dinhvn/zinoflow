@@ -20,7 +20,7 @@ import {
 } from "../ports/destination-mirror.repository";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 import { CACHE_PURGE, type CachePurgePort } from "../ports/cache-purge.port";
-import { autoLinkContent, type LinkTarget } from "../../domain/auto-link";
+import { autoLinkContent, type LinkTarget } from "../../../shared/text/auto-link";
 import {
   buildFaqJson,
   renderDestinationBodyHtml,

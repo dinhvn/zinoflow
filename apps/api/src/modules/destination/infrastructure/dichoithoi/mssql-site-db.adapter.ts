@@ -21,9 +21,12 @@ import type {
   DestinationCardRow,
   DichoithoiSiteDb,
   PublishDestinationInput,
+  SiteContentCoverageRow,
   SiteContentRow,
   SiteDestinationContent,
   SiteDestinationMeta,
+  SiteTagAssignmentRow,
+  SiteTagRow,
   SiteTypeRow,
   TaxonomyContentRows,
 } from "../../application/ports/dichoithoi-site-db.port";
@@ -577,6 +580,118 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         `UPDATE v2.DestinationContent SET PracticalNotesJson = @practicalNotesJson WHERE DestinationId = @siteId`,
       );
     });
+  }
+
+  /** destination-spec §2.4 buoc 0 — 7 tag seed san qua phase-b-01-seed-tags.sql */
+  async fetchTags(): Promise<SiteTagRow[]> {
+    const rows = await this.queryWithRetry<{
+      Id: number;
+      Slug: string;
+      Name: string;
+      Description: string | null;
+      Status: number;
+    }>(`SELECT Id, Slug, Name, Description, Status FROM v2.DestinationTag ORDER BY Name`);
+    return rows.map((r) => ({
+      id: Number(r.Id),
+      slug: r.Slug,
+      name: r.Name,
+      description: r.Description ?? null,
+      status: Number(r.Status),
+    }));
+  }
+
+  async fetchTagAssignments(): Promise<SiteTagAssignmentRow[]> {
+    const rows = await this.queryWithRetry<{
+      Id: number;
+      Slug: string;
+      Name: string;
+      TagSlug: string | null;
+    }>(`
+      SELECT d.Id, d.Slug, d.Name, t.Slug AS TagSlug
+      FROM v2.Destination d
+      LEFT JOIN v2.DestinationTagMap m ON m.DestinationId = d.Id
+      LEFT JOIN v2.DestinationTag t ON t.Id = m.TagId
+      WHERE d.Status = 1
+      ORDER BY d.Name
+    `);
+    const byDestination = new Map<number, SiteTagAssignmentRow>();
+    for (const r of rows) {
+      const id = Number(r.Id);
+      let entry = byDestination.get(id);
+      if (!entry) {
+        entry = { destinationId: id, destinationSlug: r.Slug, destinationName: r.Name, tagSlugs: [] };
+        byDestination.set(id, entry);
+      }
+      if (r.TagSlug) entry.tagSlugs.push(r.TagSlug);
+    }
+    return [...byDestination.values()];
+  }
+
+  async replaceTagAssignments(destinationSlug: string, tagSlugs: readonly string[]): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("slug", destinationSlug);
+      const uniqueSlugs = [...new Set(tagSlugs)];
+      uniqueSlugs.forEach((slug, i) => request.input(`tag${i}`, slug));
+      const insertRows = uniqueSlugs
+        .map(
+          (_, i) =>
+            `SELECT @destinationId, Id FROM v2.DestinationTag WHERE Slug = @tag${i}`,
+        )
+        .join("\nUNION ALL\n");
+      return request.query(`
+        DECLARE @destinationId int = (SELECT Id FROM v2.Destination WHERE Slug = @slug);
+        IF @destinationId IS NOT NULL
+        BEGIN
+          DELETE FROM v2.DestinationTagMap WHERE DestinationId = @destinationId;
+          ${uniqueSlugs.length > 0 ? `INSERT INTO v2.DestinationTagMap (DestinationId, TagId)\n${insertRows}` : ""}
+        END
+      `);
+    });
+  }
+
+  async updateTagDescription(tagSlug: string, description: string | null): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("slug", tagSlug);
+      request.input("description", description);
+      return request.query(
+        `UPDATE v2.DestinationTag SET Description = @description WHERE Slug = @slug`,
+      );
+    });
+  }
+
+  /** Coverage Score (spec §2.2.2) — 1 truy van tinh san cac co, tranh N+1 query tren ~271 diem */
+  async fetchContentCoverageRows(): Promise<SiteContentCoverageRow[]> {
+    const rows = await this.queryWithRetry<{
+      Id: number;
+      HasOpeningTime: number;
+      HasTicketPrice: number;
+      HasFaq: number;
+      HasPracticalNotes: number;
+      HasTicketLinks: number;
+      HasMainContent: number;
+    }>(`
+      SELECT d.Id,
+        CASE WHEN c.OpeningTime IS NOT NULL AND LEN(c.OpeningTime) > 0 THEN 1 ELSE 0 END AS HasOpeningTime,
+        CASE WHEN c.TicketPrice IS NOT NULL AND LEN(c.TicketPrice) > 0 THEN 1 ELSE 0 END AS HasTicketPrice,
+        CASE WHEN c.FaqJson IS NOT NULL AND LEN(c.FaqJson) > 2 THEN 1 ELSE 0 END AS HasFaq,
+        CASE WHEN c.PracticalNotesJson IS NOT NULL AND LEN(c.PracticalNotesJson) > 2 THEN 1 ELSE 0 END AS HasPracticalNotes,
+        CASE WHEN c.TicketLinksJson IS NOT NULL AND LEN(c.TicketLinksJson) > 2 THEN 1 ELSE 0 END AS HasTicketLinks,
+        CASE WHEN c.ContentHtml IS NOT NULL AND LEN(c.ContentHtml) > 300 THEN 1 ELSE 0 END AS HasMainContent
+      FROM v2.Destination d
+      LEFT JOIN v2.DestinationContent c ON c.DestinationId = d.Id
+      WHERE d.Status = 1
+    `);
+    return rows.map((r) => ({
+      destinationId: Number(r.Id),
+      hasOpeningTime: Boolean(r.HasOpeningTime),
+      hasTicketPrice: Boolean(r.HasTicketPrice),
+      hasFaq: Boolean(r.HasFaq),
+      hasPracticalNotes: Boolean(r.HasPracticalNotes),
+      hasTicketLinks: Boolean(r.HasTicketLinks),
+      hasMainContent: Boolean(r.HasMainContent),
+    }));
   }
 
   async onModuleDestroy(): Promise<void> {

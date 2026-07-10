@@ -11,7 +11,7 @@ import {
   autoLinkContent,
   normalizeDestinationLinks,
   type LinkTarget,
-} from "../../domain/auto-link";
+} from "../../../shared/text/auto-link";
 
 /**
  * Re-link toan bo (spec §12.2): bai CU nhac toi diem den MOI thi chua co link —

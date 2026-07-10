@@ -7,6 +7,7 @@ import {
 } from "../../../ai-content/application/ports/content-draft.repository";
 import { getArticleTypeProfile } from "../../../ai-content/application/services/article-type-profiles";
 import { ArticleBlockCompiler } from "../services/article-block-compiler.service";
+import { ArticleAutoLinkService } from "../services/article-auto-link.service";
 import { ARTICLE_SITE_DB, type ArticleSiteDb } from "../ports/article-site-db.port";
 import {
   ARTICLE_PUBLICATION_REPOSITORY,
@@ -28,6 +29,7 @@ export class RefreshDynamicBlocksUseCase {
     @Inject(ARTICLE_PUBLICATION_REPOSITORY)
     private readonly publications: ArticlePublicationRepository,
     private readonly compiler: ArticleBlockCompiler,
+    private readonly autoLink: ArticleAutoLinkService,
   ) {}
 
   async execute(jobId: string): Promise<RefreshDynamicBlocksResult> {
@@ -49,8 +51,9 @@ export class RefreshDynamicBlocksUseCase {
         compiled.errors.map((e) => e.message),
       );
     }
+    const linkedHtml = await this.autoLink.linkHtml(compiled.html);
 
-    await this.siteDb.updateContentHtml(publication.siteId, compiled.html);
+    await this.siteDb.updateContentHtml(publication.siteId, linkedHtml);
     await this.publications.markRefreshed(jobId, new Date());
 
     this.logger.log(`Làm mới khối động ${jobId} (${publication.slug}): ${compiled.blockCount} khối`);

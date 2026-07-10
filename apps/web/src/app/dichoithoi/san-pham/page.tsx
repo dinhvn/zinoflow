@@ -83,13 +83,18 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">Sản phẩm</h2>
-        <p className="text-sm text-zinc-500">
-          Affiliate dùng chung, chèn vào bài viết qua tag — KHÔNG gắn theo điểm đến/tỉnh
-          (product-spec §1). Chèn bằng <code>[[block:products tag=...]]</code> hoặc{" "}
-          <code>[[block:product id=...]]</code> trong bài cẩm nang.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">Sản phẩm</h2>
+          <p className="text-sm text-zinc-500">
+            Affiliate dùng chung, chèn vào bài viết qua tag — KHÔNG gắn theo điểm đến/tỉnh
+            (product-spec §1). Chèn bằng <code>[[block:products tag=...]]</code> hoặc{" "}
+            <code>[[block:product id=...]]</code> trong bài cẩm nang.
+          </p>
+        </div>
+        <a href="/dichoithoi/san-pham/nhap" className="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">
+          Nhập từ Sheet →
+        </a>
       </div>
 
       {error && (

@@ -116,6 +116,34 @@ export interface DestinationCardFilter {
   sort: "featured" | "newest" | "order";
 }
 
+/** 1 tag dinh nghia (v2.DestinationTag) — destination-spec §2.4 */
+export interface SiteTagRow {
+  id: number;
+  slug: string;
+  name: string;
+  description: string | null;
+  status: number;
+}
+
+/** 1 diem den + slug cac tag dang gan (v2.DestinationTagMap join) */
+export interface SiteTagAssignmentRow {
+  destinationId: number;
+  destinationSlug: string;
+  destinationName: string;
+  tagSlugs: string[];
+}
+
+/** Co du lieu content da co tren v2.DestinationContent — dung tinh Coverage Score (spec §2.2.2) */
+export interface SiteContentCoverageRow {
+  destinationId: number;
+  hasOpeningTime: boolean;
+  hasTicketPrice: boolean;
+  hasFaq: boolean;
+  hasPracticalNotes: boolean;
+  hasTicketLinks: boolean;
+  hasMainContent: boolean;
+}
+
 export interface DichoithoiSiteDb {
   /** false khi thieu DICHOITHOI_DB_* trong env — UI hien huong dan cau hinh */
   isConfigured(): boolean;
@@ -190,4 +218,19 @@ export interface DichoithoiSiteDb {
     id: number,
     description: string | null,
   ): Promise<void>;
+
+  /** Toan bo tag da duyet (destination-spec §2.4 buoc 0 — 7 tag seed san) */
+  fetchTags(): Promise<SiteTagRow[]>;
+  /** Moi diem den (chi diem da published) kem slug cac tag dang gan (rong = chua gan tag nao) */
+  fetchTagAssignments(): Promise<SiteTagAssignmentRow[]>;
+  /**
+   * Ghi de TOAN BO tag cua 1 diem den (theo slug) — xoa cac dong cu, insert lai
+   * theo tagSlugs moi. Bo qua slug diem/tag khong ton tai (khong throw ca batch).
+   */
+  replaceTagAssignments(destinationSlug: string, tagSlugs: readonly string[]): Promise<void>;
+  /** Ghi de Description cho 1 tag (buoc 3 — AI soan mo ta) */
+  updateTagDescription(tagSlug: string, description: string | null): Promise<void>;
+
+  /** Co du lieu content (chi diem da published) — dung tinh Coverage Score (spec §2.2.2) */
+  fetchContentCoverageRows(): Promise<SiteContentCoverageRow[]>;
 }

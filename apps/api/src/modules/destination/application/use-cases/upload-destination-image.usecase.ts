@@ -5,8 +5,8 @@ import {
   DESTINATION_MIRROR_REPOSITORY,
   type DestinationMirrorRepository,
 } from "../ports/destination-mirror.repository";
-import { IMAGE_PROCESSOR, type ImageProcessor } from "../ports/image-processor.port";
-import { IMAGE_UPLOADER, type ImageUploader } from "../ports/image-uploader.port";
+import { IMAGE_PROCESSOR, type ImageProcessor } from "../../../shared/media/ports/image-processor.port";
+import { IMAGE_UPLOADER, type ImageUploader } from "../../../shared/media/ports/image-uploader.port";
 import { UpdateThumbnailUseCase } from "./update-thumbnail.usecase";
 
 /**

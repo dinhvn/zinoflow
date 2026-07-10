@@ -2,8 +2,11 @@
 export * from "./common/error";
 
 // Dichoithoi (M4)
+export * from "./dichoithoi/sheet-import";
 export * from "./dichoithoi/destination";
 export * from "./dichoithoi/destination-article";
+export * from "./dichoithoi/destination-tag";
+export * from "./dichoithoi/coverage-score";
 export * from "./dichoithoi/affiliate";
 export * from "./dichoithoi/hotel";
 export * from "./dichoithoi/tour";

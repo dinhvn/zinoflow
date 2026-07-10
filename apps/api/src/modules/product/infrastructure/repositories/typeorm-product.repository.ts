@@ -15,6 +15,7 @@ function toRecord(e: ProductEntity): ProductRecord {
     category: e.category,
     tags: e.tags,
     thumbnailUrl: e.thumbnailUrl,
+    thumbnailSourceUrl: e.thumbnailSourceUrl,
     price: e.price === null ? null : Number(e.price),
     provider: e.provider,
     sourceUrl: e.sourceUrl,

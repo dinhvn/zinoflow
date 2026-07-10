@@ -238,7 +238,10 @@ Ngoài publish:
 
 **Giai đoạn 1 — Đại tu nền (hiện tại):**
 1. Chạy migration schema mới (redesign doc §7) — bên repo dichoithoi, sau backup.
-2. Sửa website .NET đọc schema mới (repo dichoithoi, người dùng tự làm, song song).
+2. Sửa website .NET đọc schema mới (repo dichoithoi, song song) — ✅ cập nhật
+   07/2026: ghi chú "người dùng tự làm" trước đó chỉ là note cũ chưa cập
+   nhật, không phải quyết định có chủ ý — Claude làm luôn, test trên
+   `dichoithoi_dev` trước khi động tới production.
 3. Build M4 zinoflow: mirror + generate + review + publisher (destination-spec).
 4. Build module Hotel zinoflow: cào/nhập tay + publisher (`dichoithoi-hotel-spec.md`).
 5. Build module Tour zinoflow: cào/nhập tay + publisher (`dichoithoi-tour-spec.md`).

@@ -3,6 +3,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { AiContentModule } from "../ai-content/ai-content.module";
 import { AffiliateModule } from "../affiliate/affiliate.module";
 import { DestinationsController } from "./presentation/destinations.controller";
+import { DestinationTagsController } from "./presentation/destination-tags.controller";
 import { ListDestinationsUseCase } from "./application/use-cases/list-destinations.usecase";
 import { SyncDestinationsUseCase } from "./application/use-cases/sync-destinations.usecase";
 import { GetDestinationTaxonomyUseCase } from "./application/use-cases/get-destination-taxonomy.usecase";
@@ -19,17 +20,14 @@ import {
 } from "./application/ports/destination-mirror.repository";
 import { REFERENCE_FETCHER } from "./application/ports/reference-fetcher.port";
 import { IMAGE_CHECKER } from "./application/ports/image-checker.port";
-import { IMAGE_PROCESSOR } from "./application/ports/image-processor.port";
-import { IMAGE_UPLOADER } from "./application/ports/image-uploader.port";
-import { SHEET_CSV_FETCHER } from "./application/ports/sheet-csv-fetcher.port";
+import { SHEET_CSV_FETCHER } from "../shared/sheet-import/ports/sheet-csv-fetcher.port";
 import { URL_RESOLVER } from "./application/ports/url-resolver.port";
 import { HttpReferenceFetcher } from "./infrastructure/reference/http-reference-fetcher";
 import { HttpImageChecker } from "./infrastructure/reference/http-image-checker";
 import { HttpUrlResolver } from "./infrastructure/reference/http-url-resolver";
 import { ParseMapsLinkUseCase } from "./application/use-cases/parse-maps-link.usecase";
-import { SharpImageProcessor } from "./infrastructure/image/sharp-image-processor";
-import { FtpsImageUploader } from "./infrastructure/dichoithoi/ftps-image-uploader";
-import { GoogleSheetCsvFetcher } from "./infrastructure/reference/google-sheet-csv-fetcher";
+import { SharedMediaModule } from "../shared/media/shared-media.module";
+import { SharedSheetImportModule } from "../shared/sheet-import/shared-sheet-import.module";
 import { UpdateThumbnailUseCase } from "./application/use-cases/update-thumbnail.usecase";
 import { UpdateTicketLinksUseCase } from "./application/use-cases/update-ticket-links.usecase";
 import { UpdatePriceBreakdownUseCase } from "./application/use-cases/update-price-breakdown.usecase";
@@ -45,6 +43,13 @@ import { UpsertDestinationUseCase } from "./application/use-cases/upsert-destina
 import { ImportDestinationsUseCase } from "./application/use-cases/import-destinations.usecase";
 import { ListAddressMappingsUseCase } from "./application/use-cases/list-address-mappings.usecase";
 import { ManageTaxonomyContentUseCase } from "./application/use-cases/manage-taxonomy-content.usecase";
+import { ListDestinationTagAssignmentsUseCase } from "./application/use-cases/list-destination-tag-assignments.usecase";
+import { SuggestTagAssignmentsUseCase } from "./application/use-cases/suggest-tag-assignments.usecase";
+import { ApplyTagAssignmentsUseCase } from "./application/use-cases/apply-tag-assignments.usecase";
+import { ReverseCheckTagAssignmentsUseCase } from "./application/use-cases/reverse-check-tag-assignments.usecase";
+import { GenerateTagDescriptionUseCase } from "./application/use-cases/generate-tag-description.usecase";
+import { UpdateTagDescriptionUseCase } from "./application/use-cases/update-tag-description.usecase";
+import { GetCoverageScoresUseCase } from "./application/use-cases/get-coverage-scores.usecase";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
 import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
@@ -66,6 +71,8 @@ import {
   imports: [
     AiContentModule,
     AffiliateModule,
+    SharedMediaModule,
+    SharedSheetImportModule,
     TypeOrmModule.forFeature([
       DestinationMirrorEntity,
       DestinationRelationEntity,
@@ -74,8 +81,15 @@ import {
       AdminWardMappingEntity,
     ]),
   ],
-  controllers: [DestinationsController],
+  controllers: [DestinationsController, DestinationTagsController],
   providers: [
+    ListDestinationTagAssignmentsUseCase,
+    SuggestTagAssignmentsUseCase,
+    ApplyTagAssignmentsUseCase,
+    ReverseCheckTagAssignmentsUseCase,
+    GenerateTagDescriptionUseCase,
+    UpdateTagDescriptionUseCase,
+    GetCoverageScoresUseCase,
     ListDestinationsUseCase,
     SyncDestinationsUseCase,
     GetDestinationTaxonomyUseCase,
@@ -102,10 +116,7 @@ import {
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
     { provide: IMAGE_CHECKER, useClass: HttpImageChecker },
     { provide: URL_RESOLVER, useClass: HttpUrlResolver },
-    { provide: IMAGE_PROCESSOR, useClass: SharpImageProcessor },
-    { provide: IMAGE_UPLOADER, useClass: FtpsImageUploader },
     { provide: IMAGE_DOWNLOADER, useClass: LocalFileImageDownloader },
-    { provide: SHEET_CSV_FETCHER, useClass: GoogleSheetCsvFetcher },
     { provide: DESTINATION_MIRROR_REPOSITORY, useClass: TypeOrmDestinationMirrorRepository },
     { provide: DESTINATION_RELATION_REPOSITORY, useClass: TypeOrmDestinationRelationRepository },
   ],

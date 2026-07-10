@@ -14,7 +14,9 @@ export interface TourRecord {
   readonly rating: number | null;
   readonly reviewCount: number | null;
   readonly thumbnailUrl: string | null;
+  readonly thumbnailSourceUrl: string | null;
   readonly images: string[];
+  readonly imageSourceUrls: string[];
   readonly provider: string | null;
   readonly sourceUrl: string;
   readonly affiliateUrl: string | null;
@@ -36,7 +38,9 @@ export interface UpsertTourInput {
   readonly rating: number | null;
   readonly reviewCount: number | null;
   readonly thumbnailUrl: string | null;
+  readonly thumbnailSourceUrl: string | null;
   readonly images: string[];
+  readonly imageSourceUrls: string[];
   readonly provider: string | null;
   readonly sourceUrl: string;
   readonly affiliateUrl: string;

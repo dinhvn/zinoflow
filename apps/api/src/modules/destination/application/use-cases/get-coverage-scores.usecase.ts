@@ -1,0 +1,68 @@
+import { Inject, Injectable } from "@nestjs/common";
+import type { ListCoverageScoresResponse } from "@zinoflow/contracts";
+import { computeCoverageScore, type CoverageInput } from "../../domain/coverage-score";
+import {
+  DESTINATION_MIRROR_REPOSITORY,
+  type DestinationMirrorRepository,
+} from "../ports/destination-mirror.repository";
+import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+
+/**
+ * Coverage Score (destination-spec §2.2.2) — tinh cho TAT CA diem den da
+ * published, sap xep diem thap truoc (uu tien bo sung). Chi doc, khong ghi.
+ */
+@Injectable()
+export class GetCoverageScoresUseCase {
+  constructor(
+    @Inject(DESTINATION_MIRROR_REPOSITORY) private readonly mirrorRepo: DestinationMirrorRepository,
+    @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
+  ) {}
+
+  async execute(): Promise<ListCoverageScoresResponse> {
+    const [mirrors, coverageRows, tagAssignments] = await Promise.all([
+      this.mirrorRepo.findAll(),
+      this.siteDb.fetchContentCoverageRows(),
+      this.siteDb.fetchTagAssignments(),
+    ]);
+
+    const published = mirrors.filter((m) => m.siteId !== null && m.siteStatus === 1);
+    const coverageById = new Map(coverageRows.map((r) => [r.destinationId, r]));
+    const taggedSlugs = new Set(
+      tagAssignments.filter((a) => a.tagSlugs.length > 0).map((a) => a.destinationSlug),
+    );
+    const featuredChildBySlug = new Set(
+      published.filter((m) => m.isFeatured && m.parentSlug).map((m) => m.parentSlug as string),
+    );
+
+    const items = published
+      .map((m) => {
+        const content = coverageById.get(m.siteId as number);
+        const input: CoverageInput = {
+          kind: m.kind as CoverageInput["kind"],
+          hasAddress: Boolean(m.addressNew ?? m.addressOld),
+          hasCoordinates: m.lat !== null && m.lng !== null,
+          hasThumbnail: Boolean(m.thumbnail),
+          hasMainContent: content?.hasMainContent ?? false,
+          hasOpeningTime: content?.hasOpeningTime ?? false,
+          hasTicketPrice: content?.hasTicketPrice ?? false,
+          hasFaq: content?.hasFaq ?? false,
+          hasPracticalNotes: content?.hasPracticalNotes ?? false,
+          hasTicketLinks: content?.hasTicketLinks ?? false,
+          hasTag: taggedSlugs.has(m.slug),
+          hasFeaturedChild: featuredChildBySlug.has(m.slug),
+        };
+        const score = computeCoverageScore(input);
+        return {
+          destinationSlug: m.slug,
+          destinationName: m.name,
+          kind: m.kind as CoverageInput["kind"],
+          tier: score.tier,
+          scorePercent: score.scorePercent,
+          items: score.items,
+        };
+      })
+      .sort((a, b) => a.scorePercent - b.scorePercent || a.destinationName.localeCompare(b.destinationName, "vi"));
+
+    return { items };
+  }
+}

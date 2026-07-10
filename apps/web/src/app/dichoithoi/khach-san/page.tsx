@@ -84,12 +84,17 @@ export default function HotelsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">Khách sạn</h2>
-        <p className="text-sm text-zinc-500">
-          Khối gợi ý trên trang điểm đến — không có trang riêng, không qua duyệt (hotel-spec §2).
-          Lưu sẽ publish thẳng lên website.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">Khách sạn</h2>
+          <p className="text-sm text-zinc-500">
+            Khối gợi ý trên trang điểm đến — không có trang riêng, không qua duyệt (hotel-spec §2).
+            Lưu sẽ publish thẳng lên website.
+          </p>
+        </div>
+        <a href="/dichoithoi/khach-san/nhap" className="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">
+          Nhập từ Sheet →
+        </a>
       </div>
 
       {error && (

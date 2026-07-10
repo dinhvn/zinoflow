@@ -139,6 +139,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
           category: "balo",
           tags: ["phuot", "leo-nui"],
           thumbnailUrl: "balo.webp",
+          thumbnailSourceUrl: null,
           price: 590000,
           provider: "shopee",
           sourceUrl: "https://shopee.vn/balo",

@@ -210,29 +210,295 @@ dữ liệu, output đổ vào migration Phase B — làm sau là phải migrate
    module đó (Phase C bước 3), không phải việc phân tích giấy giải quyết được.
 
 **Phase B — Đại tu nền** (`system-overview.md` §5):
-1. Migration schema v2 (`database-redesign.md` §7) — **chạy trên bản clone
-   LocalDB trước** (`pnpm clone:dichoithoi`), KHÔNG chạy thẳng production.
-   Gộp output Phase A: seed `DestinationTag`/`TagMap`, sửa `TypeMap`, cột +
-   dữ liệu `AddressNew`/`AddressOld`.
-2. Website .NET đọc schema mới (repo dichoithoi, song song).
+1. ✅ **XONG (07/2026) — Gộp output Phase A vào schema v2 trên `dichoithoi_dev`**
+   (LocalDB, KHÔNG đụng production). Phát hiện lúc bắt tay: core migration
+   §7 bước 1-5 (bảng `v2.Destination`/`DestinationContent`/`Province`/
+   `DestinationType*` + 271 dòng dữ liệu) **đã được dựng và chạy sẵn từ
+   trước** (không rõ lúc nào) — không phải làm lại từ đầu, chỉ còn thiếu
+   đúng phần Phase A tạo ra:
+   - Tạo bảng `v2.DestinationTag`/`DestinationTagMap` (database-redesign.md
+     §3.2.1) + seed 7 tag đã duyệt (chỉ định nghĩa tag, CHƯA gán vào điểm đến
+     nào — việc đó là Bước 1 quy trình AI-gán-duyệt ở destination-spec §2.4,
+     cần UI, chưa build).
+   - Sửa `v2.DestinationTypeMap`: gán Type cho 8/10 POI trước đó thiếu hẳn
+     Type (Hà Tiên/Mũi Cà Mau giữ nguyên không ép Type theo đúng ghi chú
+     Phase A); gỡ Type "Di tích lịch sử" gán sai cho Biệt thự Hằng Nga/Vịnh
+     Hạ Long/Bãi đá cổ Sa Pa (Bãi đá cổ được gán thay bằng "Núi - Cao
+     nguyên" vì nếu gỡ suông sẽ về 0 type). Kết quả: 239→247/271 điểm có
+     `PrimaryTypeId`.
+   - `UPDATE AddressNew/AddressOld` từ `dry-run-report-v2.csv` (Phase A bước
+     2) cho 235/271 dòng (114 match tự tin + 121 chấp nhận cấp tỉnh) — 36
+     dòng "nhiều phường/xã trùng" CHỦ Ý để `AddressNew=NULL`, chờ người dùng
+     xem tay từng dòng trước khi ghi (đúng quyết định đã chốt, không tự
+     đoán ward có rủi ro sai).
+   - Script SQL: `dichoithoi/scripts/address-migration/phase-b-0{1,2,3}-*.sql`
+     (idempotent, có thể chạy lại an toàn — dùng `IF NOT EXISTS`/kiểm tra
+     trước khi INSERT).
+2. 🔄 **ĐANG LÀM (07/2026) — Website .NET đọc schema mới** (repo dichoithoi,
+   song song). Khảo sát thực tế cho thấy đã v2-hoá SẴN 1 phần trước đây:
+   `/loai/...` + `/tinh/{slug}` (100% v2), trang chi tiết `/diem-den/{slug}`
+   (dữ liệu bổ sung — review/FAQ/gallery/hotel-tour/breadcrumb — đã đọc v2 qua
+   `DestinationExtrasRepository`, nhưng field CHÍNH — Address/Type — vẫn đọc
+   bảng v1 cũ). ✅ Đã làm xong đợt này: field `AddressNew`/`AddressOld` (output
+   Phase A/B bước 1) nối vào `DestinationExtrasModel`/`DestinationExtrasRepository`,
+   hiển thị đúng theo destination-spec §13.3 (địa chỉ mới làm chính, địa chỉ cũ
+   chỉ hiện khi khác địa chỉ mới) trên `_QuickDecisionCard.cshtml` + JSON-LD
+   (`SchemaUtil.cs`) — build sạch, test bằng dev server thật trên
+   `dichoithoi_dev`, spot-check 2 điểm (Biệt thự Hằng Nga — không đổi, Hoàng Su
+   Phì — Hà Giang→Tuyên Quang, hiện đúng cả 2 dòng).
+
+   ✅ **Đợt 2 cùng ngày** — nối luôn `Types` (v2 `DestinationTypeMap` join
+   `DestinationType`/`DestinationTypeGroup`) vào `DestinationExtrasModel`,
+   thay CSV `Type` v1 ở 3 chỗ hiển thị trên trang chi tiết: chip loại (link
+   thẳng `/loai/{groupSlug}/{typeSlug}` đã build sẵn, thay vì `/search?q=`
+   không còn đúng nghĩa), JSON-LD `touristType`, và `firstType` dùng trong
+   title/meta — đều fallback về CSV v1 khi điểm chưa có Type nào trong v2.
+   **Kết quả trực tiếp nhìn thấy được**: kết quả rà taxonomy ở Phase A bước 1
+   (gỡ "Di tích lịch sử" sai cho Biệt thự Hằng Nga) giờ mới thật sự hiện đúng
+   trên web — trước đợt sửa này, dù đã sửa `DestinationTypeMap` trong DB, trang
+   chi tiết vẫn hiện "Di tích lịch sử" vì đọc CSV `Type` v1 chưa đụng tới, hoàn
+   toàn tách biệt với cột đã sửa. Test dev server thật: title đổi từ "...Di
+   tích lịch sử" → "...Công trình kiến trúc", JSON-LD `touristType` đúng, chip
+   link đúng `/loai/van-hoa-lich-su/cong-trinh-kien-truc`.
+
+   ~~⚠️ Cố ý CHƯA đụng: logic sắp xếp "điểm liên quan" theo loại trùng nhau~~
+   → ✅ **ĐÃ SỬA (đợt 4 cùng ngày)**. Sau đợt 3 migrate `DestinationRepository.cs`,
+   vế ứng viên (`GetRelationDestinationAsync` → `ToShortModel`) đã tự động đổi
+   sang đọc `TypeNames` từ v2 — khiến vế còn lại (`detail.Type`, CSV v1 từ
+   `GetDetailAsync` chưa migrate) bị LỆCH "từ điển" so khớp thật sự (không
+   còn là "để nguyên an toàn" như ghi chú cũ, mà đã thành bug sống). Sửa
+   `DestinationController.cs`: dời fetch `extras` lên TRƯỚC khối tính
+   "điểm liên quan", dùng `extras.Types` (v2, cùng vocabulary với candidate)
+   thay `detail.Type` CSV khi so khớp `type1`/`type2`, fallback CSV nếu điểm
+   chưa có Type nào ở v2. Build sạch, test dev server thật: `/diem-den/biet-
+   thu-hang-nga-dalat` (cụm Đà Lạt, 45 con → rơi đúng nhánh >9 ứng viên cần
+   sắp xếp) trả về đúng 8 điểm liên quan hợp lệ, không lỗi.
+
+   ✅ **Đợt 3 cùng ngày — migrate nốt phần "còn lại" nêu trên sang v2**:
+   viết lại toàn bộ `DestinationRepository.cs` (`GetListAsync`,
+   `GetChildDestinationAsync`, `GetRelationDestinationAsync`, `GetTopListAsync`,
+   `GetDesForHotelAsync`) đọc từ `v2.Destination` + join `DestinationTypeMap`/
+   `DestinationType` (thay CSV Type) — dùng lại đúng pattern cache-RAM đã có
+   (`SEARCH_INDEX_CACHE_KEY`), tận dụng cột `NameUnaccented` đã precompute sẵn
+   ở v2 thay vì tính lại. Quan hệ cha-con dùng `ParentId` (self-join) thay
+   `DestinationGroupId` CSV cũ. `/diem-den` (list), `/search`, trang chủ (top
+   list), `destination-sitemap.xml` (dùng chung `GetListAsync` nên tự động ăn
+   theo, không cần sửa riêng), `/map`, cross-ref `/khach-san/{id}` — TẤT CẢ
+   giờ đọc v2. Test dev server thật, tất cả trả 200 đúng dữ liệu (VD `/diem-den`
+   hiện đúng 25 nhóm = 17 tỉnh + 8 cụm; sitemap ghi đúng 272 URL).
+
+   Phát hiện + sửa 1 bug thật khi test (không phải do đợt sửa này gây ra —
+   đã có sẵn từ trước): `MapController.Index` gọi `GetListAsync(null)` nhưng
+   hàm không null-guard `param` trước khi truy cập `param.q` → NRE. Đã thêm
+   `param = param ?? new DestinationListParameter();` (cùng pattern
+   `DestinationController.Search` đã dùng).
+
+   ⚠️ **Cố ý CHƯA đụng** (ngoài phạm vi hợp lý của đợt này):
+   - `GetDetailAsync` — nội dung chính (Content/OpeningTime/TicketPrice/Food/
+     Transport/Tip/Hotel/Phone) vẫn đọc `dbo.DestinationDetail` — CÓ THỂ
+     migrate sang `v2.DestinationContent` (đã có field tương ứng đầy đủ,
+     `ContentHtml`/`HotelText`...) nhưng là 1 đợt riêng, rủi ro cao hơn (nội
+     dung hiển thị chính, không chỉ field phụ) — để dành khi cần.
+     **Xác nhận rủi ro cụ thể (07/2026)**: so `LEN()` của `Content` (v1) vs
+     `ContentHtml` (v2) trên mẫu 5 dòng + đếm coverage 271/271 cả 2 bên —
+     giống hệt nhau (v2 là bản mirror copy của v1 từ lần migrate trước, chưa
+     rõ thời điểm). NHƯNG `CmsDiChoiThoi.Service/Repositories/Destination/
+     DestinationRepository.cs` (CMS cũ) vẫn còn nguyên luồng import Google
+     Sheet kiểu xoá-trắng-rồi-nạp-lại (`DeleteAllAsync`+`AddListAsync`+
+     `AddDetailListAsync`) nhắm thẳng vào `dbo.Destination`/`DestinationDetail`
+     (v1) — module Destination CMS cũ CHƯA tắt (kế hoạch tắt nằm ở Phase D
+     mục 3, chưa tới). Nếu migrate `GetDetailAsync` sang v2 NGAY BÂY GIỜ:
+     lần tới admin re-import từ Google Sheet qua CMS cũ sẽ ghi đè v1, v2
+     đứng yên — website sẽ âm thầm hiện nội dung CŨ vĩnh viễn, không có lỗi
+     nào báo hiệu. Kết luận: **giữ nguyên quyết định trì hoãn**, chỉ migrate
+     khi module Destination CMS cũ đã tắt HOẶC M4 destination (Phase C) đã
+     build xong và ghi thẳng vào v2 thay Google Sheet import.
+   - Thiếu entity `V2DestinationRelation`/`V2SlugRedirect` — không cần tới vì
+     dùng `ParentId` self-join thay thế được, nhưng nếu sau này muốn dùng
+     đúng bảng quan hệ curated (`nearby`/`related`/`mentioned` — database-
+     redesign §3.3) thì vẫn cần tạo 2 entity này.
+   - ~~`/map` vẫn lỗi 500... bảng `Ad` KHÔNG tồn tại...~~ / ~~`/update-sitemap`
+     lỗi 500 vì bảng `Phuot`...~~ → ✅ **ĐÃ XOÁ HẲN (đợt 5, theo yêu cầu người
+     dùng "xóa Ad với phượt đi")**. Xác nhận phạm vi trước khi làm (AskUser-
+     Question): người dùng chọn xoá hẳn khỏi code (không chỉ tắt 2 route lỗi),
+     vì khảo sát cho thấy Ad/Phuot đang chạy thật trên nhiều trang khác
+     (`/blog`, `/phuot`) — không phải code chết, tắt 2 chỗ lẻ tẻ sẽ để sót
+     `/blog`+`/phuot` vẫn 500 cùng lỗi. Đã gỡ toàn bộ 2 tính năng khỏi
+     `DiChoiThoi.Web`/`DiChoiThoi.Service`/`DiChoiThoi.Common` (entity,
+     repository, service, model, parameter, enum, `AdUtils`, `_Ad.cshtml`,
+     `PhuotController` + view, DI ở `Program.cs`, `DbSet`/modelBuilder ở
+     `DiChoiThoiDbContext`/`TestDbContext`, nav link Footer, breadcrumb util,
+     cache key) — build gặp lỗi vì `CmsDiChoiThoi.*` (CMS admin, project khác
+     trong cùng solution) cũng tham chiếu entity `Phuot`/`PhuotDetail` (module
+     quản lý Phượt qua Google Sheet import) nên phải gỡ tiếp bên đó để cả
+     solution build sạch (không có Ad trong CMS, chỉ Phuot). Tiện thể sửa 1
+     bug copy-paste có sẵn từ trước lộ ra khi gỡ: `CmsDiChoiThoi.Web/Views/
+     Tour/Index.cshtml` có form search trỏ nhầm `asp-controller="Phuot"` (đáng
+     lẽ "Tour") và include nhầm bundle JS `phuotList.js` — sửa cả hai vì nếu
+     không sẽ vỡ khi Phuot bị xoá. Build cả `dichoithoi.sln` sạch (0 lỗi), test
+     dev server thật: `/map`, `/map/{slug}`, `/update-sitemap`, `/diem-den`,
+     trang chủ đều 200. Phát hiện thêm khi test `/blog`: lỗi 500 `Invalid
+     object name 'Post'` — bảng `Post`/`PostDetail` (nội dung blog cũ) CŨNG
+     không tồn tại trong `dichoithoi_dev`, CÙNG loại gap script clone như
+     Ad/Phuot trước đây, không liên quan tới đợt xoá này — để ngoài phạm vi,
+     ghi nhận thêm vào danh sách gap của `pnpm clone:dichoithoi`.
 
 **Phase C — CMS zinoflow (các module, theo thứ tự phụ thuộc):**
-1. M4 destination: mirror + generate + review + publisher.
-2. Cơ chế affiliate link conversion — TRƯỚC hoặc CÙNG Hotel/Tour (cả 2 phụ
-   thuộc `provider/sourceUrl/affiliateUrl/linkStatus`).
-3. Hotel + Tour + Product, **KÈM CÙNG ĐỢT**: pipeline ảnh (tab Ảnh §14.3 +
-   ingest ảnh URL ngoài §14.5 — sharp/FTP) và import Google Sheet
-   (product-spec §5.1) — sheet import PHỤ THUỘC pipeline ảnh, không tách rời.
-4. Năng lực "Viết tay thủ công" ở lõi `ai-content` (`sourceType=Manual` —
-   article-spec §1.1) — TRƯỚC hoặc CÙNG Article.
-5. Module Article: khối động + publisher + **1 engine auto-link DÙNG CHUNG**
-   (re-link nội dung destination §12.2 VÀ auto-link compile bài §8.2 — build
-   1 lần, 2 nơi gọi, không 2 bản sao) + bổ sung prompt mặc định `cam-nang.*`
-   (gap Phase 8 đã ghi nhận — điều kiện chặn của generate Article).
-6. UI Chủ đề (tag) §2.4 (màn quản lý + gán hàng loạt AI gợi ý) + Coverage
-   Score §2.2.2 + Flight/Bus (2 màn quản lý theo flight/bus-spec §5).
-7. Khối "Việc cần làm" trên hub §7.2 — CUỐI Phase C (tổng hợp cảnh báo từ
-   mọi nguồn ở trên, nguồn phải tồn tại trước).
+
+⚠️ **SỬA LẠI TOÀN BỘ (07/2026)** — mục này TỪNG ghi "chưa xây", nhưng đó là
+SAI: audit code thật (`apps/api/src/modules/*`, `apps/web/src/app/dichoithoi/*`,
+git log) cho thấy phần lớn đã build xong từ trước (M4 Phase A/B/C, Phase
+12-20 trong `dichoithoi-implementation-plan.md`) — tài liệu Phase C này chỉ
+đơn giản KHÔNG được cập nhật sau khi việc đã xong (giống 2 lần phát hiện
+tương tự trước đó trong phiên này: schema v2 "đã migrate từ trước", note
+"người dùng tự làm" sai). **Từ nay coi `dichoithoi-implementation-plan.md`
+(Phase 0-20, có gắn nhãn "ĐÃ XONG 07/2026") là nguồn sự thật cho "cái gì đã
+xong", KHÔNG dùng mục Phase C này nữa.** Giữ lại bảng dưới chỉ để tra cứu
+lịch sử + 2 gap thật còn sót:
+
+| # | Việc | Trạng thái thật (audit 07/2026) |
+|---|---|---|
+| 1 | M4 destination: mirror + generate + review + publisher | ✅ XONG — `publish-destination.usecase.ts` UPSERT thẳng vào `v2.Destination`/`DestinationContent` qua `mssql-site-db.adapter.ts`, có auto-link + cache purge + RelatedJson. |
+| 2 | Affiliate link conversion trước/cùng Hotel/Tour | ✅ XONG — module `affiliate/` đầy đủ, Hotel/Tour upsert gọi `ResolveAffiliateLinkUseCase` khi lưu. |
+| 3 | Hotel+Tour+Product kèm pipeline ảnh (sharp/FTP) + import Google Sheet | 🔄 **BACKEND XONG (07/2026, đợt tự động)** — pipeline ảnh + Sheet import (dry-run/upsert/fallback) đều xong; chỉ còn thiếu trang web UI preview. Xem chi tiết ngay dưới bảng. |
+| 4 | "Viết tay thủ công" (`sourceType=Manual`) trong `ai-content` | ✅ XONG — `create-manual-draft.usecase.ts`, đi qua đủ gate review/publish như bài AI. |
+| 5 | Article: khối động + publisher + auto-link engine DÙNG CHUNG với destination | ✅ **XONG (07/2026, đợt tự động)** — xem chi tiết ngay dưới bảng. |
+| 6 | UI Chủ đề (tag) + Coverage Score | ✅ **XONG (07/2026, đợt tự động)** — xem chi tiết ngay dưới bảng. Flight/Bus vẫn CHƯA XÂY (lý do dưới, spec tự ghi chưa chốt). |
+| 7 | Khối "Việc cần làm" trên hub | ✅ XONG — `dashboard-home.tsx` có block `Card title="Việc cần làm"` + `get-dashboard-summary.usecase.ts`. |
+
+**✅ Mục 5 — Auto-link Article (07/2026, tự động, không cần hỏi lại):**
+`shared/text/auto-link.ts` (dọn từ `destination/domain/auto-link.ts`, dùng
+chung 100% — không 2 bản sao) nối vào `PublishArticleUseCase` và
+`RefreshDynamicBlocksUseCase` qua `ArticleAutoLinkService`
+(`article/application/services/article-auto-link.service.ts`, inject
+`DESTINATION_MIRROR_REPOSITORY` lấy danh sách điểm đến đã publish làm target).
+Bài cẩm nang giờ tự chèn link nội bộ tới điểm đến được nhắc trong thân bài,
+cùng engine/quy tắc với `publish-destination.usecase.ts`/`relink-all.usecase.ts`.
+Build + test sạch (`article-auto-link.service.spec.ts` — 2 case: có link, bỏ
+qua điểm chưa publish).
+
+**🔄 Mục 3 — Pipeline ảnh Hotel/Tour/Product (07/2026, tự động — nửa đầu xong):**
+- ✅ Đã xây: pipeline ảnh dùng chung (`shared/media/` — dọn từ `destination/`:
+  `image-processor.port.ts`/`SharpImageProcessor`, `image-uploader.port.ts`/
+  `FtpsImageUploader` nay nhận thêm `baseDirEnvVar` để mỗi module dùng 1 thư
+  mục FTP gốc riêng — biến mới `DICHOITHOI_FTP_{HOTEL,TOUR,PRODUCT}_BASE_DIR`,
+  không đổi hành vi cũ của destination). Thêm
+  `IngestExternalImageUseCase` (`shared/media/application/`) — tải ảnh URL
+  ngoài (Booking/Agoda/Shopee...) → validate content-type/kích thước → resize
+  3 cỡ WebP → FTP, đúng destination-spec §14.5. Nối vào `UpsertHotelUseCase`/
+  `UpsertTourUseCase`/`UpsertProductUseCase`: `thumbnailUrl`/`images` là URL
+  http(s) thì tự ingest và thay bằng path nội bộ, giữ URL gốc ở cột mới
+  `thumbnailSourceUrl`/`imageSourceUrls` (migration
+  `1782000000000-HotelTourProductImageSourceUrls.ts`). Ingest lỗi → log cảnh
+  báo + giữ tạm URL ngoài, KHÔNG chặn lưu bản ghi (never-block, đúng tinh
+  thần "MVP trước" của hotel-spec/tour-spec §7). Test: `upsert-hotel.usecase.
+  spec.ts` (3 case: ingest thành công/bỏ qua path nội bộ/ingest lỗi vẫn lưu
+  được) + `ingest-external-image.usecase.spec.ts` (4 case biên: HTTP lỗi,
+  sai content-type, ảnh quá nhỏ, thành công). Toàn bộ 266 test + typecheck
+  API/web sạch.
+  - Tour/Product áp y hệt logic Hotel (cùng pattern).
+- ✅ **Đã xây tiếp (07/2026, cùng đợt tự động) — backend Sheet import cho cả
+  3 module, theo đúng product-spec §5.1**:
+  - `SHEET_CSV_FETCHER`/`GoogleSheetCsvFetcher` dọn từ `destination/` sang
+    `shared/sheet-import/` (generic, không đổi hành vi — chỉ đổi vị trí file
+    để Hotel/Tour/Product dùng chung mà không phải import cả `DestinationModule`
+    nặng nề, riêng Product vốn không phụ thuộc Destination).
+  - `shared/sheet-import/import-matcher.ts` (`matchImportRow` + test) — hàm
+    thuần so khớp: `sourceUrl` trùng → `update`; không trùng nhưng
+    tên-chuẩn-hoá + tỉnh trùng → `needsConfirm` (không tự ghi đè); không
+    trùng gì → `create`. **Chỉ áp dụng khoá phụ cho Hotel/Tour** — Product
+    CHỦ Ý bỏ qua khoá phụ (chỉ so `sourceUrl`) vì spec §5.1 chỉ ghi
+    "áp dụng chung cho Hotel/Tour", sản phẩm không có địa lý để phân biệt,
+    trùng tên hoàn toàn không đủ chắc chắn để tự gợi ý gộp — tránh gộp nhầm
+    2 sản phẩm khác nhau cùng tên.
+  - `ImportHotelsUseCase`/`ImportToursUseCase`/`ImportProductsUseCase` +
+    contracts (`import{Hotels,Tours,Products}RequestSchema`/`...ResultSchema`
+    trong `packages/contracts`) + endpoint `POST /hotels|tours|products/
+    {fetch-sheet,import}` — cùng hình dạng response với destination (dry-run
+    trả báo cáo create/update/needsConfirm/lỗi từng dòng, `dryRun=false` mới
+    ghi thật; dòng `needsConfirm` CHỈ ghi khi client gửi kèm
+    `confirmMergeIds[sourceUrl] = matchedId` đúng — không bao giờ âm thầm ghi
+    đè bản ghi nhập tay trước đó). Test: `import-hotels.usecase.spec.ts` (4
+    case) + `import-tours.usecase.spec.ts` (2 case) + `import-products.
+    usecase.spec.ts` (2 case) + `import-matcher.spec.ts` (4 case). Toàn bộ
+    278 test + typecheck API/web sạch.
+- ✅ **XONG (07/2026, cùng đợt tự động) — trang web UI paste-link-Sheet cho cả
+  3 module**: `apps/web/src/app/dichoithoi/{khach-san,tour,san-pham}/nhap/
+  page.tsx` — dán link Google Sheet (hoặc CSV/JSON), gọi `POST .../fetch-sheet`
+  rồi `POST .../import` với `dryRun:true` để xem trước từng dòng (badge Tạo
+  mới/Cập nhật/Cần xác nhận + lý do), tick xác nhận riêng cho dòng
+  `needsConfirm` (Hotel/Tour) rồi mới `dryRun:false` ghi thật — không bao giờ
+  tự động gộp khi chưa tick. Product bỏ nhánh `needsConfirm` (đúng thiết kế
+  backend). Phần parse CSV/JSON dùng chung qua
+  `features/dichoithoi/sheet-import-csv.ts` (tách từ trang import destination
+  có sẵn, tránh copy 3 lần), phần field/preview riêng từng module do khác
+  field. Thêm link "Nhập từ Sheet →" trên 3 trang danh sách + route mới. Web
+  typecheck + lint sạch.
+
+**✅ Mục 6 — UI Chủ đề (tag) (07/2026, tự động, không cần hỏi lại):**
+Xây đủ 3 bước destination-spec §2.4, đọc/ghi thẳng SQL Server (bảng
+`v2.DestinationTag`/`DestinationTagMap` đã tạo + seed 7 tag từ trước qua
+`phase-b-01-seed-tags.sql` — không cần mirror Postgres riêng, giống pattern
+taxonomy group/type/province).
+- Contracts: `packages/contracts/src/dichoithoi/destination-tag.ts` (tag,
+  suggestion, apply, reverse-check, generate/update description).
+- `dichoithoi-site-db.port.ts` + `mssql-site-db.adapter.ts` thêm
+  `fetchTags`/`fetchTagAssignments`/`replaceTagAssignments`/
+  `updateTagDescription`.
+- Buoc 1 — `SuggestTagAssignmentsUseCase`: AI (Haiku, đi qua
+  `IContentAIProvider` như mọi call AI khác) gợi ý tag cho các điểm CHƯA có
+  tag nào (hoặc danh sách chỉ định), kèm `reasoning` 1 câu; lọc bỏ mọi
+  slug tag/điểm đến AI bịa ra không có thật trước khi trả về — CHỈ gợi ý,
+  không ghi DB.
+- `ApplyTagAssignmentsUseCase`: ghi đè toàn bộ tag của từng điểm sau khi
+  người dùng tick duyệt/bỏ trên UI.
+- Buoc 2 — `ReverseCheckTagAssignmentsUseCase`: 2 loại phát hiện — "dưới
+  ngưỡng" tính thuần (tag có <3 điểm gán, không cần AI) + "có thể gán sai"
+  do AI đọc lại toàn bộ gán-tag hiện tại và chỉ ra cặp nghi ngờ (lọc bỏ cặp
+  AI bịa không tồn tại thật).
+- Buoc 3 — `GenerateTagDescriptionUseCase`: tái dùng `IContentAIProvider`
+  soạn đoạn giới thiệu cho `/chu-de/{slug}`, CHỈ trả gợi ý; `UpdateTagDescriptionUseCase`
+  lưu sau khi người dùng duyệt/sửa tay (cùng pattern `ManageTaxonomyContentUseCase`).
+- Trang web `apps/web/src/app/dichoithoi/chu-de/page.tsx` (thêm mục sidebar
+  "Chủ đề"): 4 khối — danh sách 7 tag (sửa/AI soạn mô tả), gợi ý AI hàng loạt
+  kèm tick duyệt từng tag/điểm trước khi áp dụng, chạy rà soát ngược hiển thị
+  badge theo mức độ, bảng tag đang gán (tham khảo).
+- Test: 5 file usecase mới (10 test case) — toàn bộ 42 suite/288 test +
+  typecheck API/web sạch.
+
+**✅ Coverage Score (07/2026, tự động, không cần hỏi lại):** destination-spec
+§2.2.2 tự ghi "trọng số/ngưỡng chốt lúc build, không chốt cứng ở spec" — nên
+xây thẳng thay vì hỏi lại. Phạm vi ĐÃ làm (dùng đúng dữ liệu có thật trong
+code, không bịa schema mới):
+- Domain thuần `destination/domain/coverage-score.ts` (`computeCoverageScore`)
+  — 10 mục checklist chung (địa chỉ/toạ độ/ảnh/nội dung chính/giờ mở cửa/giá
+  vé/FAQ/mẹo thực tế/link vé/chủ đề) + 1 mục riêng tier "flagship" (có điểm
+  con `IsFeatured`). Test 5 case.
+- `mssql-site-db.adapter.ts` thêm `fetchContentCoverageRows()` — 1 câu SQL
+  tính sẵn cờ cho TẤT CẢ điểm đã published (tránh N+1 query trên ~271 điểm).
+- `GetCoverageScoresUseCase` gộp mirror Postgres (địa chỉ/toạ độ/ảnh/tag qua
+  `fetchTagAssignments` đã có từ Tag UI/con `IsFeatured`) + cờ content SQL
+  Server, tính điểm % cho từng điểm, sắp xếp điểm thấp trước (ưu tiên bổ
+  sung). Endpoint `GET /destinations/coverage-scores`. Test 2 case.
+- Trang web `apps/web/.../dichoithoi/do-phu` (thêm mục sidebar "Độ phủ nội
+  dung") — danh sách badge % (đỏ/vàng/xanh theo mức), bấm mở rộng xem
+  checklist ✅/⚠️ từng mục.
+- **Phạm vi CHỦ Ý CẮT BỚT** (ghi rõ trong code/contracts, không giả vờ đã
+  đủ): tier Flagship/POI chưa có cột `ContentTier` thật (spec ghi "gán tay"
+  nhưng form chưa build) — tạm dùng `kind` làm proxy (poi↔poi,
+  province/cluster↔flagship). 2 mục checklist Flagship-only trong spec CHƯA
+  tính được vì thiếu hạ tầng: "lịch trình (khối B)" (không có field đánh dấu
+  riêng) và "độ phủ bài cẩm nang theo topic" (`ArticleDestinationMap` —
+  article-spec §8.1 — bảng quan hệ này chưa được xây, xây thêm sẽ là 1 tính
+  năng lớn riêng, không lẫn vào Coverage Score).
+- Test: 44 suite/295 test + typecheck/lint API+web sạch.
+
+**❌ Flight/Bus — CHƯA làm (07/2026, quyết định có chủ ý, không phải quên):**
+`dichoithoi-flight-spec.md`/`dichoithoi-bus-spec.md` tự ghi banner "⚠️ đây là
+tài liệu PHÂN TÍCH — chưa chốt để build". Xây mù 1 thiết kế DB/UI cho thứ
+chính spec của nó nói "chưa chốt" thì rủi ro làm sai hướng người dùng thật sự
+muốn — để nguyên, chờ người dùng xem lại và chốt spec trước khi có đợt code
+tiếp theo.
 
 **Phase D — Website .NET (routes/views mới):**
 1. Route/view: Article `/blog/`, `/chu-de/{slug}`, khối Flight/Bus trên

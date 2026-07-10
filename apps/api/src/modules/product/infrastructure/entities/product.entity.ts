@@ -24,6 +24,10 @@ export class ProductEntity {
   @Column({ name: "thumbnail_url", type: "varchar", length: 512, nullable: true })
   thumbnailUrl!: string | null;
 
+  /** URL anh dai dien GOC (truoc khi ingest ve hosting minh) — spec §14.5 */
+  @Column({ name: "thumbnail_source_url", type: "varchar", length: 512, nullable: true })
+  thumbnailSourceUrl!: string | null;
+
   @Column({ type: "decimal", precision: 12, scale: 0, nullable: true })
   price!: string | null;
 

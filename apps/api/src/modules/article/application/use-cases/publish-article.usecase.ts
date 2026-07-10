@@ -11,6 +11,7 @@ import {
 } from "../../../ai-content/application/ports/content-draft.repository";
 import { getArticleTypeProfile } from "../../../ai-content/application/services/article-type-profiles";
 import { ArticleBlockCompiler } from "../services/article-block-compiler.service";
+import { ArticleAutoLinkService } from "../services/article-auto-link.service";
 import { ARTICLE_SITE_DB, type ArticleSiteDb } from "../ports/article-site-db.port";
 import {
   ARTICLE_PUBLICATION_REPOSITORY,
@@ -36,6 +37,7 @@ export class PublishArticleUseCase {
     @Inject(ARTICLE_PUBLICATION_REPOSITORY)
     private readonly publications: ArticlePublicationRepository,
     private readonly compiler: ArticleBlockCompiler,
+    private readonly autoLink: ArticleAutoLinkService,
   ) {}
 
   async execute(jobId: string): Promise<PublishArticleResult> {
@@ -65,6 +67,9 @@ export class PublishArticleUseCase {
         compiled.errors.map((e) => e.message),
       );
     }
+    // Chen link noi bo toi diem den nhac trong bai (dung chung engine voi
+    // publish-destination.usecase.ts — backlog §B Phase C muc 5).
+    const linkedHtml = await this.autoLink.linkHtml(compiled.html);
 
     const existing = await this.publications.findByJobId(jobId);
     const slug = existing?.slug ?? article.metadata.slugSuggestion;
@@ -75,7 +80,7 @@ export class PublishArticleUseCase {
       title: article.title,
       shortDescription: article.intro.slice(0, SHORT_DESCRIPTION_MAX),
       thumbnail: null,
-      contentHtml: compiled.html,
+      contentHtml: linkedHtml,
       metaTitle: article.metadata.metaTitle,
       metaDescription: article.metadata.metaDescription,
     });

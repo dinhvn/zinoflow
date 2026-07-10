@@ -49,6 +49,52 @@ export const upsertHotelRequestSchema = z.object({
 });
 export type UpsertHotelRequest = z.infer<typeof upsertHotelRequestSchema>;
 
+/**
+ * Import hang loat tu Google Sheet (hotel-spec §5, dung chung co che
+ * product-spec §5.1 — CHOT 07/2026): 1 dong = 1 UpsertHotelRequest, khop
+ * theo sourceUrl (khoa chinh) hoac ten+tinh chuan hoa (khoa phu, can xac nhan).
+ */
+export const hotelImportRowSchema = upsertHotelRequestSchema;
+export type HotelImportRow = UpsertHotelRequest;
+
+export const importHotelsRequestSchema = z.object({
+  items: z.array(hotelImportRowSchema).min(1).max(500),
+  /** true = chi phan tich + tra bao cao, KHONG ghi DB (man preview) */
+  dryRun: z.boolean().optional().default(false),
+  /**
+   * Xac nhan gop rieng cho cac dong needsConfirm — key = sourceUrl cua dong
+   * trong sheet, value = id ban ghi cu nguoi dung dong y gop vao. Dong nao
+   * khong co trong day se BI BO QUA (khong tu dong ghi de) ke ca dryRun=false.
+   */
+  confirmMergeIds: z.record(z.string(), z.string()).optional(),
+});
+export type ImportHotelsRequest = z.infer<typeof importHotelsRequestSchema>;
+
+export const importRowActionSchema = z.enum(["create", "update", "needsConfirm"]);
+export type ImportRowActionKind = z.infer<typeof importRowActionSchema>;
+
+export const importHotelRowResultSchema = z.object({
+  sourceUrl: z.string(),
+  name: z.string(),
+  action: importRowActionSchema,
+  matchedId: z.string().nullable(),
+  reason: z.string().nullable(),
+  /** true = da thuc su ghi DB (luon false khi dryRun, hoac needsConfirm chua duoc xac nhan) */
+  applied: z.boolean(),
+  error: z.string().nullable(),
+});
+export type ImportHotelRowResult = z.infer<typeof importHotelRowResultSchema>;
+
+export const importHotelsResultSchema = z.object({
+  dryRun: z.boolean(),
+  created: z.number().int(),
+  updated: z.number().int(),
+  needsConfirm: z.number().int(),
+  errors: z.number().int(),
+  rows: z.array(importHotelRowResultSchema),
+});
+export type ImportHotelsResult = z.infer<typeof importHotelsResultSchema>;
+
 /** Gan/go 1 khach san khoi 1 diem den (hotel-spec §3 hotel_destination_map) */
 export const assignHotelRequestSchema = z.object({
   destinationSlug: z.string().min(1).max(64),

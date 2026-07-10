@@ -7,6 +7,7 @@ import { TourModule } from "../tour/tour.module";
 import { ProductModule } from "../product/product.module";
 import { ArticlesController } from "./presentation/articles.controller";
 import { ArticleBlockCompiler } from "./application/services/article-block-compiler.service";
+import { ArticleAutoLinkService } from "./application/services/article-auto-link.service";
 import { PublishArticleUseCase } from "./application/use-cases/publish-article.usecase";
 import { RefreshDynamicBlocksUseCase } from "./application/use-cases/refresh-dynamic-blocks.usecase";
 import { RefreshAllDynamicBlocksUseCase } from "./application/use-cases/refresh-all-dynamic-blocks.usecase";
@@ -33,6 +34,7 @@ import { ArticlePublicationEntity } from "./infrastructure/entities/article-publ
   controllers: [ArticlesController],
   providers: [
     ArticleBlockCompiler,
+    ArticleAutoLinkService,
     PublishArticleUseCase,
     RefreshDynamicBlocksUseCase,
     RefreshAllDynamicBlocksUseCase,

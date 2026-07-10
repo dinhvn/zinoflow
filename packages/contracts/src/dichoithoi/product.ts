@@ -37,3 +37,37 @@ export const upsertProductRequestSchema = z.object({
   sourceUrl: z.url().max(512),
 });
 export type UpsertProductRequest = z.infer<typeof upsertProductRequestSchema>;
+
+/**
+ * Import hang loat tu Google Sheet (product-spec §5.1 — CHOT 07/2026). KHAC
+ * Hotel/Tour: chi UPSERT theo `sourceUrl` (khong co khoa phu ten+tinh — spec
+ * chi ap dung fallback nay cho Hotel/Tour, san pham khong co dia ly de gan,
+ * trung ten khong du chac chan de tu goi y gop).
+ */
+export const productImportRowSchema = upsertProductRequestSchema;
+export type ProductImportRow = UpsertProductRequest;
+
+export const importProductsRequestSchema = z.object({
+  items: z.array(productImportRowSchema).min(1).max(500),
+  dryRun: z.boolean().optional().default(false),
+});
+export type ImportProductsRequest = z.infer<typeof importProductsRequestSchema>;
+
+export const importProductRowResultSchema = z.object({
+  sourceUrl: z.string(),
+  name: z.string(),
+  action: z.enum(["create", "update"]),
+  matchedId: z.string().nullable(),
+  applied: z.boolean(),
+  error: z.string().nullable(),
+});
+export type ImportProductRowResult = z.infer<typeof importProductRowResultSchema>;
+
+export const importProductsResultSchema = z.object({
+  dryRun: z.boolean(),
+  created: z.number().int(),
+  updated: z.number().int(),
+  errors: z.number().int(),
+  rows: z.array(importProductRowResultSchema),
+});
+export type ImportProductsResult = z.infer<typeof importProductsResultSchema>;

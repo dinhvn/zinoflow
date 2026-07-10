@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import sharp from "sharp";
-import type { ImageProcessor, WebpVariants } from "../../application/ports/image-processor.port";
+import type { ImageProcessor, WebpVariants } from "../ports/image-processor.port";
 
 // 3 co co dinh (spec §14.2). hero cho dau bai/og:image, medium cho srcset, thumb cho card.
 const WIDTHS = { hero: 1600, medium: 800, thumb: 400 } as const;

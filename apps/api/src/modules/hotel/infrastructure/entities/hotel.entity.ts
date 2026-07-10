@@ -34,8 +34,16 @@ export class HotelEntity {
   @Column({ name: "thumbnail_url", type: "varchar", length: 512, nullable: true })
   thumbnailUrl!: string | null;
 
+  /** URL anh dai dien GOC (truoc khi ingest ve hosting minh) — spec §14.5 */
+  @Column({ name: "thumbnail_source_url", type: "varchar", length: 512, nullable: true })
+  thumbnailSourceUrl!: string | null;
+
   @Column({ type: "jsonb", default: () => "'[]'" })
   images!: string[];
+
+  /** URL anh phu GOC, cung thu tu voi `images` — spec §14.5 */
+  @Column({ name: "image_source_urls", type: "jsonb", default: () => "'[]'" })
+  imageSourceUrls!: string[];
 
   @Column({ type: "varchar", length: 64, nullable: true })
   provider!: string | null;

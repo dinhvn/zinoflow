@@ -2,9 +2,12 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AffiliateModule } from "../affiliate/affiliate.module";
 import { DestinationModule } from "../destination/destination.module";
+import { SharedMediaModule } from "../shared/media/shared-media.module";
+import { SharedSheetImportModule } from "../shared/sheet-import/shared-sheet-import.module";
 import { HotelsController } from "./presentation/hotels.controller";
 import { ListHotelsUseCase } from "./application/use-cases/list-hotels.usecase";
 import { UpsertHotelUseCase } from "./application/use-cases/upsert-hotel.usecase";
+import { ImportHotelsUseCase } from "./application/use-cases/import-hotels.usecase";
 import { AssignHotelToDestinationUseCase } from "./application/use-cases/assign-hotel-to-destination.usecase";
 import { ListHotelsForDestinationUseCase } from "./application/use-cases/list-hotels-for-destination.usecase";
 import { RecomputeHotelCardsUseCase } from "./application/use-cases/recompute-hotel-cards.usecase";
@@ -25,12 +28,15 @@ import { HotelDestinationMapEntity } from "./infrastructure/entities/hotel-desti
   imports: [
     AffiliateModule,
     DestinationModule,
+    SharedMediaModule,
+    SharedSheetImportModule,
     TypeOrmModule.forFeature([HotelEntity, HotelDestinationMapEntity]),
   ],
   controllers: [HotelsController],
   providers: [
     ListHotelsUseCase,
     UpsertHotelUseCase,
+    ImportHotelsUseCase,
     AssignHotelToDestinationUseCase,
     ListHotelsForDestinationUseCase,
     RecomputeHotelCardsUseCase,

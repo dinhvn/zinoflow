@@ -49,6 +49,41 @@ export const upsertTourRequestSchema = z.object({
 });
 export type UpsertTourRequest = z.infer<typeof upsertTourRequestSchema>;
 
+/**
+ * Import hang loat tu Google Sheet (tour-spec §5, dung chung co che
+ * product-spec §5.1 — CHOT 07/2026). Cung dang voi Hotel.
+ */
+export const tourImportRowSchema = upsertTourRequestSchema;
+export type TourImportRow = UpsertTourRequest;
+
+export const importToursRequestSchema = z.object({
+  items: z.array(tourImportRowSchema).min(1).max(500),
+  dryRun: z.boolean().optional().default(false),
+  confirmMergeIds: z.record(z.string(), z.string()).optional(),
+});
+export type ImportToursRequest = z.infer<typeof importToursRequestSchema>;
+
+export const importTourRowResultSchema = z.object({
+  sourceUrl: z.string(),
+  name: z.string(),
+  action: z.enum(["create", "update", "needsConfirm"]),
+  matchedId: z.string().nullable(),
+  reason: z.string().nullable(),
+  applied: z.boolean(),
+  error: z.string().nullable(),
+});
+export type ImportTourRowResult = z.infer<typeof importTourRowResultSchema>;
+
+export const importToursResultSchema = z.object({
+  dryRun: z.boolean(),
+  created: z.number().int(),
+  updated: z.number().int(),
+  needsConfirm: z.number().int(),
+  errors: z.number().int(),
+  rows: z.array(importTourRowResultSchema),
+});
+export type ImportToursResult = z.infer<typeof importToursResultSchema>;
+
 /** Gan/go 1 tour khoi 1 diem den (tour-spec §3 tour_destination_map) */
 export const assignTourRequestSchema = z.object({
   destinationSlug: z.string().min(1).max(64),

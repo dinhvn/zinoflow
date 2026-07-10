@@ -8,6 +8,7 @@ export interface ProductRecord {
   readonly category: string;
   readonly tags: string[];
   readonly thumbnailUrl: string | null;
+  readonly thumbnailSourceUrl: string | null;
   readonly price: number | null;
   readonly provider: string | null;
   readonly sourceUrl: string;
@@ -24,6 +25,7 @@ export interface UpsertProductInput {
   readonly category: string;
   readonly tags: string[];
   readonly thumbnailUrl: string | null;
+  readonly thumbnailSourceUrl: string | null;
   readonly price: number | null;
   readonly provider: string | null;
   readonly sourceUrl: string;

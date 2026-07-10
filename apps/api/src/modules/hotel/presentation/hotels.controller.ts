@@ -1,14 +1,25 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post } from "@nestjs/common";
 import {
   assignHotelRequestSchema,
+  fetchSheetRequestSchema,
+  importHotelsRequestSchema,
   upsertHotelRequestSchema,
   type AssignHotelRequest,
+  type FetchSheetRequest,
+  type FetchSheetResponse,
   type Hotel,
+  type ImportHotelsRequest,
+  type ImportHotelsResult,
   type UpsertHotelRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
+import {
+  SHEET_CSV_FETCHER,
+  type SheetCsvFetcher,
+} from "../../shared/sheet-import/ports/sheet-csv-fetcher.port";
 import { ListHotelsUseCase } from "../application/use-cases/list-hotels.usecase";
 import { UpsertHotelUseCase } from "../application/use-cases/upsert-hotel.usecase";
+import { ImportHotelsUseCase } from "../application/use-cases/import-hotels.usecase";
 import { AssignHotelToDestinationUseCase } from "../application/use-cases/assign-hotel-to-destination.usecase";
 import { ListHotelsForDestinationUseCase } from "../application/use-cases/list-hotels-for-destination.usecase";
 
@@ -18,13 +29,31 @@ export class HotelsController {
   constructor(
     private readonly listHotels: ListHotelsUseCase,
     private readonly upsertHotel: UpsertHotelUseCase,
+    private readonly importHotels: ImportHotelsUseCase,
     private readonly assignHotel: AssignHotelToDestinationUseCase,
     private readonly listForDestination: ListHotelsForDestinationUseCase,
+    @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
   ) {}
 
   @Get()
   list(): Promise<Hotel[]> {
     return this.listHotels.execute();
+  }
+
+  /** Tai Google Sheet (cong khai) ve CSV — client parse + xem truoc roi import */
+  @Post("fetch-sheet")
+  async fetchSheet(
+    @Body(new ZodValidationPipe(fetchSheetRequestSchema)) request: FetchSheetRequest,
+  ): Promise<FetchSheetResponse> {
+    return { csv: await this.sheetFetcher.fetchCsv(request.url) };
+  }
+
+  /** Import hang loat (dry-run mac dinh — client goi lai dryRun=false sau khi xem preview) */
+  @Post("import")
+  importBulk(
+    @Body(new ZodValidationPipe(importHotelsRequestSchema)) request: ImportHotelsRequest,
+  ): Promise<ImportHotelsResult> {
+    return this.importHotels.execute(request);
   }
 
   @Post()

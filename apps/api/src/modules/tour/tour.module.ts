@@ -2,9 +2,12 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AffiliateModule } from "../affiliate/affiliate.module";
 import { DestinationModule } from "../destination/destination.module";
+import { SharedMediaModule } from "../shared/media/shared-media.module";
+import { SharedSheetImportModule } from "../shared/sheet-import/shared-sheet-import.module";
 import { ToursController } from "./presentation/tours.controller";
 import { ListToursUseCase } from "./application/use-cases/list-tours.usecase";
 import { UpsertTourUseCase } from "./application/use-cases/upsert-tour.usecase";
+import { ImportToursUseCase } from "./application/use-cases/import-tours.usecase";
 import { AssignTourToDestinationUseCase } from "./application/use-cases/assign-tour-to-destination.usecase";
 import { ListToursForDestinationUseCase } from "./application/use-cases/list-tours-for-destination.usecase";
 import { RecomputeTourCardsUseCase } from "./application/use-cases/recompute-tour-cards.usecase";
@@ -25,12 +28,15 @@ import { TourDestinationMapEntity } from "./infrastructure/entities/tour-destina
   imports: [
     AffiliateModule,
     DestinationModule,
+    SharedMediaModule,
+    SharedSheetImportModule,
     TypeOrmModule.forFeature([TourEntity, TourDestinationMapEntity]),
   ],
   controllers: [ToursController],
   providers: [
     ListToursUseCase,
     UpsertTourUseCase,
+    ImportToursUseCase,
     AssignTourToDestinationUseCase,
     ListToursForDestinationUseCase,
     RecomputeTourCardsUseCase,

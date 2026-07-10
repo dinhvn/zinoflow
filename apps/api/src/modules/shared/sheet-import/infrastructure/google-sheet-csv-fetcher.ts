@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { UpstreamApiError } from "../../../shared/errors/app-error";
-import type { SheetCsvFetcher } from "../../application/ports/sheet-csv-fetcher.port";
+import { UpstreamApiError } from "../../errors/app-error";
+import type { SheetCsvFetcher } from "../ports/sheet-csv-fetcher.port";
 
 const FETCH_TIMEOUT_MS = 15_000;
 

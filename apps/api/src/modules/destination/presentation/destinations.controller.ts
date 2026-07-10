@@ -66,6 +66,7 @@ import {
   updateTaxonomyDescriptionRequestSchema,
   type TaxonomyContent,
   type UpdateTaxonomyDescriptionRequest,
+  type ListCoverageScoresResponse,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { ValidationError } from "../../shared/errors/app-error";
@@ -88,11 +89,15 @@ import { UpsertDestinationUseCase } from "../application/use-cases/upsert-destin
 import { ImportDestinationsUseCase } from "../application/use-cases/import-destinations.usecase";
 import { ListAddressMappingsUseCase } from "../application/use-cases/list-address-mappings.usecase";
 import { ManageTaxonomyContentUseCase } from "../application/use-cases/manage-taxonomy-content.usecase";
+import { GetCoverageScoresUseCase } from "../application/use-cases/get-coverage-scores.usecase";
 import { SuggestDestinationMetaUseCase } from "../../ai-content/application/use-cases/suggest-destination-meta.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
-import { SHEET_CSV_FETCHER, type SheetCsvFetcher } from "../application/ports/sheet-csv-fetcher.port";
+import {
+  SHEET_CSV_FETCHER,
+  type SheetCsvFetcher,
+} from "../../shared/sheet-import/ports/sheet-csv-fetcher.port";
 import { Inject } from "@nestjs/common";
 
 /** Gioi han kich thuoc anh goc upload (truoc khi convert) — 15MB */
@@ -123,6 +128,7 @@ export class DestinationsController {
     private readonly importDestinations: ImportDestinationsUseCase,
     private readonly listAddressMappings: ListAddressMappingsUseCase,
     private readonly manageTaxonomyContent: ManageTaxonomyContentUseCase,
+    private readonly getCoverageScores: GetCoverageScoresUseCase,
     private readonly suggestMeta: SuggestDestinationMetaUseCase,
     private readonly parseMapsLink: ParseMapsLinkUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
@@ -219,6 +225,12 @@ export class DestinationsController {
     request: UpdateTaxonomyDescriptionRequest,
   ): Promise<{ ok: true }> {
     return this.manageTaxonomyContent.updateDescription(request);
+  }
+
+  /** Coverage Score toan bo diem da published, diem thap truoc (spec §2.2.2). Truoc ":slug". */
+  @Get("coverage-scores")
+  coverageScores(): Promise<ListCoverageScoresResponse> {
+    return this.getCoverageScores.execute();
   }
 
   /**

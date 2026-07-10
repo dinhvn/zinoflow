@@ -1,6 +1,8 @@
 /**
- * Engine auto-link noi bo cho bai diem den — port tu CMS C# DestinationService.ImportAsync
- * (spec dichoithoi-destination-spec §1.3, §3.4, §12.2). Pure TS, khong phu thuoc framework.
+ * Engine auto-link noi bo dung chung (dichoithoi-destination-spec §1.3, §3.4, §12.2;
+ * dichoithoi-backlog.md §B Phase C muc 5). Pure TS, khong phu thuoc framework — dung
+ * ca cho bai diem den (publish-destination.usecase.ts, relink-all.usecase.ts) VA bai
+ * cam nang (article-auto-link.service.ts), build 1 lan, khong 2 ban sao.
  *
  * Khac ban C# cu (chay regex thang tren chuoi HTML, ten chua escape):
  * - Escape regex ten diem den (ten co the chua ky tu dac biet).
