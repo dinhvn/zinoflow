@@ -145,39 +145,189 @@ Các mục đích dự kiến dùng API này khi triển khai:
 
 Ảnh từ Google Maps: **KHÔNG tải/lưu ảnh của Google về server** (rủi ro bản
 quyền/ToS) — chỉ hiển thị 1 link/nút "Xem ảnh & đánh giá trên Google Maps" dẫn
-thẳng ra trang địa điểm đó, đặt cạnh khối bản đồ nhúng đã có. Nếu cần ảnh xem
-trước trên site, dùng ảnh tự upload (`GalleryJson`), không lấy từ Google.
+thẳng ra trang địa điểm đó. Nếu cần ảnh xem trước trên site, dùng ảnh tự upload
+(`GalleryJson`), không lấy từ Google.
+
+**Cập nhật vị trí 07/2026** (chỗ đặt cũ "cạnh khối bản đồ nhúng" đã lỗi thời —
+map nhúng đã bỏ hẳn, xem `content-seo-ux-plan.md` phần map removal): nút này
+dời sang **cạnh khối "Đánh giá biên tập"** (§2.2 nhóm F) — ghép logic tự nhiên
+"đây là góc nhìn của chúng tôi" + "xem thêm ý kiến người khác ở nơi khác". Mở
+rộng thành mục **"Xem thêm trên"** gồm tối đa 2 link tham khảo độc lập (không
+phải affiliate, không bán vé): Google Maps (đã có kế hoạch) + **TripAdvisor**
+(mới, nếu điểm đến có trang TripAdvisor) — nhập tay URL, không gọi API. Cả 2
+gắn `rel="nofollow"` (không cho đi PageRank) nhưng vẫn hữu ích cho người đọc —
+lấp khoảng trống review thật sau khi đã gỡ review tự nhập (§1). Dùng style
+"trung tính" trong hệ card đã chốt (content-seo-ux-plan §10.6.5), KHÔNG dùng
+màu Accent — đây không phải CTA mua hàng, tránh nhầm với nút vé/đặt phòng.
+
+**Phân biệt với nền tảng CÓ BÁN VÉ** (Traveloka, Klook...): nếu điểm đến có
+bán vé qua các nền tảng này VÀ có chương trình affiliate, KHÔNG thêm như link
+tham khảo ở đây — đi qua đúng cơ chế `ticketLinks[]` đã có (§2.3), giống
+Klook/TripVision. Việc cần làm là kiểm tra Traveloka có affiliate program hay
+không (việc kinh doanh, không phải thiết kế lại).
 
 Thiết kế khi triển khai (để tránh tốn phí không kiểm soát): nút bấm thủ công
 "Lấy thông tin từ Google Maps" trong form, gọi 1 lượt duy nhất khi người dùng
 chủ động bấm — KHÔNG chạy job nền tự động/định kỳ gọi lại API.
 
-### 2.2 Khung thông tin "ai cũng cần" của 1 bài điểm đến
-Phân tích theo search intent du lịch (người đọc trước chuyến đi cần gì) + các cột
-DB website đang render thành mục riêng:
+### 2.2 Khung thông tin theo từng khối — phân loại nguồn gốc A-F (CHỐT 07/2026,
+thay bảng cũ, đủ mọi khối đã chốt ở `content-seo-ux-plan.md` §10.6.2/§10.6.3)
 
-| Khối | Người đọc cần biết | Map sang DB |
+**6 nhóm nguồn gốc nội dung** — quyết định AI có sinh nội dung hay không, và
+sinh theo hình thức nào:
+
+| Nhóm | Ý nghĩa | Cơ chế sửa/lưu |
 |---|---|---|
-| Tổng quan | điểm này là gì, vì sao đáng đi | Content (intro) |
-| Vị trí & di chuyển | ở đâu, đi bằng gì, mất bao lâu, gửi xe | Transport + Address/Lat/Lng |
-| Giờ mở cửa & giá vé | thông tin quyết định lịch trình — PHẢI dễ thấy | OpeningTime + TicketPrice |
-| Trải nghiệm / chơi gì | hoạt động chính, khu vực nổi bật, check-in | Content (sections) |
-| Món ăn / đặc sản | ăn gì tại chỗ và gần đó | Food |
-| Thời điểm đẹp | mùa/giờ nên đi, tránh đông | Content (section) |
-| Lưu trú | ở khu nào tiện, gợi ý khách sạn | HotelText + module Hotel (`HotelDestinationMap`) |
-| Mẹo & lưu ý | tiết kiệm, an toàn, quy định | Tip |
-| FAQ | câu hỏi thực tế theo search intent | Content (cuối bài) |
-| Điểm đến gần đó | đi kèm trong cùng chuyến | auto-link + quan hệ (§3.7) |
-| Câu chuyện văn hoá - lịch sử *(đề xuất 07/2026, chưa build)* | truyền thuyết, ý nghĩa văn hoá/lịch sử — tạo cảm xúc, khác dữ liệu khô khan | Content (section mới, không cột riêng — content-seo-ux-plan §5.6). **AI viết, người duyệt** — không có form nhập tay riêng. |
-| Chi phí ước tính *(đề xuất 07/2026, chưa build)* | tổng chi phí tham khảo cho 1 chuyến (vé + khách sạn + tour cộng dồn) | Tính lúc render từ `TicketPriceFrom`/Hotel/Tour `PriceFrom` đã có, không cột mới (content-seo-ux-plan §5.4). **Không nhập gì** — tự tính, không phải form/AI. |
-| Giá vé theo đối tượng *(đề xuất 07/2026, chưa build)* | (a) giá cố định người lớn/trẻ em/sinh viên/cao tuổi theo quy định điểm đến; (b) giá riêng từng nhà cung cấp booking | (a) cột mới `PriceBreakdownJson`; (b) thêm field `price` vào `ticketLinks[]` — 2 nguồn khác nhau, xem content-seo-ux-plan §5.5. **Cả 2 đều nhập tay** trong màn sửa điểm đến — AI không được tự bịa giá. |
-| Lưu ý thực tế *(đề xuất 07/2026, chưa build)* | bãi xe, nhà vệ sinh, phù hợp trẻ em/người già/xe lăn, quy định tại chỗ, an toàn | Cột mới `PracticalNotesJson` (content-seo-ux-plan §5.7). **AI gợi ý draft, bắt buộc người dùng duyệt/sửa** trước khi lưu (ảnh hưởng an toàn thực tế). |
+| **A. AI viết (văn xuôi)** | Nằm trong outline → expand theo prompt pack | Draft → editor sửa văn bản thường → Approve → Publish (cơ chế đã có, không cần xây thêm) |
+| **B. AI viết CÓ CẤU TRÚC** | Output JSON schema riêng, không phải đoạn văn | Editor phải có **form riêng** theo từng field (không hiện JSON thô) — xem ví dụ Lịch trình dưới |
+| **C. Nhập tay 100%, AI KHÔNG đụng** | Dữ liệu cứng/quyết định kinh doanh | Form nhập liệu thường trong màn sửa điểm đến |
+| **D. Tự tính, KHÔNG AI KHÔNG nhập tay** | Máy tính từ dữ liệu đã có (bake `DynamicBlocksJson`, `RelatedJson`...) | Không có UI sửa nội dung — chỉ sửa DỮ LIỆU NGUỒN (vd sửa giá Hotel) rồi hệ thống tự tính lại |
+| **E. AI gợi ý draft, BẮT BUỘC duyệt/sửa** | Ảnh hưởng an toàn thực tế, không tự publish | Giống nhóm A nhưng gate chặn Approve nếu chưa có thao tác xem/sửa từng dòng |
+| **F. Nhập tay, mang tính quan điểm** | Tiếng nói biên tập thật, KHÔNG phải AI generate thay | AI chỉ được **gợi ý draft**, bắt buộc biên tập viết lại bằng giọng riêng trước Approve (mạnh hơn nhóm E — không chỉ duyệt, phải viết lại) |
 
-Prompt pack ép đủ các khối này; khối nào không áp dụng (vd điểm miễn phí không có
-giá vé) phải ghi rõ thay vì bỏ trống — structure gate kiểm tra (§6). 4 dòng đánh
-dấu "đề xuất 07/2026, chưa build" là kết quả phân tích vai khách du lịch (xem
-`dichoithoi-content-seo-ux-plan.md` §5.4-§5.7 để biết chi tiết field/schema) —
-CHƯA đưa vào prompt pack/structure gate hiện tại, chỉ ghi nhận để làm sau.
+**Nguyên tắc chung mọi nhóm A/B/E/F**: dùng đúng cơ chế draft→review→approve→
+publish + lưu version đã có (spec chính §7) — AI tạo draft, người dùng luôn
+sửa được và lưu lại trước khi publish, không có đường tắt.
+
+#### Bảng khối — `kind=poi` (vd Biệt Thự Hằng Nga)
+
+| # | Khối | Nhóm | Map dữ liệu |
+|---|---|---|---|
+| 1 | Tổng quan/giới thiệu | A | `Content` (intro) |
+| 2 | Vị trí + khoảng cách + chỉ đường | C (nhập) + D (hiện) | `Address`/`Lat`/`Lng`/`DistanceFromCenter` |
+| 3 | Giờ mở cửa & giá vé | C | `OpeningTime`/`TicketPrice`/`ticketLinks[]` |
+| 4 | Trải nghiệm/chơi gì | A | `Content` (sections) |
+| 5 | Ăn uống gần đó | A | `Food` |
+| 6 | Thời điểm đẹp (giờ/mùa) | A | `Content` (section) |
+| 7 | Di chuyển (chặng cuối từ trung tâm cụm) | A | `Transport` |
+| 8 | Câu chuyện văn hoá - lịch sử *(đề xuất, chưa build)* | A | `Content` (section mới — content-seo-ux-plan §5.6) |
+| 9 | Chi phí ước tính *(đề xuất, chưa build)* | D | Tính từ `TicketPriceFrom`/Hotel/Tour `PriceFrom` (§5.4) |
+| 10 | Giá vé theo đối tượng *(đề xuất, chưa build)* | C | `PriceBreakdownJson` + `price` trong `ticketLinks[]` (§5.5) |
+| 11 | Mẹo & lưu ý thực tế | E | `PracticalNotesJson` (§5.7) |
+| 12 | Banner khách sạn / Card tour | D | `DynamicBlocksJson["hotels"/"tours"]` |
+| 13 | Banner "Về {node cha}" | D | Template cố định + `AncestorsJson` (§10.6.3) |
+| 14 | FAQ | A | `FaqJson` |
+| 15 | Đánh giá biên tập + "Xem thêm trên" (Google Maps/TripAdvisor) | F + C | Field riêng (chưa đặt tên cột) + `ExternalReviewUrls` (Google Maps/TripAdvisor, nhập tay, `rel=nofollow` — §2.1) |
+| 16 | Điểm đến liên quan | D | `RelatedJson` |
+| 17 | Disclosure affiliate | — (template tĩnh, không A-F) | Cố định trong layout |
+
+#### Bảng khối — node `ContentTier=Flagship` (vd Đà Lạt)
+
+| # | Khối | Nhóm | Map dữ liệu |
+|---|---|---|---|
+| 1 | Tổng quan/giới thiệu | A | `Content` (intro, viết theo §10.6.2 khối 1) |
+| 2 | Nên đi mùa nào | A | `Content` (section) |
+| 3 | Lịch trình gợi ý (2N1D/3N2D/4N3D) | **B** | JSON riêng: mảng ngày → {buổi, POI/slug, ghi chú} — form theo ngày, không JSON thô |
+| 3b | CTA tour khớp lịch trình + link bài cẩm nang | D | `DynamicBlocksJson["tours"]` + `ArticleDestinationMap` (topic=itinerary) |
+| 4 | Di chuyển — cách tới nơi + trong khu vực | A | `Content` (section) |
+| 4b | Card vé máy bay/xe khách | D | `DynamicBlocksJson["transports"]` |
+| 5 | Điểm tham quan (2 lớp: nổi bật + theo khu vực) | **D hoàn toàn** — không AI viết gì | `ChildrenJson`+`IsFeatured`+`Order`+`DistanceFromCenter` |
+| 5b | Link bài cẩm nang điểm tham quan | D | `ArticleDestinationMap` (topic=poi-guide) |
+| 6 | Ăn gì đặc trưng | A | `Food` (viết sâu hơn POI — món, không tên quán) |
+| 6b | Link bài cẩm nang ẩm thực | D | `ArticleDestinationMap` (topic=food) |
+| 6c | Buổi tối làm gì — link bài cẩm nang *(khối mới 07/2026, chỉ hiện khi có bài)* | D | `ArticleDestinationMap` (topic=nightlife) |
+| 7 | Mẹo & lưu ý thực tế | E | `PracticalNotesJson` |
+| 8 | Quà mang về (mô tả đặc sản) | A | `Content` (section mới) |
+| 8b | Card sản phẩm mua sắm + link bài cẩm nang | D | `DynamicBlocksJson["souvenirProducts"]` + `ArticleDestinationMap` (topic=souvenir) |
+| 9 | FAQ (tầm thành phố) | A | `FaqJson` |
+| 10 | Đánh giá biên tập + "Xem thêm trên" (Google Maps/TripAdvisor) | F + C | Field riêng, chung cơ chế với POI (§2.1) |
+| 11 | Điểm đến liên quan (loại trừ con, ưu tiên anh em/vùng) | D | `RelatedJson` (công thức riêng Flagship) |
+| — | `ContentTier` | C | Gán tay, không AI (§7.3) |
+| — | Disclosure affiliate | — | Cố định trong layout |
+
+**Cơ chế chọn đúng bộ khối khi tạo outline**: bước "Tạo outline" (spec chính
+§7) đọc `kind`+`ContentTier` của điểm đến TRƯỚC khi chọn đúng bảng khối A/B ở
+trên — Flagship và POI có bộ khối nhóm A/B khác nhau hoàn toàn (Flagship có
+Lịch trình/Mùa/Di chuyển 2 chiều; POI có Giờ mở cửa/Giá vé). Nhóm C/D/E/F
+không nằm trong outline AI sinh — ghép vào cùng trang lúc publish từ field/cơ
+chế riêng của từng nhóm.
+
+Prompt pack ép đủ các khối nhóm A/B theo đúng bảng khối tương ứng; khối nào
+không áp dụng (vd điểm miễn phí không có giá vé) phải ghi rõ thay vì bỏ trống
+— structure gate kiểm tra (§6). Các dòng đánh dấu "đề xuất, chưa build" CHƯA
+đưa vào prompt pack/structure gate hiện tại, chỉ ghi nhận để làm sau.
+
+### 2.2.1 Ghi chú/tư liệu tham khảo — bổ sung chi tiết đặc trưng cho từng khối
+(CHỐT 07/2026, giải quyết vấn đề "nội dung AI viết đạt gate nhưng chung chung")
+
+1 ô nhập tự do, KHÔNG bắt buộc, trong form điểm đến (tab Thông tin/Nội dung) —
+khuyến khích ghi theo tên khối để dễ đối chiếu (không ép cấu trúc cứng):
+```
+Tổng quan: kiến trúc sư Đặng Việt Nga, cảm hứng từ Gaudí, xây từ 1990, vẫn
+đang mở rộng
+Trải nghiệm: có các phòng đặt tên theo con vật (Kiến, Đại Bàng, Hổ), cầu thang
+xoắn hẹp
+Mẹo: buổi tối khá rùng rợn vì ánh sáng yếu, nên đi ban ngày nếu sợ
+Ăn uống: gần đó có quán bánh tráng nướng khá nổi ở đầu đường
+```
+
+**Cách AI dùng**: mỗi lần generate 1 khối (nhóm A/B, §2.2), prompt kèm theo
+TOÀN BỘ nội dung ô này (không tách nhỏ theo khối, đỡ rối form) cùng chỉ dẫn:
+*"Nếu có ghi chú liên quan tới khối đang viết, PHẢI dùng đúng chi tiết đó,
+không viết chung chung thay thế; KHÔNG được tự bịa thêm sự kiện ngoài ghi chú
+và dữ liệu đã có"* — đúng nguyên tắc "AI không bịa dữ liệu cứng" áp dụng xuyên
+suốt dự án, mở rộng sang cả tình tiết/chi tiết đặc trưng, không chỉ số liệu.
+
+Không bắt buộc điền — bỏ trống thì AI vẫn viết dựa trên field sẵn có
+(`Content`/`Food`/`Tip`...) như bình thường; ô này chỉ "tăng lực" cho nội dung
+cần đặc biệt hơn (ưu tiên điền cho node Flagship/POI nổi tiếng — cùng tinh
+thần ưu tiên theo `ContentTier` áp dụng xuyên suốt §10.6.1-§10.6.5
+content-seo-ux-plan), không phải điều kiện publish.
+
+**Nguồn tự động cho ô này — "Đọc nội dung từ website chính thức" (CHỐT
+07/2026)**: mở rộng đúng pattern đã áp dụng cho Google Maps ở §2.1 ("tự điền
+field còn trống, gợi ý — cần xác nhận") sang website chính thức
+(`ContactWebsite`, §2.2/§7.3):
+1. Khi điểm đến đã có `ContactWebsite`, hiện 1 nút bấm TAY (không tự
+   động/định kỳ — tránh tốn phí/vi phạm ToS, cùng nguyên tắc Google Maps) —
+   "Đọc nội dung từ website".
+2. AI đọc trang web đó, trích thông tin thực tế: **hoạt động/trải nghiệm có
+   thể làm** (chèo thuyền, tham quan xưởng, chụp ảnh...), **dịch vụ tại chỗ**
+   (cho thuê đồ, hướng dẫn viên, ăn uống, giữ xe...), giờ mở cửa/giá vé nếu có
+   — đúng nhu cầu "cho người đọc biết tới đó có thể làm gì/dùng dịch vụ gì".
+3. Kết quả đổ THẲNG vào ô "Ghi chú/tư liệu tham khảo" trên, gắn nhãn rõ "Trích
+   từ website chính thức — cần xác nhận" — KHÔNG tự ghi vào bài đã publish.
+   Người dùng xem/sửa/xoá trước khi generate — không có đường tắt tự publish
+   thẳng, đúng nguyên tắc "AI không bịa, luôn qua duyệt".
+4. **Không copy nguyên văn** — khi AI dùng chi tiết này để viết khối chính
+   thức (§2.2), phải diễn đạt lại bằng lời riêng, tránh trùng lặp nội dung với
+   chính website nguồn (hại SEO cho cả 2 bên).
+
+Lợi ích chính: mở rộng quy mô nội dung đặc trưng (không chỉ node có admin tự
+gõ tay chi tiết) — hầu hết điểm đến đã có sẵn thông tin chuẩn trên website
+riêng, tận dụng được thay vì AI phải viết chung chung vì thiếu nguồn.
+
+### 2.2.2 Điểm độ phủ nội dung — Content Coverage Score (CHỐT 07/2026)
+
+Mỗi điểm đến có 1 **thang đánh giá độ đầy đủ nội dung** — nhóm **D** (tự tính
+từ dữ liệu sẵn có, không AI, không nhập tay), CHỈ hiện NỘI BỘ trong CMS
+zinoflow, KHÔNG phơi ra website.
+
+**Mục đích**: người vận hành nhìn vào biết ngay điểm nào đang "mỏng" và thiếu
+đúng mục gì để bổ sung — đây là công cụ chủ động chống "scaled content abuse"
+(seo-principles §3): làm dày từng điểm theo checklist thay vì xả hàng loạt
+trang mỏng giống nhau.
+
+**Checklist tính điểm — theo đúng bảng khối §2.2, KHÁC NHAU giữa 2 tier**:
+- POI: đủ field thực dụng (Address/giờ/giá vé), toạ độ, ảnh (≥N ảnh gallery),
+  Content các section nhóm A, FAQ, mẹo thực tế (E đã duyệt), đánh giá biên tập
+  (F), external review link, ≥1 chủ đề (tag) đã gắn (§2.4).
+- Flagship: như trên + lịch trình (B), điểm tham quan con có `IsFeatured`,
+  và **độ phủ bài cẩm nang theo topic** (`ArticleDestinationMap` —
+  article-spec §8.1): mỗi topic áp dụng (`itinerary`/`food`/`souvenir`/
+  `nightlife`/`poi-guide`) chưa có bài nào gắn vào = 1 mục ⚠️ thiếu.
+
+**Hiển thị**:
+1. Màn chi tiết điểm đến (§7.3): panel checklist ✅/⚠️ từng mục; mục "chưa có
+   bài viết topic X" có nút đi thẳng sang màn tạo Article với destination +
+   topic điền sẵn.
+2. Màn danh sách (§7.2): cột/badge % tổng để quét nhanh, sort/filter được
+   theo % — ưu tiên bổ sung node Flagship/nổi tiếng trước (đúng tinh thần ưu
+   tiên theo `ContentTier`).
+
+Trọng số/ngưỡng % cụ thể từng mục: chốt lúc build, không chốt cứng ở spec —
+nhưng nguyên tắc cố định là **điểm chỉ phản ánh dữ liệu THẬT đã có** (bài đã
+publish, field đã điền), không tính draft chưa duyệt.
 
 ### 2.3 Kiếm tiền trên bài điểm đến (khách sạn + vé online + tour)
 Mô hình: bài điểm đến kéo organic traffic → chuyển đổi qua 3 kênh affiliate:
@@ -206,6 +356,103 @@ Mô hình: bài điểm đến kéo organic traffic → chuyển đổi qua 3 k�
 Nguyên tắc policy: CTA trung thực, không cam kết "giá rẻ nhất"; giá hiển thị luôn
 kèm lưu ý thay đổi (§6.3); nhiều nhà cung cấp không sắp xếp theo "rẻ nhất trước"
 trừ khi có dữ liệu giá thật kèm theo — mặc định giữ thứ tự người dùng nhập.
+
+### 2.4 Chủ đề (tag) điểm đến — quy trình AI gán + soạn mô tả (CHỐT 07/2026)
+
+Nền tảng DB + luật SEO (bộ từ vựng đóng, không trùng nghĩa Type, ngưỡng ≥5
+điểm mới index): `dichoithoi-database-redesign.md` §3.2.1. Trang public:
+`/chu-de/{slug}` (`content-seo-ux-plan.md` §10.3). Phần này chốt quy trình
+làm việc trong CMS zinoflow — cả 3 bước đều **gợi-ý-rồi-duyệt**, không bao
+giờ tự gán/tự publish im lặng:
+
+0. **Bước 0 — thiết kế bộ từ vựng ban đầu (YÊU CẦU 07/2026, làm 1 lần trước
+   khi build UI/seed)**: KHÔNG tự nghĩ bộ tag trên giấy — AI (phiên làm việc
+   Claude, không phải tính năng CMS) phải **đọc danh sách TOÀN BỘ điểm đến
+   thật từ DB** (~271 điểm hiện tại: tên, loại, content), rà lại luôn hệ
+   thống `DestinationType`/`DestinationTypeGroup` hiện có (loại nào thừa/
+   thiếu/trùng nghĩa, điểm nào đang phân loại sai), rồi đề xuất TRỌN BỘ:
+   danh sách tag ~10-20 chủ đề (mỗi tag kèm tiêu chí gán + đếm sơ bộ bao
+   nhiêu điểm hiện tại đạt — tag nào < 5 điểm thì loại khỏi đợt đầu) + đề
+   xuất chỉnh sửa taxonomy Type nếu có. Người dùng xem toàn bộ và duyệt
+   TRƯỚC khi seed bảng `DestinationTag` hay gán bất kỳ điểm nào.
+
+   **KẾT QUẢ Bước 0 (đã chạy 07/2026 trên `dichoithoi_dev`, 271 điểm — chờ
+   bạn duyệt trước khi seed):**
+
+   **✅ ĐÃ DUYỆT 07/2026** — áp dụng khi seed migration v2 (Phase B), không
+   cần hỏi lại.
+
+   *A. Đánh giá taxonomy Type hiện có (`v2.DestinationTypeGroup`/`DestinationType`)*
+   — cấu trúc 3 nhóm/18 loại hiện tại (Thiên nhiên: Biển-Đảo, Núi-Cao nguyên,
+   Sông-Suối-Hồ-Thác, Hang động, Rừng-Vườn quốc gia, Đồng quê miền Tây; Văn
+   hóa-Lịch sử: Di tích lịch sử, Chùa-Đền-Miếu, Nhà thờ, Làng nghề truyền
+   thống, Bảo tàng, Công trình kiến trúc; Vui chơi-Trải nghiệm: Khu vui
+   chơi-Giải trí, Check-in sống ảo, Chợ-Phố đêm, Khu-Phố ẩm thực, Phố cổ-Phố
+   đi bộ, Nghỉ dưỡng) — **KHÔNG có loại nào thừa/trùng nghĩa rõ**, không cần
+   gộp/tách nhóm. Phát hiện 2 vấn đề cụ thể, cả 2 xử lý được ngay không cần
+   đổi cấu trúc:
+   - **10 điểm (`kind=poi`) đang KHÔNG có Type nào** (chặn hiển thị đúng ở
+     `/loai`): Cơ sở sản xuất rượu Sim, Đồi chè Tân Cương, Làng hoa Thái
+     Phiên, Nhà thùng sản xuất nước mắm → gán `Làng nghề truyền thống`; Dalat
+     Fairytale Land, Đồi cỏ hồng Đà Lạt, Đồi Cù, Vườn Ánh Sáng Lumiere → gán
+     `Check-in sống ảo` (+ `Khu vui chơi - Giải trí` nếu có dịch vụ); Hà
+     Tiên, Mũi Cà Mau → 2 điểm mang tính địa danh/mũi đất, đề xuất tạm không
+     ép Type (giữ như điểm địa lý phụ, không phải lỗi).
+   - **Loại `Di tích lịch sử` đang bị gán RỘNG quá mức** (35/271 điểm, gấp
+     đôi loại đông thứ 2) — lẫn cả điểm KHÔNG phải di tích lịch sử: **Vịnh Hạ
+     Long** (di sản thiên nhiên, không phải di tích lịch sử), **Biệt thự
+     Hằng Nga/Crazy House** (công trình kiến trúc hiện đại thập niên 1990,
+     không phải di tích), **Bãi đá cổ Sa Pa** (cảnh quan tự nhiên gắn truyền
+     thuyết, không phải di tích). Đề xuất: khi chạy bước 2 (AI rà chiều
+     ngược) ưu tiên rà lại đúng 35 điểm này trước, gỡ Type cho ít nhất 3 điểm
+     kể trên. *(Lưu ý: Biệt thự Hằng Nga là 1 trong 2 điểm pilot Phase E —
+     nên sửa ngay khi duyệt, không đợi tới đợt rà toàn bộ).*
+
+   *B. Đề xuất bộ tag ~10-20 chủ đề cắt ngang* — chỉ giữ tag nào (a) không
+   trùng nghĩa 1-1 với 1 Type sẵn có (loại "Tâm linh", "Ẩm thực", "Nghỉ dưỡng
+   cao cấp" khỏi danh sách vì đã trùng gần hết với Type "Chùa-Đền-Miếu"/"Khu-
+   Phố ẩm thực"/"Nghỉ dưỡng"), (b) có ≥5 điểm đạt dựa trên dữ liệu content
+   thật (tên + mô tả 271 điểm, không suy đoán):
+
+   | # | Tag đề xuất | Tiêu chí gán | Đếm sơ bộ (thật) |
+   |---|---|---|---|
+   | 1 | Hoang sơ — Ít người biết | Mô tả nhấn "hoang sơ/hoang dã/chưa nhiều người biết", cắt ngang biển/đảo/bản làng/thác | ~27 |
+   | 2 | Lãng mạn — Check-in cặp đôi | Mô tả nhấn "lãng mạn/thơ mộng/mộng mơ", cắt ngang đồi/hồ/kiến trúc Pháp/khu vui chơi | ~22-25 |
+   | 3 | Mạo hiểm — Trekking — Phượt | Địa hình khó (đèo, núi cao, hang, rừng nguyên sinh) đòi hỏi thể lực, khác "hoang sơ" (offbeat) ở việc nhấn thử thách thể chất | ~20-25 |
+   | 4 | Di sản — Kỷ lục thế giới | Được công nhận chính thức (UNESCO/khu dự trữ sinh quyển/kỷ lục) — Vịnh Hạ Long, Cù Lao Chàm, Phố cổ Hội An, Tràng An... | ~15 |
+   | 5 | Biểu tượng địa phương — Phải ghé | Điểm "must-see" gắn liền hình ảnh 1 thành phố (cầu Rồng, cầu Trường Tiền, chợ Bến Thành, Nhà thờ Đức Bà, Tháp Bà Ponagar) | ~15-20 |
+   | 6 | Văn hóa dân tộc thiểu số | Bản làng/chợ phiên gắn đời sống đồng bào dân tộc (Sa Pa, Hà Giang, Yên Bái, Sơn La) | ~12-15 |
+   | 7 | Lịch sử chiến tranh — Cách mạng | Di tích gắn giai đoạn kháng chiến cụ thể (Địa đạo Củ Chi, Nhà tù Hỏa Lò, Pác Bó...) — hẹp hơn Type "Di tích lịch sử" chung | ~8-10 |
+
+   **Theo dõi thêm (chưa đủ dữ liệu để chốt ngay, AI sẽ đọc kỹ hơn ở Bước 1
+   khi gán tay từng tag)**: "Đặc sản — Quà lưu niệm" (~7 điểm, sát ngưỡng 5,
+   liên quan topic `souvenir` của Article) và "Săn mây — Ngắm bình minh/hoàng
+   hôn" (chưa đo được số chính xác bằng từ khóa, cần AI đọc mô tả kỹ hơn) —
+   để lại xét ở Bước 1, không đưa vào seed đợt đầu. Loại khỏi danh sách vì
+   tín hiệu quá yếu trong content hiện tại: "Gia đình — Trẻ em" (chỉ 1 điểm
+   nhắc tới), "Phim trường/nổi tiếng qua MXH" (dưới ngưỡng 5).
+
+   → Nếu duyệt: seed 7 tag trên vào `DestinationTag`, sửa 10 điểm thiếu Type
+   + gỡ Type sai cho ≥3 điểm nêu trên NGAY trong migration v2 (Phase B),
+   trước khi chạy Bước 1 (gán tay hàng loạt).
+
+1. **Gán chủ đề hàng loạt** (màn Công cụ §7.6): chọn 1 tag (vd "Kiến trúc")
+   → AI đọc toàn bộ điểm đến (tên + content + ghi chú tham khảo §2.2.1) →
+   trả danh sách đề xuất **kèm lý do 1 dòng** (vd "Biệt Thự Hằng Nga — công
+   trình của KTS Đặng Việt Nga, phong cách biểu hiện") → người dùng tick
+   duyệt/bỏ từng dòng rồi mới ghi `DestinationTagMap`.
+2. **AI rà chiều ngược**: cùng màn đó, AI chỉ ra (a) điểm đang gắn tag mà có
+   vẻ SAI (đề xuất gỡ, kèm lý do), (b) tag đang dưới ngưỡng 5 điểm — chưa
+   đáng mở trang public, nên gom thêm điểm hoặc gộp/xoá tag.
+3. **Soạn mô tả chủ đề** (nhóm **E**): chạy qua đúng pipeline ai-content sẵn
+   có (job → draft → review → approve — §3.1), prompt pack riêng cho tag
+   description (300-500 từ: chủ đề có gì đặc sắc, phong cách/vùng nổi bật,
+   dẫn vài điểm tiêu biểu ĐÃ gắn tag — không bịa điểm ngoài danh sách).
+   Không xây luồng generate mới.
+
+Trên trang điểm đến: dãy chip chủ đề (link `/chu-de/...`) — thêm 1 lớp
+internal link đúng ngữ nghĩa. Điểm đến chưa gắn chủ đề nào = 1 mục ⚠️ trong
+Điểm độ phủ nội dung (§2.2.2).
 
 ## 3) Quyết định thiết kế
 
@@ -380,13 +627,22 @@ vì AI tool đóng vai CMS đầy đủ cho site này (system overview §1):
 ZinoFlow
 ├─ Dashboard
 ├─ AI Content                ← bài affiliate laruki/dochoi3s (flow hiện tại)
-├─ Dichoithoi                ← khu mới
+├─ Dichoithoi                ← khu mới (cây HỢP NHẤT 07/2026 — gom mọi module spec sau)
 │   ├─ Điểm đến              /dichoithoi              (màn trung tâm — hub)
+│   ├─ Bài viết              /dichoithoi/articles     (cẩm nang — article-spec; tạo AI/viết tay §1.1)
+│   ├─ Khách sạn             /dichoithoi/hotels       (hotel-spec §6)
+│   ├─ Tour                  /dichoithoi/tours        (tour-spec §6)
+│   ├─ Sản phẩm              /dichoithoi/products     (product-spec §6)
+│   ├─ Chủ đề                /dichoithoi/tags         (tag — bộ từ vựng + mô tả, §2.4 + database-redesign §3.2.1)
 │   ├─ Taxonomy              /dichoithoi/taxonomy     (Loại + Tỉnh — giai đoạn 2, ẩn ở MVP)
 │   ├─ Review khách          /dichoithoi/reviews      (duyệt review — giai đoạn 2, ẩn ở MVP)
-│   └─ Công cụ               /dichoithoi/tools        (re-link, recompute, đồng bộ, log job)
+│   └─ Công cụ               /dichoithoi/tools        (re-link, recompute, đồng bộ, gán chủ đề hàng loạt, log job)
 └─ Settings
 ```
+
+Cây trên là **nguồn sự thật duy nhất** cho menu khu Dichoithoi — các spec module
+(hotel/tour/product/article) chỉ mô tả NỘI DUNG màn của mình, vị trí menu theo
+đây; thêm module mới thì cập nhật cây này trước.
 
 Nguyên tắc: **mọi việc theo TỪNG điểm đến đi từ màn "Điểm đến"** (hub); các job
 chạy toàn cục (re-link, recompute related, đồng bộ mirror) nằm ở "Công cụ".
@@ -395,6 +651,34 @@ route `/content/[id]` hiện có (thêm panel quick-facts), không xây editor t
 list ở `/content` thêm filter theo site để tách bài dichoithoi khỏi bài affiliate.
 
 ### 7.2 Màn "Điểm đến" `/dichoithoi` (hub)
+
+**Khối "Việc cần làm" (dashboard vận hành — CHỐT 07/2026)**, nằm TRÊN bảng
+danh sách. KHÔNG làm route Dashboard riêng, KHÔNG biểu đồ thống kê (không dẫn
+tới hành động thì không build). Trả lời đúng 1 câu: "hôm nay mở CMS nên làm
+gì trước?" — đây là nơi mọi cảnh báo từ các cơ chế đã chốt đổ về 1 chỗ, phục
+vụ chiến lược "làm dày từng điểm theo checklist" (chống scaled-content).
+
+Nguyên tắc: chỉ hiện mục có số > 0; MỖI mục là 1 link nhảy thẳng tới danh
+sách đã lọc sẵn — không có mục "chỉ để biết". Dashboard chỉ TỔNG HỢP dữ liệu
+sẵn có (mỗi dòng 1 query đếm, cache 5-10 phút), không tính toán/bảng/job mới:
+
+| Cảnh báo | Nguồn |
+|---|---|
+| X điểm độ phủ nội dung < ngưỡng (Flagship trước) | Coverage Score §2.2.2 |
+| X điểm Chủ lực chưa có bài cẩm nang topic nào | `ArticleDestinationMap` (article-spec §8.1) |
+| X chủ đề (tag) dưới ngưỡng 5 điểm — chưa mở được trang | database-redesign §3.2.1 |
+| X draft chờ duyệt (điểm đến + bài viết) | pipeline ai-content |
+| X job lỗi / khối động trả 0 kết quả | job log + compile report (article-spec §4) |
+| X link affiliate `no-rule`/chết | affiliate-link-conversion spec |
+| X điểm chưa migrate địa chỉ mới | plan migration địa chỉ (khi làm xong) |
+| X điểm không có ảnh gallery | `GalleryJson` (§14) |
+
+Kèm đúng 1 dòng sức khoẻ tổng: **% điểm đến đạt độ phủ ≥ ngưỡng** — 1 con số
+theo dõi tiến bộ, không biểu đồ. KHÔNG đưa vào: traffic/thứ hạng (Search
+Console làm tốt hơn), biểu đồ theo thời gian, doanh thu affiliate (số thật
+nằm ở dashboard đối tác — kéo về vừa khó vừa lệch).
+
+**Bảng danh sách:**
 - Bảng từ mirror: Tên (kèm badge Kind: tỉnh/cụm/điểm) · Tỉnh · Loại · Trạng thái
   nội dung · Cập nhật lúc · Nguồn (tay/AI).
 - Trạng thái nội dung là cột quan trọng nhất, 4 giá trị có màu:
@@ -409,13 +693,29 @@ list ở `/content` thêm filter theo site để tách bài dichoithoi khỏi b�
 ### 7.3 Màn chi tiết điểm đến `/dichoithoi/[id]` — 4 tab
 1. **Thông tin**: form metadata — tên, slug (cảnh báo đổi slug → tạo redirect),
    kind + cha (chọn trong cây), tỉnh, loại (multi), lat/lng, địa chỉ mới/cũ,
-   liên hệ, **danh sách ticketLinks** (thêm/xóa/sắp xếp từng dòng, dán `sourceUrl`
+   liên hệ (điện thoại, website chính thức, **Fanpage Facebook** — thêm lại
+   07/2026, xem `database-redesign.md` §4.2: nguồn tham khảo cho người đọc,
+   không phải kênh kinh doanh nên không xung đột affiliate), **danh sách ticketLinks** (thêm/xóa/sắp xếp từng dòng, dán `sourceUrl`
    → preview `affiliateUrl` ngay theo cơ chế chung
    `dichoithoi-affiliate-link-conversion-spec.md`), thumbnail, featured/order —
    KHÔNG có trường chọn khách sạn ở đây (`HotelGroupId` legacy, đã thay bằng
    `HotelDestinationMap`). Khách sạn/tour gợi ý cho điểm đến này quản lý ở module
    riêng (`dichoithoi-hotel-spec.md` §6, `dichoithoi-tour-spec.md` §6), không nằm
    trong form này.
+   - **`ContentTier`** (chỉ hiện khi `kind IN (province, cluster)` — ẩn hẳn với
+     `kind=poi` vì luôn mặc định "sâu", không cần chọn): dropdown `Chủ lực` /
+     `Thường`, mặc định `Thường`. **Ghi chú hiển thị ngay cạnh field (bắt buộc
+     khi build UI, để admin chọn đúng)**:
+     > "Chủ lực" = nơi người dùng chủ động tìm kiếm và cần được TRUYỀN CẢM HỨNG
+     > (câu chuyện, trải nghiệm, lịch trình) trước khi quan tâm chi tiết —
+     > không phải cứ tỉnh/cụm lớn là chọn Chủ lực. Ví dụ: Đà Lạt, TP.HCM, Hội
+     > An, Phú Quốc, Đà Nẵng, Huế, Sa Pa. Chọn "Thường" cho tỉnh/cụm chỉ đóng
+     > vai trò gom nhóm điểm con (vd Bảo Lộc, Di Linh) — trang của chúng sẽ ở
+     > dạng danh mục gọn, không cần đầu tư nội dung sâu.
+     > Ảnh hưởng khi chọn "Chủ lực": trang được viết nội dung điểm đến đầy đủ
+     > (không chỉ danh sách con), có thêm JSON-LD `TouristAttraction`, và được
+     > phép xuất hiện ở khối "Điểm nổi bật"/gợi ý liên quan trên toàn site —
+     > xem `dichoithoi-content-seo-ux-plan.md` §10.6.1.
 2. **Nội dung**: draft hiện tại + lịch sử version, nút "Tạo bài AI"/"Cập nhật bài"
    (mở form job §7.4), preview HTML sẽ publish.
 3. **Quan hệ**: con trực thuộc (từ cây) · nearby (tự tính, kèm khoảng cách) ·
@@ -659,6 +959,32 @@ Mọi ảnh có thể gắn remark. Hai dạng, làm trong pipeline xử lý ả
    (`<figure>/<figcaption>`), alt từ DB thay vì hardcode trong HTML.
 Khi làm tab "Ảnh" (giai đoạn 2) thì build bảng metadata này luôn; watermark là
 option trong pipeline resize. Ảnh gốc local KHÔNG đóng watermark (giữ bản sạch).
+
+### 14.5 Ingest ảnh từ URL ngoài — cơ chế dùng chung (CHỐT 07/2026)
+
+Áp dụng cho MỌI record có ảnh nguồn ngoài (Product/Hotel/Tour từ Shopee/
+Klook/OTA — import sheet `product-spec.md` §5.1, hoặc cào). **Quyết định:
+KHÔNG hotlink ảnh nguồn, luôn tải về server mình.** Lý do:
+- Link CDN Shopee/OTA xoay/hết hạn + chống hotlink (403 theo referer) —
+  sản phẩm gỡ bán là ảnh chết hàng loạt, không ai biết.
+- Ảnh domain người khác = Google Images index cho HỌ; không kiểm soát
+  kích thước/định dạng → hại LCP (§14.2 — site ưu tiên tốc độ nhất).
+- Mỗi lượt xem trang lộ traffic cho bên thứ 3.
+
+**Pipeline** (tái dùng đúng hạ tầng ảnh §14.3 giai đoạn 2 — sharp + FTP,
+không xây mới):
+1. Lưu record có `imageUrl` ngoài → job pg-boss: tải ảnh → validate (đúng
+   MIME ảnh, kích thước tối thiểu) → nén + resize bộ cỡ chuẩn (WebP +
+   thumbnail) → đẩy lên hosting hiện tại → ghi path nội bộ vào DB.
+2. **Giữ `imageSourceUrl` gốc trong DB** — tải lại được khi cần + biết nguồn.
+3. Tải lỗi → placeholder + đếm vào cảnh báo "X ảnh lỗi" ở khối "Việc cần
+   làm" (§7.2) — không âm thầm.
+4. Chạy async — import 100 dòng không đợi 100 ảnh, ảnh về dần.
+
+Lưu ý bản quyền: ảnh sản phẩm Shopee thuộc shop/nhãn hàng — dùng để dẫn
+traffic affiliate về đúng shop là thực tế phổ biến, nhưng shop yêu cầu gỡ
+thì gỡ. Ảnh ingest từ nguồn ngoài KHÔNG đóng watermark (không phải ảnh của
+mình — khác ảnh tự tạo §14.4).
 
 ## Phụ lục — §11 cũ: Nâng cấp schema DB website — ⚠️ ĐÃ BỊ THAY THẾ (12/06/2026)
 

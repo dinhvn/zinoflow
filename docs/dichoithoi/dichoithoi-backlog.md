@@ -35,14 +35,18 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
   phân tích 07/2026): 2 kênh mới trả lời "tới điểm đến bằng cách nào", song song
   Hotel/Tour nhưng gắn theo TUYẾN ở cấp tỉnh/thành (không theo POI, không có
   bảng `*_destination_map`) — POI con kế thừa qua `ProvinceId` sẵn có. Giá là
-  tham khảo tĩnh, cập nhật định kỳ (không phải meta-search real-time). Cách
-  hiển thị cụ thể trên trang detail (vị trí khối, gộp/tách Flight với Bus) —
-  vẫn đang phân tích, chưa chốt. Khi quyết định build: thêm vào §B dưới đây +
-  `dichoithoi-system-overview.md` + `dichoithoi-implementation-plan.md`. Cách
-  nhập: 2 màn quản lý riêng trong zinoflow (giống Hotel/Tour) — nhập tay hoàn
-  toàn hoặc cào định kỳ, KHÔNG có panel gán vào từng điểm đến (chỉ chọn tỉnh
-  đích), trang chi tiết điểm đến chỉ đọc theo `ProvinceId` (flight-spec §5,
-  bus-spec §5).
+  tham khảo tĩnh, cập nhật định kỳ (không phải meta-search real-time). ✅ **Cách
+  hiển thị trên trang detail ĐÃ CHỐT** (`content-seo-ux-plan.md` §5.8, Phase A
+  bước 3 07/2026 — chỉ là `flight-spec`/`bus-spec §6` trước đó ghi sót "chưa
+  chốt", đã đồng bộ lại): 2 card "✈️ Vé máy bay"/"🚌 Vé xe khách" cạnh nhau
+  trong mục "Cách tới đây" (sau lịch trình gợi ý, trước Điểm tham quan gần
+  đây), ẩn card rỗng, gộp 1 bảng `transports` (cột `mode`) không tách bảng
+  riêng, bake HTML vào `DynamicBlocksJson`. Khi quyết định BUILD (đổi tên
+  bảng, đồng bộ SQL Server): thêm vào §B dưới đây + `system-overview.md` +
+  `implementation-plan.md`. Cách nhập: 2 màn quản lý riêng trong zinoflow
+  (giống Hotel/Tour) — nhập tay hoàn toàn hoặc cào định kỳ, KHÔNG có panel gán
+  vào từng điểm đến (chỉ chọn tỉnh đích), trang chi tiết điểm đến chỉ đọc theo
+  `ProvinceId` (flight-spec §5, bus-spec §5).
 
 - **4 khối nội dung mới cho trang điểm đến** (`dichoithoi-content-seo-ux-plan.md`
   §5.4-§5.7, phân tích 07/2026 — vai khách du lịch): chi phí ước tính (§5.4,
@@ -104,9 +108,11 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
   `AncestorsJson` (breadcrumb, không query đệ quy) và `ChildrenJson` (danh sách
   đầy đủ con trực tiếp, khác `RelatedJson` chỉ cắt 8 mục gợi ý). 1 điểm đến chỉ
   thuộc 1 cha duy nhất ở trục địa lý (đúng bản chất vật lý); trục phân loại
-  (`DestinationTypeMap`) đã hỗ trợ nhiều-nhiều sẵn. Tag tự do: chưa cần, vì
-  `DestinationType` đã đóng vai trò tag có cấu trúc + trang SEO riêng — chỉ nên
-  thêm `tags: string[]` đơn giản khi có nhu cầu lọc mịn hơn thực sự phát sinh.
+  (`DestinationTypeMap`) đã hỗ trợ nhiều-nhiều sẵn. ~~Tag tự do: chưa cần~~ →
+  **ĐÃ MỞ LẠI 07/2026** — nhu cầu chủ đề cắt ngang (vd "Kiến trúc") đã phát
+  sinh thật: chốt bảng `DestinationTag`/`DestinationTagMap` + trang
+  `/chu-de/{slug}` (bộ từ vựng ĐÓNG quản lý trong CMS, không phải tag nhập tự
+  do — database-redesign §3.2.1, destination-spec §2.4).
   **CHƯA thêm vào DDL/migration thật**, chỉ ghi nhận phân tích.
 
 - **URL điểm đến giữ PHẲNG, không theo cấp bậc** (`content-seo-ux-plan.md`
@@ -163,35 +169,109 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
 
 | # | Việc | Ảnh hưởng | Nguồn |
 |---|---|---|---|
-| 1 | URL bài cẩm nang — đề xuất `/cam-nang/{slug}`, có đổi `/blog/`/`/tin-tuc/` không? | Route website + SEO | article-spec §10.1 |
-| 2 | Bộ khối động MVP chỉ 4 loại (`destinations`/`hotels`/`tours`/`destination`) — cần thêm khối "món ăn/quán ăn" riêng không? | Độ phức tạp compile engine | article-spec §10.3 |
+| 1 | ✅ **CHỐT 07/2026** — URL bài cẩm nang = `/blog/{slug}` (đổi từ đề xuất `/cam-nang/`) | Route website + SEO | article-spec §10.1 |
+| 2 | ✅ **CHỐT 07/2026** — thêm ngay khối `foodSpots` (món ăn/quán ăn, tái dùng bảng `products` lọc category) | Độ phức tạp compile engine | article-spec §3.1/§10.3 |
 | 3 | ✅ AI tự đề xuất chèn khối động lúc generate, người dùng duyệt/sửa trước khi publish (chốt 07/2026, áp dụng mọi kind) | Độ phức tạp prompt pack | article-spec §10.4, product-spec §7 |
 | 4 | Chọn OTA nào cào khách sạn trước (Booking.com/Agoda/Traveloka) | Parser đầu tiên cần build | hotel-spec §7.1 |
 | 5 | Chọn nguồn cào tour trước (Klook/TripVision/khác) | Parser đầu tiên cần build | tour-spec §7.1 |
 | 6 | Mạng affiliate đang/sẽ tham gia đã cấp rule/deep-link dạng nào (theo từng khách sạn/tour hay chỉ link chung)? | Thiết kế `affiliate_link_rules`, ảnh hưởng CTA | hotel-spec §7.2, tour-spec §7.2, affiliate-conversion-spec §2 |
 | 7 | Ngưỡng khối lượng khách sạn/tour cần có trước khi đáng xây job cào tự động | MVP nhập tay hay xây crawler ngay | hotel-spec §7.3, tour-spec §7.3 |
-| 8 | **Rà soát lại `DestinationType`/`DestinationTypeMap` đã gắn cho từng điểm đến — hiện tại có thực sự hợp lý không** (ghi nhận 07/2026, người dùng tự nêu nghi ngờ, chưa xác nhận đúng/sai): cần 1 đợt đánh giá lại toàn bộ — do AI chấm/gợi ý sửa (dựa nội dung bài + loại đang gắn) hay tự tay chuẩn hoá thủ công từng điểm — CHƯA chọn cách nào, CHƯA có job/tool cho việc này | Chất lượng taxonomy ảnh hưởng trực tiếp trang `/loai` (SEO) + khối động `[[block:destinations type=...]]` trong bài viết | destination-spec §2.2 (khung phân loại), article-spec §3 (block theo `type`) |
+| 8 | ✅ **ĐÃ CHỐT CÁCH LÀM 07/2026** — rà `DestinationType`/`TypeMap` GỘP CHUNG vào đợt "thiết kế bộ chủ đề (tag)": Claude đọc toàn bộ điểm đến thật, đánh giá cả taxonomy lẫn đề xuất tag, người dùng duyệt (§B Phase A bước 1, destination-spec §2.4 bước 0) | Chất lượng taxonomy ảnh hưởng trang `/loai` (SEO) + khối động theo `type` | destination-spec §2.4 |
+| 9 | ✅ **CHỐT 07/2026** — Ô "Tư liệu tham khảo" trong form tạo bài Article bằng AI: giống mẫu Destination §2.2.1, lưu cùng `ContentJob` | Chất lượng bài Article + tín hiệu Who/How/Why | article-spec §1.2 |
+| 10 | ✅ **CHỐT 07/2026** — Khoá phụ UPSERT = slug + tên chuẩn hoá (bỏ dấu, lowercase) + tỉnh/tuyến; nghi trùng → để nháp chờ người dùng xác nhận gộp, KHÔNG tự động ghi đè | Import sheet không tạo trùng với data nhập tay | product-spec §5.1 |
 
-## B) Thứ tự build đề xuất (phụ thuộc lẫn nhau — không phải "chưa quyết")
+## B) Lộ trình thực hiện theo PHASE (viết lại 07/2026 sau đợt rà toàn bộ — thứ tự theo PHỤ THUỘC, không theo thứ tự nghĩ ra)
 
-**Giai đoạn 1 — Đại tu nền** (`system-overview.md` §5, đã cập nhật 07/2026):
+**Phase A — Làm được NGAY, không chờ code gì** (toàn bộ là việc phân tích/
+dữ liệu, output đổ vào migration Phase B — làm sau là phải migrate 2 lần):
+1. ✅ **ĐÃ DUYỆT 07/2026 — Thiết kế bộ chủ đề (tag) + rà taxonomy Type**: đọc
+   thật 271 điểm đến từ `dichoithoi_dev`, phát hiện 10 điểm chưa có Type +
+   loại "Di tích lịch sử" bị gán quá rộng (35 điểm, lẫn cả Vịnh Hạ Long/Biệt
+   thự Hằng Nga không phải di tích) + đề xuất 7 tag chủ đề (kèm tiêu chí +
+   đếm thật) — chi tiết đầy đủ + 2 tag theo dõi thêm ở destination-spec §2.4
+   bước 0. Áp dụng khi seed migration v2 (Phase B), không cần hỏi lại.
+2. ✅ **XONG (07/2026, theo phạm vi đã chốt) — migration địa chỉ cũ→mới**
+   (plan riêng `~/.claude/plans/nifty-purring-waterfall.md`): sửa lỗi thuật
+   toán so khớp (bỏ tiền tố Xã/Phường) + sửa `ProvinceName` sai (Phan Thiết→
+   Bình Thuận, Hội An→Quảng Nam) — kết quả cuối: 114 match tự tin cấp
+   phường/xã, 121 chấp nhận cấp tỉnh (quyết định người dùng, không chặn tiến
+   độ), 36 cần xem tay khi rảnh (không chặn Phase B). Chuẩn hoá format địa
+   chỉ (mục cũ) để lại làm lúc chạy migration v2 thật.
+3. ✅ **XONG (07/2026) — Cách hiển thị Flight/Bus trên trang detail**: hoá ra
+   đã chốt sẵn từ trước ở `content-seo-ux-plan.md` §5.8, chỉ do `flight-spec`/
+   `bus-spec §6` chưa cập nhật nên tưởng còn mở — đã đồng bộ lại 3 file. Không
+   còn là điều kiện chặn Pilot (Phase E) nữa, chỉ còn chờ BUILD module.
+4. ✅ **PHẦN LÀM ĐƯỢC XONG (07/2026)** — 4/8 mục A quyết được ngay: URL Article
+   = `/blog/` (A#1), thêm khối `foodSpots` (A#2), ô tư liệu Article (A#9), khoá
+   UPSERT sheet (A#10). **Còn 4 mục A#4-7 (chọn OTA khách sạn/tour cào trước,
+   dạng rule mạng affiliate, ngưỡng khối lượng xây crawler) — CHƯA quyết được**
+   vì cần thông tin kinh doanh thật (bạn đã/đang đàm phán mạng affiliate nào,
+   OTA nào có API) mà Claude không có — để mở, hỏi bạn khi bắt tay build đúng
+   module đó (Phase C bước 3), không phải việc phân tích giấy giải quyết được.
+
+**Phase B — Đại tu nền** (`system-overview.md` §5):
 1. Migration schema v2 (`database-redesign.md` §7) — **chạy trên bản clone
-   LocalDB trước** (`pnpm clone:dichoithoi`, xem `system-overview.md` §6.6),
-   KHÔNG chạy thẳng production.
+   LocalDB trước** (`pnpm clone:dichoithoi`), KHÔNG chạy thẳng production.
+   Gộp output Phase A: seed `DestinationTag`/`TagMap`, sửa `TypeMap`, cột +
+   dữ liệu `AddressNew`/`AddressOld`.
 2. Website .NET đọc schema mới (repo dichoithoi, song song).
-3. Build M4 destination: mirror + generate + review + publisher.
-4. Build cơ chế affiliate link conversion (`affiliate-link-conversion-spec.md`)
-   — làm TRƯỚC hoặc CÙNG Hotel/Tour vì cả 2 phụ thuộc field
-   `provider/sourceUrl/affiliateUrl/linkStatus`.
-5. Build module Hotel (`hotel-spec.md`) + Tour (`tour-spec.md`).
-6. Build năng lực "Viết tay thủ công" ở lõi module `ai-content`
-   (`sourceType=Manual`, transition `Created→DraftReady` mới —
-   `article-spec.md` §1.1, đồng bộ với `ai-content-technical-spec.md` §4.1/§5)
-   — cần TRƯỚC hoặc CÙNG lúc build Article vì Article là nơi đầu tiên cần.
-7. Build module Article (`article-spec.md`) — cơ chế khối động + publisher.
-8. Website .NET: route/view mới cho `/loai/{group}[/{type}]`, `/tinh/{slug}`,
-   Article — ưu tiên landing loại/tỉnh trước (SEO ROI cao nhất, data sẵn sàng).
-9. Tắt module Destination + Hotel + Tour trên CMS cũ.
+
+**Phase C — CMS zinoflow (các module, theo thứ tự phụ thuộc):**
+1. M4 destination: mirror + generate + review + publisher.
+2. Cơ chế affiliate link conversion — TRƯỚC hoặc CÙNG Hotel/Tour (cả 2 phụ
+   thuộc `provider/sourceUrl/affiliateUrl/linkStatus`).
+3. Hotel + Tour + Product, **KÈM CÙNG ĐỢT**: pipeline ảnh (tab Ảnh §14.3 +
+   ingest ảnh URL ngoài §14.5 — sharp/FTP) và import Google Sheet
+   (product-spec §5.1) — sheet import PHỤ THUỘC pipeline ảnh, không tách rời.
+4. Năng lực "Viết tay thủ công" ở lõi `ai-content` (`sourceType=Manual` —
+   article-spec §1.1) — TRƯỚC hoặc CÙNG Article.
+5. Module Article: khối động + publisher + **1 engine auto-link DÙNG CHUNG**
+   (re-link nội dung destination §12.2 VÀ auto-link compile bài §8.2 — build
+   1 lần, 2 nơi gọi, không 2 bản sao) + bổ sung prompt mặc định `cam-nang.*`
+   (gap Phase 8 đã ghi nhận — điều kiện chặn của generate Article).
+6. UI Chủ đề (tag) §2.4 (màn quản lý + gán hàng loạt AI gợi ý) + Coverage
+   Score §2.2.2 + Flight/Bus (2 màn quản lý theo flight/bus-spec §5).
+7. Khối "Việc cần làm" trên hub §7.2 — CUỐI Phase C (tổng hợp cảnh báo từ
+   mọi nguồn ở trên, nguồn phải tồn tại trước).
+
+**Phase D — Website .NET (routes/views mới):**
+1. Route/view: Article `/blog/`, `/chu-de/{slug}`, khối Flight/Bus trên
+   detail — ưu tiên theo SEO ROI (landing loại/tỉnh đã build Phase 18).
+2. Faceted search — hợp nhất `/diem-den` + `/search` (§9.3): đợt 1 facet
+   Tỉnh/Khu vực/Loại; facet Chủ đề bật khi tag đã seed.
+3. Tắt module Destination + Hotel + Tour trên CMS cũ.
+
+**Phase E — PILOT kiểm thử end-to-end: Đà Lạt (Flagship) + Biệt Thự Hằng Nga
+(POI) với FULL dữ liệu** (yêu cầu 07/2026 — chạy SAU khi Phase B-D xong;
+người dùng sẽ RA LỆNH khi tới lúc, không tự khởi động). Mục tiêu: 2 trang
+mẫu đầy đủ mọi khối đã thiết kế (article gắn topic, vé xe/máy bay,
+hotel/tour/product, tag chủ đề, coverage score đạt ngưỡng...) để duyệt chất
+lượng trước khi scale. Claude làm giúp, KHÔNG cần người dùng tự tạo/tự viết:
+    a. **Rà + tự tạo dữ liệu còn thiếu** cho 2 điểm: chạy checklist Coverage
+       Score (destination-spec §2.2.2), field nào thiếu thì Claude tự điền
+       bằng suy luận + tra cứu thật — field SỰ THẬT (giá vé, giờ mở cửa,
+       địa chỉ, SĐT) phải lấy từ nguồn thật (website chính thức qua cơ chế
+       §2.2.1, Google Maps), KHÔNG bịa; field nội dung (mô tả, ghi chú tham
+       khảo) dùng kiến thức thật của Claude. Mọi thứ ghi ở trạng thái
+       nháp/chờ duyệt.
+    b. **Viết sẵn bộ bài cẩm nang mặc định** cho 2 điểm (đủ các topic
+       article-spec §8.1: lịch trình, ẩm thực, quà lưu niệm, buổi tối,
+       poi-guide...) qua pipeline ai-content → dừng ở trạng thái CHỜ DUYỆT,
+       người dùng chỉ việc review/sửa/approve — không tự publish.
+    c. **Ảnh còn thiếu: tự tìm → tải → cập nhật**, NHƯNG chỉ từ nguồn giấy
+       phép an toàn (Wikimedia Commons, Flickr CC, Unsplash... — ghi rõ
+       nguồn + license vào caption/credit `destination_images` §14.4);
+       KHÔNG lấy ảnh bản quyền báo chí/blog cá nhân. Ảnh nào không tìm được
+       nguồn sạch → liệt kê ra cho người dùng tự chụp/tự tạo. Ảnh vào DB ở
+       trạng thái chờ duyệt trước khi lên web.
+    d. Kết thúc pilot: báo cáo 2 trang đạt bao nhiêu % coverage, mục nào
+       còn chờ người dùng quyết — làm chuẩn mẫu (playbook) để scale các
+       điểm còn lại.
+
+**Phase F — Scale sau pilot**: trước khi nhân rộng playbook ra các điểm còn
+lại, build **gate "originality"** (mục 0 đầu tài liệu — so trùng lặp nội bộ
+giữa các bài cùng loại/tỉnh) — pilot 2 trang chưa cần, scale hàng trăm trang
+thì bắt buộc, đúng rủi ro "scaled content abuse" đã phân tích.
 
 **SEO/UX đi kèm** (`content-seo-ux-plan.md` §7, đã sắp ưu tiên):
 - Cao: bật lại Review/Rating + JSON-LD AggregateRating; render FAQ + JSON-LD
@@ -200,6 +280,11 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
   nhúng; `rel=sponsored` + disclosure; render `ticketLinks[]` thành nhiều nút.
 - Sau: mini lịch trình; so sánh giá tại quầy vs online; sitemap.xml + Search
   Console; critical CSS cho LCP; phân trang `/diem-den` có URL riêng từng trang.
+- **Faceted search — hợp nhất `/diem-den` + `/search` thành trang Khám phá**
+  (CHỐT 07/2026, thiết kế đầy đủ `content-seo-ux-plan.md` §9.3): facet
+  Tỉnh/Khu vực/Loại (+Chủ đề đợt 2), tick nhiều — OR trong nhóm, AND giữa
+  nhóm, đếm số sống, lọc client-side tức thì, autocomplete header,
+  `/search` 301 về `/diem-den?q=`; có tham số = noindex. Repo dichoithoi (.NET).
 
 ## C) Rủi ro/lưu ý vận hành (không phải task, nhưng đừng quên)
 

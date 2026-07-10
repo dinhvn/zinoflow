@@ -1,14 +1,24 @@
-# Dichoithoi Flight — Technical Spec (phân tích 07/2026, CHƯA vào lộ trình build)
+# Dichoithoi Transport (Flight + Xe khách) — Technical Spec (phân tích 07/2026, CHƯA vào lộ trình build)
 
 ⚠️ **Trạng thái**: đây là tài liệu PHÂN TÍCH — chưa chốt để build. Chưa thêm vào
 `dichoithoi-implementation-plan.md` (danh sách phase chính thức) hay
 `dichoithoi-system-overview.md` (sơ đồ kiến trúc "đã chốt"). Khi quyết định build,
 cập nhật 2 tài liệu đó + đổi tiêu đề file này bỏ chữ "phân tích".
 
-Module mới, song song Hotel/Tour: quản lý dữ liệu **vé máy bay** — trả lời câu hỏi
-"tới điểm đến này bằng cách nào" (khác 3 kênh đã có: khách sạn/vé tham quan/tour —
-xem `dichoithoi-content-seo-ux-plan.md` §0). Dùng chung cơ chế link gốc → affiliate
-ở `dichoithoi-affiliate-link-conversion-spec.md`.
+**Mở rộng 07/2026 (chốt cùng lúc với vị trí hiển thị, xem
+`dichoithoi-content-seo-ux-plan.md` §5.8)**: module này KHÔNG còn chỉ riêng vé
+máy bay — mở rộng gộp chung **vé xe khách**, vì 2 loại có cấu trúc gần như
+giống hệt nhau (tuyến khởi hành → tỉnh đến, giá tham khảo tĩnh, 2 nguồn nhập
+tay/cào, cùng cơ chế affiliate) — không tách bảng riêng để tránh trùng lặp.
+Bảng đổi tên `flights` → `transports`, thêm cột `mode` (1=máy bay, 2=xe khách),
+đổi tên cột `airline` → `operator_name` (dùng chung cho hãng bay lẫn nhà xe).
+Toàn bộ phần còn lại của tài liệu (nguyên tắc giá tĩnh, 2 nguồn nhập liệu, đồng
+bộ SQL Server, adapter cào) áp dụng y hệt cho cả 2 `mode`, không thiết kế lại.
+
+Module mới, song song Hotel/Tour: quản lý dữ liệu **vé máy bay + vé xe khách** —
+trả lời câu hỏi "tới điểm đến này bằng cách nào" (khác 3 kênh đã có: khách
+sạn/vé tham quan/tour — xem `dichoithoi-content-seo-ux-plan.md` §0). Dùng chung
+cơ chế link gốc → affiliate ở `dichoithoi-affiliate-link-conversion-spec.md`.
 
 ## 1) Vai trò & khác biệt cốt lõi so với Hotel/Tour
 
@@ -23,13 +33,13 @@ dung SEO độc lập — không AI generate bài, không quality gates, không 
    xuống 1 điểm tham quan — nó tới **sân bay khu vực**. Vì vậy Flight gắn vào
    **cấp tỉnh/thành** (`province_id`), KHÔNG có bảng map kiểu
    `hotel_destination_map`/`tour_destination_map`.
-2. **Điểm đến con (POI) vẫn cần hiển thị thông tin này** — nhưng qua kế thừa:
-   POI đã có sẵn `province_id` (từ `destinations` mirror/SQL Server
-   `v2.Destination.ProvinceId`) → trang POI tự tra chuyến bay theo
-   `province_id` đó, không cần map riêng cho từng POI. Cách hiển thị cụ thể
-   trên trang (vị trí khối, có gộp chung với phần "Đến đây bằng cách nào" hay
-   không, ưu tiên máy bay/xe...) — **CHƯA CHỐT, phân tích riêng ở bước sau**,
-   không thuộc phạm vi tài liệu này.
+2. **Mọi node điểm đến (POI, `kind=cluster`, `kind=province`) đều hiển thị được
+   qua kế thừa**: đã có sẵn `ProvinceId` (từ `destinations` mirror/SQL Server
+   `v2.Destination.ProvinceId`, kể cả node Flagship như Đà Lạt/TP.HCM) → trang
+   tự tra theo `ProvinceId` đó, không cần map riêng cho từng node. **Vị trí
+   hiển thị ĐÃ CHỐT 07/2026**: 2 card "✈️ Vé máy bay" / "🚌 Vé xe khách" trong
+   mục "Cách tới đây" của khối Di chuyển, ngay sau lịch trình gợi ý — chi tiết
+   xem `dichoithoi-content-seo-ux-plan.md` §5.8.
 3. **Giá là THAM KHẢO TĨNH, không phải tìm kiếm giá thật theo ngày** (đã chốt
    07/2026). Giá vé máy bay biến động liên tục theo ngày bay/hạng vé — công cụ
    này KHÔNG làm meta-search kiểu Skyscanner (không gọi API tra giá real-time
@@ -51,10 +61,11 @@ bạn, không phải giới hạn kỹ thuật.
 ## 2) Data model — Postgres (zinoflow, nguồn sự thật)
 
 ```sql
-CREATE TABLE flights (
+CREATE TABLE transports (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  mode           smallint NOT NULL,                    -- 1 may bay, 2 xe khach (moi 07/2026, gop chung vs Flight)
   departure_city varchar(128) NOT NULL,               -- text tự do, vd "Hà Nội", "TP.HCM"
-  airline        varchar(128) NOT NULL,                -- text tự do, vd "Vietnam Airlines", "Vietjet"
+  operator_name  varchar(128) NOT NULL,                -- text tự do, hãng bay HOẶC nhà xe, vd "Vietnam Airlines"/"Phương Trang" (đổi tên tu 'airline' 07/2026)
   arrival_province_id int NOT NULL REFERENCES admin_provinces(id), -- tinh/thanh dich — KHONG gan theo POI
   price_from     numeric(12,0),                        -- VND, gia THAM KHAO tinh (khong phai gia that theo ngay)
   duration_approx varchar(64),                          -- tuy chon, vd "~1h30" — chi mo ta, khong tinh toan
@@ -76,24 +87,30 @@ So với Hotel/Tour: KHÔNG có bảng `*_destination_map` (không gắn theo PO
 `arrival_province_id` là khoá gắn duy nhất. Nhiều dòng cùng `arrival_province_id`
 là bình thường (nhiều hãng bay/nhiều điểm khởi hành cùng tới 1 tỉnh).
 
-## 3) Đồng bộ xuống SQL Server (website chỉ đọc)
+## 3) Hiển thị trên trang điểm đến — bake HTML, KHÔNG cần đồng bộ SQL Server
 
-Bảng mới bên SQL Server (chưa tồn tại, tương tự Tour): `Flight`, cấu trúc rút gọn
-từ bảng Postgres trên (chỉ giữ cột website cần render). zinoflow là single-writer
-(`IFlightPublisher`, infrastructure layer, cùng pattern
-`IDestinationPublisher`/`IHotelPublisher`/`ITourPublisher`).
+**Cập nhật 07/2026 (thống nhất cơ chế card động, `database-redesign.md`
+§3.4)**: card "Vé máy bay"/"Vé xe khách" trên trang điểm đến (POI/cluster/
+province) KHÔNG query bảng sống — zinoflow tính sẵn (`WHERE
+ArrivalProvinceId=@provinceId AND Status=1 ORDER BY Mode, PriceFrom` ngay trên
+Postgres `transports`, `@provinceId` lấy từ chính destination đang xem) rồi
+bake thành HTML, ghi vào `DestinationContent.DynamicBlocksJson["transports"]`
+lúc publish/khi dữ liệu Transport đổi. Website chỉ đọc field đó, không JOIN gì.
 
-Query gợi ý cho trang tỉnh/POI: `SELECT ... FROM Flight WHERE
-ArrivalProvinceId=@provinceId AND Status=1 ORDER BY PriceFrom` — `@provinceId`
-lấy từ chính destination đang xem (POI hoặc tỉnh) qua `ProvinceId` có sẵn, không
-cần join thêm bảng map.
+Do đó bảng `Transport` bên SQL Server (mirror, tương tự Tour, single-writer
+`ITransportPublisher`) trở thành **TUỲ CHỌN** — chỉ cần dựng nếu sau này muốn
+có trang riêng độc lập (SEO "vé máy bay đi Đà Lạt" — có search volume thật,
+khác trang điểm đến), không phải điều kiện bắt buộc cho việc hiện card ở trang
+điểm đến như thiết kế ban đầu.
 
 ## 4) Job cào & đồng bộ (pg-boss)
 
 Giống Hotel/Tour (`dichoithoi-hotel-spec.md` §5):
 1. **Cào theo tuyến/nguồn**: nhập tỉnh đích + (tuỳ chọn) điểm khởi hành → job
-   fetch + parse theo `IFlightScraper` của nguồn tương ứng → tạo dòng
-   `status=0` (nháp) để soát trước khi publish.
+   fetch + parse theo adapter riêng của nguồn tương ứng (`IFlightScraper` cho
+   nguồn vé máy bay, `IBusTicketScraper` cho nguồn vé xe khách — 2 interface
+   riêng vì cấu trúc trang nguồn khác hẳn nhau, tuy cùng ghi vào 1 bảng
+   `transports`) → tạo dòng `status=0` (nháp) để soát trước khi publish.
 2. **Cập nhật giá tham khảo định kỳ**: re-fetch các chuyến đã published theo
    lịch (vd hàng tuần/2 tuần — giá vé máy bay đổi nhanh hơn khách sạn/tour nên
    tần suất cần cao hơn, hoặc chấp nhận độ trễ và ghi rõ "giá tham khảo, có
@@ -122,5 +139,6 @@ Thêm dưới khu "Dichoithoi", mục mới `Vé máy bay` (song song `Khách s�
    dạng nào trong `affiliate_link_rules`.
 3. Tần suất cập nhật giá tham khảo chấp nhận được (ảnh hưởng lịch job §4.2 và
    cách hiển thị disclaimer "giá tham khảo" trên UI).
-4. Cách hiển thị cụ thể trên trang POI/tỉnh (vị trí, gộp chung hay tách riêng
-   với phần vé xe) — phân tích riêng, chưa nằm trong tài liệu này.
+4. ✅ **ĐÃ CHỐT 07/2026** — cách hiển thị cụ thể trên trang POI/tỉnh (vị trí,
+   gộp/tách với vé xe): xem `content-seo-ux-plan.md` §5.8 (2 card cạnh nhau
+   trong mục "Cách tới đây", ẩn card rỗng, bake HTML — không còn là việc mở).

@@ -112,6 +112,13 @@ chế render THẬT SỰ, thay cho `HotelGroupId`** — đúng pattern đã dùn
    nợ kỹ thuật sau — không xoá vội để tránh gãy trang đang chạy giữa lúc chuyển đổi.
 4. Card hiển thị: `SELECT ... FROM HotelDestinationMap JOIN Hotel WHERE
    DestinationSlug=@slug AND Status=1` — same shape với query Tour (tour-spec §4).
+   **Cập nhật 07/2026**: query sống này bị THAY bởi cơ chế bake HTML chung
+   (`database-redesign.md` §3.4) — zinoflow chạy đúng query trên (trên nguồn
+   Postgres) lúc publish/khi Hotel-DestinationMap đổi, ghi kết quả vào
+   `DestinationContent.DynamicBlocksJson["hotels"]`, website chỉ đọc field đó.
+   Bảng `HotelDestinationMap` bên SQL Server ở mục 2 vẫn giữ (không xoá) — hữu
+   ích nếu sau này làm trang riêng "khách sạn gần {điểm đến}" (đã nhắc ở đầu
+   tài liệu), nhưng không còn là đường query bắt buộc cho card trên trang điểm đến.
 5. Publish khách sạn độc lập với publish điểm đến (không qua 2 chốt review/approve
    — xem §2) — có thể chạy 1 nút "Đồng bộ khách sạn" ghi thẳng, hoặc tự động sau
    mỗi lần cào thành công (cấu hình được).
@@ -139,6 +146,12 @@ idempotent, có report ở màn "Công cụ".
 MVP có thể bỏ qua job (1) và (2) tự động hoá, làm bằng tay trước (nhập/cào 1 lần
 qua form, publish tay) — xây job tự động khi khối lượng khách sạn đủ lớn để đáng
 công sức.
+
+**Import từ Google Sheet (CHỐT 07/2026)**: dùng chung cơ chế ở
+`dichoithoi-product-spec.md` §5.1 (link sheet công khai → CSV export → preview
+dry-run → UPSERT theo `source_url`, không xoá dòng vắng mặt) — chỉ khác
+template cột theo field §3 của spec này. Cột ảnh → ingest về server
+(`dichoithoi-destination-spec.md` §14.5), không hotlink.
 
 ## 6) UI trong AI tool
 

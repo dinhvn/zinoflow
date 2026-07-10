@@ -55,10 +55,24 @@ lời rõ ràng 3 câu sau (không phải sau khi code xong mới nghĩ tới):
   `Place`, `BreadcrumbList`, `FAQPage`, `AggregateRating`, `ItemList`/
   `CollectionPage` — mỗi khi thêm field/khối nội dung mới, luôn tự hỏi "field
   này có schema.org type nào khớp không, đã khai báo JSON-LD chưa".
+- **KHÔNG review/rating giả** (`AggregateRating`/`Review`): 2 schema này CHỈ
+  được khai báo cho dữ liệu do người dùng thật gửi (đã trải nghiệm dịch vụ) —
+  không áp dụng cho điểm số do admin/biên tập tự chấm (dùng badge thường,
+  không gắn schema này) và tuyệt đối không tự bịa tên/bình luận "khách". Google
+  cấm rõ trong chính sách structured data và từng gỡ rich snippet sao vàng
+  TOÀN SITE khi phát hiện vi phạm — case thực tế đã xử lý: điểm đến (07/2026,
+  content-seo-ux-plan §1/§8.2). Áp dụng NGAY khi làm review cho Hotel/Tour sau
+  này, không chỉ riêng module điểm đến.
 - **Không trùng lặp nội dung (duplicate content)**: mỗi URL phải có giá trị
   riêng biệt thật sự — đây là lý do quyết định KHÔNG cho `kind=province` có
   trang riêng trùng `/tinh/{slug}` (content-seo-ux-plan §10.6), và lý do mọi
-  trang danh mục phải có đoạn giới thiệu riêng, không chỉ là lưới card.
+  trang danh mục phải có đoạn giới thiệu riêng, không chỉ là lưới card. Lưu ý:
+  đây là quyết định về **URL** (không tạo 2 URL trùng nội dung), KHÔNG có
+  nghĩa `kind=province` bị coi là "phi-điểm-đến" — tỉnh/thành gắn
+  `ContentTier=Flagship` (vd TP.HCM, Đà Nẵng — content-seo-ux-plan §10.6.1)
+  vẫn phải được công nhận là 1 điểm đến thật (JSON-LD `TouristAttraction`, đủ
+  điều kiện vào `RelatedJson`/gợi ý), chỉ là dùng chung route `/tinh/{slug}`
+  thay vì tách URL riêng.
 - **Internal linking chủ động**: mọi nội dung mới nên tự tạo cơ hội liên kết
   nội bộ (breadcrumb, related, auto-link khi nhắc tên điểm khác) — không để
   trang nào "mồ côi" (orphan page) không có link trỏ tới.

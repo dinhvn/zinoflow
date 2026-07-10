@@ -62,6 +62,21 @@ type ĐẦU TIÊN cần năng lực này (destination/affiliate hiện luôn qua
    lại 1 phần (vd bôi đen đoạn, AI mở rộng) — đây là tính năng hay nhưng KHÔNG
    bắt buộc cho MVP, ghi nhận làm giai đoạn sau nếu cần.
 
+### 1.2 Ô "Tư liệu tham khảo" trong form tạo bài bằng AI (CHỐT 07/2026)
+
+Giống mẫu đã duyệt ở Destination (`dichoithoi-destination-spec.md` §2.2.1):
+thêm 1 ô nhập tự do, KHÔNG bắt buộc, trong form **"Tạo bằng AI"** (§1.1 mục 4)
+— người dùng dán trải nghiệm/danh sách/giá thật đã biết (vd "Quán bún đậu ở
+đây ngon nhất, giá 50k/suất, mở 10h-22h"). Prompt ràng buộc: *"Tư liệu này là
+nguồn ưu tiên 1 — PHẢI dùng đúng chi tiết đã cho, KHÔNG được bịa thêm sự kiện/
+số liệu ngoài tư liệu và dữ liệu điểm đến liên quan đã có"* — cùng nguyên tắc
+"AI không bịa dữ liệu cứng" áp dụng xuyên suốt dự án.
+
+Lưu cùng `ContentJob` (không phải field riêng trên `Article`) để xem lại lúc
+review và dùng lại khi bấm "Làm mới khối động"/viết lại bài. Không bắt buộc
+điền — bỏ trống thì AI viết dựa trên kiến thức + dữ liệu mirror như bình
+thường, giống hành vi hiện tại.
+
 ## 2) Chọn Cách 1 (precompute lúc publish) — xác nhận hướng bạn đề xuất
 
 Cách 1 (replace token → HTML lúc publish, lưu HTML tĩnh) là lựa chọn ĐÚNG,
@@ -108,6 +123,11 @@ cần thiết (đúng như bạn nhận xét).
 | `destination` (số ít) | 1 slug cụ thể | card đơn — dùng khi nhắc 1 nơi giữa đoạn văn |
 | `products` *(đề xuất 07/2026, chưa build)* | bảng `products` theo `tag` (OR, khớp bất kỳ) + `category` tuỳ chọn | card sản phẩm affiliate — xem `dichoithoi-product-spec.md` §4 |
 | `product` (số ít) *(đề xuất 07/2026, chưa build)* | 1 `id` cụ thể | card đơn — dùng khi nhắc 1 sản phẩm giữa đoạn văn |
+| `foodSpots` *(CHỐT 07/2026, chưa build)* | **KHÔNG tạo bảng mới** — dùng lại bảng `products` (product-spec §4), lọc `category IN ('Quán ăn','Ẩm thực', ...)` (free-text category đã có sẵn, không cần bảng "quán ăn" riêng) theo `province`/`destination` | card món ăn/quán ăn — layout riêng (ảnh + tên quán + món đặc trưng), khác card sản phẩm mua-mang-về mặc định |
+
+`foodSpots` chỉ là 1 CÁCH RENDER khác của cùng dữ liệu `products` (giống
+`destinations` vs `destination` số ít) — không phải module/bảng mới, giữ đúng
+nguyên tắc "tái dùng trước khi tạo mới" (copilot-instructions §4).
 
 ## 4) Thuật toán compile (lúc Approve→Publish HOẶC bấm "Làm mới khối động")
 
@@ -171,7 +191,7 @@ cơ chế đã có.
 ```sql
 CREATE TABLE Article (
   Id               int IDENTITY PRIMARY KEY,
-  Slug             varchar(128)  NOT NULL UNIQUE,   -- /cam-nang/{slug}
+  Slug             varchar(128)  NOT NULL UNIQUE,   -- /blog/{slug}
   Title            nvarchar(200) NOT NULL,
   ShortDescription nvarchar(500),
   Thumbnail        varchar(256),
@@ -188,6 +208,79 @@ soạn, SQL Server = read-model" đã chốt (`dichoithoi-system-overview.md` §
 mọi version + token gốc nằm ở Postgres draft; SQL Server chỉ giữ bản
 `ContentHtml` cuối cùng đã compile, đúng cái website cần in ra.
 
+### 8.1 Quan hệ NGƯỢC — Article → Destination (CHỐT 07/2026)
+
+Khác với §3 (khối `[[block:...]]` NHÚNG card destination/hotel/tour VÀO TRONG
+bài) — đây là chiều ngược lại: trang điểm đến cần biết **có bài cẩm nang nào
+viết về mình** để hiện link ra (vd khối "lịch trình gợi ý" hoặc "ăn gì đặc
+trưng" trên trang Đà Lạt hiện link sang bài "Lịch trình Đà Lạt 3N2D chi tiết"/
+"Ẩm thực Đà Lạt" — xem `dichoithoi-content-seo-ux-plan.md` §5.2, §10.6.2 khối
+6). 2 cơ chế độc lập, không thay thế nhau.
+
+```sql
+CREATE TABLE ArticleDestinationMap (
+  ArticleId        int NOT NULL REFERENCES Article(Id),
+  DestinationSlug  varchar(64) NOT NULL,   -- không FK cứng (khác site DB), giống pattern Hotel/TourDestinationMap
+  Topic            varchar(20) NOT NULL,   -- xem bảng topic dưới — khối nào trên trang hiện link này
+  [Order]          int NOT NULL DEFAULT 0,
+  PRIMARY KEY (ArticleId, DestinationSlug, Topic)
+);
+CREATE INDEX IX_ArticleDestinationMap_Slug ON ArticleDestinationMap(DestinationSlug, Topic);
+```
+
+**Bộ topic (MỞ RỘNG 07/2026** — bản đầu chỉ có itinerary/food/general, không
+đủ phủ các khối trang Flagship; đồng bộ với destination-spec §2.2 dùng
+`topic=souvenir`**)**:
+
+| Topic | Khối trên trang điểm đến | Ví dụ bài |
+|---|---|---|
+| `itinerary` | 3b — CTA lịch trình | "Lịch trình Đà Lạt 3N2Đ chi tiết" |
+| `food` | 6b — Ăn gì đặc trưng | "Ẩm thực Đà Lạt" |
+| `souvenir` | 8b — Quà mang về | "Những nơi mua quà lưu niệm tốt ở Đà Lạt" |
+| `nightlife` | Buổi tối làm gì | "Đà Lạt về đêm" |
+| `poi-guide` | 5 — Điểm tham quan | "Top 15 điểm check-in Đà Lạt" |
+| `general` | Cuối bài / "Đọc thêm" | bài không khớp khối chuyên biệt nào |
+
+Link bài render qua cơ chế **bake vào `DynamicBlocksJson`** đã chốt
+(database-redesign §3.4): mỗi topic 1 blockKey (`articleLinkItinerary`,
+`articleLinkFood`...), website chỉ echo HTML — KHÔNG query
+`ArticleDestinationMap` sống lúc render trang. Bake lại khi publish/gỡ bài
+có gắn map (trigger chiều ngược, cùng cơ chế Hotel/Tour đổi giá).
+
+**Cách gán (SỬA 07/2026** — bản đầu chốt "gán tay, không suy luận tự động";
+nới thành mô hình gợi ý-rồi-duyệt, cùng pattern E**)**: khi soạn/generate
+bài, CMS quét nội dung tìm tên điểm đến khớp DB → **gợi ý sẵn** danh sách
+destination + topic (đoán topic từ chủ đề bài) trong form Article — người
+dùng tick xác nhận/sửa/xoá trước khi lưu. KHÔNG bao giờ tự gán im lặng —
+tránh gán sai (1 bài liệt kê nhiều điểm không chắc bài nào cũng đúng "chủ
+đề" cho từng điểm). Query trang điểm đến (chỉ dùng lúc BAKE): `SELECT ...
+FROM ArticleDestinationMap WHERE DestinationSlug=@slug AND Topic=@topic ORDER
+BY [Order]`.
+
+Điểm đến chưa có bài nào gắn theo topic áp dụng → tính là mục ⚠️ thiếu trong
+**Điểm độ phủ nội dung** (destination-spec §2.2.2) — CMS hiện cảnh báo + nút
+tạo bài với destination/topic điền sẵn.
+
+### 8.2 Auto-link tên điểm đến trong thân bài (CHỐT 07/2026)
+
+Khi bài nhắc tới 1 điểm đến có trong DB, CMS tự chuyển tên đó thành link nội
+bộ tới `/diem-den/{slug}` — internal link là tín hiệu SEO nội bộ mạnh, nhưng
+phải có luật chặt để không thành spam:
+
+1. Chỉ link **lần xuất hiện ĐẦU TIÊN** của mỗi điểm trong 1 bài
+   (Wikipedia-style), tối đa ~10 link auto/bài.
+2. Chạy lúc **compile `ContentHtml`** — cùng bước resolve khối động
+   `[[block:...]]` (§4): link được bake sẵn vào HTML, website không xử lý
+   gì; người duyệt THẤY link trong preview trước khi Approve.
+3. KHÔNG link khi tên nằm trong: heading, link sẵn có, hoặc HTML card của
+   khối động (tránh link lồng link).
+4. Tên nhập nhằng (vd "Bãi Dài" có ở cả Phú Quốc lẫn Cam Ranh) → chỉ
+   auto-link khi ngữ cảnh đã xác định tỉnh (bài đã gán destination cùng
+   tỉnh qua §8.1); không xác định được thì BỎ QUA, không đoán — đúng nguyên
+   tắc "AI/hệ thống không đoán bừa" xuyên suốt.
+5. Anchor text = đúng tên xuất hiện tự nhiên trong câu, không chèn/sửa từ
+   khoá vào anchor (tránh over-optimization).
+
 ## 9) UI
 
 - Màn tạo bài: 2 lựa chọn ngay từ đầu — **"Tạo bằng AI"** / **"Viết tay"** (§1.1
@@ -202,12 +295,16 @@ mọi version + token gốc nằm ở Postgres draft; SQL Server chỉ giữ b�
 
 ## 10) Việc cần chốt trước khi build
 
-1. URL bài viết — đề xuất `/cam-nang/{slug}` (cẩm nang, đúng ngôn ngữ tìm kiếm
-   du lịch tiếng Việt); có thể đổi `/blog/` hay `/tin-tuc/` nếu bạn muốn khác.
+1. ✅ **CHỐT 07/2026**: URL bài viết = `/blog/{slug}` (đổi từ đề xuất ban đầu
+   `/cam-nang/{slug}` — người dùng chọn giữ tên quen thuộc `/blog/`). Đã đồng
+   bộ ở mọi chỗ nhắc route này (§3.2 DDL, `content-seo-ux-plan.md` §5.3/§8.6,
+   `database-redesign.md` §3.4 mẫu `DynamicBlocksJson`, `implementation-plan.md`,
+   `system-design.md`).
 2. Website .NET cần route + view mới cho Article (chưa tồn tại) — việc bên
    repo dichoithoi, song song các route landing khác (`/loai/...`, `/tinh/...`).
-3. Bộ khối hỗ trợ MVP chỉ 4 loại ở §3.1 — có cần thêm (vd khối "món ăn/quán ăn"
-   riêng, khác `destinations`) khi có module riêng cho ẩm thực sau này không?
+3. ✅ **CHỐT 07/2026**: THÊM NGAY khối "món ăn/quán ăn" riêng vào bộ khối hỗ
+   trợ MVP (không chờ có module ẩm thực riêng) — xem §3.1 (đã thêm khối
+   `foodSpots`).
 4. ✅ **CHỐT 07/2026**: AI **tự gợi ý** chèn khối động lúc generate (dựa chủ đề
    bài, chèn sẵn `[[block:...]]` vào outline draft) nhưng chỉ là gợi ý — người
    dùng xem/sửa/xoá trong màn review trước khi Approve→Publish, không tự động

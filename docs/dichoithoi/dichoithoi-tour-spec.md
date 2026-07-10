@@ -89,6 +89,14 @@ Tour WHERE DestinationSlug=@slug AND Status=1 ORDER BY IsPrimary DESC` — 1 que
 thêm, hoặc gộp vào query trang detail nếu số tour/điểm nhỏ (tối đa hiển thị
 4-6 tour, giống giới hạn card related).
 
+**Cập nhật 07/2026**: query sống này bị THAY bởi cơ chế bake HTML chung
+(`database-redesign.md` §3.4) — zinoflow chạy đúng query trên (trên nguồn
+Postgres) lúc publish/khi Tour-DestinationMap đổi, ghi kết quả vào
+`DestinationContent.DynamicBlocksJson["tours"]`, website chỉ đọc field đó.
+Bảng `TourDestinationMap` bên SQL Server vẫn giữ (không xoá) — hữu ích nếu sau
+này làm trang riêng "tour {điểm đến}" (đã nhắc ở đầu tài liệu), nhưng không còn
+là đường query bắt buộc cho card trên trang điểm đến.
+
 ## 5) Job cào & đồng bộ (pg-boss)
 
 Giống Hotel (`dichoithoi-hotel-spec.md` §5), thêm phần riêng cho tour:
@@ -102,6 +110,12 @@ Giống Hotel (`dichoithoi-hotel-spec.md` §5), thêm phần riêng cho tour:
    cho tour).
 
 MVP: nhập tay trước cho các điểm đến hot nhất, xây crawler khi khối lượng đủ lớn.
+
+**Import từ Google Sheet (CHỐT 07/2026)**: dùng chung cơ chế ở
+`dichoithoi-product-spec.md` §5.1 (link sheet công khai → CSV export → preview
+dry-run → UPSERT theo `source_url`, không xoá dòng vắng mặt) — chỉ khác
+template cột theo field §3 của spec này. Cột ảnh → ingest về server
+(`dichoithoi-destination-spec.md` §14.5), không hotlink.
 
 ## 6) UI trong AI tool
 

@@ -106,6 +106,7 @@ Thêm dưới khu "Dichoithoi", mục mới `Vé xe` (song song `Vé máy bay`):
    nhà xe nhỏ không có affiliate, chỉ hiện SĐT — không phải mọi dòng đều cần
    `affiliate_url`).
 3. Tần suất cập nhật giá tham khảo (ảnh hưởng lịch job §4.2).
-4. Cách hiển thị cụ thể trên trang POI/tỉnh, có gộp chung khối "Đến đây bằng
-   cách nào" với Flight hay tách 2 khối riêng — phân tích riêng, chưa nằm
-   trong tài liệu này.
+4. ✅ **ĐÃ CHỐT 07/2026** — cách hiển thị trên trang POI/tỉnh: xem
+   `content-seo-ux-plan.md` §5.8 (2 card "✈️"/"🚌" cạnh nhau trong mục "Cách
+   tới đây", gộp chung bảng `transports` với Flight qua cột `mode`, không
+   tách bảng riêng — không còn là việc mở).

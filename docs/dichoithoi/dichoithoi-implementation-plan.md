@@ -131,7 +131,7 @@ data để khối động query vào). **Nguồn**: `dichoithoi-article-spec.md`
 Ưu tiên theo ROI (đã sắp ở content-seo-ux-plan §7):
 1. **Cao**: bật lại Review/Rating + JSON-LD AggregateRating; render FAQ +
    JSON-LD FAQPage; route `/loai/{group}[/{type}]` + `/tinh/{slug}`; SSR khối
-   khách sạn/tour giữa bài (bỏ AJAX); route mới `/cam-nang/{slug}` cho Article.
+   khách sạn/tour giữa bài (bỏ AJAX); route mới `/blog/{slug}` cho Article.
 2. **Trung bình**: gallery ảnh (đọc `GalleryJson`); bản đồ nhúng; `rel=sponsored`
    + disclosure; render `TicketLinksJson` thành nhiều nút.
 3. **Sau**: mini lịch trình; so sánh giá; sitemap.xml + Search Console; critical
@@ -407,8 +407,8 @@ duyệt đúng đề xuất, không sửa gì — không còn chặn phase này 
 - `kind=cluster` — 2 biến thể theo có/không `OpeningTime`/`TicketPrice`/
   `ContentHtml` thật (không cần cột mới): (1) Cụm CÓ vé/giờ riêng (vd Suối
   Tiên) → render như `poi` đầy đủ + thêm khối "Các khu trong [tên]"
-  (`ChildrenJson`) sau "Trải nghiệm/chơi gì"; (2) Cụm THUẦN địa lý (vd Đà Lạt,
-  Di Linh) → ẩn khối "quyết định nhanh", cấu trúc gần trang danh mục
+  (`ChildrenJson`) sau "Trải nghiệm/chơi gì"; (2) Cụm THUẦN địa lý (vd Bảo
+  Lộc, Di Linh) → ẩn khối "quyết định nhanh", cấu trúc gần trang danh mục
   (breadcrumb, H1 + giới thiệu, khối "Các điểm trong [tên]" toàn bộ
   `ChildrenJson`, rồi đặc sản/lưu trú/tour/FAQ cấp khu vực).
 - `kind=province`: KHÔNG có trang riêng ở `/diem-den/{slug}` (trùng
@@ -416,6 +416,14 @@ duyệt đúng đề xuất, không sửa gì — không còn chặn phase này 
   301 redirect sang `/tinh/{slug}` khi gặp node `kind=province`; node này
   trong cây chỉ giữ vai trò cấu trúc (gốc cho `parentSlug`/`AncestorsJson`/
   `ChildrenJson`).
+- **`ContentTier` (thêm 07/2026, `content-seo-ux-plan.md` §10.6.1)** — độc
+  lập với `kind`, cột mới `Flagship`/`Standard` gán tay cho `province`/`cluster`
+  (vd Đà Lạt, TP.HCM = `Flagship`; Bảo Lộc = `Standard`). Node `Flagship` được
+  cộng thêm nội dung "điểm đến" đầy đủ + JSON-LD `TouristAttraction` lai
+  `ItemList` + đủ điều kiện vào `RelatedJson`/`IsFeatured` — không đổi cách
+  query con cái (vẫn `ParentId`). Sửa kèm 1 bug: trang tỉnh phải query
+  `WHERE ParentId=@provinceId` (không phải `ProvinceId` — trộn lẫn tầng con
+  cháu, xem `database-redesign.md` §3.4/§5).
 - **Vùng/miền**: KHÔNG thêm làm `kind` thứ 4 (không phải điểm vật lý, không
   giá vé/giờ/toạ độ) — trục phân loại độc lập, trang `/vung/{slug}` theo đúng
   pattern trang danh mục (§10.3). Dự tính ban đầu cần bảng `Region` mới +

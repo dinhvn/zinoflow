@@ -119,6 +119,38 @@ CREATE TABLE DestinationTypeGroup (
   (trang loại cụ thể, vd `/loai/thien-nhien/thac-ho-suoi`) — cấu trúc URL lồng
   thể hiện đúng quan hệ cha-con, tốt cho breadcrumb + internal link theo silo.
 
+### 3.2.1 Trục thứ 3 — chủ đề cắt ngang: `DestinationTag` (CHỐT 07/2026)
+
+Khác `DestinationType` (bản chất vật lý, mỗi điểm 1 loại chính) — tag là
+**chủ đề cắt ngang nhiều loại** (vd "Kiến trúc": Biệt Thự Hằng Nga + Nhà thờ
+Con Gà + Ga Đà Lạt — 3 type khác nhau cùng chủ đề). Mở lại từ backlog "tag
+tự do: chưa cần" — nhu cầu đã phát sinh thật.
+
+```sql
+CREATE TABLE DestinationTag (
+  Id          int IDENTITY PRIMARY KEY,
+  Slug        varchar(64)   NOT NULL UNIQUE,  -- /chu-de/{slug}
+  Name        nvarchar(128) NOT NULL,          -- "Kiến trúc độc đáo"
+  Description nvarchar(max),                   -- mô tả chủ đề — nhóm E (AI soạn, người duyệt)
+  Status      tinyint NOT NULL DEFAULT 0       -- 0 nháp, 1 published (đủ điều kiện index)
+);
+CREATE TABLE DestinationTagMap (
+  DestinationId int NOT NULL,
+  TagId         int NOT NULL REFERENCES DestinationTag(Id),
+  PRIMARY KEY (DestinationId, TagId)
+);
+```
+
+Luật vận hành (chống tag sprawl kiểu WordPress — thin page/index bloat):
+- **Bộ từ vựng ĐÓNG, tạo tay trong CMS** (~10-20 chủ đề ban đầu) — form điểm
+  đến chỉ CHỌN từ danh sách, không nhập tự do.
+- Tag KHÔNG được trùng nghĩa với `DestinationType` sẵn có (vd không tạo tag
+  "thác nước" — `/loai/thien-nhien/thac-ho-suoi` đã có) — tránh
+  cannibalization; CMS cảnh báo khi tạo tag tên gần trùng type.
+- Trang `/chu-de/{slug}` chỉ published + index khi: có `Description` đã
+  duyệt **và** gắn đủ ≥5 điểm đến; chưa đủ → `noindex`/chưa mở.
+- Quy trình AI gán tag + soạn mô tả: `destination-spec.md` §2.4.
+
 ### 3.3 Quan hệ tường minh — bảng `DestinationRelation`
 Chỉ 3 loại KHÔNG suy ra được từ cây/loại:
 
@@ -155,16 +187,64 @@ cột đọc-nhanh này. Không khuyến nghị lồng quá 1 cấp `cluster` tr
 (dù `ParentId` tự tham chiếu không giới hạn được) — giữ breadcrumb/URL/sitemap
 đơn giản, thực tế du lịch hiếm khi cần sâu hơn 3 tầng.
 
-**Đề xuất bổ sung 07/2026 (rà soát tốc độ trang detail — phát hiện website đang
-JOIN+ORDER BY+TAKE bảng Hotel/Tour SỐNG lúc render, sai nguyên tắc "website chỉ
-đọc, không xử lý" — system-design §5 mục 1)**: thêm `HotelCardsJson`/
-`TourCardsJson` (xem DDL §4.3) — tính sẵn danh sách khách sạn/tour gợi ý (đã
-JOIN, sort, cắt limit) ngay lúc publish/khi Hotel-Tour-DestinationMap đổi, thay
-vì query sống. Trigger tính lại: (a) lúc publish destination (như RelatedJson),
-(b) THÊM trigger mới khi 1 Hotel/Tour đổi giá/rating hoặc đổi mapping — quét
-mọi destination liên quan tới Hotel/Tour đó và tính lại (khác RelatedJson chỉ
-trigger theo destination, ở đây phải trigger theo chiều ngược — từ Hotel/Tour
-ra danh sách destination bị ảnh hưởng).
+**Đề xuất bổ sung 07/2026 (phân tích lại — `kind` không đủ mô tả độ quan
+trọng, xem `content-seo-ux-plan.md` §10.6.1) — CHƯA thêm vào DDL thật**: thêm
+cột `ContentTier` (tinyint hoặc varchar ngắn: `Flagship`/`Standard`, mặc định
+`Standard`) trên `Destination`, chỉ có ý nghĩa với `Kind IN (province, cluster)`.
+Gán tay bởi admin qua form điểm đến (§7.3 destination-spec) — không cần thuật
+toán gợi ý ở giai đoạn này. Node `Flagship` (vd Đà Lạt, TP.HCM, Hội An) được
+cộng thêm nội dung "điểm đến" đầy đủ + JSON-LD `TouristAttraction` + đủ điều
+kiện vào `RelatedJson`/`IsFeatured` — chi tiết xem `content-seo-ux-plan.md`
+§10.6.1. Không đổi cách query con cái (`ParentId` như trên).
+
+**THAY THẾ 07/2026 (mở rộng từ đề xuất `HotelCardsJson`/`TourCardsJson` ban đầu
+— nâng 1 bước xa hơn theo đúng nguyên tắc "website chỉ đọc, không xử lý",
+system-design §5 mục 1, sau khi phân tích khối nội dung trang Flagship
+Đà Lạt, `content-seo-ux-plan.md` §10.6.2)**: thay vì tính sẵn JSON (website vẫn
+phải loop + render Razor mỗi request), zinoflow tính sẵn luôn **HTML cuối
+cùng** cho MỌI khối "card động" trên trang điểm đến — đúng pattern
+`Article.ContentHtml` đã dùng (`article-spec.md` §4, §8) — website chỉ echo
+ra, không JOIN/loop/render gì thêm.
+
+Thêm 1 cột `DestinationContent.DynamicBlocksJson` (nvarchar(max), dạng map
+`{blockKey: html}`) thay vì nhiều cột `*CardsHtml` riêng (không cần migration
+DB mỗi khi thêm loại khối mới):
+```json
+{
+  "hotels": "<div class=\"grid ...\">...</div>",
+  "tours": "<div ...>...</div>",
+  "transports": "<div ...>...</div>",
+  "souvenirProducts": "<div ...>...</div>",
+  "articleLinkItinerary": "<a href=\"/blog/...\">Xem lịch trình chi tiết →</a>",
+  "articleLinkFood": "<a href=\"/blog/...\">Xem thêm: ... →</a>",
+  "articleLinkSouvenir": "...", "articleLinkNightlife": "...",
+  "articleLinkPoiGuide": "..."
+}
+```
+(1 blockKey cho mỗi topic của `ArticleDestinationMap` — bộ topic đầy đủ:
+`article-spec.md` §8.1; bake lại khi bài gắn map được publish/gỡ.)
+Website (Razor) chỉ quyết định VỊ TRÍ từng khối trong layout
+(`@Html.Raw(content.DynamicBlocksJson["hotels"])` đúng chỗ đã định ở
+`content-seo-ux-plan.md` §2/§10.6.2) — không còn JOIN/query sống cho bất kỳ
+khối nào trong danh sách trên, kể cả Product (§8 dưới — nhờ vậy Product
+**không cần đồng bộ SQL Server/tag-map riêng**, zinoflow tính HTML thẳng từ
+Postgres `products`/`tags` lúc bake).
+
+**Trigger tính lại HTML** (tái dùng đúng cơ chế Article "Làm mới khối động",
+không xây job mới):
+1. Lúc publish/republish destination (như `RelatedJson`).
+2. Trigger theo chiều ngược — khi 1 Hotel/Tour/Transport/Product nguồn đổi
+   giá/rating/mapping/tag, quét mọi destination liên quan (qua
+   `*_destination_map` hoặc tag khớp) và bake lại đúng `blockKey` đó (không
+   bake lại toàn bộ `DynamicBlocksJson`, chỉ key bị ảnh hưởng).
+3. Nút "Làm mới khối động" thủ công ở màn sửa điểm đến (giống Article) — dùng
+   khi cần ép bake lại ngay, không đợi trigger tự động.
+
+⚠️ **Đánh đổi cần biết** (không phải lý do từ chối, chỉ cần lường trước): đổi
+giao diện card (CSS/layout) sau này KHÔNG tự áp dụng cho HTML đã bake trước đó
+— phải chạy job bake lại toàn bộ khi đổi template, khác cách JSON-thuần (chỉ
+sửa 1 Razor partial là áp dụng ngay mọi trang). Chấp nhận đánh đổi này để lấy
+tốc độ tối đa (ưu tiên đã chọn 07/2026).
 
 **URL vẫn giữ PHẲNG bất kể độ sâu cây** (chốt 07/2026 — chi tiết + lý do đầy đủ
 xem `content-seo-ux-plan.md` §10.7): `/diem-den/{slug}`, KHÔNG nhúng đường dẫn
@@ -213,8 +293,10 @@ CREATE TABLE Destination (
   AddressOld    nvarchar(256) NULL,           -- website hiển thị CẢ HAI (spec §13.3); build từ mapping dvhcvn
   ContactPhone  varchar(32)   NULL,
   ContactWebsite varchar(256) NULL,
+  ContactFacebook varchar(256) NULL,           -- THÊM LẠI 07/2026 (đảo quyết định cũ dưới) — link Fanpage chính chủ, nguồn tham khảo cho người đọc (ảnh mới/giờ đóng cửa đột xuất), KHÔNG phải kênh kinh doanh của DiChoiThoi nên không xung đột affiliate
   HotelGroupId  nvarchar(50)  NULL,           -- LEGACY/fallback — thay bằng bảng HotelDestinationMap (dichoithoi-hotel-spec.md §4, sửa 07/2026), giữ tạm khi chuyển đổi rồi bỏ
   IsFeatured    bit NOT NULL DEFAULT 0,       -- thay cho "load cả bảng rồi Take"
+  DistanceFromCenter decimal(6,2) NULL,       -- km tới trung tâm cụm/tỉnh cha — phục hồi từ schema cũ (destination-spec §... cột Order/DistanceFromCenter), bị rớt lúc thiết kế lại; dùng để tự nhóm ChildrenJson theo khu vực (trung tâm/ngoại ô gần/xa) trên trang Flagship (content-seo-ux-plan §10.6.1)
   [Order]       int NOT NULL DEFAULT 0,
   Status        tinyint NOT NULL DEFAULT 1,   -- 0 draft, 1 published, 2 hidden
   ContentSource tinyint NOT NULL DEFAULT 0,   -- 0 tay, 1 AI
@@ -235,11 +317,20 @@ CREATE INDEX IX_Destination_Featured ON Destination(IsFeatured, [Order])
 `INCLUDE` biến các index trên thành **covering index**: trang danh sách/tỉnh/cha-con
 trả thẳng từ index, không lookup về bảng.
 
-**Đã cân nhắc và KHÔNG thêm** (quyết định 07/2026, giữ schema gọn): cột liên hệ
-mở rộng (`ContactZalo`/`ContactFacebook` — mô hình kiếm tiền chính là affiliate,
-không cần kênh liên hệ trực tiếp điểm đến); dữ liệu "thời điểm đẹp" có cấu trúc
+**Đảo lại 1 phần quyết định cũ (07/2026)**: `ContactFacebook` đã THÊM LẠI ở
+§4.2 trên — quyết định gốc lẫn 2 việc khác nhau ("kênh liên hệ kinh doanh của
+DiChoiThoi" — đúng là không cần, khác "link Fanpage chính chủ điểm đến làm
+nguồn tham khảo cho người đọc" — giống vai trò `ContactWebsite`, nên giữ lại).
+Mục tiêu ưu tiên: cung cấp thông tin hữu ích nhất cho người đọc, kiếm tiền hài
+hoà — không phải cắt bớt thông tin chỉ vì không trực tiếp ra tiền.
+
+**Vẫn KHÔNG thêm** (giữ nguyên lý do gốc): `ContactZalo` — mang tính "nhắn tin
+liên hệ trực tiếp" hơn là nguồn tham khảo công khai, giá trị thông tin thấp
+hơn Website/Fanpage với người đọc chưa từng liên hệ; có thể thêm sau nếu thực
+tế nhiều điểm đến dùng Zalo làm kênh chính. Dữ liệu "thời điểm đẹp" có cấu trúc
 (vd `BestMonths` cho landing theo mùa — giữ dạng văn xuôi trong `ContentHtml`,
-không thêm cột/model mới vì chưa có nhu cầu landing theo mùa cụ thể).
+không thêm cột/model mới vì chưa có nhu cầu landing theo mùa cụ thể) vẫn không
+thêm, không liên quan quyết định trên.
 
 ### 4.3 `DestinationContent` — bảng lạnh (chỉ trang detail đọc), 1-1
 ```sql
@@ -274,12 +365,13 @@ quy) và `ChildrenJson` (danh sách đầy đủ con trực tiếp, không cắt
 `RelatedJson`) — cùng dạng `nvarchar(max)` JSON, cùng nguồn tính (`ParentId`,
 `Kind`) đã có sẵn trên `Destination`.
 
-Cũng CHƯA thêm vào DDL thật (đề xuất 07/2026, phát hiện lúc rà soát tốc độ —
-xem §3.4): `HotelCardsJson`/`TourCardsJson` (danh sách khách sạn/tour gợi ý đã
-JOIN+sort+cắt limit sẵn — THAY query sống hiện tại của website qua
+Cũng CHƯA thêm vào DDL thật (THAY THẾ 07/2026 đề xuất `HotelCardsJson`/
+`TourCardsJson` ban đầu — xem §3.4): `DynamicBlocksJson` (map `{blockKey:
+html}` — HTML cuối cùng đã bake cho khối hotels/tours/transports/
+souvenirProducts/articleLink..., THAY query sống hiện tại của website qua
 `V2HotelDestinationMap`/`V2TourDestinationMap` JOIN `V2Hotel`/`V2Tour` ORDER BY
-Rating). Đây là việc SỬA (đổi từ live query sang precompute), không phải thêm
-tính năng mới.
+Rating). Đây là việc SỬA (đổi từ live query sang bake HTML sẵn), không phải
+thêm tính năng mới — chi tiết đầy đủ ở §3.4.
 
 Về review (`AvgRating`/`ReviewCount` đã có sẵn cột cache trên `V2Destination`
 — redesign §4.2/`V2Destination.cs`): đề xuất SỬA CÁCH GHI, không cần cột mới —
@@ -365,7 +457,7 @@ cột flags `IsGroup/IsArea/IsProvince`, cột CSV `Type`, các cột denormaliz
 |---|---|---|
 | Detail `/diem-den/{slug}` | 1: `Destination JOIN DestinationContent WHERE Slug=@s` (FAQ/related từ JSON trong cùng dòng) | UX_Slug |
 | — reviews (dưới fold) | lazy load query 2 hoặc defer AJAX | IX review |
-| Trang tỉnh | con trực thuộc: `WHERE ProvinceId=@p AND Status=1` | IX_Province (covering) |
+| Trang tỉnh | con TRỰC TIẾP (drill-down 1 tầng, giống trang cluster): `WHERE ParentId=@provinceId AND Status=1` — **KHÔNG dùng `ProvinceId`** (sửa 07/2026: `ProvinceId` là field "tắt" gắn trên mọi destination trong tỉnh bất kể tầng sâu bao nhiêu, dùng để query con sẽ trộn lẫn cluster + poi cháu vào 1 danh sách, sai mô hình drill-down — xem `content-seo-ux-plan.md` §10.6.1) | IX_Parent (covering) |
 | Trang cluster | `WHERE ParentId=@id AND Status=1` | IX_Parent (covering) |
 | Home / Top | `WHERE IsFeatured=1 ORDER BY [Order]` | IX_Featured (filtered) |
 | Trang nhóm loại `/loai/{groupSlug}` | `DestinationType WHERE GroupId=@g` → `TypeMap JOIN Destination` | IX_DestinationType_Group |
