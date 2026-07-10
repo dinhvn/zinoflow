@@ -501,11 +501,69 @@ muốn — để nguyên, chờ người dùng xem lại và chốt spec trướ
 tiếp theo.
 
 **Phase D — Website .NET (routes/views mới):**
-1. Route/view: Article `/blog/`, `/chu-de/{slug}`, khối Flight/Bus trên
+1. Route/view: ~~Article `/blog/`~~, `/chu-de/{slug}`, khối Flight/Bus trên
    detail — ưu tiên theo SEO ROI (landing loại/tỉnh đã build Phase 18).
+   **Sửa lại (07/2026)**: mục "`/blog/`" trong dòng này bị SAI — website đã có
+   sẵn hệ bài cẩm nang v2 tại `/cam-nang/{slug}` (`ArticleController.cs`,
+   entity `V2Article`), không phải `/blog` (đó là route legacy v1
+   `BlogController` vẫn còn sống, không liên quan). Không tạo route `/blog`
+   mới đè lên route legacy đang chạy.
+   - ✅ **`/chu-de/{slug}` XONG (07/2026, đợt tự động)** — mirror đúng pattern
+     `/tinh/{slug}` đã có (`ProvinceController`/`IDestinationTaxonomyService`/
+     `IDestinationTaxonomyRepository`): thêm entity `V2DestinationTag`/
+     `V2DestinationTagMap` (EF, đọc SQL Server, KHÔNG ghi — zinoflow ghi qua
+     `mssql-site-db.adapter.ts`), `TopicDetailPageModel`, `GetTopicPageAsync`
+     trong repo/service có sẵn (không tạo interface mới), `TopicController`
+     (`Controllers/TopicController.cs`) + view `Views/Topic/Detail.cshtml`
+     (dùng lại `_DestinationCardList`/`_Pagination` partial). Gate SEO đúng
+     database-redesign §3.2.1: `Status != 1` → 404 (tag chưa duyệt/chưa mở);
+     `Status == 1` nhưng thiếu `Description` HOẶC < 5 điểm gán → vẫn hiện
+     trang bình thường nhưng thêm `noindex` (dùng `PageInfo.NoIndex` có sẵn,
+     không phải cơ chế mới). `dotnet build` sạch (0 lỗi CS — chỉ có lỗi copy
+     file do 1 tiến trình `DiChoiThoi.Web` cũ đang chạy giữ khoá DLL, không
+     liên quan code, tắt tiến trình đó rồi build lại là hết).
+   - **CHỦ Ý CHƯA làm**: (a) link "Chủ đề" trong mega-menu/footer — hoãn vì
+     tag hiện chưa có điểm nào được gán qua Tag UI, đưa link vào menu chính
+     lúc trang còn rỗng/`noindex` không có lợi, nên bật SAU khi đã gán tag
+     thật; (b) chip tag trên trang chi tiết điểm đến (destination-spec §2.4
+     có nhắc) — cần sửa `DestinationDetailModel`/`DestinationController`/
+     repository liên quan, phạm vi lớn hơn 1 trang mới nên tách việc riêng;
+     (c) khối Flight/Bus trên trang chi tiết — vẫn chờ chốt spec như đã ghi.
 2. Faceted search — hợp nhất `/diem-den` + `/search` (§9.3): đợt 1 facet
    Tỉnh/Khu vực/Loại; facet Chủ đề bật khi tag đã seed.
-3. Tắt module Destination + Hotel + Tour trên CMS cũ.
+   **✅ Phần lõi XONG (07/2026, đợt tự động)** — `DestinationController.Index`
+   (`/diem-den`) nay là trang Khám phá duy nhất: `q` + 3 facet Tỉnh/thành,
+   Khu vực (cụm — node `Kind=Cluster`), Loại (OR trong nhóm, VÀ giữa nhóm),
+   đếm số cạnh từng lựa chọn (tính theo điều kiện các nhóm KHÁC đang chọn,
+   đúng ngữ nghĩa faceted search chuẩn), chip đã-chọn + "Xoá hết", banner
+   "Xem trang đầy đủ" khi chọn đúng 1 facet Tỉnh hoặc Khu vực, phân trang
+   (`_Pagination.cshtml` sửa để nối `&trang=` khi base path đã có query
+   string — sửa chung, không hỏng các trang cũ vốn không có query string).
+   `/search` → 301 sang `/diem-den` giữ nguyên querystring (dọn luôn bug `q`
+   rỗng bỏ dở cũ). SEO: không tham số = index bình thường; có
+   `q`/facet = `noindex, follow`. Mở rộng search-index thêm tỉnh + địa chỉ
+   không dấu (sửa lỗi "gõ Lâm Đồng bị trượt"). Đã test qua HTTP thật (dry-run
+   dev server, không phải chỉ đọc code): lọc 1 facet, lọc 2 facet cùng lúc
+   (AND đúng), banner single-facet, noindex, `/search` redirect, phân trang
+   giữ facet, `/map`/`/tinh/{slug}` (dùng chung search-index) không bị ảnh
+   hưởng — đều đúng. `dotnet build` toàn solution sạch.
+   **CHỦ Ý CHƯA làm (đợt 2, ghi rõ tránh hiểu nhầm đã xong 100% §9.3)**:
+   (a) live-count-instant-client-filter (đổi kết quả ngay khi tick, không
+   cần load lại trang) — hiện MỖI facet click là 1 lần điều hướng URL mới
+   (vẫn đúng UX cơ bản, hoạt động không cần JS, nhưng chưa "tức thì" như
+   spec §9.3 mục 2 yêu cầu — cần 1 index JSON nhỏ đổ xuống client + JS lọc,
+   việc này rủi ro/kích cỡ lớn hơn hẳn phần đã làm nên tách đợt sau);
+   (b) autocomplete ô tìm kiếm header (dropdown 8 gợi ý) — form header vẫn
+   là submit thường về `/diem-den`, chưa có dropdown/API gợi ý riêng;
+   (c) banner "Xem trang đầy đủ" cho facet Loại đơn lẻ — thiếu slug nhóm
+   (`GroupSlug`) trong index hiện tại, cần thêm 1 lookup nữa, để lại tránh
+   phình thêm phạm vi; (d) bottom-sheet mobile thật — tạm dùng `<details>`
+   disclosure (hoạt động tốt, đúng nội dung, nhưng khác animation/UX
+   bottom-sheet spec mô tả); (e) facet Chủ đề (tag) — đúng như spec ghi,
+   đợi tag được gán qua Tag UI trước.
+3. Tắt module Destination + Hotel + Tour trên CMS cũ. ❌ CHƯA làm — đây là
+   việc tắt chức năng admin đang chạy thật (`CmsDiChoiThoi.Web`), nên hỏi lại
+   trước khi làm thay vì tự ý tắt.
 
 **Phase E — PILOT kiểm thử end-to-end: Đà Lạt (Flagship) + Biệt Thự Hằng Nga
 (POI) với FULL dữ liệu** (yêu cầu 07/2026 — chạy SAU khi Phase B-D xong;
@@ -551,6 +609,26 @@ thì bắt buộc, đúng rủi ro "scaled content abuse" đã phân tích.
   Tỉnh/Khu vực/Loại (+Chủ đề đợt 2), tick nhiều — OR trong nhóm, AND giữa
   nhóm, đếm số sống, lọc client-side tức thì, autocomplete header,
   `/search` 301 về `/diem-den?q=`; có tham số = noindex. Repo dichoithoi (.NET).
+  **Cập nhật 07/2026 (đợt 2, phần 1/2 đã xong)**:
+  - ✅ Autocomplete header: `GET /api/search-suggest?q=` (tái dùng search-index
+    RAM có sẵn), dropdown JS thuần (`nav.ts`, debounce 250ms, phím mũi tên/
+    Enter/Escape, bấm ra ngoài đóng) tối đa 8 gợi ý (tên+tỉnh+loại+thumbnail),
+    bấm 1 dòng đi thẳng `/diem-den/{slug}`, dòng cuối "Xem tất cả kết quả →"
+    mới đổ về `/diem-den?q=`. Đã smoke-test qua Playwright (dropdown hiện đúng,
+    click điều hướng đúng, không còn lỗi 404 ảnh — bug thumbnail thiếu tiền tố
+    `/diem-den/thumbnail/` phát hiện + sửa ngay lúc test bằng trình duyệt thật).
+  - ✅ Banner landing cho facet Loại đơn lẻ: `DestinationService.GetFacetedSearchAsync`
+    tra `GroupSlug` qua `ITaxonomyService.GetAllTypesAsync()` (đã cache sẵn từ
+    Phase 18.0, không thêm query) để tính `/loai/{group}/{type}` — trước đây
+    chỉ có Tỉnh/Khu vực có banner, thiếu Loại. Verify qua curl thật:
+    `?loai=thac-ho-suoi` → banner `/loai/thien-nhien/thac-ho-suoi` (200 OK).
+  - ⏳ **Còn lại (đợt 2, phần 2/2 — CHƯA làm, rủi ro cao hơn nên tách riêng)**:
+    (a) live client-side instant filter (đổ JSON index xuống client, lọc tức
+    thì không reload trang — hiện mỗi lần tick facet vẫn là 1 lần điều hướng
+    URL đầy đủ); (b) mobile bottom-sheet thật (đang dùng `<details>` thay thế).
+    Cả 2 đòi hỏi viết lại đáng kể phần JS render kết quả — cân nhắc làm riêng
+    1 phiên, kiểm thử kỹ trên trình duyệt thật trước khi ship lên production.
+  - Facet Chủ đề vẫn chờ tag được gán qua Tag UI (không đổi so với trước).
 
 ## C) Rủi ro/lưu ý vận hành (không phải task, nhưng đừng quên)
 
