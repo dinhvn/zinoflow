@@ -622,13 +622,40 @@ thì bắt buộc, đúng rủi ro "scaled content abuse" đã phân tích.
     Phase 18.0, không thêm query) để tính `/loai/{group}/{type}` — trước đây
     chỉ có Tỉnh/Khu vực có banner, thiếu Loại. Verify qua curl thật:
     `?loai=thac-ho-suoi` → banner `/loai/thien-nhien/thac-ho-suoi` (200 OK).
-  - ⏳ **Còn lại (đợt 2, phần 2/2 — CHƯA làm, rủi ro cao hơn nên tách riêng)**:
-    (a) live client-side instant filter (đổ JSON index xuống client, lọc tức
-    thì không reload trang — hiện mỗi lần tick facet vẫn là 1 lần điều hướng
-    URL đầy đủ); (b) mobile bottom-sheet thật (đang dùng `<details>` thay thế).
-    Cả 2 đòi hỏi viết lại đáng kể phần JS render kết quả — cân nhắc làm riêng
-    1 phiên, kiểm thử kỹ trên trình duyệt thật trước khi ship lên production.
-  - Facet Chủ đề vẫn chờ tag được gán qua Tag UI (không đổi so với trước).
+  - ✅ **Cập nhật tiếp (đợt 2, phần 2/2 — cũng đã xong)**: live client-side
+    instant filter + mobile bottom-sheet thật.
+    - `GET /api/diem-den/facet-index?q=` trả index JSON CHỈ điểm lẻ (Poi) đã
+      lọc sẵn theo `q` hiện tại (client không cần biết logic bỏ dấu — 1 nguồn
+      thật duy nhất cho "thế nào là khớp q" vẫn là `MatchesKeyword` phía
+      server); client chỉ so khớp slug Tỉnh/Khu vực/Loại (OR trong nhóm, AND
+      giữa nhóm — y hệt `GetFacetedSearchAsync`).
+    - `destination.ts` (bundle mới, trước đây tồn tại nhưng KHÔNG được nạp ở
+      trang nào — chỉ import 1 file scss Bootstrap chết, đã bỏ): tick facet
+      lọc tức thì (grid + đếm số cạnh + chip + phân trang đều cập nhật không
+      reload), đồng bộ URL qua `history.pushState` (back/forward hoạt động
+      đúng — đã test qua Playwright), tiến cường dần đúng nghĩa (mọi link vẫn
+      là `<a href>` thật tính sẵn ở server, JS tắt vẫn điều hướng đúng).
+    - Bottom-sheet mobile thật thay `<details>`: trượt lên từ dưới, nút chốt
+      dính đáy ghi số sống "Xem N kết quả" (cập nhật live theo tick), tái
+      dùng `wireOverlay` (tách từ `nav.ts` sang `overlay.ts` dùng chung).
+    - Banner landing 1-facet-đơn-lẻ: ẩn ngay khi có tương tác JS (không cố
+      tính lại phía client vì facet Loại cần thêm `GroupSlug` không có trong
+      index nhẹ) — chỉ hiện đúng lúc SSR ban đầu, tránh hiện link sai/lệch.
+    - **Bug thật phát hiện + sửa lúc test bằng Playwright**: chip bị dính dư
+      ký hiệu "✕" tích luỹ dần sau mỗi lần tick (2 lần tick → "Tên ✕ ✕ ✕") —
+      do chip cũng mang `data-facet-group`/`data-facet-slug` (để tái dùng
+      logic toggle khi bấm xoá chip), nên hàm đọc tên gốc `labelFor()` +
+      `updateGroupCounts()` lỡ khớp nhầm vào CHÍNH chip thay vì mục facet-list
+      gốc. Sửa bằng cách giới hạn 2 hàm này chỉ tìm trong khối
+      `[data-facet-group-block]` (sidebar/sheet), không đụng tới chip.
+    - Verify: `dotnet build` sạch, `npm run prod` sạch, test qua Playwright
+      trên dev server thật (dev DB) — tick tỉnh/loại cùng lúc (AND đúng, kể cả
+      case 1 điểm có NHIỀU tag loại như Thác Prenn vừa "Sông-Suối-Hồ-Thác" vừa
+      "Check-in sống ảo"), thứ tự kết quả client khớp 100% với SSR cùng bộ
+      lọc, phân trang client + nút back trình duyệt khôi phục đúng trạng
+      thái, bottom-sheet mobile (viewport 390×844) hoạt động đúng.
+  - Facet Chủ đề vẫn chờ tag được gán qua Tag UI (không đổi so với trước) —
+    đây là phần DUY NHẤT còn lại của toàn bộ faceted-search đợt 2.
 
 ## C) Rủi ro/lưu ý vận hành (không phải task, nhưng đừng quên)
 
