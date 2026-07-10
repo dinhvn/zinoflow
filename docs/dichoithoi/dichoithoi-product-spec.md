@@ -172,5 +172,8 @@ thêm cơ chế gì mới ngoài việc AI biết gợi ý đúng kind cho đún
    có NHIỀU sàn, phần cấu hình rule để sau (chốt hướng, chưa chọn thứ tự cụ thể
    — không chặn việc build phần còn lại, `affiliate_link_rules` đã hỗ trợ nhiều
    provider sẵn).
-5. Danh sách `category` chuẩn hoá thế nào (tự do nhập hay danh sách cố định
-   quản lý ở đâu) — cần chốt trước khi build form quản lý.
+5. ✅ **CHỐT lúc build (Phase 16, 07/2026)** — `category` tự do nhập + gợi ý
+   autocomplete từ giá trị đã dùng (`GET /products/categories`, DISTINCT),
+   KHÔNG bảng quản lý riêng — đúng tinh thần MVP nhập tay của cả module. Đã
+   xác nhận trong code thật: `ListProductCategoriesUseCase`, UI
+   `apps/web/src/app/dichoithoi/san-pham/page.tsx` (input + `<datalist>`).
