@@ -18,6 +18,8 @@ export interface DestinationGateInput {
 }
 
 const MIN_SECTION_WORDS = 60;
+/** Nguong do dai toi thieu toan bai (content-seo-ux-plan §8.3, bo sung 07/2026) */
+const MIN_TOTAL_WORDS = 800;
 
 /** Claim tuyet doi bi cam voi bai travel khi khong co nguon (spec chinh §19.5.3). */
 const BANNED_TRAVEL_PHRASES: readonly string[] = [
@@ -73,6 +75,13 @@ export function evaluateDestinationStructureGate(input: DestinationGateInput): Q
   if (countWords(article.intro) < 40) {
     details.push("Mở bài quá ngắn (cần tối thiểu ~80 từ theo khung bài)");
   }
+
+  const totalWords =
+    countWords(article.intro) + article.sections.reduce((sum, s) => sum + countWords(s.content), 0);
+  if (totalWords < MIN_TOTAL_WORDS) {
+    details.push(`Bài quá ngắn: ${totalWords} từ (tối thiểu ${MIN_TOTAL_WORDS} từ toàn bài)`);
+  }
+
   if (article.faq.length < 3) {
     details.push(`FAQ cần ít nhất 3 câu hỏi (hiện có ${article.faq.length})`);
   }

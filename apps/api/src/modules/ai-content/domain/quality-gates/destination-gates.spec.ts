@@ -8,8 +8,10 @@ import {
   evaluateDestinationStructureGate,
 } from "./destination-gates";
 
+// 18 tu/cau x 12 lan = 216 tu/section x 4 section + ~65 tu mo bai > 800 tu
+// (nguong MIN_TOTAL_WORDS o destination-gates.ts) de bai mac dinh hop le.
 const longContent = (topic: string): string =>
-  `${topic} là điểm dừng chân được nhiều người yêu thích khi ghé thăm khu vực này. `.repeat(8);
+  `${topic} là điểm dừng chân được nhiều người yêu thích khi ghé thăm khu vực này. `.repeat(12);
 
 function validArticle(overrides: Partial<DestinationArticle> = {}): DestinationArticle {
   return {
@@ -86,6 +88,17 @@ describe("destination gates (spec dichoithoi §6)", () => {
     );
     expect(result.passed).toBe(false);
     expect(result.details.join(" ")).toContain("văn hoá - lịch sử");
+  });
+
+  it("structure: fail khi bai qua ngan (duoi 800 tu toan bai)", () => {
+    const article = validArticle();
+    const shortSections = article.sections.map((s) => ({
+      ...s,
+      content: "Đoạn ngắn giới thiệu nhanh về địa điểm này, còn nhiều điều thú vị khác nữa.",
+    }));
+    const result = evaluateDestinationStructureGate(gateInput({ ...article, sections: shortSections }));
+    expect(result.passed).toBe(false);
+    expect(result.details.join(" ")).toContain("tối thiểu 800 từ toàn bài");
   });
 
   it("seo: fail khi ten diem den khong co trong H1 (keyword mac dinh la ten)", () => {
