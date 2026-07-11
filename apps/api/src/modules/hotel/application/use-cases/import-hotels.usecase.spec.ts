@@ -50,6 +50,9 @@ describe("ImportHotelsUseCase (hotel-spec §5, product-spec §5.1)", () => {
       assignToDestination: async () => {},
       unassignFromDestination: async () => {},
       listForDestination: async () => [],
+      listAssignmentsForHotel: async () => [],
+      autoAssignToDestination: async () => {},
+      removeAutoAssignment: async () => {},
     };
     const upsertHotel = {
       create: async (r: { sourceUrl: string }) => {

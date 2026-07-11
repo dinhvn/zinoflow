@@ -10,6 +10,7 @@ import {
 import { HOTEL_SITE_DB, type HotelSiteDb } from "../ports/hotel-site-db.port";
 import { ResolveAffiliateLinkUseCase } from "../../../affiliate/application/use-cases/resolve-affiliate-link.usecase";
 import { IngestExternalImageUseCase } from "../../../shared/media/application/ingest-external-image.usecase";
+import { JOB_QUEUE, QUEUE_NAMES, type JobQueue } from "../../../shared/jobs/job-queue.port";
 import { hotelToDto } from "./list-hotels.usecase";
 import { RecomputeHotelCardsUseCase } from "./recompute-hotel-cards.usecase";
 
@@ -35,6 +36,7 @@ export class UpsertHotelUseCase {
     private readonly resolveLink: ResolveAffiliateLinkUseCase,
     private readonly recomputeCards: RecomputeHotelCardsUseCase,
     private readonly ingestImage: IngestExternalImageUseCase,
+    @Inject(JOB_QUEUE) private readonly jobQueue: JobQueue,
   ) {}
 
   async create(request: UpsertHotelRequest): Promise<Hotel> {
@@ -46,6 +48,10 @@ export class UpsertHotelUseCase {
     await this.publish(created.id, null, withImages ?? input);
     const withSite = await this.hotels.findById(created.id);
     if (!withSite) throw new DomainRuleError("Khách sạn biến mất ngay sau khi tạo");
+    // Khach san moi co toa do -> enqueue gan tu dong theo khoang cach (hotel-spec §5 job 3)
+    if (withSite.lat !== null && withSite.lng !== null) {
+      await this.jobQueue.send(QUEUE_NAMES.hotelAutoAssign, {});
+    }
     return hotelToDto(withSite, 0);
   }
 

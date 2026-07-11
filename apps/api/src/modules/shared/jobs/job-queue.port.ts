@@ -17,4 +17,5 @@ export const QUEUE_NAMES = {
   systemPing: "system.ping",
   contentGenerate: "content.generate",
   imageRender: "image.render",
+  hotelAutoAssign: "hotel.auto-assign",
 } as const;

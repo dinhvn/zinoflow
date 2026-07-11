@@ -104,4 +104,23 @@ export class TypeOrmHotelRepository implements IHotelRepository {
   async listForDestination(destinationSlug: string): Promise<HotelDestinationMapRecord[]> {
     return this.mapRepo.find({ where: { destinationSlug } });
   }
+
+  async listAssignmentsForHotel(hotelId: string): Promise<HotelDestinationMapRecord[]> {
+    return this.mapRepo.find({ where: { hotelId } });
+  }
+
+  async autoAssignToDestination(
+    hotelId: string,
+    destinationSlug: string,
+    distanceM: number,
+  ): Promise<void> {
+    await this.mapRepo.upsert(
+      { hotelId, destinationSlug, distanceM, isManual: false },
+      ["hotelId", "destinationSlug"],
+    );
+  }
+
+  async removeAutoAssignment(hotelId: string, destinationSlug: string): Promise<void> {
+    await this.mapRepo.delete({ hotelId, destinationSlug, isManual: false });
+  }
 }

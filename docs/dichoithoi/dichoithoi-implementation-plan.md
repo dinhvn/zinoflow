@@ -76,7 +76,7 @@ việc chưa cần dùng ngay.
 - **DoD**: thêm 2 link Klook + TripVision cho 1 điểm đến → publish → cả 2 có
   `affiliateUrl` đúng, field cũ `bookingUrl` không còn dùng.
 
-## Phase 5 — Module `hotel` (PHẦN LỚN XONG — re-verify 07/2026: THIẾU IHotelPublisher port, THIẾU job tự gán theo khoảng cách (haversine, chưa tái dùng hàm đã có ở destination), UI form chưa preview affiliateUrl trực tiếp khi dán sourceUrl)
+## Phase 5 — Module `hotel` (PHẦN LỚN XONG — re-verify 07/2026: ✅ đã xây job tự gán theo khoảng cách (`AutoAssignHotelsByDistanceUseCase`, tái dùng `haversineMeters` của destination, qua pg-boss `hotel.auto-assign` + nút tay ở UI); còn THIẾU `IHotelPublisher` port, UI form chưa preview affiliateUrl trực tiếp khi dán sourceUrl)
 
 **Phụ thuộc**: Phase 3 (affiliate). **Nguồn**: `dichoithoi-hotel-spec.md`.
 1. Bảng `hotels`/`hotel_destination_map` (Postgres) + `Hotel`/`HotelDestinationMap`

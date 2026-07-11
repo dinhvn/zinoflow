@@ -51,6 +51,9 @@ describe("UpsertHotelUseCase — ingest anh ngoai (destination-spec §14.5)", ()
       assignToDestination: async () => {},
       unassignFromDestination: async () => {},
       listForDestination: async () => [],
+      listAssignmentsForHotel: async () => [],
+      autoAssignToDestination: async () => {},
+      removeAutoAssignment: async () => {},
     };
     const siteDb: HotelSiteDb = {
       upsertHotel: async () => ({ siteId: 1 }),
@@ -69,7 +72,15 @@ describe("UpsertHotelUseCase — ingest anh ngoai (destination-spec §14.5)", ()
         },
       } as unknown as IngestExternalImageUseCase);
 
-    const usecase = new UpsertHotelUseCase(hotels, siteDb, resolveLink, recomputeCards, ingestImage);
+    const jobQueue = { send: async () => null } as unknown as import("../../../shared/jobs/job-queue.port").JobQueue;
+    const usecase = new UpsertHotelUseCase(
+      hotels,
+      siteDb,
+      resolveLink,
+      recomputeCards,
+      ingestImage,
+      jobQueue,
+    );
     return { usecase, stored, ingested };
   }
 

@@ -13,6 +13,7 @@ import {
   type UpsertHotelRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
+import { JOB_QUEUE, QUEUE_NAMES, type JobQueue } from "../../shared/jobs/job-queue.port";
 import {
   SHEET_CSV_FETCHER,
   type SheetCsvFetcher,
@@ -33,6 +34,7 @@ export class HotelsController {
     private readonly assignHotel: AssignHotelToDestinationUseCase,
     private readonly listForDestination: ListHotelsForDestinationUseCase,
     @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
+    @Inject(JOB_QUEUE) private readonly jobQueue: JobQueue,
   ) {}
 
   @Get()
@@ -93,5 +95,12 @@ export class HotelsController {
   ): Promise<{ ok: true }> {
     await this.assignHotel.unassign(id, destinationSlug);
     return { ok: true };
+  }
+
+  /** Tinh lai gan tu dong theo khoang cach cho TOAN BO khach san (hotel-spec §5 job 3) */
+  @Post("auto-assign")
+  async autoAssign(): Promise<{ jobId: string | null }> {
+    const jobId = await this.jobQueue.send(QUEUE_NAMES.hotelAutoAssign, {});
+    return { jobId };
   }
 }

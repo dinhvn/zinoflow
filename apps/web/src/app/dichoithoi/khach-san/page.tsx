@@ -65,6 +65,15 @@ export default function HotelsPage() {
     onError: (e) => setError(e instanceof ApiError ? e.message : String(e)),
   });
 
+  const autoAssign = useMutation({
+    mutationFn: () => apiSend("POST", "/hotels/auto-assign", {}),
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["hotels"] });
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : String(e)),
+  });
+
   function startEdit(h: Hotel) {
     setEditingId(h.id);
     setForm({
@@ -92,9 +101,18 @@ export default function HotelsPage() {
             Lưu sẽ publish thẳng lên website.
           </p>
         </div>
-        <a href="/dichoithoi/khach-san/nhap" className="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">
-          Nhập từ Sheet →
-        </a>
+        <div className="flex shrink-0 items-center gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => autoAssign.mutate()}
+            disabled={autoAssign.isPending}
+          >
+            {autoAssign.isPending ? "Đang tính..." : "Tính lại gán tự động theo khoảng cách"}
+          </Button>
+          <a href="/dichoithoi/khach-san/nhap" className="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">
+            Nhập từ Sheet →
+          </a>
+        </div>
       </div>
 
       {error && (
