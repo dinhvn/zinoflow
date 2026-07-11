@@ -3,7 +3,7 @@ import {
   DESTINATION_MIRROR_REPOSITORY,
   type DestinationMirrorRepository,
 } from "../../../destination/application/ports/destination-mirror.repository";
-import { autoLinkContent, type LinkTarget } from "../../../shared/text/auto-link";
+import { autoLinkContent, type AddedLinkInfo, type LinkTarget } from "../../../shared/text/auto-link";
 
 /**
  * Chen link noi bo toi diem den vao bai cam nang, dung lai engine auto-link
@@ -18,13 +18,12 @@ export class ArticleAutoLinkService {
     private readonly mirrorRepo: DestinationMirrorRepository,
   ) {}
 
-  async linkHtml(html: string): Promise<string> {
+  async linkHtml(html: string): Promise<{ html: string; addedLinks: AddedLinkInfo[] }> {
     const all = await this.mirrorRepo.findAll();
     const targets: LinkTarget[] = all
       .filter((d) => d.siteStatus === 1 && d.siteId !== null)
       .map((d) => ({ slug: d.slug, name: d.name }));
 
-    const { html: linkedHtml } = autoLinkContent(html, targets, "");
-    return linkedHtml;
+    return autoLinkContent(html, targets, "");
   }
 }

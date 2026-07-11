@@ -339,4 +339,21 @@ CREATE TABLE v2.Article (
 );
 GO
 
+/* ===== ArticleDestinationMap — quan he NGUOC Article -> Destination (article-spec §8.1, Phase 26) =====
+   Trang diem den can biet co bai cam nang nao viet ve minh de hien link ra.
+   Khong FK cung toi Destination (khac site DB truoc day, gio cung schema
+   nhung giu pattern nhu Hotel/TourDestinationMap cho nhat quan). */
+IF OBJECT_ID('v2.ArticleDestinationMap') IS NULL
+CREATE TABLE v2.ArticleDestinationMap (
+  ArticleId        int           NOT NULL REFERENCES v2.Article(Id),
+  DestinationSlug  varchar(64)   NOT NULL,
+  Topic            varchar(20)   NOT NULL,   -- itinerary|food|souvenir|nightlife|poi-guide|general
+  [Order]          int           NOT NULL DEFAULT 0,
+  PRIMARY KEY (ArticleId, DestinationSlug, Topic)
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ArticleDestinationMap_Slug')
+  CREATE INDEX IX_ArticleDestinationMap_Slug ON v2.ArticleDestinationMap(DestinationSlug, Topic);
+GO
+
 PRINT N'01-create-new-schema.sql: xong — schema v2 da san sang. Chay tiep 02-migrate-data.sql';

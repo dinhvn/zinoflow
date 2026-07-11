@@ -23,7 +23,8 @@ describe("ArticleAutoLinkService (backlog §B Phase C muc 5 — auto-link dung c
 
     const result = await service.linkHtml("<p>Ghé Vịnh Hạ Long dịp cuối tuần.</p>");
 
-    expect(result).toContain('href="/diem-den/vinh-ha-long"');
+    expect(result.html).toContain('href="/diem-den/vinh-ha-long"');
+    expect(result.addedLinks).toEqual([{ targetSlug: "vinh-ha-long", targetName: "Vịnh Hạ Long" }]);
   });
 
   it("bo qua diem den chua publish (siteId null hoac siteStatus khac 1)", async () => {
@@ -34,6 +35,6 @@ describe("ArticleAutoLinkService (backlog §B Phase C muc 5 — auto-link dung c
 
     const result = await service.linkHtml("<p>Ghé Vịnh Hạ Long dịp cuối tuần.</p>");
 
-    expect(result).not.toContain("href=");
+    expect(result.html).not.toContain("href=");
   });
 });

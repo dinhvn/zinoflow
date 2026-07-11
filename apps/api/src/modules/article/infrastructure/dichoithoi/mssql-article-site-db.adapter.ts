@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import type * as sql from "mssql";
 import { UpstreamApiError } from "../../../shared/errors/app-error";
 import type {
+  ArticleDestinationMapRow,
   ArticleSiteDb,
   UpsertArticleInput,
 } from "../../application/ports/article-site-db.port";
@@ -72,6 +73,55 @@ export class MssqlArticleSiteDbAdapter implements ArticleSiteDb, OnModuleDestroy
       return request.query(
         `UPDATE v2.Article SET ContentHtml = @contentHtml, UpdatedAt = SYSUTCDATETIME() WHERE Id = @siteId`,
       );
+    });
+  }
+
+  async fetchDestinationMap(articleId: number): Promise<ArticleDestinationMapRow[]> {
+    const rows = await this.runWithRetry<Array<{ DestinationSlug: string; Topic: string; Order: number }>>(
+      async (pool) => {
+        const request = pool.request();
+        request.input("articleId", articleId);
+        const result = await request.query<{ DestinationSlug: string; Topic: string; Order: number }>(
+          `SELECT DestinationSlug, Topic, [Order] FROM v2.ArticleDestinationMap
+           WHERE ArticleId = @articleId ORDER BY Topic, [Order]`,
+        );
+        return result.recordset;
+      },
+    );
+    return rows.map((r) => ({
+      destinationSlug: r.DestinationSlug,
+      topic: r.Topic,
+      order: Number(r.Order),
+    }));
+  }
+
+  async replaceDestinationMap(
+    articleId: number,
+    items: readonly ArticleDestinationMapRow[],
+  ): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("articleId", articleId);
+      items.forEach((item, i) => {
+        request.input(`slug${i}`, item.destinationSlug);
+        request.input(`topic${i}`, item.topic);
+        request.input(`order${i}`, item.order);
+      });
+      const insertRows = items
+        .map(
+          (_, i) =>
+            `SELECT @articleId, @slug${i}, @topic${i}, @order${i}
+             WHERE EXISTS (SELECT 1 FROM v2.Destination WHERE Slug = @slug${i})`,
+        )
+        .join("\nUNION ALL\n");
+      return request.query(`
+        DELETE FROM v2.ArticleDestinationMap WHERE ArticleId = @articleId;
+        ${
+          items.length > 0
+            ? `INSERT INTO v2.ArticleDestinationMap (ArticleId, DestinationSlug, Topic, [Order])\n${insertRows}`
+            : ""
+        }
+      `);
     });
   }
 

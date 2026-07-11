@@ -51,7 +51,7 @@ export class RefreshDynamicBlocksUseCase {
         compiled.errors.map((e) => e.message),
       );
     }
-    const linkedHtml = await this.autoLink.linkHtml(compiled.html);
+    const { html: linkedHtml } = await this.autoLink.linkHtml(compiled.html);
 
     await this.siteDb.updateContentHtml(publication.siteId, linkedHtml);
     await this.publications.markRefreshed(jobId, new Date());

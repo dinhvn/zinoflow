@@ -68,8 +68,9 @@ export class PublishArticleUseCase {
       );
     }
     // Chen link noi bo toi diem den nhac trong bai (dung chung engine voi
-    // publish-destination.usecase.ts — backlog §B Phase C muc 5).
-    const linkedHtml = await this.autoLink.linkHtml(compiled.html);
+    // publish-destination.usecase.ts — backlog §B Phase C muc 5). addedLinks
+    // lam nguon goi y gan ArticleDestinationMap (article-spec §8.1, Phase 26).
+    const { html: linkedHtml, addedLinks } = await this.autoLink.linkHtml(compiled.html);
 
     const existing = await this.publications.findByJobId(jobId);
     const slug = existing?.slug ?? article.metadata.slugSuggestion;
@@ -97,6 +98,7 @@ export class PublishArticleUseCase {
       blockCount: compiled.blockCount,
       warnings: compiled.warnings,
       durationMs: Date.now() - startedAt,
+      addedLinks,
     };
   }
 }

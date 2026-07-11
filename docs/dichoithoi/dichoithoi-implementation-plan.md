@@ -862,6 +862,37 @@ thật đầu tiên (đúng ví dụ trong content-seo-ux-plan §10.6.1).
 
 ---
 
+## Phase 26 — Bảng `ArticleDestinationMap` — nền tảng (ĐÃ XONG 07/2026)
+
+**Phụ thuộc**: không phụ thuộc phase nào.
+
+Quan hệ NGƯỢC Article → Destination (article-spec §8.1) — trang điểm đến biết
+có bài cẩm nang nào viết về mình để hiện link. Phase này CHỈ xây nền tảng
+(bảng + API ghi/đọc + UI gán cơ bản) — CHƯA bake vào `DynamicBlocksJson`/hiện
+link trên trang điểm đến (để Phase 28, vì đó là việc của layout trang).
+
+- SQL Server: `v2.ArticleDestinationMap` (PK `ArticleId+DestinationSlug+Topic`,
+  đúng DDL trong article-spec §8.1, idempotent trong `01-create-new-schema.sql`,
+  áp dụng `dichoithoi_dev`).
+- `ArticleAutoLinkService.linkHtml()` đổi trả về cả `addedLinks` (trước đây
+  tính rồi bỏ) — dùng làm nguồn gợi ý gán, không cần engine quét riêng.
+  `PublishArticleResult` thêm field `addedLinks`.
+- 2 use-case mới: `GetArticleDestinationMapUseCase` (đọc, resolve tên điểm đến
+  qua mirror), `SaveArticleDestinationMapUseCase` (ghi đè toàn bộ theo tick
+  xác nhận — KHÔNG bao giờ tự gán im lặng, đúng nguyên tắc xuyên suốt).
+  `GET`/`PUT /articles/:jobId/destination-map`.
+- `guessArticleTopic()` (domain, có unit test riêng) — đoán topic từ tiêu đề
+  theo từ khoá, chỉ là gợi ý ban đầu.
+- UI: `ArticleDestinationMapPanel` (`features/dichoithoi/`) hiện sau khi
+  publish bài cẩm nang thành công — tick + chọn topic + Lưu.
+
+Verify: `tsc --noEmit` api+web sạch, jest 51/51 suites (326/326 tests — thêm
+10 test mới), round-trip thật qua GET/PUT `/api/articles/:jobId/destination-map`
+(insert Article/publication test tạm qua script, xác nhận SQL Server
+`v2.ArticleDestinationMap` ghi đúng, xoá dữ liệu test sau khi verify).
+
+---
+
 ## Còn treo — CHƯA đủ điều kiện đưa vào phase code (cần bạn quyết định trước)
 
 ~~Rà soát lại `DestinationType`/`DestinationTypeMap`~~ → **✅ ĐÃ XONG (07/2026,

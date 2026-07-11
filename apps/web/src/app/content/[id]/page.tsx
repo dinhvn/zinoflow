@@ -22,6 +22,7 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
 import { InsertDynamicBlockPanel } from "@/features/dichoithoi/insert-dynamic-block-panel";
+import { ArticleDestinationMapPanel } from "@/features/dichoithoi/article-destination-map-panel";
 
 /** Draft response tu GET /content/jobs/:id/draft (DraftRecord phia API). */
 const draftSchema = z.object({
@@ -541,6 +542,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 </ul>
               )}
             </div>
+          )}
+
+          {articleResult && articleResult.addedLinks.length > 0 && (
+            <ArticleDestinationMapPanel jobId={id} suggestions={articleResult.addedLinks} />
           )}
 
           {refreshResult && (

@@ -41,6 +41,13 @@ export const compileArticleReportSchema = z.object({
 });
 export type CompileArticleReport = z.infer<typeof compileArticleReportSchema>;
 
+/** 1 diem den duoc auto-link nhac toi trong bai (article-spec §3.4/§8.1) */
+export const articleAddedLinkSchema = z.object({
+  targetSlug: z.string(),
+  targetName: z.string(),
+});
+export type ArticleAddedLink = z.infer<typeof articleAddedLinkSchema>;
+
 export const publishArticleResultSchema = z.object({
   jobId: z.string().uuid(),
   slug: z.string(),
@@ -48,8 +55,51 @@ export const publishArticleResultSchema = z.object({
   blockCount: z.number().int(),
   warnings: z.array(articleBlockWarningSchema),
   durationMs: z.number().int(),
+  /** Diem den auto-link nhac trong bai — nguon goi y gan ArticleDestinationMap (§8.1) */
+  addedLinks: z.array(articleAddedLinkSchema),
 });
 export type PublishArticleResult = z.infer<typeof publishArticleResultSchema>;
+
+/**
+ * Quan he NGUOC Article -> Destination (article-spec §8.1, Phase 26 — nen
+ * tang): trang diem den can biet co bai cam nang nao viet ve minh de hien
+ * link ra. Gan tay/tick xac nhan tu goi y auto-link, khong tu dong hoan toan.
+ */
+export const articleTopicSchema = z.enum([
+  "itinerary",
+  "food",
+  "souvenir",
+  "nightlife",
+  "poi-guide",
+  "general",
+]);
+export type ArticleTopic = z.infer<typeof articleTopicSchema>;
+
+export const articleDestinationMapItemSchema = z.object({
+  destinationSlug: z.string().min(1).max(64),
+  destinationName: z.string(),
+  topic: articleTopicSchema,
+  order: z.number().int().default(0),
+});
+export type ArticleDestinationMapItem = z.infer<typeof articleDestinationMapItemSchema>;
+
+export const saveArticleDestinationMapRequestSchema = z.object({
+  items: z.array(
+    z.object({
+      destinationSlug: z.string().min(1).max(64),
+      topic: articleTopicSchema,
+      order: z.number().int().default(0),
+    }),
+  ),
+});
+export type SaveArticleDestinationMapRequest = z.infer<
+  typeof saveArticleDestinationMapRequestSchema
+>;
+
+export const articleDestinationMapResponseSchema = z.object({
+  items: z.array(articleDestinationMapItemSchema),
+});
+export type ArticleDestinationMapResponse = z.infer<typeof articleDestinationMapResponseSchema>;
 
 /** "Làm mới khối động" — khong AI, khong qua review lai (spec §7) */
 export const refreshDynamicBlocksResultSchema = z.object({
