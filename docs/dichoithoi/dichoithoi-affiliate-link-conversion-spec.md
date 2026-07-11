@@ -53,8 +53,8 @@ Mọi link (item trong `ticketLinks[]`, khách sạn, tour) đều mang 4 field 
 (data, không phải code) khi có mã affiliate từng sàn, không chặn việc build các
 phần khác của module Product. Thứ tự sàn nào cấu hình trước chưa chốt (07/2026).
 
-**Riêng `ticketLinks[]`** (đề xuất 07/2026, chưa build — xem
-`dichoithoi-content-seo-ux-plan.md` §5.5): thêm field thứ 5 `price` (numeric,
+**Riêng `ticketLinks[]`** (✅ ĐÃ XONG, xác nhận qua code 07/2026 — xem
+`dichoithoi-content-seo-ux-plan.md` §5.5): đã thêm field thứ 5 `price` (numeric,
 TUỲ CHỌN/nullable) — giá tham khảo riêng của nhà cung cấp đó, KHÁC với
 `PriceBreakdownJson` (giá cố định chính thức do điểm đến quy định, không qua
 affiliate — xem destination-spec §2.2). Hotel/Tour KHÔNG cần field này vì đã có

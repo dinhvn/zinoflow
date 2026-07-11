@@ -257,16 +257,10 @@ price:25000}`) — hiển thị dạng bảng nhỏ ngay dưới `TicketPrice` k
 AI KHÔNG được tự sinh/đoán số này — đây là số liệu chính thức của điểm đến,
 sai là sai tiền thật của khách.
 
-**(b) Giá theo từng nhà cung cấp booking** — đã có sẵn cơ chế `ticketLinks[]`
-(§2.3 destination-spec, mỗi dòng 1 nhà cung cấp như Klook/TripVision) nhưng
-HIỆN CHƯA có field giá riêng cho từng link — chỉ có
-`{provider, label, sourceUrl, affiliateUrl, linkStatus}`. Đề xuất thêm field
-`price` TUỲ CHỌN vào item schema đó (nullable — nhiều nhà cung cấp không hiện
-giá trước khi bấm vào link ngoài), để mỗi nút "Đặt vé qua {provider}" có thể
-hiện kèm giá tham khảo của riêng nhà đó. CẦN sửa `affiliateLinkItemSchema`
-(`packages/contracts/src/dichoithoi/affiliate.ts`) + cột `TicketLinksJson`
-(cùng cấu trúc, database-redesign §4.3) — chưa build. Xem thêm ghi chú ở
-`dichoithoi-affiliate-link-conversion-spec.md`.
+**(b) Giá theo từng nhà cung cấp booking** — ✅ **ĐÃ XONG (xác nhận qua code
+07/2026)**: `affiliateLinkItemSchema` (`packages/contracts/src/dichoithoi/
+affiliate.ts`) đã có field `price` tuỳ chọn (nullable), UI
+`destination-ticket-links-editor.tsx` đã có ô nhập giá cho từng dòng.
 **Nhập ở zinoflow**: nhập tay, thêm 1 ô "Giá tham khảo" vào form "Link vé tham
 quan" đã có sẵn (cùng chỗ nhập `sourceUrl`) — tuỳ chọn, để trống nếu nhà cung
 cấp không hiện giá trước khi bấm link ngoài.
