@@ -8,6 +8,7 @@ import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Badge } from "@/shared/ui/badge";
+import { AffiliateUrlPreview } from "@/features/dichoithoi/affiliate-url-preview";
 
 const EMPTY_FORM = {
   name: "",
@@ -182,6 +183,9 @@ export default function HotelsPage() {
             value={form.sourceUrl}
             onChange={(e) => setForm((f) => ({ ...f, sourceUrl: e.target.value }))}
           />
+        </div>
+        <div className="mt-2">
+          <AffiliateUrlPreview sourceUrl={form.sourceUrl} provider={form.provider} />
         </div>
         <div className="mt-3 flex gap-2">
           <Button

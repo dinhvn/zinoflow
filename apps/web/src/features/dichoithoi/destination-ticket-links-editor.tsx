@@ -8,6 +8,7 @@ import { apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { Input } from "@/shared/ui/input";
+import { AffiliateUrlPreview } from "./affiliate-url-preview";
 
 interface Row {
   provider: string;
@@ -126,6 +127,9 @@ export function DestinationTicketLinksEditor({
                   onChange={(e) => update(i, { price: e.target.value })}
                   placeholder="Giá tham khảo (tuỳ chọn)"
                 />
+              </div>
+              <div className="mt-2">
+                <AffiliateUrlPreview sourceUrl={row.sourceUrl} provider={row.provider} />
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
                 {saved && saved.sourceUrl === row.sourceUrl.trim() ? (

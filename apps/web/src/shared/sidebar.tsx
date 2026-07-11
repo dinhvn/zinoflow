@@ -47,8 +47,12 @@ const DICHOITHOI_ITEMS: NavItem[] = [
   { href: "/dichoithoi/khach-san", label: "Khách sạn", icon: IconHotel },
   { href: "/dichoithoi/tour", label: "Tour", icon: IconCompass },
   { href: "/dichoithoi/san-pham", label: "Sản phẩm", icon: IconTag },
-  { href: "/dichoithoi/affiliate", label: "Quy tắc affiliate", icon: IconLink },
   { href: "/dichoithoi/quy-trinh", label: "Quy trình", icon: IconFlow },
+];
+
+/** Công cụ (destination-spec §7.1) — thao tác vận hành chung, không gắn 1 module cụ thể */
+const DICHOITHOI_TOOL_ITEMS: NavItem[] = [
+  { href: "/dichoithoi/affiliate", label: "Quy tắc affiliate", icon: IconLink },
 ];
 
 /** Khu CMS khuyenmai (laruki + dochoi3s) — tao content AI ghi vao CMS */
@@ -107,6 +111,13 @@ export function Sidebar() {
           Dichoithoi
         </div>
         {DICHOITHOI_ITEMS.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} />
+        ))}
+
+        <div className="mt-3 mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          Công cụ
+        </div>
+        {DICHOITHOI_TOOL_ITEMS.map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
 
