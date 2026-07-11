@@ -9,6 +9,7 @@ import {
 import { apiGet } from "@/shared/api-client";
 import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { ErrorBox } from "@/shared/ui/error-box";
+import { Card, ActionRow } from "@/shared/ui/card";
 
 const usd = (n: number) => `$${n.toFixed(n < 1 ? 4 : 2)}`;
 const num = (n: number) => n.toLocaleString("vi-VN");
@@ -196,29 +197,6 @@ function Kpi({ label, value, tone, href }: { label: string; value: string; tone:
     </div>
   );
   return href ? <a href={href}>{inner}</a> : inner;
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-      <h2 className="mb-3 font-medium">{title}</h2>
-      {children}
-    </div>
-  );
-}
-
-function ActionRow({ label, count, href, tone }: { label: string; count: number; href: string; tone: BadgeTone }) {
-  return (
-    <a
-      href={href}
-      className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900 ${
-        count > 0 ? "border-zinc-200 dark:border-zinc-800" : "border-transparent opacity-60"
-      }`}
-    >
-      <span className="text-zinc-700 dark:text-zinc-300">{label}</span>
-      <Badge tone={count > 0 ? tone : "gray"}>{count}</Badge>
-    </a>
-  );
 }
 
 function ChannelCard({ channel }: { channel: DashboardSummaryResponse["channels"][number] }) {

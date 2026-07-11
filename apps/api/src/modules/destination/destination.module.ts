@@ -50,6 +50,7 @@ import { ReverseCheckTagAssignmentsUseCase } from "./application/use-cases/rever
 import { GenerateTagDescriptionUseCase } from "./application/use-cases/generate-tag-description.usecase";
 import { UpdateTagDescriptionUseCase } from "./application/use-cases/update-tag-description.usecase";
 import { GetCoverageScoresUseCase } from "./application/use-cases/get-coverage-scores.usecase";
+import { GetDichoithoiDashboardAlertsUseCase } from "./application/use-cases/get-dichoithoi-dashboard-alerts.usecase";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
 import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
@@ -90,6 +91,7 @@ import {
     GenerateTagDescriptionUseCase,
     UpdateTagDescriptionUseCase,
     GetCoverageScoresUseCase,
+    GetDichoithoiDashboardAlertsUseCase,
     ListDestinationsUseCase,
     SyncDestinationsUseCase,
     GetDestinationTaxonomyUseCase,

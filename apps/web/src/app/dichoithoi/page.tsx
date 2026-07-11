@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   destinationTaxonomySchema,
+  dichoithoiDashboardAlertsResponseSchema,
   listDestinationsResponseSchema,
   migrateDestinationImagesReportSchema,
   recomputeRelatedReportSchema,
@@ -24,11 +25,38 @@ import {
 import { apiGet, apiSend } from "@/shared/api-client";
 import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { Button, buttonClasses } from "@/shared/ui/button";
+import { Card, ActionRow } from "@/shared/ui/card";
 import { DataTable, type DataTableColumn, type SortDirection } from "@/shared/ui/data-table";
 import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
 import { Pagination } from "@/shared/ui/pagination";
 import { Select } from "@/shared/ui/select";
+
+/** Khoi "Viec can lam" tren hub (destination-spec §7.2, Phase 23) — chi hien
+ * khi co it nhat 1 canh bao (nguyen tac "khong hien muc chi de biet"). */
+function DashboardAlertsCard() {
+  const query = useQuery({
+    queryKey: ["dichoithoi-dashboard-alerts"],
+    queryFn: () =>
+      apiGet("/destinations/dashboard-alerts", dichoithoiDashboardAlertsResponseSchema),
+    staleTime: 5 * 60 * 1000,
+  });
+  const data = query.data;
+  if (!data || data.alerts.length === 0) return null;
+
+  return (
+    <Card title="Việc cần làm">
+      <div className="mb-3 text-sm text-zinc-500">
+        {data.coverageHealthPercent}% điểm đến đạt độ phủ nội dung mục tiêu
+      </div>
+      <div className="space-y-2">
+        {data.alerts.map((a) => (
+          <ActionRow key={a.key} label={a.label} count={a.count} href={a.href} tone="amber" />
+        ))}
+      </div>
+    </Card>
+  );
+}
 
 const KIND_LABELS: Record<DestinationKind, string> = {
   province: "Tỉnh/Thành",
@@ -357,6 +385,8 @@ export default function DichoithoiPage() {
           </Button>
         </div>
       </div>
+
+      <DashboardAlertsCard />
 
       {syncError && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">

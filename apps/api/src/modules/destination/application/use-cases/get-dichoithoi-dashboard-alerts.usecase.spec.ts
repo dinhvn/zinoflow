@@ -1,0 +1,106 @@
+import { GetDichoithoiDashboardAlertsUseCase } from "./get-dichoithoi-dashboard-alerts.usecase";
+import { GetCoverageScoresUseCase } from "./get-coverage-scores.usecase";
+import { ContentJob, type ContentJobProps } from "../../../ai-content/domain/content-job";
+import type { ContentJobRepository } from "../../../ai-content/application/ports/content-job.repository";
+import type { DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+
+function fakeJob(overrides: Partial<ContentJobProps>): ContentJob {
+  return ContentJob.restore({
+    id: "job-1",
+    siteCode: "dichoithoi",
+    sourceType: "Topic",
+    sourceRef: "cam-nang",
+    topic: "Chủ đề",
+    articleType: "cam-nang",
+    keywordSeed: [],
+    toneProfile: null,
+    sourceContext: null,
+    status: "Created",
+    aiProvider: "gemini",
+    aiModel: "gemini-2.5-flash",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  });
+}
+
+describe("GetDichoithoiDashboardAlertsUseCase (destination-spec §7.2, Phase 23)", () => {
+  function setup(overrides: {
+    jobs?: ContentJob[];
+    tags?: Awaited<ReturnType<DichoithoiSiteDb["fetchTags"]>>;
+    tagAssignments?: Awaited<ReturnType<DichoithoiSiteDb["fetchTagAssignments"]>>;
+    coverageRows?: Awaited<ReturnType<DichoithoiSiteDb["fetchContentCoverageRows"]>>;
+    mirrors?: unknown[];
+  } = {}) {
+    const jobsRepo: ContentJobRepository = {
+      save: async () => {},
+      findById: async () => null,
+      findAll: async () => overrides.jobs ?? [],
+      findStatusesByIds: async () => new Map(),
+    };
+    const siteDb = {
+      fetchTags: async () => overrides.tags ?? [],
+      fetchTagAssignments: async () => overrides.tagAssignments ?? [],
+      fetchContentCoverageRows: async () => overrides.coverageRows ?? [],
+    } as unknown as DichoithoiSiteDb;
+    const mirrorRepo = { findAll: async () => overrides.mirrors ?? [] } as unknown as ConstructorParameters<
+      typeof GetCoverageScoresUseCase
+    >[0];
+    const coverageScores = new GetCoverageScoresUseCase(mirrorRepo, siteDb);
+    const usecase = new GetDichoithoiDashboardAlertsUseCase(jobsRepo, siteDb, coverageScores);
+    return { usecase };
+  }
+
+  it("khong hien muc nao khi moi thu deu on (nguyen tac chi hien count > 0)", async () => {
+    const { usecase } = setup();
+    const result = await usecase.execute();
+    expect(result.alerts).toEqual([]);
+    expect(result.coverageHealthPercent).toBe(100);
+  });
+
+  it("dem dung draft cho duyet + job loi, CHI cua dichoithoi (bo qua site khac)", async () => {
+    const jobs = [
+      fakeJob({ id: "a", status: "InReview" }),
+      fakeJob({ id: "b", status: "Failed" }),
+      fakeJob({ id: "c", siteCode: "laruki", status: "InReview" }),
+      fakeJob({ id: "d", status: "DraftReady" }),
+    ];
+    const { usecase } = setup({ jobs });
+    const result = await usecase.execute();
+
+    const pending = result.alerts.find((a) => a.key === "pending-review");
+    const failed = result.alerts.find((a) => a.key === "failed-job");
+    expect(pending?.count).toBe(1);
+    expect(failed?.count).toBe(1);
+  });
+
+  it("dem dung tag duoi nguong (< 3 diem gan)", async () => {
+    const tags = [
+      { id: 1, slug: "hoang-so", name: "Hoang so", description: null, status: 1 },
+      { id: 2, slug: "pho-bien", name: "Pho bien", description: null, status: 1 },
+    ] as unknown as Awaited<ReturnType<DichoithoiSiteDb["fetchTags"]>>;
+    const tagAssignments = [
+      { destinationId: 1, destinationSlug: "a", destinationName: "A", tagSlugs: ["hoang-so"] },
+      { destinationId: 2, destinationSlug: "b", destinationName: "B", tagSlugs: ["pho-bien"] },
+      { destinationId: 3, destinationSlug: "c", destinationName: "C", tagSlugs: ["pho-bien"] },
+      { destinationId: 4, destinationSlug: "d", destinationName: "D", tagSlugs: ["pho-bien"] },
+    ];
+    const { usecase } = setup({ tags, tagAssignments });
+    const result = await usecase.execute();
+
+    const underThreshold = result.alerts.find((a) => a.key === "under-threshold-tag");
+    expect(underThreshold?.count).toBe(1); // chi "hoang-so" (1 diem) duoi nguong 3
+  });
+
+  it("dem dung diem thieu anh gallery", async () => {
+    const coverageRows = [
+      { destinationId: 1, hasOpeningTime: true, hasTicketPrice: true, hasFaq: true, hasPracticalNotes: true, hasTicketLinks: true, hasMainContent: true, hasGallery: false },
+      { destinationId: 2, hasOpeningTime: true, hasTicketPrice: true, hasFaq: true, hasPracticalNotes: true, hasTicketLinks: true, hasMainContent: true, hasGallery: true },
+    ];
+    const { usecase } = setup({ coverageRows });
+    const result = await usecase.execute();
+
+    const missingGallery = result.alerts.find((a) => a.key === "missing-gallery");
+    expect(missingGallery?.count).toBe(1);
+  });
+});

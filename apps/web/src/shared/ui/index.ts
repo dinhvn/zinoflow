@@ -11,3 +11,4 @@ export { Slider } from "./slider";
 export { Checkbox } from "./checkbox";
 export { Drawer } from "./drawer";
 export { Combobox, type ComboboxOption } from "./combobox";
+export { Card, ActionRow } from "./card";

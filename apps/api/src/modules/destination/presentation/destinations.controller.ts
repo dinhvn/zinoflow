@@ -67,6 +67,7 @@ import {
   type TaxonomyContent,
   type UpdateTaxonomyDescriptionRequest,
   type ListCoverageScoresResponse,
+  type DichoithoiDashboardAlertsResponse,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { ValidationError } from "../../shared/errors/app-error";
@@ -90,6 +91,7 @@ import { ImportDestinationsUseCase } from "../application/use-cases/import-desti
 import { ListAddressMappingsUseCase } from "../application/use-cases/list-address-mappings.usecase";
 import { ManageTaxonomyContentUseCase } from "../application/use-cases/manage-taxonomy-content.usecase";
 import { GetCoverageScoresUseCase } from "../application/use-cases/get-coverage-scores.usecase";
+import { GetDichoithoiDashboardAlertsUseCase } from "../application/use-cases/get-dichoithoi-dashboard-alerts.usecase";
 import { SuggestDestinationMetaUseCase } from "../../ai-content/application/use-cases/suggest-destination-meta.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
@@ -129,6 +131,7 @@ export class DestinationsController {
     private readonly listAddressMappings: ListAddressMappingsUseCase,
     private readonly manageTaxonomyContent: ManageTaxonomyContentUseCase,
     private readonly getCoverageScores: GetCoverageScoresUseCase,
+    private readonly getDashboardAlerts: GetDichoithoiDashboardAlertsUseCase,
     private readonly suggestMeta: SuggestDestinationMetaUseCase,
     private readonly parseMapsLink: ParseMapsLinkUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
@@ -231,6 +234,12 @@ export class DestinationsController {
   @Get("coverage-scores")
   coverageScores(): Promise<ListCoverageScoresResponse> {
     return this.getCoverageScores.execute();
+  }
+
+  /** Khoi "Viec can lam" tren hub CMS (spec §7.2, Phase 23). Truoc ":slug". */
+  @Get("dashboard-alerts")
+  dashboardAlerts(): Promise<DichoithoiDashboardAlertsResponse> {
+    return this.getDashboardAlerts.execute();
   }
 
   /**

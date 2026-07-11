@@ -7,6 +7,7 @@ export * from "./dichoithoi/destination";
 export * from "./dichoithoi/destination-article";
 export * from "./dichoithoi/destination-tag";
 export * from "./dichoithoi/coverage-score";
+export * from "./dichoithoi/dashboard-alerts";
 export * from "./dichoithoi/affiliate";
 export * from "./dichoithoi/hotel";
 export * from "./dichoithoi/tour";

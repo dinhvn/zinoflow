@@ -142,6 +142,8 @@ export interface SiteContentCoverageRow {
   hasPracticalNotes: boolean;
   hasTicketLinks: boolean;
   hasMainContent: boolean;
+  /** GalleryJson co it nhat 1 anh — dung cho canh bao dashboard (destination-spec §7.2) */
+  hasGallery: boolean;
 }
 
 export interface DichoithoiSiteDb {

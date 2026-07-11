@@ -671,6 +671,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       HasPracticalNotes: number;
       HasTicketLinks: number;
       HasMainContent: number;
+      HasGallery: number;
     }>(`
       SELECT d.Id,
         CASE WHEN c.OpeningTime IS NOT NULL AND LEN(c.OpeningTime) > 0 THEN 1 ELSE 0 END AS HasOpeningTime,
@@ -678,7 +679,8 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         CASE WHEN c.FaqJson IS NOT NULL AND LEN(c.FaqJson) > 2 THEN 1 ELSE 0 END AS HasFaq,
         CASE WHEN c.PracticalNotesJson IS NOT NULL AND LEN(c.PracticalNotesJson) > 2 THEN 1 ELSE 0 END AS HasPracticalNotes,
         CASE WHEN c.TicketLinksJson IS NOT NULL AND LEN(c.TicketLinksJson) > 2 THEN 1 ELSE 0 END AS HasTicketLinks,
-        CASE WHEN c.ContentHtml IS NOT NULL AND LEN(c.ContentHtml) > 300 THEN 1 ELSE 0 END AS HasMainContent
+        CASE WHEN c.ContentHtml IS NOT NULL AND LEN(c.ContentHtml) > 300 THEN 1 ELSE 0 END AS HasMainContent,
+        CASE WHEN c.GalleryJson IS NOT NULL AND LEN(c.GalleryJson) > 2 THEN 1 ELSE 0 END AS HasGallery
       FROM v2.Destination d
       LEFT JOIN v2.DestinationContent c ON c.DestinationId = d.Id
       WHERE d.Status = 1
@@ -691,6 +693,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       hasPracticalNotes: Boolean(r.HasPracticalNotes),
       hasTicketLinks: Boolean(r.HasTicketLinks),
       hasMainContent: Boolean(r.HasMainContent),
+      hasGallery: Boolean(r.HasGallery),
     }));
   }
 
