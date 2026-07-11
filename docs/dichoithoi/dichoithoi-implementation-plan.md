@@ -825,22 +825,55 @@ nhận Card hiện đúng trên `/dichoithoi` và không phá dashboard tổng `
 
 ## Phase 22-23 lưu ý chung: jest 48/48 suites, `tsc --noEmit` api+web sạch.
 
-## Phase 24 — Nối dây `SlugRedirect` — MỘT NỬA (chiều đọc, 07/2026)
+## Phase 24 — Nối dây `SlugRedirect` (ĐÃ XONG cả 2 chiều, 07/2026)
 
 **Phụ thuộc**: không phụ thuộc phase nào.
 
-✅ Chiều ĐỌC: `DestinationController.Detail` (dichoithoi) check
+✅ Chiều ĐỌC (07/2026): `DestinationController.Detail` (dichoithoi) check
 `v2.SlugRedirect` trước khi 404, 301 sang slug mới nếu có (entity
 `V2SlugRedirect` mới + `FindRedirectSlugAsync` qua repository/service). Test
 Playwright thật: chèn 1 dòng redirect test, xác nhận 301 đúng, xoá sau khi
 verify; slug không tồn tại thật vẫn 404 đúng (không regressive).
 
-❌ Chiều GHI — **CHƯA LÀM, phát hiện phức tạp hơn dự kiến khi bắt tay**: đổi
-slug hiện tại KHÔNG được hỗ trợ qua form sửa thông thường (`slug` là PRIMARY
-KEY của bảng mirror Postgres; `UpsertDestinationUseCase` cố ý bỏ qua
-`request.slug` khi sửa — đổi PK cần cascade cập nhật `ParentId` của mọi điểm
-con, rủi ro cao hơn "nối dây" đơn giản). Cần thiết kế riêng 1 tính năng "Đổi
-slug" tường minh nếu muốn hoàn thiện — xem `dichoithoi-backlog.md`.
+✅ Chiều GHI (07/2026) — tính năng "Đổi slug" riêng biệt, canh bao ro tren UI
+(không gộp vào form sửa metadata thường):
+- `RenameDestinationSlugUseCase` (`apps/api/.../destination/application/
+  use-cases/rename-destination-slug.usecase.ts`) — validate slug mới hợp lệ/
+  chưa tồn tại/khác slug cũ/không đổi khi đang có job AI soạn dở -> tính tập
+  ảnh hưởng TRƯỚC khi đổi (`RecomputeRelatedService.affectedSlugsForRename`,
+  BFS con cháu + cha + nguồn có quan hệ, cùng mẫu với
+  `affectedSlugsForParentChange`) -> cascade Postgres
+  (`TypeOrmDestinationMirrorRepository.renameSlug` — 1 transaction:
+  `dichoithoi_destinations.slug`+`parent_slug`,
+  `dichoithoi_destination_relations.source_slug`+`target_slug`,
+  `hotel_destination_map`/`tour_destination_map.destination_slug`,
+  `products.tags`) -> cascade SQL Server nếu đã publish
+  (`MssqlSiteDbAdapter.renameSlug` — 1 transaction `SET XACT_ABORT ON`:
+  `v2.Destination.Slug`, `v2.ArticleDestinationMap.DestinationSlug`, upsert
+  `v2.SlugRedirect`) -> recompute Ancestors/Children/RelatedJson -> enqueue
+  `destination.relink` (pg-boss) để tự sửa href nội bộ bài khác.
+- Contract: `renameDestinationSlugRequestSchema`/`...ResponseSchema`
+  (`packages/contracts/src/dichoithoi/destination.ts`). Endpoint
+  `POST /destinations/:slug/rename-slug`.
+- UI: panel "⚠️ Đổi slug (nâng cao)" riêng trên trang chi tiết điểm đến
+  (`apps/web/.../dichoithoi/[slug]/page.tsx`) — mặc định đóng, cảnh báo rõ
+  trước khi mở form, `window.confirm` trước khi gọi, điều hướng sang URL mới
+  sau khi thành công.
+- Ngoài phạm vi (đã biết, không phải bug): KHÔNG tự di chuyển ảnh vật lý trên
+  FTP/disk; KHÔNG tự sửa token `[[block:...]]` trong markdown thô của bài
+  cẩm nang chưa publish (compiler đã fail-safe: 0 kết quả → warning + bỏ
+  khối); `content_jobs.source_ref` để nguyên (chỉ lịch sử, không tra lại).
+
+Verify: `tsc --noEmit` api+web sạch, jest 18/18 destination suites (97/97
+tests, gồm 2 spec mới `recompute-related.service.spec.ts` +
+`rename-destination-slug.usecase.spec.ts`). Test thật trên `dichoithoi_dev`:
+tạo cây test (cha `test-rename-cha` + con `test-rename-con`), publish thẳng
+qua SQL Server (insert `v2.Destination` + sync), gọi `rename-slug` đổi cha
+thành `test-rename-cha-v2` — xác nhận `v2.Destination.Slug` đổi đúng,
+`v2.SlugRedirect` có dòng `test-rename-cha -> Id 274`, mirror Postgres cascade
+đúng (`slug` + con `parent_slug` đều trỏ slug mới), API trả 422 cho slug cũ
+(không còn tồn tại) và trả đúng `children` cho slug mới. Dọn sạch dữ liệu
+test ở cả 2 DB sau khi verify.
 
 ---
 

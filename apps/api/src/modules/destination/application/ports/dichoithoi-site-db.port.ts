@@ -219,6 +219,14 @@ export interface DichoithoiSiteDb {
   /** Cap nhat metadata diem den da ton tai (khong dong cham content/quan he) */
   updateMetadata(siteId: number, meta: SiteDestinationMeta): Promise<void>;
   /**
+   * Doi slug 1 diem den DA publish (Phase 24 chieu ghi) — 1 transaction:
+   * v2.Destination.Slug + v2.ArticleDestinationMap.DestinationSlug (cascade,
+   * chuoi tu do khong FK) + ghi v2.SlugRedirect (OldSlug->DestinationId) de
+   * website 301 tu slug cu (chieu doc da xong Phase 24). Upsert SlugRedirect
+   * (khong throw neu oldSlug da tung la 1 redirect cu).
+   */
+  renameSlug(siteId: number, oldSlug: string, newSlug: string): Promise<void>;
+  /**
    * Card diem den theo bo loc (article-spec §3.1 khoi `destinations`) — CHI diem
    * da published (Status=1). typeSlug khop qua DestinationTypeMap+DestinationType.
    */

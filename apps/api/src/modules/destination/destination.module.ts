@@ -45,6 +45,7 @@ import { IMAGE_DOWNLOADER } from "./application/ports/image-downloader.port";
 import { LocalFileImageDownloader } from "./infrastructure/reference/local-file-image-downloader";
 import { GetDestinationDetailUseCase } from "./application/use-cases/get-destination-detail.usecase";
 import { UpsertDestinationUseCase } from "./application/use-cases/upsert-destination.usecase";
+import { RenameDestinationSlugUseCase } from "./application/use-cases/rename-destination-slug.usecase";
 import { ImportDestinationsUseCase } from "./application/use-cases/import-destinations.usecase";
 import { ListAddressMappingsUseCase } from "./application/use-cases/list-address-mappings.usecase";
 import { ManageTaxonomyContentUseCase } from "./application/use-cases/manage-taxonomy-content.usecase";
@@ -118,6 +119,7 @@ import {
     MigrateDestinationImagesUseCase,
     GetDestinationDetailUseCase,
     UpsertDestinationUseCase,
+    RenameDestinationSlugUseCase,
     ImportDestinationsUseCase,
     ListAddressMappingsUseCase,
     ManageTaxonomyContentUseCase,

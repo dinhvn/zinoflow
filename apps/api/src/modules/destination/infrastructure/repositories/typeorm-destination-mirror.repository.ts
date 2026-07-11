@@ -220,6 +220,42 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     await this.repo.update({ slug }, { thumbnail });
   }
 
+  async renameSlug(oldSlug: string, newSlug: string): Promise<void> {
+    await this.repo.manager.transaction(async (manager) => {
+      await manager.query(`UPDATE dichoithoi_destinations SET slug = $1 WHERE slug = $2`, [
+        newSlug,
+        oldSlug,
+      ]);
+      await manager.query(
+        `UPDATE dichoithoi_destinations SET parent_slug = $1 WHERE parent_slug = $2`,
+        [newSlug, oldSlug],
+      );
+      await manager.query(
+        `UPDATE dichoithoi_destination_relations SET source_slug = $1 WHERE source_slug = $2`,
+        [newSlug, oldSlug],
+      );
+      await manager.query(
+        `UPDATE dichoithoi_destination_relations SET target_slug = $1 WHERE target_slug = $2`,
+        [newSlug, oldSlug],
+      );
+      // hotel_destination_map/tour_destination_map/products do Hotel/Tour/Product module
+      // "so huu" — cham thang qua manager (khong qua port cua ho) de tranh circular
+      // dependency module (HotelModule/TourModule da import DestinationModule).
+      await manager.query(
+        `UPDATE hotel_destination_map SET destination_slug = $1 WHERE destination_slug = $2`,
+        [newSlug, oldSlug],
+      );
+      await manager.query(
+        `UPDATE tour_destination_map SET destination_slug = $1 WHERE destination_slug = $2`,
+        [newSlug, oldSlug],
+      );
+      await manager.query(`UPDATE products SET tags = array_replace(tags, $1, $2)`, [
+        oldSlug,
+        newSlug,
+      ]);
+    });
+  }
+
   async setTicketLinks(slug: string, ticketLinks: readonly AffiliateLinkItem[]): Promise<void> {
     await this.repo.update({ slug }, { ticketLinks: [...ticketLinks] });
   }

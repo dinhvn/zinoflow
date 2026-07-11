@@ -405,6 +405,26 @@ export const upsertDestinationRequestSchema = z.object({
 export type UpsertDestinationRequest = z.infer<typeof upsertDestinationRequestSchema>;
 
 /**
+ * Doi slug 1 diem den DA TON TAI (Phase 24 chieu ghi) — thao tac rieng, KHONG
+ * gop vao upsertDestinationRequestSchema vi can canh bao rieng + cascade
+ * (con chau, hotel/tour map, SlugRedirect...). slug cu lay tu URL.
+ */
+export const renameDestinationSlugRequestSchema = z.object({
+  newSlug: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug chỉ gồm chữ thường, số và dấu gạch ngang"),
+});
+export type RenameDestinationSlugRequest = z.infer<typeof renameDestinationSlugRequestSchema>;
+
+export const renameDestinationSlugResponseSchema = z.object({
+  oldSlug: z.string(),
+  newSlug: z.string(),
+});
+export type RenameDestinationSlugResponse = z.infer<typeof renameDestinationSlugResponseSchema>;
+
+/**
  * 1 dong import hang loat — giong upsert nhung slug TUY CHON (thieu thi server
  * tu sinh tu ten) + kem thong tin cho AI (ghi chu + URL nguon).
  */

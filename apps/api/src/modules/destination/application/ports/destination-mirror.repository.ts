@@ -65,6 +65,14 @@ export interface DestinationMirrorRepository {
   setSiteId(slug: string, siteId: number): Promise<void>;
   /** Cap nhat duong dan thumbnail (spec §14.3) */
   setThumbnail(slug: string, thumbnail: string | null): Promise<void>;
+  /**
+   * Doi slug 1 diem den (Phase 24 chieu ghi) — cascade TRONG 1 transaction:
+   * dichoithoi_destinations.slug + parent_slug cua con, dichoithoi_destination_relations
+   * (source/target_slug), hotel_destination_map/tour_destination_map.destination_slug,
+   * products.tags. Cac bang do Hotel/Tour/Product module "so huu" nhung KHONG co FK
+   * (chuoi tu do) — cham thang o day de tranh circular dependency module (xem plan).
+   */
+  renameSlug(oldSlug: string, newSlug: string): Promise<void>;
   /** Cap nhat danh sach link mua ve (affiliateUrl da tinh san — spec affiliate-link §2) */
   setTicketLinks(slug: string, ticketLinks: readonly AffiliateLinkItem[]): Promise<void>;
   /** Cap nhat gia ve theo doi tuong — nhap tay hoan toan (content-seo-ux-plan §5.5a) */

@@ -97,6 +97,36 @@ export class RecomputeRelatedService {
     return [...affected];
   }
 
+  /**
+   * Tap diem BI ANH HUONG khi doi SLUG cua 1 diem (Phase 24 chieu ghi —
+   * dichoithoi-implementation-plan.md Phase 24): chinh no + TOAN BO con chau
+   * (BFS, giong affectedSlugsForParentChange — AncestorsJson cua tung dua
+   * nhung con nhac ten cu) + cha (ChildrenJson cua cha nhac ten cu) + moi
+   * nguon co quan he/nhac toi slug nay. PHAI goi TRUOC khi doi slug that su
+   * (sau khi doi, oldSlug khong con ton tai de tra cuu quan he).
+   */
+  async affectedSlugsForRename(slug: string): Promise<string[]> {
+    const all = await this.mirrorRepo.findAll();
+    const self = all.find((d) => d.slug === slug);
+    const affected = new Set<string>([slug]);
+    if (self?.parentSlug) affected.add(self.parentSlug);
+
+    const queue = [slug];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const d of all) {
+        if (d.parentSlug === current && !affected.has(d.slug)) {
+          affected.add(d.slug);
+          queue.push(d.slug);
+        }
+      }
+    }
+    for (const source of await this.relationRepo.findSourcesLinkingTo(slug)) {
+      affected.add(source);
+    }
+    return [...affected];
+  }
+
   private async run(
     all: DestinationMirrorEntity[],
     slugs: readonly string[],

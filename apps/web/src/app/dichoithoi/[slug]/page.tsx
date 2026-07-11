@@ -7,6 +7,7 @@ import {
   destinationDetailSchema,
   listAiProvidersResponseSchema,
   publishDestinationResultSchema,
+  renameDestinationSlugResponseSchema,
   type DestinationContentState,
   type DestinationDetail,
   type DestinationKind,
@@ -187,6 +188,22 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     onSuccess: () => {
       setActionError(null);
       invalidate();
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+
+  // --- Doi slug (Phase 24 chieu ghi) — thao tac RIENG, canh bao ro, tach khoi form sua thuong ---
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [newSlugInput, setNewSlugInput] = useState("");
+  const renameSlug = useMutation({
+    mutationFn: async () =>
+      renameDestinationSlugResponseSchema.parse(
+        await apiSend("POST", `/destinations/${slug}/rename-slug`, {
+          newSlug: newSlugInput.trim(),
+        }),
+      ),
+    onSuccess: (r) => {
+      window.location.href = `/dichoithoi/${r.newSlug}`;
     },
     onError: (e) => setActionError(toActionError(e)),
   });
@@ -519,6 +536,72 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           isNew={false}
           onSaved={() => invalidate()}
         />
+      </Group>
+
+      {/* Doi slug — thao tac RIENG, tach khoi form sua thuong (Phase 24 chieu ghi) */}
+      <Group title="⚠️ Đổi slug (nâng cao)">
+        {!renameOpen ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-zinc-500">
+              Đổi URL <code className="font-mono">/{d.slug}</code> — chỉ dùng khi thật cần (vd sai
+              chính tả). Con cháu + link nội bộ sẽ tự cập nhật, URL cũ tự chuyển hướng.
+            </p>
+            <Button size="sm" variant="secondary" onClick={() => setRenameOpen(true)}>
+              Đổi slug
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="rounded border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+              <p className="font-medium">Đọc kỹ trước khi đổi:</p>
+              <ul className="mt-1 list-inside list-disc space-y-0.5">
+                <li>URL cũ tự động chuyển hướng (301) sang URL mới — không lo mất khách/SEO.</li>
+                <li>Toàn bộ điểm con, link nội bộ trong bài khác tự cập nhật theo.</li>
+                <li>
+                  Ảnh trên hosting <strong>không</strong> tự đổi tên thư mục — vẫn hiển thị đúng,
+                  chỉ là path không còn khớp slug mới (không phải lỗi).
+                </li>
+              </ul>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm text-zinc-400">/diem-den/</span>
+              <Input
+                value={newSlugInput}
+                onChange={(e) => setNewSlugInput(e.target.value)}
+                placeholder="slug-moi"
+                className="flex-1"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="bg-amber-600 text-white hover:bg-amber-700"
+                loading={renameSlug.isPending}
+                disabled={!newSlugInput.trim() || newSlugInput.trim() === d.slug}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Đổi slug "${d.slug}" → "${newSlugInput.trim()}"? Không thể tự hoàn tác.`,
+                    )
+                  ) {
+                    renameSlug.mutate();
+                  }
+                }}
+              >
+                {renameSlug.isPending ? "Đang đổi..." : "Xác nhận đổi"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setRenameOpen(false);
+                  setNewSlugInput("");
+                }}
+              >
+                Huỷ
+              </Button>
+            </div>
+          </div>
+        )}
       </Group>
 
       {/* Link mua ve (affiliate-link-conversion-spec §5) */}

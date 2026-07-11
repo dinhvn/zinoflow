@@ -349,6 +349,32 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     });
   }
 
+  async renameSlug(siteId: number, oldSlug: string, newSlug: string): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("oldSlug", oldSlug);
+      request.input("newSlug", newSlug);
+      return request.query(`
+        SET XACT_ABORT ON;
+        BEGIN TRAN;
+
+        UPDATE v2.Destination SET Slug = @newSlug, UpdatedAt = SYSUTCDATETIME()
+        WHERE Id = @siteId;
+
+        UPDATE v2.ArticleDestinationMap SET DestinationSlug = @newSlug
+        WHERE DestinationSlug = @oldSlug;
+
+        IF EXISTS (SELECT 1 FROM v2.SlugRedirect WHERE OldSlug = @oldSlug)
+          UPDATE v2.SlugRedirect SET DestinationId = @siteId WHERE OldSlug = @oldSlug;
+        ELSE
+          INSERT INTO v2.SlugRedirect (OldSlug, DestinationId) VALUES (@oldSlug, @siteId);
+
+        COMMIT;
+      `);
+    });
+  }
+
   /** Bind tham so metadata dung chung cho insert + update */
   private bindMeta(request: sql.Request, meta: SiteDestinationMeta): sql.Request {
     request.input("slug", meta.slug);

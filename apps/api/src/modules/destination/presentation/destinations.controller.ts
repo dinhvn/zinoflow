@@ -19,6 +19,7 @@ import {
   parseMapsLinkRequestSchema,
   saveAiInputsRequestSchema,
   relinkAllRequestSchema,
+  renameDestinationSlugRequestSchema,
   suggestDestinationMetaRequestSchema,
   updateThumbnailRequestSchema,
   updateTicketLinksRequestSchema,
@@ -59,6 +60,8 @@ import {
   type RecomputeRelatedReport,
   type RelinkAllRequest,
   type RelinkAllReport,
+  type RenameDestinationSlugRequest,
+  type RenameDestinationSlugResponse,
   type SaveAiInputsRequest,
   type SuggestDestinationMetaRequest,
   type DestinationMetaSuggestion,
@@ -100,6 +103,7 @@ import { MigrateDestinationImagesUseCase } from "../application/use-cases/migrat
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
 import { ParseMapsLinkUseCase } from "../application/use-cases/parse-maps-link.usecase";
 import { UpsertDestinationUseCase } from "../application/use-cases/upsert-destination.usecase";
+import { RenameDestinationSlugUseCase } from "../application/use-cases/rename-destination-slug.usecase";
 import { ImportDestinationsUseCase } from "../application/use-cases/import-destinations.usecase";
 import { ListAddressMappingsUseCase } from "../application/use-cases/list-address-mappings.usecase";
 import { ManageTaxonomyContentUseCase } from "../application/use-cases/manage-taxonomy-content.usecase";
@@ -145,6 +149,7 @@ export class DestinationsController {
     private readonly migrateImages: MigrateDestinationImagesUseCase,
     private readonly getDetail: GetDestinationDetailUseCase,
     private readonly upsertDestination: UpsertDestinationUseCase,
+    private readonly renameSlug: RenameDestinationSlugUseCase,
     private readonly importDestinations: ImportDestinationsUseCase,
     private readonly listAddressMappings: ListAddressMappingsUseCase,
     private readonly manageTaxonomyContent: ManageTaxonomyContentUseCase,
@@ -212,6 +217,20 @@ export class DestinationsController {
     @Body(new ZodValidationPipe(upsertDestinationRequestSchema)) request: UpsertDestinationRequest,
   ): Promise<{ slug: string }> {
     return this.upsertDestination.update(slug, request);
+  }
+
+  /**
+   * Doi slug 1 diem den DA TON TAI (Phase 24 chieu ghi) — thao tac RIENG, canh
+   * bao ro tren UI, cascade con chau/hotel-tour-map/products.tags + SlugRedirect
+   * (xem RenameDestinationSlugUseCase). DAT TRUOC :slug/jobs de khong nham lan.
+   */
+  @Post(":slug/rename-slug")
+  renameDestinationSlug(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(renameDestinationSlugRequestSchema))
+    request: RenameDestinationSlugRequest,
+  ): Promise<RenameDestinationSlugResponse> {
+    return this.renameSlug.execute(slug, request.newSlug);
   }
 
   @Get("taxonomy")
