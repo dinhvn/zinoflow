@@ -10,7 +10,7 @@ Nguyên tắc lập kế hoạch: build từng lát mỏng kiểm chứng đư�
 đại tu toàn bộ rồi mới test), ưu tiên ROI cao trước, không chặn phase sau bởi
 việc chưa cần dùng ngay.
 
-## Phase 0 — Môi trường dev an toàn (làm TRƯỚC MỌI THỨ) (ĐÃ XONG — code xác nhận 07/2026)
+## Phase 0 — Môi trường dev an toàn (làm TRƯỚC MỌI THỨ) (PHẦN LỚN XONG — re-verify 07/2026: hạ tầng LocalDB đúng, NHƯNG apps/api/.env dev đang chứa credential DB+FTP production thật — vi phạm DoD nghĩa đen dù không lộ vào git)
 
 **Mục tiêu**: không ai code/test chạm production trong lúc build.
 - Chạy `pnpm clone:dichoithoi` → tạo `dichoithoi_dev` LocalDB.
@@ -19,7 +19,7 @@ việc chưa cần dùng ngay.
   nhận kết nối `dichoithoi_dev`, KHÔNG còn connection string production trong
   `.env` của bất kỳ máy dev nào.
 
-## Phase 1 — Schema v2 (chạy trên LocalDB clone trước) (ĐÃ XONG — code xác nhận 07/2026)
+## Phase 1 — Schema v2 (chạy trên LocalDB clone trước) (PHẦN LỚN XONG — re-verify 07/2026: script/seed/taxonomy đúng theo spec, nhưng không tìm thấy bằng chứng đã chạy bước verify row-count trong DoD)
 
 **Phụ thuộc**: Phase 0. **Nguồn**: `dichoithoi-database-redesign.md`.
 1. Chạy `01-create-new-schema.sql` trên `dichoithoi_dev` — tạo toàn bộ bảng
@@ -34,7 +34,7 @@ việc chưa cần dùng ngay.
 - **DoD**: Query thử `SELECT` mọi bảng mới trên `dichoithoi_dev` ra đúng số
   dòng kỳ vọng; chưa chạm production.
 
-## Phase 2 — Module `destination` (lõi M4) (ĐÃ XONG — code xác nhận 07/2026)
+## Phase 2 — Module `destination` (lõi M4) (PHẦN LỚN XONG — re-verify 07/2026: thiếu quality gate ≥800 từ/bài; relink chạy đồng bộ qua API, CHƯA qua pg-boss worker như spec yêu cầu)
 
 **Phụ thuộc**: Phase 1. **Nguồn**: `dichoithoi-destination-spec.md`.
 1. `domain/`: entity mirror, engine auto-link (unit test kỹ — escape regex,
@@ -51,7 +51,7 @@ việc chưa cần dùng ngay.
   thật trên `dichoithoi_dev` (chưa lên web thật); chạy `relink` không lỗi;
   chạy 2 lần liên tiếp không đổi thêm gì (idempotent).
 
-## Phase 3 — Module `affiliate` (nền tảng, TRƯỚC Hotel/Tour) (ĐÃ XONG — code xác nhận 07/2026)
+## Phase 3 — Module `affiliate` (nền tảng, TRƯỚC Hotel/Tour) (PHẦN LỚN XONG — re-verify 07/2026: resolver + manual-override đúng, nhưng job 'áp dụng lại' đang chạy ĐỒNG BỘ qua REST (không qua pg-boss), UI chưa nhóm dưới 'Công cụ')
 
 **Phụ thuộc**: Phase 1 (chỉ cần Postgres, không phụ thuộc destination xong).
 **Nguồn**: `dichoithoi-affiliate-link-conversion-spec.md`.
@@ -65,7 +65,7 @@ việc chưa cần dùng ngay.
   đúng `affiliateUrl` theo template; đổi rule → bấm áp dụng lại → link cũ đổi
   theo, trừ những cái đã `manual-override`.
 
-## Phase 4 — `ticketLinks[]` cho Destination (phụ thuộc Phase 2+3) (ĐÃ XONG — code xác nhận 07/2026)
+## Phase 4 — `ticketLinks[]` cho Destination (phụ thuộc Phase 2+3) (ĐÃ XONG — re-verify 07/2026: PASS đầy đủ, không còn bookingUrl sống ở đâu)
 
 Đổi `bookingUrl` (1 link, code hiện tại) → `ticketLinks[]` (nhiều link):
 1. Contracts: sửa Zod schema (`packages/contracts/src/dichoithoi/destination.ts`).
@@ -76,7 +76,7 @@ việc chưa cần dùng ngay.
 - **DoD**: thêm 2 link Klook + TripVision cho 1 điểm đến → publish → cả 2 có
   `affiliateUrl` đúng, field cũ `bookingUrl` không còn dùng.
 
-## Phase 5 — Module `hotel` (ĐÃ XONG — code xác nhận 07/2026)
+## Phase 5 — Module `hotel` (PHẦN LỚN XONG — re-verify 07/2026: THIẾU IHotelPublisher port, THIẾU job tự gán theo khoảng cách (haversine, chưa tái dùng hàm đã có ở destination), UI form chưa preview affiliateUrl trực tiếp khi dán sourceUrl)
 
 **Phụ thuộc**: Phase 3 (affiliate). **Nguồn**: `dichoithoi-hotel-spec.md`.
 1. Bảng `hotels`/`hotel_destination_map` (Postgres) + `Hotel`/`HotelDestinationMap`
@@ -87,7 +87,7 @@ việc chưa cần dùng ngay.
 - **DoD**: thêm 1 khách sạn tay, gán vào 1 điểm đến → publish → query
   `HotelDestinationMap JOIN Hotel WHERE DestinationSlug=@slug` ra đúng card data.
 
-## Phase 6 — Module `tour` (ĐÃ XONG — code xác nhận 07/2026)
+## Phase 6 — Module `tour` (PHẦN LỚN XONG — re-verify 07/2026: nhiều-điểm-đến (many-to-many) đúng, nhưng cùng thiếu job tự gán theo khoảng cách + preview affiliateUrl UI như Hotel)
 
 **Phụ thuộc**: Phase 3. **Nguồn**: `dichoithoi-tour-spec.md`. Giống hệt cấu
 trúc Phase 5 (Hotel), khác field đặc thù (`duration_days/nights`,
@@ -95,7 +95,7 @@ trúc Phase 5 (Hotel), khác field đặc thù (`duration_days/nights`,
 - **DoD**: thêm 1 tour gán 2 điểm đến khác nhau → publish → cả 2 trang điểm
   đến đều query ra đúng tour đó.
 
-## Phase 7 — Năng lực "Viết tay" ở lõi `ai-content` (ĐÃ XONG — code xác nhận 07/2026)
+## Phase 7 — Năng lực "Viết tay" ở lõi `ai-content` (ĐÃ XONG — re-verify 07/2026: PASS, 1 gap nhỏ không rủi ro thực tế — transition Created→DraftReady chưa được code chặn theo sourceType, chỉ đúng nhờ quy ước gọi hàm, không có đường gọi sai trong code hiện tại)
 
 **Phụ thuộc**: không phụ thuộc Hotel/Tour, có thể làm song song Phase 5-6.
 **Nguồn**: `dichoithoi-article-spec.md` §1.1, đồng bộ
@@ -108,7 +108,7 @@ trúc Phase 5 (Hotel), khác field đặc thù (`duration_days/nights`,
 - **DoD**: bấm "Viết tay" → có ngay `DraftReady` không qua job pg-boss nào,
   sửa/review/Approve/Publish chạy y hệt bài AI (không có đường tắt bỏ gate).
 
-## Phase 8 — Module `article` (ĐÃ XONG — code xác nhận 07/2026)
+## Phase 8 — Module `article` (PHẦN LỚN XONG — re-verify 07/2026: backend (bảng, compile engine, 2 hành động publish, gate H2/H3) đúng đầy đủ, nhưng UI 'Chèn khối động' (nút + palette + form tham số) CHƯA có — phải gõ tay token [[block:...]] trong textarea)
 
 **Phụ thuộc**: Phase 7 (viết tay) + Phase 2/5/6 (destination/hotel/tour đã có
 data để khối động query vào). **Nguồn**: `dichoithoi-article-spec.md`.
@@ -125,7 +125,7 @@ data để khối động query vào). **Nguồn**: `dichoithoi-article-spec.md`
   thác; thêm 1 thác mới sau đó → bấm "Làm mới khối động" → bài cập nhật không
   cần viết lại văn bản.
 
-## Phase 9 — Website .NET (song song, không chặn phase AI tool) (ĐÃ XONG — code xác nhận 07/2026)
+## Phase 9 — Website .NET (song song, không chặn phase AI tool) (PHẦN LỚN XONG (7/9 mục cao+trung) — re-verify 07/2026: AggregateRating/Review và nhúng bản đồ đã CHỦ Ý bỏ — quyết định ghi rõ trong SchemaUtil.cs và content-seo-ux-plan.md, không phải bug — nhưng DoD viết theo nghĩa đen thì 2 mục này chưa đạt)
 
 **Nguồn**: `dichoithoi-content-seo-ux-plan.md` §4, §7; `dichoithoi-web-page-audit.md`.
 Ưu tiên theo ROI (đã sắp ở content-seo-ux-plan §7):
