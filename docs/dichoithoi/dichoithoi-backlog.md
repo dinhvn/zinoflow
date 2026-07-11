@@ -58,10 +58,18 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   RelatedJson (badge khoảng cách "cách 527 m"), `/diem-den/da-lat` (cluster)
   không bị ảnh hưởng (vẫn dùng "Các khu trong Đà Lạt" qua `ChildrenJson` như
   cũ), build `dotnet build` sạch, 0 lỗi console.
-- **`SlugRedirect`** — bảng tồn tại, zinoflow đọc để chuẩn hoá auto-link nội
-  bộ, nhưng KHÔNG có nơi nào ghi (INSERT) vào bảng, và website 404 thẳng khi
-  slug miss thay vì check bảng này → 301 như thiết kế `database-redesign.md`
-  §5 mô tả.
+- ⚠️ **`SlugRedirect` — MỘT NỬA ĐÃ XONG (Phase 24, 07/2026)**. ✅ Chiều ĐỌC:
+  website (`DestinationController.Detail`) giờ check `SlugRedirect` trước khi
+  404, 301 sang slug mới nếu có — test qua Playwright thật (chèn 1 dòng test,
+  xác nhận redirect đúng, xoá sau khi verify). ❌ Chiều GHI: vẫn KHÔNG có nơi
+  nào insert vào bảng, vì **đổi slug hiện tại không được hỗ trợ qua form sửa
+  thông thường** — phát hiện khi bắt tay làm: `slug` là PRIMARY KEY của bảng
+  mirror (Postgres), và `UpsertDestinationRequest`/`UpsertDestinationUseCase`
+  cố ý bỏ qua `slug` khi sửa (comment sẵn: "Khi sửa: slug lấy từ URL, body bỏ
+  qua slug") — đổi PK cần cascade cập nhật `ParentId` của mọi điểm con đang
+  trỏ tới slug cũ, rủi ro cao hơn nhiều so với "nối dây" đơn giản ban đầu
+  tưởng. Cần thiết kế riêng 1 tính năng "Đổi slug" tường minh (không lẫn vào
+  form sửa thường) nếu muốn hoàn thiện chiều ghi này.
 - **Product "Quà mang về"** — sản phẩm gắn `tag=slug điểm đến` hoàn toàn
   không hiện trên trang điểm đến (0% wiring, ngoài 3 lỗ hổng gốc ở trên).
 - **Bài loại `cam-nang` (Article) không thể tạo bằng AI** — chỉ tạo được qua
