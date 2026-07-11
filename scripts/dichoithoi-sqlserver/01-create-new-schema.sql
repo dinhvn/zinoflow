@@ -217,6 +217,26 @@ CREATE TABLE v2.DestinationTypeMap (
 );
 GO
 
+/* ===== Tag chu de (destination-spec §2.4) — bo sung 07/2026, tach khoi Type
+   (Type = phan loai vat ly co dinh; Tag = chu de gan tay, 1 diem co nhieu tag) ===== */
+IF OBJECT_ID('v2.DestinationTag') IS NULL
+CREATE TABLE v2.DestinationTag (
+  Id          int IDENTITY PRIMARY KEY,
+  Slug        varchar(64)   NOT NULL UNIQUE,
+  Name        nvarchar(128) NOT NULL,
+  Description nvarchar(max) NULL,
+  Status      tinyint       NOT NULL DEFAULT 0
+);
+GO
+
+IF OBJECT_ID('v2.DestinationTagMap') IS NULL
+CREATE TABLE v2.DestinationTagMap (
+  DestinationId int NOT NULL REFERENCES v2.Destination(Id),
+  TagId         int NOT NULL REFERENCES v2.DestinationTag(Id),
+  PRIMARY KEY (DestinationId, TagId)
+);
+GO
+
 /* ===== Quan he + redirect (redesign §4.5) ===== */
 IF OBJECT_ID('v2.DestinationRelation') IS NULL
 BEGIN

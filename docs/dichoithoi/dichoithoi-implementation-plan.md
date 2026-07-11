@@ -148,19 +148,43 @@ data để khối động query vào). **Nguồn**: `dichoithoi-article-spec.md`
    CSS cho LCP; phân trang `/diem-den` có URL riêng từng trang (không noindex).
 - **DoD**: mỗi mục có thể ship độc lập, không cần đợi toàn bộ xong mới release.
 
-## Phase 10 — Go-live cutover
+## Phase 10 — Go-live cutover (REHEARSAL local ĐÃ XONG 07/2026, production CHƯA chốt thời điểm)
 
 **Phụ thuộc**: Phase 1-9 đã test ổn trên LocalDB + staging.
-1. Backup 2 bảng gốc thật trên production (destination-spec §8).
-2. Chạy migration schema v2 THẬT trên production (sau backup, đã tập dượt Phase 1).
-3. Đổi `.env` production sang connection thật (chỉ lúc này).
-4. Đồng bộ mirror lần đầu → re-link toàn bộ → recompute related toàn bộ
-   (thứ tự bắt buộc, destination-spec §12.4).
-5. **Khoá nút import Destination + Hotel + Tour trên CMS cũ NGAY** (tránh wipe).
-6. Website .NET trỏ schema mới, chạy song song kiểm tra 1-2 tuần trước khi bỏ
-   bảng cũ (database-redesign §7 bước 8).
-- **DoD**: gate M4 pass (bài AI lên web thật, update đè bài cũ, re-link chạy
-  ổn) + khối khách sạn/tour/vé đọc đúng data zinoflow ghi.
+
+✅ **Đã rehearsal toàn bộ TRÊN LOCAL (`dichoithoi_dev`)** theo quyết định của
+user ("làm hoàn chỉnh ở local trước, chỉ lên production sau") — xem
+`dichoithoi-golive-runbook.md` (MỚI) để biết đúng lệnh + log rehearsal đầy
+đủ. Phát hiện + vá lúc chuẩn bị:
+- `scripts/dichoithoi-sqlserver/01-create-new-schema.sql` thiếu DDL
+  `v2.DestinationTag`/`v2.DestinationTagMap` (tính năng tag `af73075` áp
+  dụng tay, quên thêm script) — đã vá, verify idempotent (chạy 2 lần không
+  đổi gì, dữ liệu 7 tag không mất).
+- Script backup/restore 2 bảng gốc CHƯA từng tồn tại — đã viết
+  `03-backup-legacy-tables.sql`/`04-restore-legacy-tables.sql` (kiểu
+  `SELECT INTO`/`sp_rename`, không dùng `BACKUP DATABASE` vì hosting share
+  khó có quyền ghi file), test thật trên `dichoithoi_dev` (row-count khớp
+  100%, restore phục hồi đúng).
+- **Sửa lại phạm vi khoá CMS cũ**: chỉ Destination + Tour có route import
+  trên `CmsDiChoiThoi.Web` (`import_destination`/`import_tour`) — **Hotel
+  không có**, câu "khoá Destination + Hotel + Tour" trước đây ghi sai.
+- Thêm `AppSetting:IsLegacyImportLocked` (mặc định `false`, reversible,
+  không xoá code) vào `CmsDiChoiThoi.Web` — check đầu 2 action trên, verify
+  `dotnet build` sạch. **Không test chạy app thật** vì phát hiện
+  `appsettings.Development.json`/`Release.json` của `CmsDiChoiThoi.Web` đều
+  trỏ thẳng vào SQL Server production thật (`sql5059.site4now.net`) — không
+  có profile local an toàn cho riêng app CMS này.
+- Rehearsal full-chain: `02-migrate-data.sql` tự chặn đúng khi chạy lại
+  (one-time guard), `sync`→`relink`(dry-run)→`relink/apply`→
+  `recompute-related` chạy 2 lần liên tiếp đều idempotent — log chi tiết ở
+  cuối runbook.
+
+❌ **Production THẬT — chưa làm, chờ user chốt thời điểm**: backup + migrate
+thật trên SQL Server production, đổi `.env`/`appsettings` production, bật
+`IsLegacyImportLocked=true` thật, theo dõi song song 1-2 tuần + xoá bảng cũ.
+Khi sẵn sàng, làm theo đúng thứ tự trong `dichoithoi-golive-runbook.md`.
+- **DoD production**: gate M4 pass (bài AI lên web thật, update đè bài cũ,
+  re-link chạy ổn) + khối khách sạn/tour/vé đọc đúng data zinoflow ghi.
 
 ## Phase 11 — Giai đoạn 2 (sau go-live, không cần làm ngay)
 
