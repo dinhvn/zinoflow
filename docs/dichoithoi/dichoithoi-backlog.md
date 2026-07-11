@@ -92,9 +92,14 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   kỹ thuật, ghi nhận để biết khi cần mở rộng (thêm vùng mới phải sửa code).
 - **DestinationTag** — chưa có UI tạo/sửa chính cái tag (chỉ có UI gán tag
   cho điểm đến) — tag mới phải seed thẳng SQL.
-- **DDL lệch**: `BookingUrl` đáng lẽ đã bỏ (thay bằng `TicketLinksJson`)
-  nhưng vẫn còn nguyên trong DDL + entity; `ContactFacebook` ("thêm lại
-  07/2026" theo doc) lại KHÔNG có trong DDL/entity nào.
+- ✅ **DDL lệch — ĐÃ SỬA (07/2026, Phase 21.5)**: xoá cột chết `BookingUrl`
+  khỏi `v2.Destination` (SQL Server + entity `V2Destination.cs` — đã xác nhận
+  0 nơi đọc/ghi trước khi xoá) + thêm cột `ContactFacebook varchar(256)` còn
+  thiếu theo `database-redesign.md` §4.2. Script idempotent trong
+  `scripts/dichoithoi-sqlserver/01-create-new-schema.sql`. **Phạm vi hẹp có
+  chủ ý**: chỉ sửa DDL/entity, CHƯA nối dây field `ContactFacebook` vào
+  contract/UI nhập liệu/website hiển thị — đó là 1 tính năng nhập liệu mới
+  đầy đủ (khác "dọn schema lệch"), để làm riêng khi cần.
 - **Ingest ảnh URL ngoài** (destination-spec §14.5) — chạy ĐỒNG BỘ (không
   qua pg-boss như thiết kế "async"), và module Product hoàn toàn CHƯA có
   ingest ảnh nào dù spec ghi áp dụng cho "mọi record" (Hotel/Tour có, Product

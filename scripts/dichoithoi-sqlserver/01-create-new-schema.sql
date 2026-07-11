@@ -56,7 +56,7 @@ BEGIN
     AddressOld      nvarchar(256) NULL,
     ContactPhone    varchar(32)   NULL,
     ContactWebsite  varchar(256)  NULL,
-    BookingUrl      varchar(512)  NULL,
+    ContactFacebook varchar(256)  NULL,          -- link Fanpage chinh chu (them 07/2026, database-redesign §4.2)
     HotelGroupId    nvarchar(50)  NULL,
     IsFeatured      bit NOT NULL DEFAULT 0,
     [Order]         int NOT NULL DEFAULT 0,
@@ -80,6 +80,16 @@ BEGIN
   CREATE INDEX IX_v2Destination_Featured ON v2.Destination(IsFeatured, [Order])
     WHERE IsFeatured = 1;
 END
+GO
+-- Phase 21.5 (07/2026, audit sau commit cbd15c9), idempotent cho install cu
+-- (da chay CREATE TABLE truoc khi 2 dong nay ton tai): BookingUrl la field
+-- 1-link cu, da thay bang ticketLinks[] (DestinationContent.TicketLinksJson)
+-- tu lau nhung cot van con trong DDL/entity, khong noi nao doc/ghi — xoa cho
+-- dung thiet ke. ContactFacebook them lai theo database-redesign §4.2.
+IF COL_LENGTH('v2.Destination', 'BookingUrl') IS NOT NULL
+  ALTER TABLE v2.Destination DROP COLUMN BookingUrl;
+IF COL_LENGTH('v2.Destination', 'ContactFacebook') IS NULL
+  ALTER TABLE v2.Destination ADD ContactFacebook varchar(256) NULL;
 GO
 
 /* ===== DestinationContent — bang lanh 1-1 (redesign §4.3) ===== */
