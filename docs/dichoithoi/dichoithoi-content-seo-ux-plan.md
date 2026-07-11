@@ -252,8 +252,9 @@ text tự do ("50.000đ/người") — không đủ khi khách hỏi giá theo t
 Đề xuất thêm field cấu trúc `PriceBreakdownJson` dạng `[{audience, price, note}]`
 (vd `{audience:"Người lớn", price:50000}`, `{audience:"Trẻ em 6-12 tuổi",
 price:25000}`) — hiển thị dạng bảng nhỏ ngay dưới `TicketPrice` khi có dữ liệu,
-ẩn hoàn toàn khi không có (không suy diễn giá theo tỷ lệ). CẦN cột DB mới
-(`DestinationContent.PriceBreakdownJson`, database-redesign §4.3) — chưa build.
+ẩn hoàn toàn khi không có (không suy diễn giá theo tỷ lệ). Cột DB
+(`DestinationContent.PriceBreakdownJson`, database-redesign §4.3) — ✅ ĐÃ XONG
+(Phase 12).
 **Nhập ở zinoflow**: nhập tay hoàn toàn trong màn sửa điểm đến (thêm 1 khối
 "Giá vé theo đối tượng" — bảng {đối tượng, giá, ghi chú}, thêm/xoá dòng tự do).
 AI KHÔNG được tự sinh/đoán số này — đây là số liệu chính thức của điểm đến,
@@ -293,8 +294,8 @@ không, quy định tại chỗ (cấm flycam/mang đồ ăn riêng/hút thuốc
 (đường trơn, sóng lớn, có cứu hộ không). Đề xuất GỘP thành 1 field JSON duy nhất
 `PracticalNotesJson` dạng `[{icon, label, note}]` (tự do, không ép cấu trúc chi
 tiết từng loại) — render thành 1 khối danh sách ngắn, giống cách `FaqJson` đang
-hoạt động. CẦN cột DB mới (`DestinationContent.PracticalNotesJson`, database-
-redesign §4.3) — chưa build.
+hoạt động. Cột DB (`DestinationContent.PracticalNotesJson`, database-redesign
+§4.3) — ✅ ĐÃ XONG (Phase 12).
 **Nhập ở zinoflow**: AI gợi ý draft trước (dựa trên loại điểm đến — vd biển thì
 gợi ý mục "sóng lớn/cứu hộ", núi thì gợi ý "đường trơn/độ cao") trong 1 khối
 riêng ở màn sửa điểm đến, nhưng KHÔNG tự publish thẳng — bắt buộc người dùng

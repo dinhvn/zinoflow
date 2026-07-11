@@ -200,9 +200,9 @@ sửa được và lưu lại trước khi publish, không có đường tắt.
 | 5 | Ăn uống gần đó | A | `Food` |
 | 6 | Thời điểm đẹp (giờ/mùa) | A | `Content` (section) |
 | 7 | Di chuyển (chặng cuối từ trung tâm cụm) | A | `Transport` |
-| 8 | Câu chuyện văn hoá - lịch sử *(đề xuất, chưa build)* | A | `Content` (section mới — content-seo-ux-plan §5.6) |
-| 9 | Chi phí ước tính *(đề xuất, chưa build)* | D | Tính từ `TicketPriceFrom`/Hotel/Tour `PriceFrom` (§5.4) |
-| 10 | Giá vé theo đối tượng *(đề xuất, chưa build)* | C | `PriceBreakdownJson` + `price` trong `ticketLinks[]` (§5.5) |
+| 8 | Câu chuyện văn hoá - lịch sử ✅ ĐÃ XONG (Phase 12) | A | `Content` (section mới — content-seo-ux-plan §5.6) |
+| 9 | Chi phí ước tính ✅ ĐÃ XONG (Phase 12) | D | Tính từ `TicketPriceFrom`/Hotel/Tour `PriceFrom` (§5.4) |
+| 10 | Giá vé theo đối tượng ✅ ĐÃ XONG (Phase 12) | C | `PriceBreakdownJson` + `price` trong `ticketLinks[]` (§5.5) |
 | 11 | Mẹo & lưu ý thực tế | E | `PracticalNotesJson` (§5.7) |
 | 12 | Banner khách sạn / Card tour | D | `DynamicBlocksJson["hotels"/"tours"]` |
 | 13 | Banner "Về {node cha}" | D | Template cố định + `AncestorsJson` (§10.6.3) |
@@ -244,8 +244,9 @@ chế riêng của từng nhóm.
 
 Prompt pack ép đủ các khối nhóm A/B theo đúng bảng khối tương ứng; khối nào
 không áp dụng (vd điểm miễn phí không có giá vé) phải ghi rõ thay vì bỏ trống
-— structure gate kiểm tra (§6). Các dòng đánh dấu "đề xuất, chưa build" CHƯA
-đưa vào prompt pack/structure gate hiện tại, chỉ ghi nhận để làm sau.
+— structure gate kiểm tra (§6). Khối #8 (câu chuyện văn hoá - lịch sử) đã vào
+prompt pack + structure gate thật (Phase 12, `CULTURAL_STORY_HEADING_KEYWORDS`
+ở `destination-gates.ts`).
 
 ### 2.2.1 Ghi chú/tư liệu tham khảo — bổ sung chi tiết đặc trưng cho từng khối
 (CHỐT 07/2026, giải quyết vấn đề "nội dung AI viết đạt gate nhưng chung chung")
