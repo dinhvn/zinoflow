@@ -5,6 +5,97 @@ Gộp mọi "việc cần chốt"/"để giai đoạn sau" đang rải rác tron
 duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sách nguồn: xem
 `dichoithoi-system-overview.md` để biết thứ tự đọc toàn bộ tài liệu.
 
+## ⚠️ MỤC KHẨN — Audit sâu 07/2026: "CHỐT thiết kế" ≠ "đã build"
+
+Người dùng phản hồi (07/2026): "hôm qua thảo luận và chốt rất nhiều, nhưng
+kiểm tra thì chưa thấy làm" (ví dụ cụ thể: cách hiển thị trang Đà Lạt/Biệt
+Thự Hằng Nga). Rà lại bằng cách đối chiếu THẲNG từng mục "CHỐT" trong mọi doc
+với code thật (không chỉ so doc-với-doc như đợt dọn dẹp trước) — xác nhận
+đây là vấn đề CÓ THẬT VÀ LỚN, không phải cảm giác: nhiều quyết định thiết kế
+đã "CHỐT" (tức là đã bàn xong, chọn phương án) nhưng **chưa từng được viết
+thành code**, và một số dòng còn ghi nhầm hẳn "✅ ĐÃ XONG" (đã sửa 3 chỗ khẩn
+cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng hơn nhiều).
+
+### 3 lỗ hổng gốc (kéo theo hàng loạt tính năng khác bị chặn)
+
+1. **Cột `ContentTier` (Flagship/Standard) chưa từng tồn tại** trong DB/code
+   (grep 0 kết quả cả 2 repo, ngoài docs + 1 comment trong `coverage-score.ts`
+   tự nhận "chưa có"). Chặn toàn bộ:
+   - `content-seo-ux-plan.md` §10.6.2 — cấu trúc trang Flagship 8 khối (Đà
+     Lạt): lịch trình gợi ý, 2 lớp "Điểm tham quan" (nổi bật + nhóm khoảng
+     cách), "Quà mang về" dạng lưới mua sắm, card vé máy bay/xe khách.
+   - `content-seo-ux-plan.md` §10.6.3 — cấu trúc trang POI (Biệt Thự Hằng
+     Nga): banner "Về {node cha}", thứ tự khối khác Flagship.
+   - `content-seo-ux-plan.md` §5.1 — ưu tiên gallery ảnh theo tier.
+   - `destination-spec.md` §2.2 khối #10/#15 — "Đánh giá biên tập + Xem thêm
+     trên Google Maps/TripAdvisor" (field `ExternalReviewUrls` — 0% code).
+2. **Bảng `ArticleDestinationMap` chưa từng tồn tại** (grep 0 kết quả, chỉ
+   code tự nhận biết đúng qua comment). Chặn:
+   - `destination-spec.md` §2.2 — 5 khối phụ Flagship (3b lịch trình→bài,
+     5b/6b/6c/8b liên kết bài cẩm nang theo topic).
+   - `article-spec.md` §8.1 — toàn bộ cơ chế UI gợi ý gán destination+topic.
+   - Coverage Score — mục "độ phủ bài cẩm nang theo topic" (đã ghi rõ trong
+     code là chưa tính được).
+3. **`DynamicBlocksJson` (thiết kế gộp 1 cột JSON cho mọi khối động) chưa
+   build** — website thực tế vẫn dùng 2 cột cũ riêng biệt `HotelCardsJson`/
+   `TourCardsJson` (đúng chức năng nhưng KHÁC tên/thiết kế spec mô tả), không
+   có chỗ chứa cho khối vé máy bay/xe khách hay sản phẩm quà lưu niệm.
+
+### Phát hiện nghiêm trọng khác (độc lập với 3 lỗ hổng trên)
+
+- **`RelatedJson` — zinoflow tính đúng + ghi vào DB, nhưng website
+  KHÔNG ĐỌC cột này.** `DestinationController.Detail` (dichoithoi) vẫn tự
+  tính "điểm liên quan" bằng code cũ (`GetRelationDestinationAsync`, join
+  `ParentId` + sort CSV `Type`) — toàn bộ cơ chế precompute RelatedJson
+  (Phase 2, tưởng đã xong từ lâu) hiện là **dead code với người dùng cuối**.
+  Đây là mục cần build lại/nối dây, không phải chỉ thiếu tính năng mới.
+- **`SlugRedirect`** — bảng tồn tại, zinoflow đọc để chuẩn hoá auto-link nội
+  bộ, nhưng KHÔNG có nơi nào ghi (INSERT) vào bảng, và website 404 thẳng khi
+  slug miss thay vì check bảng này → 301 như thiết kế `database-redesign.md`
+  §5 mô tả.
+- **Product "Quà mang về"** — sản phẩm gắn `tag=slug điểm đến` hoàn toàn
+  không hiện trên trang điểm đến (0% wiring, ngoài 3 lỗ hổng gốc ở trên).
+- **Bài loại `cam-nang` (Article) không thể tạo bằng AI** — chỉ tạo được qua
+  "Viết tay" (chưa có prompt pack AI riêng) → kéo theo ô "Tư liệu tham khảo"
+  cho Article (article-spec §1.2) cũng chưa có chỗ để nằm.
+- **Auto-link bài viết thiếu 2 rào an toàn** đã thiết kế: giới hạn ~10
+  link/bài (hiện không giới hạn), và phân biệt tên trùng theo tỉnh trước khi
+  auto-link (hiện không có bước này — rủi ro link sai điểm nếu 2 nơi trùng
+  tên khác tỉnh, vd "Bãi Dài" Phú Quốc vs Cam Ranh).
+- **`DestinationReview`** — đọc/cache đúng (`AvgRating`/`ReviewCount`), nhưng
+  KHÔNG tìm thấy đường ghi review mới nào ở cả v1/v2 — cần xác nhận tính năng
+  gửi review có thật sự hoạt động không.
+- **Mục lục 2 lớp** (`content-seo-ux-plan.md` §10.6.4) — chip nav vuốt ngang
+  đã có, nhưng KHÔNG có nút "Mục lục ▾" nào, và chip hiện tại DÙNG CHUNG 1
+  danh sách cho mọi trang (không tách bộ chip riêng Flagship/POI như thiết
+  kế — vì các khối phụ thuộc chưa build).
+- **Hệ thống card dùng chung** (§10.6.5) — không có partial `_CardItem`
+  thống nhất; mỗi loại (Hotel/Tour/Destination/Article) vẫn 1 partial riêng.
+- **Trục vùng/miền** (`/vung/{slug}`) — ĐÃ build nhưng KHÁC kiến trúc đã
+  chốt: dùng danh sách hard-code trong C# util (`RegionUtil`) thay vì bảng DB
+  `Region` + `Province.RegionId` FK như thiết kế — hoạt động đúng, chỉ lệch
+  kỹ thuật, ghi nhận để biết khi cần mở rộng (thêm vùng mới phải sửa code).
+- **DestinationTag** — chưa có UI tạo/sửa chính cái tag (chỉ có UI gán tag
+  cho điểm đến) — tag mới phải seed thẳng SQL.
+- **DDL lệch**: `BookingUrl` đáng lẽ đã bỏ (thay bằng `TicketLinksJson`)
+  nhưng vẫn còn nguyên trong DDL + entity; `ContactFacebook` ("thêm lại
+  07/2026" theo doc) lại KHÔNG có trong DDL/entity nào.
+- **Ingest ảnh URL ngoài** (destination-spec §14.5) — chạy ĐỒNG BỘ (không
+  qua pg-boss như thiết kế "async"), và module Product hoàn toàn CHƯA có
+  ingest ảnh nào dù spec ghi áp dụng cho "mọi record" (Hotel/Tour có, Product
+  không).
+- **Dashboard "Việc cần làm"** (destination-spec §7.2) — trang hub
+  `/dichoithoi` chỉ có bảng danh sách + filter, KHÔNG có khối cảnh báo 8 dòng
+  (coverage score thấp, tag dưới ngưỡng, draft chờ duyệt, ảnh gallery
+  thiếu...) như spec mô tả. Có 1 dashboard TOÀN CỤC 3-KPI chung cho cả 3 site
+  nhưng không phải khối đặc thù dichoithoi này.
+
+### Việc CHƯA sửa (chờ bạn quyết định ưu tiên — xem cuối cuộc trò chuyện)
+
+Danh sách trên CHƯA được sửa vào từng file spec riêng (chỉ mới sửa 3 dòng
+"ĐÃ XONG" sai khẩn cấp nhất ở A#2/A#3/A#9) — cần bạn chọn hướng ưu tiên
+trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần.
+
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
 - **Gate "originality" (thứ 5) cho quality gates AI content** (`dichoithoi-
