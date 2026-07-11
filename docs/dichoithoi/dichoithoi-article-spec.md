@@ -102,8 +102,9 @@ cần thiết (đúng như bạn nhận xét).
 [[block:hotels province=lam-dong limit=6]]
 [[block:tours destination=da-lat limit=4]]
 [[block:destination slug=thac-datanla]]   -- 1 điểm cụ thể, card đơn lẻ inline
-[[block:products tag=leu-trai,giay-di-bo limit=4]]   -- sản phẩm affiliate theo tag (đề xuất 07/2026, xem dichoithoi-product-spec.md)
+[[block:products tag=leu-trai,giay-di-bo limit=4]]   -- sản phẩm affiliate theo tag (xem dichoithoi-product-spec.md)
 [[block:product id=xxx-xxx-xxx]]          -- 1 sản phẩm cụ thể, card đơn lẻ inline
+[[block:food-spots tag=da-lat limit=4]]   -- món ăn/quán ăn (tái dùng products, lọc category ẩm thực)
 ```
 
 - Mỗi token nằm RIÊNG 1 dòng trong markdown nguồn (không lồng trong đoạn văn) —
@@ -121,11 +122,11 @@ cần thiết (đúng như bạn nhận xét).
 | `hotels` | bảng Hotel (`dichoithoi-hotel-spec.md`) theo Province | giống card "khách sạn gợi ý" |
 | `tours` | bảng Tour (`dichoithoi-tour-spec.md`) theo destination/Province | giống card "tour gợi ý" |
 | `destination` (số ít) | 1 slug cụ thể | card đơn — dùng khi nhắc 1 nơi giữa đoạn văn |
-| `products` *(đề xuất 07/2026, chưa build)* | bảng `products` theo `tag` (OR, khớp bất kỳ) + `category` tuỳ chọn | card sản phẩm affiliate — xem `dichoithoi-product-spec.md` §4 |
-| `product` (số ít) *(đề xuất 07/2026, chưa build)* | 1 `id` cụ thể | card đơn — dùng khi nhắc 1 sản phẩm giữa đoạn văn |
-| `foodSpots` *(CHỐT 07/2026, chưa build)* | **KHÔNG tạo bảng mới** — dùng lại bảng `products` (product-spec §4), lọc `category IN ('Quán ăn','Ẩm thực', ...)` (free-text category đã có sẵn, không cần bảng "quán ăn" riêng) theo `province`/`destination` | card món ăn/quán ăn — layout riêng (ảnh + tên quán + món đặc trưng), khác card sản phẩm mua-mang-về mặc định |
+| `products` ✅ ĐÃ XONG | bảng `products` theo `tag` (OR, khớp bất kỳ) + `category` tuỳ chọn | card sản phẩm affiliate — xem `dichoithoi-product-spec.md` §4 |
+| `product` (số ít) ✅ ĐÃ XONG | 1 `id` cụ thể | card đơn — dùng khi nhắc 1 sản phẩm giữa đoạn văn |
+| `food-spots` ✅ ĐÃ XONG (Phase 21.1, 07/2026 — tên token thực tế dùng kebab-case `food-spots`, không phải `foodSpots`, để khớp quy ước `[a-z-]+` của parser) | **KHÔNG tạo bảng mới** — dùng lại bảng `products` (product-spec §4), match theo `tag` rồi lọc `category IN ('Quán ăn','Ẩm thực','Nhà hàng','Đặc sản')` (free-text category đã có sẵn) | card món ăn/quán ăn — cùng layout card chung, badge = category |
 
-`foodSpots` chỉ là 1 CÁCH RENDER khác của cùng dữ liệu `products` (giống
+`food-spots` chỉ là 1 CÁCH RENDER khác của cùng dữ liệu `products` (giống
 `destinations` vs `destination` số ít) — không phải module/bảng mới, giữ đúng
 nguyên tắc "tái dùng trước khi tạo mới" (copilot-instructions §4).
 
@@ -301,17 +302,16 @@ phải có luật chặt để không thành spam:
 
 ✅ Luồng "Viết tay" ở core `ai-content` (Phase 7) — ĐÃ XONG, đúng như ghi.
 
-⚠️ **SỬA LẠI (07/2026, phát hiện qua rà soát code thật)** — 2 dòng dưới đây
-TRƯỚC ĐÂY ghi nhầm "đã chốt/build xong", thực ra mới chỉ ở mức "đã chốt
-HƯỚNG", CHƯA CODE:
-- Khối `foodSpots` (§3.1) — không có trong `BLOCK_KINDS`/compiler/UI palette
-  nào (grep xác nhận).
-- AI tự gợi ý chèn khối động lúc generate (§10.4 cũ) — hiện KHÔNG có prompt
-  AI nào chèn token `[[block:...]]`; cơ chế chèn khối duy nhất đang chạy là
-  **thủ công 100%** qua `insert-dynamic-block-panel.tsx`. Ngoài ra bài loại
-  `cam-nang` (loại DUY NHẤT dùng cú pháp khối động) hiện **không thể tạo bằng
-  AI** — chưa có prompt pack, chỉ tạo được qua "Viết tay" → ô "Tư liệu tham
-  khảo" (§1.2) cũng chưa có chỗ để nằm (phụ thuộc dây chuyền vào form AI chưa
-  tồn tại).
+✅ **ĐÃ XONG (Phase 21.1 + Phase 22, 07/2026)** — 2 mục dưới đây từng ghi nhầm
+"đã chốt/build xong" rồi bị phát hiện sai (audit sau commit cbd15c9), nay
+ĐÃ CODE THẬT:
+- Khối `foodSpots` — thêm vào `BLOCK_KINDS`/compiler (lọc category ẩm thực
+  qua bảng `products`)/UI palette (Phase 21.1).
+- AI tự gợi ý chèn khối động — 3 prompt `cam-nang.outline/section/frame.vi`
+  (`default-prompts.ts`) dạy AI cú pháp `[[block:...]]`; form Article thêm
+  nút "🤖 Tạo bằng AI" (Phase 22) + ô "Tư liệu tham khảo" (§1.2, map
+  `sourceContext`). Test Playwright thật: tạo job AI thành công. Lưu ý: model
+  nhỏ (flash-lite) có xu hướng thận trọng, không phải lúc nào cũng tự chèn
+  token dù có gợi ý rõ — không phải bug, có thể cần tinh chỉnh prompt/model.
 
 Chi tiết đầy đủ: xem `dichoithoi-backlog.md` mục A#1-3, A#9 (đã sửa đồng bộ).

@@ -2,26 +2,51 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
-import { createContentJobResponseSchema } from "@zinoflow/contracts";
-import { apiSend, ApiError } from "@/shared/api-client";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  createContentJobResponseSchema,
+  listAiProvidersResponseSchema,
+} from "@zinoflow/contracts";
+import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import { Select } from "@/shared/ui/select";
 
 /**
- * Tao bai cam nang moi (dichoithoi-article-spec.md §9) — MVP CHI "Viết tay":
- * nhap tieu de + tu khoa -> tao ngay DraftReady voi khung bai goi y, mo sang
- * editor chung (/content/[id]) de chen khoi dong + viet noi dung that.
- * "Tạo bằng AI" cho loai bai nay chua co prompt pack rieng — de giai doan sau.
+ * Tao bai cam nang moi (dichoithoi-article-spec.md §9, §1.1, §1.2) — 2 lua
+ * chon: "Viết tay" (di thang DraftReady voi khung goi y) hoac "Tạo bằng AI"
+ * (Phase 22, 07/2026 — prompt pack cam-nang.*.vi da co, xem default-prompts.ts).
+ * AI tu goi y chen khoi dong [[block:...]] khi hop ngu canh — nguoi dung van
+ * duyet/sua qua man review truoc khi publish, khong co duong tat.
  */
 export default function NewArticlePage() {
   const router = useRouter();
   const [topic, setTopic] = useState("");
   const [keywords, setKeywords] = useState("");
   const [siteCode, setSiteCode] = useState("dichoithoi");
+  const [sourceContext, setSourceContext] = useState("");
+  const [provider, setProvider] = useState("");
+  const [model, setModel] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const create = useMutation({
+  const providersQuery = useQuery({
+    queryKey: ["ai-providers"],
+    queryFn: () => apiGet("/content/ai-providers", listAiProvidersResponseSchema),
+  });
+  const usableProviders = (providersQuery.data?.providers ?? []).filter(
+    (p) => p.isConfigured && p.isEnabled && p.models.length > 0,
+  );
+  const selectedProvider =
+    usableProviders.find((p) => p.key === provider) ?? usableProviders[0] ?? null;
+  const selectedModel =
+    selectedProvider?.models.find((m) => m.id === model) ?? selectedProvider?.models[0] ?? null;
+
+  const keywordSeed = keywords
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+
+  const createManual = useMutation({
     mutationFn: async () =>
       createContentJobResponseSchema.parse(
         await apiSend("POST", "/content/jobs/manual", {
@@ -29,12 +54,32 @@ export default function NewArticlePage() {
           sourceRef: "cam-nang",
           topic,
           articleType: "cam-nang",
-          keywordSeed: keywords
-            .split(",")
-            .map((k) => k.trim())
-            .filter(Boolean),
+          keywordSeed,
         }),
       ),
+    onSuccess: (result) => router.push(`/content/${result.jobId}`),
+    onError: (e) => setError(e instanceof ApiError ? e.message : String(e)),
+  });
+
+  const createByAi = useMutation({
+    mutationFn: async () => {
+      if (!selectedProvider || !selectedModel) {
+        throw new Error("Chưa có AI provider khả dụng — kiểm tra Settings và API key");
+      }
+      return createContentJobResponseSchema.parse(
+        await apiSend("POST", "/content/jobs", {
+          siteCode,
+          sourceType: "Topic",
+          sourceRef: "cam-nang",
+          topic,
+          articleType: "cam-nang",
+          keywordSeed,
+          sourceContext: sourceContext.trim() || undefined,
+          aiProvider: selectedProvider.key,
+          aiModel: selectedModel.id,
+        }),
+      );
+    },
     onSuccess: (result) => router.push(`/content/${result.jobId}`),
     onError: (e) => setError(e instanceof ApiError ? e.message : String(e)),
   });
@@ -73,16 +118,73 @@ export default function NewArticlePage() {
         <Input value={siteCode} onChange={(e) => setSiteCode(e.target.value)} className="w-full" />
       </label>
 
+      <label className="block text-sm">
+        <span className="mb-1 block text-zinc-500">
+          Tư liệu tham khảo (tuỳ chọn — dán ghi chú/link nguồn để AI viết bám sát thực tế hơn)
+        </span>
+        <textarea
+          value={sourceContext}
+          onChange={(e) => setSourceContext(e.target.value)}
+          placeholder="VD: liệt kê tên các thác/khách sạn muốn nhắc tới, kèm ghi chú thật đã biết..."
+          rows={4}
+          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        />
+      </label>
+
+      <div className="grid grid-cols-2 gap-4">
+        <label className="block text-sm">
+          <span className="mb-1 block text-zinc-500">AI Provider</span>
+          <Select
+            value={selectedProvider?.key ?? ""}
+            onChange={(e) => {
+              setProvider(e.target.value);
+              setModel("");
+            }}
+            className="w-full"
+          >
+            {usableProviders.map((p) => (
+              <option key={p.key} value={p.key}>
+                {p.key}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <label className="block text-sm">
+          <span className="mb-1 block text-zinc-500">Model</span>
+          <Select
+            value={selectedModel?.id ?? ""}
+            onChange={(e) => setModel(e.target.value)}
+            className="w-full"
+          >
+            {selectedProvider?.models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.id}
+              </option>
+            ))}
+          </Select>
+        </label>
+      </div>
+
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-      <Button
-        variant="primary"
-        loading={create.isPending}
-        disabled={topic.trim().length < 5}
-        onClick={() => create.mutate()}
-      >
-        {create.isPending ? "Đang tạo..." : "✍️ Viết tay — mở editor"}
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          variant="secondary"
+          loading={createManual.isPending}
+          disabled={topic.trim().length < 5}
+          onClick={() => createManual.mutate()}
+        >
+          {createManual.isPending ? "Đang tạo..." : "✍️ Viết tay — mở editor"}
+        </Button>
+        <Button
+          variant="primary"
+          loading={createByAi.isPending}
+          disabled={topic.trim().length < 5 || !selectedProvider || !selectedModel}
+          onClick={() => createByAi.mutate()}
+        >
+          {createByAi.isPending ? "Đang tạo..." : "🤖 Tạo bằng AI"}
+        </Button>
+      </div>
     </div>
   );
 }

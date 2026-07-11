@@ -16,7 +16,12 @@ export type PromptOperation = "system" | "outline" | "section" | "frame";
  * "km-bai-viet": prompt CHUNG cho bai khuyenmai (laruki/dochoi3s) — site-aware qua {{siteCode}};
  * override per-site/postType (key "<site>.km-<postType>.<step>.vi") tao truc tiep qua DB (prompt-builder resolve).
  */
-export type PromptArticleType = "toplist" | "review" | "guide-diem-den" | "km-bai-viet";
+export type PromptArticleType =
+  | "toplist"
+  | "review"
+  | "guide-diem-den"
+  | "cam-nang"
+  | "km-bai-viet";
 
 export interface PromptCatalogEntry {
   key: string;
@@ -28,12 +33,19 @@ export interface PromptCatalogEntry {
   variables: string[];
 }
 
-const ARTICLE_TYPES: PromptArticleType[] = ["toplist", "review", "guide-diem-den", "km-bai-viet"];
+const ARTICLE_TYPES: PromptArticleType[] = [
+  "toplist",
+  "review",
+  "guide-diem-den",
+  "cam-nang",
+  "km-bai-viet",
+];
 
 export const ARTICLE_TYPE_LABELS: Record<PromptArticleType, string> = {
   toplist: "Top-list",
   review: "Review",
   "guide-diem-den": "Điểm đến (dichoithoi)",
+  "cam-nang": "Cẩm nang tổng hợp (dichoithoi)",
   "km-bai-viet": "Khuyến mãi (laruki/dochoi3s)",
 };
 
