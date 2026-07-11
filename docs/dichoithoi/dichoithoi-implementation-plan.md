@@ -86,7 +86,7 @@ lại ngay sau đó cho `changed=0` — xác nhận worker đã ghi xong.
 - **DoD**: thêm 2 link Klook + TripVision cho 1 điểm đến → publish → cả 2 có
   `affiliateUrl` đúng, field cũ `bookingUrl` không còn dùng.
 
-## Phase 5 — Module `hotel` (PHẦN LỚN XONG — re-verify 07/2026: ✅ đã xây job tự gán theo khoảng cách (`AutoAssignHotelsByDistanceUseCase`, tái dùng `haversineMeters` của destination, qua pg-boss `hotel.auto-assign` + nút tay ở UI); còn THIẾU `IHotelPublisher` port, UI form chưa preview affiliateUrl trực tiếp khi dán sourceUrl)
+## Phase 5 — Module `hotel` (ĐÃ XONG — re-verify 07/2026 (vòng 2): 2 mục ghi "còn thiếu" ở lần re-verify trước ĐÃ CÓ SẴN trong code, header cũ chỉ chưa cập nhật — `IHotelPublisher` chính là `HotelSiteDb` port (`hotel-site-db.port.ts`, đặt tên theo đúng convention `<Module>SiteDb` dùng chung toàn dự án thay vì "Publisher"), `AffiliateUrlPreview` đã render trong `khach-san/page.tsx` dòng 188 — không có gap thật nào cần code thêm)
 
 **Phụ thuộc**: Phase 3 (affiliate). **Nguồn**: `dichoithoi-hotel-spec.md`.
 1. Bảng `hotels`/`hotel_destination_map` (Postgres) + `Hotel`/`HotelDestinationMap`
@@ -97,7 +97,7 @@ lại ngay sau đó cho `changed=0` — xác nhận worker đã ghi xong.
 - **DoD**: thêm 1 khách sạn tay, gán vào 1 điểm đến → publish → query
   `HotelDestinationMap JOIN Hotel WHERE DestinationSlug=@slug` ra đúng card data.
 
-## Phase 6 — Module `tour` (PHẦN LỚN XONG — re-verify 07/2026: nhiều-điểm-đến (many-to-many) đúng; job tự gán theo khoảng cách KHÔNG áp dụng cho Tour — tour-spec xác nhận Tour không có lat/lng riêng, chỉ gắn qua bảng map; còn thiếu preview affiliateUrl UI như Hotel)
+## Phase 6 — Module `tour` (ĐÃ XONG — re-verify 07/2026 (vòng 2): nhiều-điểm-đến (many-to-many) đúng; job tự gán theo khoảng cách KHÔNG áp dụng cho Tour theo đúng thiết kế (tour-spec xác nhận Tour không có lat/lng riêng, chỉ gắn qua bảng map — không phải gap); preview affiliateUrl UI ghi "còn thiếu" ở lần re-verify trước ĐÃ CÓ SẴN — `AffiliateUrlPreview` render trong `tour/page.tsx` dòng 178)
 
 **Phụ thuộc**: Phase 3. **Nguồn**: `dichoithoi-tour-spec.md`. Giống hệt cấu
 trúc Phase 5 (Hotel), khác field đặc thù (`duration_days/nights`,
