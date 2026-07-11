@@ -208,6 +208,12 @@ export interface DichoithoiSiteDb {
   updatePriceBreakdown(siteId: number, priceBreakdownJson: string): Promise<void>;
   /** Ghi de PracticalNotesJson — doc lap voi publish (Phase 12, content-seo-ux-plan §5.7) */
   updatePracticalNotes(siteId: number, practicalNotesJson: string): Promise<void>;
+  /** Ghi de ItineraryJson — nhap tay hoan toan (Phase 28.0) */
+  updateItinerary(siteId: number, itineraryJson: string): Promise<void>;
+  /** Ghi de EditorialReview — AI goi y + nguoi dung duyet (Phase 28.0) */
+  updateEditorialReview(siteId: number, editorialReview: string | null): Promise<void>;
+  /** Ghi de ExternalReviewUrlsJson — nhap tay (Phase 28.0) */
+  updateExternalReviewUrls(siteId: number, externalReviewUrlsJson: string): Promise<void>;
   /** Insert diem den MOI (resolve ParentId/ProvinceId tu slug/code) -> tra ve siteId */
   createDestination(meta: SiteDestinationMeta): Promise<{ siteId: number }>;
   /** Cap nhat metadata diem den da ton tai (khong dong cham content/quan he) */

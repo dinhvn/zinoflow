@@ -65,6 +65,38 @@ export const practicalNoteItemSchema = z.object({
 });
 export type PracticalNoteItem = z.infer<typeof practicalNoteItemSchema>;
 
+/**
+ * 1 mục trong 1 ngày lịch trình (vd "Sáng — Hồ Xuân Hương") — nhóm B, form
+ * theo ngày (Phase 28.0, content-seo-ux-plan §10.6.2 khối 3). `poiSlug` tuỳ
+ * chọn để link nội bộ tới đúng điểm tham quan con.
+ */
+export const itineraryItemSchema = z.object({
+  period: z.string().min(1).max(20),
+  poiSlug: z.string().max(64).nullable(),
+  note: z.string().min(1).max(300),
+});
+export type ItineraryItem = z.infer<typeof itineraryItemSchema>;
+
+export const itineraryDaySchema = z.object({
+  dayLabel: z.string().min(1).max(20),
+  items: z.array(itineraryItemSchema).min(1).max(6),
+});
+export type ItineraryDay = z.infer<typeof itineraryDaySchema>;
+
+/** 1 mẫu lịch trình (vd "2N1D") — chỉ có ý nghĩa với kind IN (province, cluster) */
+export const itineraryPlanSchema = z.object({
+  label: z.string().min(1).max(20),
+  days: z.array(itineraryDaySchema).min(1).max(5),
+});
+export type ItineraryPlan = z.infer<typeof itineraryPlanSchema>;
+
+/** Link Google Maps/TripAdvisor... nhập tay, website render rel="nofollow" */
+export const externalReviewUrlItemSchema = z.object({
+  label: z.string().min(1).max(64),
+  url: z.url().max(1024),
+});
+export type ExternalReviewUrlItem = z.infer<typeof externalReviewUrlItemSchema>;
+
 /** 1 dong mirror diem den (Postgres) tra ve cho UI */
 export const destinationMirrorSchema = z.object({
   /** Id int ben SQL Server (null khi diem tao moi trong AI tool, chua publish lan nao) */
@@ -91,6 +123,12 @@ export const destinationMirrorSchema = z.object({
   priceBreakdown: z.array(priceBreakdownItemSchema),
   /** Luu y thuc te — AI goi y, nguoi dung duyet (content-seo-ux-plan §5.7) */
   practicalNotes: z.array(practicalNoteItemSchema),
+  /** Lich trinh goi y (2N1D/3N2D...) — nhap tay hoan toan, chi Flagship (Phase 28.0) */
+  itinerary: z.array(itineraryPlanSchema),
+  /** Danh gia bien tap — text ngan, AI goi y + nguoi dung duyet (Phase 28.0) */
+  editorialReview: z.string().nullable(),
+  /** Link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */
+  externalReviewUrls: z.array(externalReviewUrlItemSchema),
   hotelGroupId: z.string().nullable(),
   isFeatured: z.boolean(),
   /** Chi y nghia voi kind IN (province, cluster) — null = chua gan (mac dinh nhu Standard) */
@@ -474,6 +512,30 @@ export const suggestPracticalNotesResponseSchema = z.object({
   suggestions: z.array(practicalNoteItemSchema),
 });
 export type SuggestPracticalNotesResponse = z.infer<typeof suggestPracticalNotesResponseSchema>;
+
+/** Cap nhat lich trinh goi y — nhap tay hoan toan (Phase 28.0) */
+export const updateItineraryRequestSchema = z.object({
+  itinerary: z.array(itineraryPlanSchema).max(4),
+});
+export type UpdateItineraryRequest = z.infer<typeof updateItineraryRequestSchema>;
+
+/** Cap nhat danh gia bien tap — sau khi nguoi dung duyet/sua ban AI goi y (Phase 28.0) */
+export const updateEditorialReviewRequestSchema = z.object({
+  editorialReview: z.string().max(500).nullable(),
+});
+export type UpdateEditorialReviewRequest = z.infer<typeof updateEditorialReviewRequestSchema>;
+
+/** Ket qua AI goi y danh gia bien tap (chua luu) */
+export const suggestEditorialReviewResponseSchema = z.object({
+  suggestion: z.string(),
+});
+export type SuggestEditorialReviewResponse = z.infer<typeof suggestEditorialReviewResponseSchema>;
+
+/** Cap nhat link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */
+export const updateExternalReviewUrlsRequestSchema = z.object({
+  externalReviewUrls: z.array(externalReviewUrlItemSchema).max(5),
+});
+export type UpdateExternalReviewUrlsRequest = z.infer<typeof updateExternalReviewUrlsRequestSchema>;
 
 /** Kiem tra anh ton tai tren hosting (HEAD request — spec §14.3) */
 export const checkImageRequestSchema = z.object({

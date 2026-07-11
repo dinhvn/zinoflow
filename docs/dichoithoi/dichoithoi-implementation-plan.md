@@ -921,6 +921,64 @@ API, xác nhận `v2.DestinationContent.SouvenirProductsJson` ghi đúng và tra
 
 ---
 
+## Phase 28 — Nội dung đầy đủ trang Flagship/POI (tách sub-phase)
+
+Việc lớn nhất còn lại — nội dung ĐẦY ĐỦ cho node `ContentTier=Flagship` (vd
+Đà Lạt, 11 khối theo `content-seo-ux-plan.md` §10.6.2) và `kind=poi` (vd Biệt
+Thự Hằng Nga, §10.6.3) — cộng 2-lớp chip nav/mục lục (§10.6.4). Tách 7
+sub-phase (28.0-28.6), xem plan chi tiết đã duyệt tại thời điểm code (context
+đầy đủ về khảo sát code thật trước khi viết plan, quyết định "Đánh giá biên
+tập" = text + AI gợi ý).
+
+### 28.0 — Nền tảng dữ liệu mới: `ItineraryJson`/`EditorialReview`/`ExternalReviewUrls` (ĐÃ XONG 07/2026)
+
+3 field mới, CHƯA đổi layout hiển thị (để 28.2/28.4/28.5), đúng pattern
+`PracticalNotesJson`/`PriceBreakdownJson` đã có:
+
+- **`ItineraryJson`** (nhóm B — form theo ngày, không JSON thô): mảng mẫu
+  lịch trình (vd "2N1D") → mảng ngày → mảng mục `{period, poiSlug, note}`.
+  Nhập tay hoàn toàn, chỉ có ý nghĩa hiển thị với Flagship (không ràng buộc
+  cứng ở tầng data).
+- **`EditorialReview`**: text ngắn (≤500 ký tự) + nút "AI gợi ý" — gọi AI thật
+  qua `IContentAIProvider` (operation `suggest-editorial-review`, model
+  Haiku), đọc ngữ cảnh từ tên/mô tả ngắn + `Food`/`Transport`/`Tip` hiện có
+  (`fetchDestinationContent`) — CHỈ gợi ý, người dùng duyệt/sửa trước khi lưu
+  (không phải `AggregateRating`).
+- **`ExternalReviewUrls`**: mảng `{label, url}` (Google Maps/TripAdvisor...),
+  nhập tay, website sẽ render `rel="nofollow"` (Phase 28.5).
+- SQL Server: 3 cột mới trên `v2.DestinationContent` (`ItineraryJson`,
+  `EditorialReview` nvarchar(1000), `ExternalReviewUrlsJson`) — idempotent
+  DDL, áp dụng `dichoithoi_dev`. `.NET`: `V2DestinationContent.cs` + models
+  mới (`ItineraryPlanModel`/`ItineraryDayModel`/`ItineraryItemModel`,
+  `ExternalReviewUrlModel`) + `DestinationExtrasRepository` đọc — **CHƯA sửa
+  `Detail.cshtml`**.
+- Postgres: migration `1782020000000-DestinationItineraryEditorialReview`,
+  contract Zod (`itineraryPlanSchema`, `externalReviewUrlItemSchema`,
+  request/response schemas), 4 usecase mới (`UpdateItineraryUseCase`,
+  `UpdateEditorialReviewUseCase`, `SuggestEditorialReviewUseCase`,
+  `UpdateExternalReviewUrlsUseCase`), 4 endpoint REST, 3 form React
+  (`destination-itinerary-editor.tsx` — nested plan→day→item,
+  `destination-editorial-review-editor.tsx` — textarea + gợi ý,
+  `destination-external-review-urls-editor.tsx`).
+- Stub AI provider (`stub-content-ai.provider.ts`) thêm case
+  `suggest-editorial-review` để dev/test không cần API key thật.
+
+Verify: `tsc --noEmit` api+web sạch, jest sạch, `dotnet build` sạch. Test
+thật: ghi/đọc cả 3 field qua API thật cho Đà Lạt (itinerary + editorial
+review AI gợi ý qua stub provider + external review URL), xác nhận SQL
+Server `v2.DestinationContent` có đúng dữ liệu, trang `/diem-den/da-lat` load
+200 (server rebuild, không phải process cũ) sau khi có dữ liệu — xoá dữ liệu
+test sau khi verify (cả Postgres mirror lẫn SQL Server).
+
+### 28.1-28.6 — CHƯA LÀM
+
+Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (chip nav 2
+lớp, layout 2-lớp Điểm tham quan Flagship, nhánh AI Flagship + gate mới,
+Lịch trình + link bài cẩm nang theo topic, banner "Về node cha" + đánh giá
+biên tập + external review, Coverage Score theo tier thật).
+
+---
+
 ## Còn treo — CHƯA đủ điều kiện đưa vào phase code (cần bạn quyết định trước)
 
 ~~Rà soát lại `DestinationType`/`DestinationTypeMap`~~ → **✅ ĐÃ XONG (07/2026,

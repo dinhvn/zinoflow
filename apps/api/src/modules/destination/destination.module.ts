@@ -33,6 +33,10 @@ import { UpdateTicketLinksUseCase } from "./application/use-cases/update-ticket-
 import { UpdatePriceBreakdownUseCase } from "./application/use-cases/update-price-breakdown.usecase";
 import { UpdatePracticalNotesUseCase } from "./application/use-cases/update-practical-notes.usecase";
 import { SuggestPracticalNotesUseCase } from "./application/use-cases/suggest-practical-notes.usecase";
+import { UpdateItineraryUseCase } from "./application/use-cases/update-itinerary.usecase";
+import { UpdateEditorialReviewUseCase } from "./application/use-cases/update-editorial-review.usecase";
+import { SuggestEditorialReviewUseCase } from "./application/use-cases/suggest-editorial-review.usecase";
+import { UpdateExternalReviewUrlsUseCase } from "./application/use-cases/update-external-review-urls.usecase";
 import { DestinationAffiliateReapplyService } from "./application/services/destination-affiliate-reapply.service";
 import { UploadDestinationImageUseCase } from "./application/use-cases/upload-destination-image.usecase";
 import { MigrateDestinationImagesUseCase } from "./application/use-cases/migrate-destination-images.usecase";
@@ -103,6 +107,10 @@ import {
     UpdatePriceBreakdownUseCase,
     UpdatePracticalNotesUseCase,
     SuggestPracticalNotesUseCase,
+    UpdateItineraryUseCase,
+    UpdateEditorialReviewUseCase,
+    SuggestEditorialReviewUseCase,
+    UpdateExternalReviewUrlsUseCase,
     DestinationAffiliateReapplyService,
     UploadDestinationImageUseCase,
     MigrateDestinationImagesUseCase,

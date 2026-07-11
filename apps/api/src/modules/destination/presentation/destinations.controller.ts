@@ -24,6 +24,9 @@ import {
   updateTicketLinksRequestSchema,
   updatePriceBreakdownRequestSchema,
   updatePracticalNotesRequestSchema,
+  updateItineraryRequestSchema,
+  updateEditorialReviewRequestSchema,
+  updateExternalReviewUrlsRequestSchema,
   upsertDestinationRequestSchema,
   type AddressMappingProvinces,
   type AddressMappingsQuery,
@@ -32,6 +35,12 @@ import {
   type PriceBreakdownItem,
   type PracticalNoteItem,
   type SuggestPracticalNotesResponse,
+  type ItineraryPlan,
+  type UpdateItineraryRequest,
+  type UpdateEditorialReviewRequest,
+  type SuggestEditorialReviewResponse,
+  type ExternalReviewUrlItem,
+  type UpdateExternalReviewUrlsRequest,
   type CheckImageRequest,
   type CheckImageResponse,
   type CreateDestinationJobRequest,
@@ -82,6 +91,10 @@ import { UpdateTicketLinksUseCase } from "../application/use-cases/update-ticket
 import { UpdatePriceBreakdownUseCase } from "../application/use-cases/update-price-breakdown.usecase";
 import { UpdatePracticalNotesUseCase } from "../application/use-cases/update-practical-notes.usecase";
 import { SuggestPracticalNotesUseCase } from "../application/use-cases/suggest-practical-notes.usecase";
+import { UpdateItineraryUseCase } from "../application/use-cases/update-itinerary.usecase";
+import { UpdateEditorialReviewUseCase } from "../application/use-cases/update-editorial-review.usecase";
+import { SuggestEditorialReviewUseCase } from "../application/use-cases/suggest-editorial-review.usecase";
+import { UpdateExternalReviewUrlsUseCase } from "../application/use-cases/update-external-review-urls.usecase";
 import { UploadDestinationImageUseCase } from "../application/use-cases/upload-destination-image.usecase";
 import { MigrateDestinationImagesUseCase } from "../application/use-cases/migrate-destination-images.usecase";
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
@@ -123,6 +136,10 @@ export class DestinationsController {
     private readonly updatePriceBreakdown: UpdatePriceBreakdownUseCase,
     private readonly updatePracticalNotes: UpdatePracticalNotesUseCase,
     private readonly suggestPracticalNotes: SuggestPracticalNotesUseCase,
+    private readonly updateItinerary: UpdateItineraryUseCase,
+    private readonly updateEditorialReview: UpdateEditorialReviewUseCase,
+    private readonly suggestEditorialReview: SuggestEditorialReviewUseCase,
+    private readonly updateExternalReviewUrls: UpdateExternalReviewUrlsUseCase,
     private readonly uploadImage: UploadDestinationImageUseCase,
     private readonly migrateImages: MigrateDestinationImagesUseCase,
     private readonly getDetail: GetDestinationDetailUseCase,
@@ -363,6 +380,43 @@ export class DestinationsController {
     request: UpdatePracticalNotesRequest,
   ): Promise<PracticalNoteItem[]> {
     return this.updatePracticalNotes.execute(slug, request);
+  }
+
+  /** Cap nhat lich trinh goi y — nhap tay hoan toan (content-seo-ux-plan §10.6.2, Phase 28.0) */
+  @Post(":slug/itinerary")
+  setItinerary(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updateItineraryRequestSchema)) request: UpdateItineraryRequest,
+  ): Promise<ItineraryPlan[]> {
+    return this.updateItinerary.execute(slug, request);
+  }
+
+  /** Goi y ban nhap "Danh gia bien tap" (Phase 28.0) — CHUA luu */
+  @Get(":slug/editorial-review/suggest")
+  suggestEditorialReviewForSlug(
+    @Param("slug") slug: string,
+  ): Promise<SuggestEditorialReviewResponse> {
+    return this.suggestEditorialReview.execute(slug);
+  }
+
+  /** Luu ban "Danh gia bien tap" nguoi dung DA duyet/sua (Phase 28.0) */
+  @Post(":slug/editorial-review")
+  setEditorialReview(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updateEditorialReviewRequestSchema))
+    request: UpdateEditorialReviewRequest,
+  ): Promise<string | null> {
+    return this.updateEditorialReview.execute(slug, request);
+  }
+
+  /** Cap nhat link "Xem them tren" Google Maps/TripAdvisor... (Phase 28.0) */
+  @Post(":slug/external-review-urls")
+  setExternalReviewUrls(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updateExternalReviewUrlsRequestSchema))
+    request: UpdateExternalReviewUrlsRequest,
+  ): Promise<ExternalReviewUrlItem[]> {
+    return this.updateExternalReviewUrls.execute(slug, request);
   }
 
   /**

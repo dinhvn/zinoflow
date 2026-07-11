@@ -1,5 +1,11 @@
 import { Column, Entity, Index, PrimaryColumn } from "typeorm";
-import type { AffiliateLinkItem, PracticalNoteItem, PriceBreakdownItem } from "@zinoflow/contracts";
+import type {
+  AffiliateLinkItem,
+  ExternalReviewUrlItem,
+  ItineraryPlan,
+  PracticalNoteItem,
+  PriceBreakdownItem,
+} from "@zinoflow/contracts";
 
 /**
  * Mirror metadata diem den dichoithoi (spec dichoithoi-destination-spec §3.2, §12.1).
@@ -69,6 +75,18 @@ export class DestinationMirrorEntity {
   /** Luu y thuc te — AI goi y, nguoi dung duyet (content-seo-ux-plan §5.7, Phase 12) */
   @Column({ name: "practical_notes", type: "jsonb", default: () => "'[]'" })
   practicalNotes!: PracticalNoteItem[];
+
+  /** Lich trinh goi y (2N1D/3N2D...) — nhap tay hoan toan, chi Flagship (Phase 28.0) */
+  @Column({ type: "jsonb", default: () => "'[]'" })
+  itinerary!: ItineraryPlan[];
+
+  /** Danh gia bien tap — text ngan, AI goi y + nguoi dung duyet (Phase 28.0) */
+  @Column({ name: "editorial_review", type: "text", nullable: true })
+  editorialReview!: string | null;
+
+  /** Link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */
+  @Column({ name: "external_review_urls", type: "jsonb", default: () => "'[]'" })
+  externalReviewUrls!: ExternalReviewUrlItem[];
 
   @Column({ name: "hotel_group_id", type: "varchar", length: 50, nullable: true })
   hotelGroupId!: string | null;

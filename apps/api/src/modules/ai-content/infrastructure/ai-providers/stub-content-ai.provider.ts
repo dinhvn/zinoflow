@@ -40,6 +40,8 @@ export class StubContentAiProvider implements ContentAiProvider {
     switch (request.operation) {
       case "suggest-meta":
         return this.buildMetaSuggestion(request.vars);
+      case "suggest-editorial-review":
+        return this.buildEditorialReviewSuggestion(request.vars);
       case "outline":
         return isDestination
           ? this.buildDestinationOutline(request.vars)
@@ -62,6 +64,14 @@ export class StubContentAiProvider implements ContentAiProvider {
       shortDescription: `${topic} là một điểm đến đáng chú ý, phù hợp cho chuyến đi khám phá thiên nhiên và văn hoá địa phương.`,
       suggestedKind: "poi",
       searchKeyword: `${topic}, du lịch ${topic}, kinh nghiệm ${topic}`.toLowerCase().slice(0, 250),
+    };
+  }
+
+  /** Goi y "danh gia bien tap" (suggest-editorial-review, Phase 28.0) — output deterministic. */
+  private buildEditorialReviewSuggestion(vars: Readonly<Record<string, unknown>>): unknown {
+    const topic = String(vars["topic"] ?? "điểm đến");
+    return {
+      suggestion: `${topic} là điểm đến đáng ghé qua với đặc trưng riêng — stub provider sinh câu trả lời mẫu, provider thật sẽ dựa trên nội dung thực tế đã có.`,
     };
   }
 

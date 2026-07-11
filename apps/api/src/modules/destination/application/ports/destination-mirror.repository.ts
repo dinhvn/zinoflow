@@ -2,6 +2,8 @@ import type {
   AddressMapping,
   AddressMappingsQuery,
   AffiliateLinkItem,
+  ExternalReviewUrlItem,
+  ItineraryPlan,
   ListDestinationsQuery,
   PracticalNoteItem,
   PriceBreakdownItem,
@@ -69,6 +71,15 @@ export interface DestinationMirrorRepository {
   setPriceBreakdown(slug: string, priceBreakdown: readonly PriceBreakdownItem[]): Promise<void>;
   /** Cap nhat khoi luu y thuc te — sau khi nguoi dung duyet (content-seo-ux-plan §5.7) */
   setPracticalNotes(slug: string, practicalNotes: readonly PracticalNoteItem[]): Promise<void>;
+  /** Cap nhat lich trinh goi y — nhap tay hoan toan (Phase 28.0) */
+  setItinerary(slug: string, itinerary: readonly ItineraryPlan[]): Promise<void>;
+  /** Cap nhat danh gia bien tap — sau khi nguoi dung duyet ban AI goi y (Phase 28.0) */
+  setEditorialReview(slug: string, editorialReview: string | null): Promise<void>;
+  /** Cap nhat link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */
+  setExternalReviewUrls(
+    slug: string,
+    externalReviewUrls: readonly ExternalReviewUrlItem[],
+  ): Promise<void>;
   /** Luu thong tin nguoi dung cung cap cho AI (ghi chu + URL nguon) — tai dung lan sau */
   saveAiInputs(
     slug: string,

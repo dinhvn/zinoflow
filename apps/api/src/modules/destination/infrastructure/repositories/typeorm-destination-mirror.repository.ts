@@ -4,6 +4,8 @@ import { Repository } from "typeorm";
 import type {
   AddressMappingsQuery,
   AffiliateLinkItem,
+  ExternalReviewUrlItem,
+  ItineraryPlan,
   ListDestinationsQuery,
   PracticalNoteItem,
   PriceBreakdownItem,
@@ -232,6 +234,21 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     practicalNotes: readonly PracticalNoteItem[],
   ): Promise<void> {
     await this.repo.update({ slug }, { practicalNotes: [...practicalNotes] });
+  }
+
+  async setItinerary(slug: string, itinerary: readonly ItineraryPlan[]): Promise<void> {
+    await this.repo.update({ slug }, { itinerary: [...itinerary] });
+  }
+
+  async setEditorialReview(slug: string, editorialReview: string | null): Promise<void> {
+    await this.repo.update({ slug }, { editorialReview });
+  }
+
+  async setExternalReviewUrls(
+    slug: string,
+    externalReviewUrls: readonly ExternalReviewUrlItem[],
+  ): Promise<void> {
+    await this.repo.update({ slug }, { externalReviewUrls: [...externalReviewUrls] });
   }
 
   async saveAiInputs(

@@ -21,6 +21,9 @@ import { DestinationImageUploader } from "@/features/dichoithoi/destination-imag
 import { DestinationTicketLinksEditor } from "@/features/dichoithoi/destination-ticket-links-editor";
 import { DestinationPriceBreakdownEditor } from "@/features/dichoithoi/destination-price-breakdown-editor";
 import { DestinationPracticalNotesEditor } from "@/features/dichoithoi/destination-practical-notes-editor";
+import { DestinationItineraryEditor } from "@/features/dichoithoi/destination-itinerary-editor";
+import { DestinationEditorialReviewEditor } from "@/features/dichoithoi/destination-editorial-review-editor";
+import { DestinationExternalReviewUrlsEditor } from "@/features/dichoithoi/destination-external-review-urls-editor";
 import { DestinationHotelPanel } from "@/features/dichoithoi/destination-hotel-panel";
 import { DestinationTourPanel } from "@/features/dichoithoi/destination-tour-panel";
 import { Button, buttonClasses } from "@/shared/ui/button";
@@ -541,6 +544,33 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         <DestinationPracticalNotesEditor
           slug={d.slug}
           practicalNotes={d.practicalNotes}
+          onSaved={() => invalidate()}
+        />
+      </Group>
+
+      {/* Lich trinh goi y (content-seo-ux-plan §10.6.2 khoi 3, Phase 28.0 — chi Flagship) */}
+      <Group title="Lịch trình gợi ý">
+        <DestinationItineraryEditor
+          slug={d.slug}
+          itinerary={d.itinerary}
+          onSaved={() => invalidate()}
+        />
+      </Group>
+
+      {/* Danh gia bien tap (content-seo-ux-plan §10.6.2, Phase 28.0) */}
+      <Group title="Đánh giá biên tập">
+        <DestinationEditorialReviewEditor
+          slug={d.slug}
+          editorialReview={d.editorialReview}
+          onSaved={() => invalidate()}
+        />
+      </Group>
+
+      {/* Link "Xem them tren" (destination-spec §2.2 khoi #10/#15, Phase 28.0) */}
+      <Group title="Xem thêm trên (Google Maps/TripAdvisor...)">
+        <DestinationExternalReviewUrlsEditor
+          slug={d.slug}
+          externalReviewUrls={d.externalReviewUrls}
           onSaved={() => invalidate()}
         />
       </Group>

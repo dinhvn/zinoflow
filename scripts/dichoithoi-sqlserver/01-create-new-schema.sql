@@ -133,6 +133,16 @@ IF COL_LENGTH('v2.DestinationContent', 'PriceBreakdownJson') IS NULL
 IF COL_LENGTH('v2.DestinationContent', 'PracticalNotesJson') IS NULL
   ALTER TABLE v2.DestinationContent ADD PracticalNotesJson nvarchar(max) NULL;
 GO
+-- Phase 28.0 (07/2026): lich trinh goi y (nhap tay) + danh gia bien tap (AI
+-- goi y, nguoi dung duyet) + link Google Maps/TripAdvisor... (nhap tay) —
+-- content-seo-ux-plan §10.6.2, destination-spec §2.2 khoi #10/#15. Idempotent.
+IF COL_LENGTH('v2.DestinationContent', 'ItineraryJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD ItineraryJson nvarchar(max) NULL;
+IF COL_LENGTH('v2.DestinationContent', 'EditorialReview') IS NULL
+  ALTER TABLE v2.DestinationContent ADD EditorialReview nvarchar(1000) NULL;
+IF COL_LENGTH('v2.DestinationContent', 'ExternalReviewUrlsJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD ExternalReviewUrlsJson nvarchar(max) NULL;
+GO
 -- Phase 14 (07/2026): breadcrumb + danh sach con precompute (database-redesign §3.4).
 -- Tach rieng RelatedJson (goi y, cat 8, tron nhieu nguon) vi day la cay cau truc
 -- THAT, khong cat, khong tron nguon.

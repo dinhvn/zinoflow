@@ -599,6 +599,39 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     });
   }
 
+  async updateItinerary(siteId: number, itineraryJson: string): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("itineraryJson", itineraryJson);
+      return request.query(
+        `UPDATE v2.DestinationContent SET ItineraryJson = @itineraryJson WHERE DestinationId = @siteId`,
+      );
+    });
+  }
+
+  async updateEditorialReview(siteId: number, editorialReview: string | null): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("editorialReview", editorialReview);
+      return request.query(
+        `UPDATE v2.DestinationContent SET EditorialReview = @editorialReview WHERE DestinationId = @siteId`,
+      );
+    });
+  }
+
+  async updateExternalReviewUrls(siteId: number, externalReviewUrlsJson: string): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("externalReviewUrlsJson", externalReviewUrlsJson);
+      return request.query(
+        `UPDATE v2.DestinationContent SET ExternalReviewUrlsJson = @externalReviewUrlsJson WHERE DestinationId = @siteId`,
+      );
+    });
+  }
+
   /** destination-spec §2.4 buoc 0 — 7 tag seed san qua phase-b-01-seed-tags.sql */
   async fetchTags(): Promise<SiteTagRow[]> {
     const rows = await this.queryWithRetry<{
