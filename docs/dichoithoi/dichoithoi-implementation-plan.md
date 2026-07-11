@@ -1087,11 +1087,61 @@ quality-check của 2 job cho kết quả gate KHÁC NHAU đúng như thiết k�
 "mùa/thời điểm" thay thế), bài Biệt thự Hằng Nga vẫn bị chặn đúng như trước
 (gate cũ không đổi cho POI) — cả 2 job test đã reject dọn sạch sau verify.
 
-### 28.4-28.6 — CHƯA LÀM
+### 28.4 — Website: Lịch trình + link bài cẩm nang theo topic (ĐÃ XONG 07/2026)
 
-Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (Lịch trình +
-link bài cẩm nang theo topic, banner "Về node cha" + đánh giá biên tập +
-external review, Coverage Score theo tier thật).
+Quyết định kỹ thuật (điểm plan gốc để ngỏ): đọc `v2.ArticleDestinationMap` +
+`v2.Article` bằng **live query** trực tiếp trong `DestinationExtrasRepository`
+(EF Core), KHÔNG bake vào field precompute mới — cùng nhóm với cách trang đã
+đọc Reviews/Types (query nhỏ, không cần cache riêng), khác nhóm
+Hotel/Tour/Souvenir (JSON precompute, đổi nhiều/nặng hơn). Bảng
+`ArticleDestinationMap` nhỏ, có index `(DestinationSlug, Topic)` sẵn từ Phase 26.
+
+- `.NET`: entity mới `V2ArticleDestinationMap.cs` (`[PrimaryKey(ArticleId,
+  DestinationSlug, Topic)]`, cùng pattern `V2TourDestinationMap`) + DbSet
+  trong `DiChoiThoiDbContext`. `DestinationExtrasModel` thêm `ArticleLinkModel`
+  + 4 list `ItineraryArticles/FoodArticles/NightlifeArticles/SouvenirArticles`
+  — populate bằng 1 query JOIN `ArticleDestinationMap` × `Article` (Status=1)
+  theo slug, group theo Topic tại tầng C#.
+- `Detail.cshtml`: khối MỚI "Lịch trình gợi ý" (`#lich-trinh`, render
+  `extras.Itinerary` đã có từ Phase 28.0 — CHƯA từng hiển thị trước đây) —
+  mỗi ngày/mục hiện `period`+`note`, kèm link "Xem chi tiết →" tới POI nếu
+  `poiSlug` có; mỗi plan có CTA "tour N ngày phù hợp" khớp
+  `extras.Tours.DurationDays == plan.Days.Count`; cuối khối có link "Xem lịch
+  trình chi tiết" nếu có bài `topic=itinerary`. Khối Ăn uống + Quà mang về
+  thêm dòng "Xem thêm: {tên bài} →" khi có bài đúng topic (food/souvenir).
+  Khối "Buổi tối" (`#buoi-toi`) HOÀN TOÀN mới, CHỈ hiện khi có bài
+  `topic=nightlife` (không có nguồn nội dung tĩnh nào khác cho khối này).
+
+**Phát hiện ngoài kế hoạch — lỗi encoding LocalDB dev (KHÔNG phải bug
+zinoflow, KHÔNG ảnh hưởng production)**: khi verify bằng dữ liệu tiếng Việt
+có dấu thật, phát hiện `MssqlSiteDbAdapter` ghi xuống `dichoithoi_dev`
+(LocalDB qua driver `mssql/msnodesqlv8` + `ODBC Driver 17`) làm HỎNG dấu
+tiếng Việt bất kể input đúng encoding hay khai báo tường minh kiểu
+`NVarChar(MAX)` — đã test cả 2 cách đều hỏng, kết luận lỗi nằm sâu trong
+native addon `msnodesqlv8`/ODBC marshalling (khả năng do codepage hệ thống
+Windows, không phải type inference của thư viện `mssql`). **Chỉ xảy ra ở
+nhánh LocalDB** (`isLocalDbHost`) — production dùng driver `tedious` (TCP
+thuần, không qua ODBC) nên KHÔNG bị ảnh hưởng. Ghi nhận để các phase sau khi
+cần dữ liệu test tiếng Việt có dấu thật trên LocalDB: ghi trực tiếp bằng
+`sqlcmd -f 65001` (chỉ định codepage UTF-8 cho file .sql) thay vì gọi qua
+API viết field text/JSON, cho tới khi driver/native addon được thay hoặc vá.
+
+Verify: `dotnet build` sạch, tạo lịch trình 2N1D thật cho Đà Lạt (ghi trực
+tiếp SQL Server, `sqlcmd -f 65001` do phát hiện lỗi trên) + 1 bài cẩm nang
+test gắn `topic=food` (đã xoá sau verify — placeholder thuần, không phải
+nội dung thật) — Playwright xác nhận: khối Lịch trình hiện đúng 2 ngày/5
+mục, link POI hoạt động, link "Xem thêm" bài cẩm nang hiện đúng text; xoá
+bài test xong link biến mất đúng như thiết kế; Nha Trang (Standard, không
+có lịch trình/bài nightlife) xác nhận 2 khối mới KHÔNG hiện; Biệt thự Hằng
+Nga (POI) không ảnh hưởng — cả 3 trang 0 lỗi console. Giữ lại lịch trình
+2N1D thật cho Đà Lạt (không phải placeholder — theo quyết định giữ dữ liệu
+thật của Phase 28.2).
+
+### 28.5-28.6 — CHƯA LÀM
+
+Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (banner "Về
+node cha" + đánh giá biên tập + external review, Coverage Score theo tier
+thật).
 
 ---
 
