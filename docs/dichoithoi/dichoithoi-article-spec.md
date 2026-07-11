@@ -299,7 +299,19 @@ phải có luật chặt để không thành spam:
 `dichoithoi-backlog.md` A#1)**: quyết định này SAI, `/blog` là route legacy v1
 đang chạy thật, không đè lên được. Route thật đã build = `/cam-nang/{slug}`.
 
-✅ Các mục còn lại đã chốt/build xong: khối `foodSpots` (§3.1), AI tự gợi ý
-chèn khối động lúc generate (§10.4 cũ, xem product-spec §7), luồng "Viết tay"
-ở core `ai-content` (Phase 7, ĐÃ XONG). Chi tiết trạng thái mới nhất: xem
-`dichoithoi-backlog.md` mục A#1-3, A#9.
+✅ Luồng "Viết tay" ở core `ai-content` (Phase 7) — ĐÃ XONG, đúng như ghi.
+
+⚠️ **SỬA LẠI (07/2026, phát hiện qua rà soát code thật)** — 2 dòng dưới đây
+TRƯỚC ĐÂY ghi nhầm "đã chốt/build xong", thực ra mới chỉ ở mức "đã chốt
+HƯỚNG", CHƯA CODE:
+- Khối `foodSpots` (§3.1) — không có trong `BLOCK_KINDS`/compiler/UI palette
+  nào (grep xác nhận).
+- AI tự gợi ý chèn khối động lúc generate (§10.4 cũ) — hiện KHÔNG có prompt
+  AI nào chèn token `[[block:...]]`; cơ chế chèn khối duy nhất đang chạy là
+  **thủ công 100%** qua `insert-dynamic-block-panel.tsx`. Ngoài ra bài loại
+  `cam-nang` (loại DUY NHẤT dùng cú pháp khối động) hiện **không thể tạo bằng
+  AI** — chưa có prompt pack, chỉ tạo được qua "Viết tay" → ô "Tư liệu tham
+  khảo" (§1.2) cũng chưa có chỗ để nằm (phụ thuộc dây chuyền vào form AI chưa
+  tồn tại).
+
+Chi tiết đầy đủ: xem `dichoithoi-backlog.md` mục A#1-3, A#9 (đã sửa đồng bộ).
