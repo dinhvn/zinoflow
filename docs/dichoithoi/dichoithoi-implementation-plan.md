@@ -421,9 +421,17 @@ duyệt đúng đề xuất, không sửa gì — không còn chặn phase này 
   (vd Đà Lạt, TP.HCM = `Flagship`; Bảo Lộc = `Standard`). Node `Flagship` được
   cộng thêm nội dung "điểm đến" đầy đủ + JSON-LD `TouristAttraction` lai
   `ItemList` + đủ điều kiện vào `RelatedJson`/`IsFeatured` — không đổi cách
-  query con cái (vẫn `ParentId`). Sửa kèm 1 bug: trang tỉnh phải query
-  `WHERE ParentId=@provinceId` (không phải `ProvinceId` — trộn lẫn tầng con
-  cháu, xem `database-redesign.md` §3.4/§5).
+  query con cái (vẫn `ParentId`). CHƯA CODE — xem mục "⚠️ MỤC KHẨN" đầu
+  `dichoithoi-backlog.md` (lỗ hổng gốc #1, chặn nhiều tính năng Flagship khác).
+  ✅ **Bug đi kèm ĐÃ SỬA (07/2026, xác nhận qua audit sâu + test Playwright
+  thật)**: `DestinationTaxonomyRepository.GetProvincePageAsync` trước đây
+  query `WHERE ProvinceId=@provinceId` (trộn lẫn TOÀN BỘ cây, kể cả POI đã
+  nằm trong 1 cụm con — vd `/tinh/lam-dong` hiện phẳng 56 điểm gồm cả POI bên
+  trong Đà Lạt/Phan Thiết, gây trùng nội dung với `/diem-den/da-lat`). Đã sửa
+  sang `WHERE ParentId=@provinceDestinationId` (con TRỰC TIẾP của node tỉnh)
+  — verify qua Playwright: `/tinh/lam-dong` giờ chỉ hiện đúng 2 cụm (Đà Lạt,
+  Phan Thiết), `/tinh/ho-chi-minh` (tỉnh không có cụm con) vẫn hiện đúng POI
+  trực tiếp (Dinh Độc Lập, Nhà thờ Đức Bà...).
 - **Vùng/miền**: KHÔNG thêm làm `kind` thứ 4 (không phải điểm vật lý, không
   giá vé/giờ/toạ độ) — trục phân loại độc lập, trang `/vung/{slug}` theo đúng
   pattern trang danh mục (§10.3). Dự tính ban đầu cần bảng `Region` mới +
