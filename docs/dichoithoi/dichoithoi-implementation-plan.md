@@ -759,6 +759,79 @@ hiện hành động trên trang này".
   Tra cứu địa chỉ/Khách sạn/Tour/Quy tắc affiliate/Quy trình; hàng nút đầu
   trang chỉ còn nút hành động; `tsc --noEmit` sạch.
 
+## Phase 21 — Việc nhỏ độc lập phát hiện qua audit sau commit cbd15c9 (ĐÃ XONG 07/2026)
+
+**Phụ thuộc**: không phụ thuộc phase nào — 5 mục độc lập nhau.
+
+1. Khối `food-spots` (tái dùng `products` lọc category ẩm thực) — thêm
+   `BLOCK_KINDS`/compiler/UI palette. Backend đã hỗ trợ sẵn `products`/
+   `product` nhưng UI palette chưa mở — mở luôn cả 3 kind.
+2. Auto-link an toàn hơn: cap tối đa 10 link/bài, bỏ qua tên trùng giữa
+   nhiều điểm khác nhau (không tự chọn bừa).
+3. Ingest ảnh Hotel/Tour chuyển từ đồng bộ (chặn request) sang job nền
+   pg-boss (`hotel.image-ingest`/`tour.image-ingest`) — publish ngay với URL
+   hiện có, ingest+publish lại trong worker. Product đã có sẵn ingest
+   thumbnail đồng bộ từ trước (audit ban đầu báo sai là "chưa có").
+4. Điều tra `DestinationReview` write path — xác nhận KHÔNG PHẢI bug, là
+   quyết định đã chốt (seo-principles.md) hoãn cơ chế review thật.
+5. DDL dọn lệch: xoá cột chết `BookingUrl`, thêm `ContactFacebook` còn thiếu.
+
+**DoD**: jest 47/47 suites sạch, `dotnet build` sạch, test Playwright xác
+nhận không lỗi console.
+
+## Phase 22 — Article "Tạo bằng AI" cho `cam-nang` (ĐÃ XONG 07/2026)
+
+**Phụ thuộc**: Phase 21.1 (khối `food-spots`, để liệt kê trong prompt).
+
+Thêm 3 prompt `cam-nang.outline/section/frame.vi` (dạy AI cú pháp
+`[[block:...]]`) + UI `/dichoithoi/articles/new` thêm Select AI Provider/
+Model + ô "Tư liệu tham khảo" (map `sourceContext`) + nút "🤖 Tạo bằng AI" —
+giữ nguyên nút "Viết tay". Không cần sửa core `generate-content.usecase.ts`
+(pipeline đã tổng quát hoá qua `ArticleTypeProfile` registry).
+
+**DoD**: test Playwright thật — tạo 2 job AI thành công (DraftReady, nội
+dung tiếng Việt có dấu đầy đủ, đúng schema). Ghi nhận: model nhỏ (flash-lite)
+thận trọng, không phải lúc nào cũng tự chèn token dù có gợi ý rõ — không
+phải bug, có thể cần tinh chỉnh prompt/model mạnh hơn nếu muốn AI chèn khối
+tích cực hơn.
+
+## Phase 23 — Dashboard "Việc cần làm" trên hub CMS (ĐÃ XONG 07/2026)
+
+**Phụ thuộc**: không phụ thuộc phase nào — dùng lại `GetCoverageScoresUseCase`
+đã có.
+
+`GetDichoithoiDashboardAlertsUseCase` mới tổng hợp 5 cảnh báo (destination-
+spec §7.2): độ phủ thấp (<60%), tag dưới ngưỡng 3 điểm, draft chờ duyệt, job
+lỗi (lọc riêng site dichoithoi), ảnh gallery thiếu (thêm cột `HasGallery` vào
+`fetchContentCoverageRows`). Chỉ hiện mục có count > 0. Tách `Card`/
+`ActionRow` từ `dashboard-home.tsx` thành `shared/ui/card.tsx` dùng chung.
+
+**Phạm vi cắt bớt có chủ ý**: chưa có "bài Chủ lực chưa có bài cẩm nang"
+(cần `ArticleDestinationMap`, Phase 26 chưa build) và "link affiliate
+no-rule/chết" (trải nhiều module Hotel/Tour/Product, để riêng).
+
+**DoD**: 4 test case mới + endpoint thật trả đúng số liệu + Playwright xác
+nhận Card hiện đúng trên `/dichoithoi` và không phá dashboard tổng `/`.
+
+## Phase 22-23 lưu ý chung: jest 48/48 suites, `tsc --noEmit` api+web sạch.
+
+## Phase 24 — Nối dây `SlugRedirect` — MỘT NỬA (chiều đọc, 07/2026)
+
+**Phụ thuộc**: không phụ thuộc phase nào.
+
+✅ Chiều ĐỌC: `DestinationController.Detail` (dichoithoi) check
+`v2.SlugRedirect` trước khi 404, 301 sang slug mới nếu có (entity
+`V2SlugRedirect` mới + `FindRedirectSlugAsync` qua repository/service). Test
+Playwright thật: chèn 1 dòng redirect test, xác nhận 301 đúng, xoá sau khi
+verify; slug không tồn tại thật vẫn 404 đúng (không regressive).
+
+❌ Chiều GHI — **CHƯA LÀM, phát hiện phức tạp hơn dự kiến khi bắt tay**: đổi
+slug hiện tại KHÔNG được hỗ trợ qua form sửa thông thường (`slug` là PRIMARY
+KEY của bảng mirror Postgres; `UpsertDestinationUseCase` cố ý bỏ qua
+`request.slug` khi sửa — đổi PK cần cascade cập nhật `ParentId` của mọi điểm
+con, rủi ro cao hơn "nối dây" đơn giản). Cần thiết kế riêng 1 tính năng "Đổi
+slug" tường minh nếu muốn hoàn thiện — xem `dichoithoi-backlog.md`.
+
 ---
 
 ## Còn treo — CHƯA đủ điều kiện đưa vào phase code (cần bạn quyết định trước)
