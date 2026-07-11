@@ -4,6 +4,7 @@ import { AffiliateController } from "./presentation/affiliate.controller";
 import { ManageAffiliateRulesUseCase } from "./application/use-cases/manage-affiliate-rules.usecase";
 import { ResolveAffiliateLinkUseCase } from "./application/use-cases/resolve-affiliate-link.usecase";
 import { ReapplyAffiliateRuleUseCase } from "./application/use-cases/reapply-affiliate-rule.usecase";
+import { ReapplyAffiliateRuleWorker } from "./infrastructure/workers/reapply-affiliate-rule.worker";
 import { AffiliateReapplyRegistry } from "./application/services/affiliate-reapply-registry.service";
 import { AFFILIATE_RULE_REPOSITORY } from "./application/ports/affiliate-rule.repository";
 import { TypeOrmAffiliateRuleRepository } from "./infrastructure/repositories/typeorm-affiliate-rule.repository";
@@ -21,6 +22,7 @@ import { AffiliateLinkRuleEntity } from "./infrastructure/entities/affiliate-lin
     ManageAffiliateRulesUseCase,
     ResolveAffiliateLinkUseCase,
     ReapplyAffiliateRuleUseCase,
+    ReapplyAffiliateRuleWorker,
     AffiliateReapplyRegistry,
     { provide: AFFILIATE_RULE_REPOSITORY, useClass: TypeOrmAffiliateRuleRepository },
   ],

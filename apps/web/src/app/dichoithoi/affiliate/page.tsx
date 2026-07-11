@@ -6,7 +6,6 @@ import { z } from "zod/v4";
 import {
   affiliateLinkRuleSchema,
   affiliatePlaceholderSchema,
-  reapplyAffiliateRuleReportSchema,
   type AffiliateLinkRule,
   type AffiliatePlaceholder,
 } from "@zinoflow/contracts";
@@ -64,17 +63,13 @@ export default function AffiliateRulesPage() {
     onError: (e) => setError(e instanceof ApiError ? e.message : String(e)),
   });
 
+  // Ap dung lai gio qua pg-boss (fire-and-forget, xem ReapplyAffiliateRuleWorker) —
+  // khong con tra tong hop ngay lap tuc, chi bao "da dua vao hang doi".
   const reapply = useMutation({
-    mutationFn: async (ruleId: string | null) =>
-      reapplyAffiliateRuleReportSchema.parse(
-        await apiSend("POST", "/affiliate/reapply", { ruleId }),
-      ),
-    onSuccess: (r) => {
-      setReapplyMsg(
-        `Đã cập nhật ${r.totalUpdated} link (${r.targets
-          .map((t) => `${t.label}: ${t.updatedCount}`)
-          .join(", ")}) trong ${r.durationMs}ms`,
-      );
+    mutationFn: async (ruleId: string | null) => apiSend("POST", "/affiliate/reapply", { ruleId }),
+    onSuccess: () => {
+      setError(null);
+      setReapplyMsg("Đã đưa vào hàng đợi — link sẽ được cập nhật trong giây lát.");
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : String(e)),
   });
@@ -218,13 +213,19 @@ export default function AffiliateRulesPage() {
         )}
       </div>
 
-      <Button
-        variant="secondary"
-        loading={reapply.isPending}
-        onClick={() => reapply.mutate(null)}
-      >
-        Áp dụng lại TOÀN BỘ rule
-      </Button>
+      <div className="rounded border border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-medium">Công cụ:</span>
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={reapply.isPending}
+            onClick={() => reapply.mutate(null)}
+          >
+            Áp dụng lại TOÀN BỘ rule
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

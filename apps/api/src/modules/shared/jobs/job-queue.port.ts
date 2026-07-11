@@ -21,4 +21,5 @@ export const QUEUE_NAMES = {
   hotelImageIngest: "hotel.image-ingest",
   tourImageIngest: "tour.image-ingest",
   destinationRelink: "destination.relink",
+  affiliateReapply: "affiliate.reapply",
 } as const;

@@ -61,7 +61,7 @@ thay vì chờ report — report đã hiện đủ ở bước xem trước ngay
 mất thông tin. Verify thật: dry-run trước cho `changed=14`, gọi apply, dry-run
 lại ngay sau đó cho `changed=0` — xác nhận worker đã ghi xong.
 
-## Phase 3 — Module `affiliate` (nền tảng, TRƯỚC Hotel/Tour) (PHẦN LỚN XONG — re-verify 07/2026: resolver + manual-override đúng, nhưng job 'áp dụng lại' đang chạy ĐỒNG BỘ qua REST (không qua pg-boss), UI chưa nhóm dưới 'Công cụ')
+## Phase 3 — Module `affiliate` (nền tảng, TRƯỚC Hotel/Tour) (ĐÃ XONG — re-verify 07/2026: resolver + manual-override đúng; job "áp dụng lại" đã chuyển qua pg-boss (`affiliate.reapply`, `ReapplyAffiliateRuleWorker`), UI đã nhóm nút "Áp dụng lại TOÀN BỘ rule" dưới khối "Công cụ")
 
 **Phụ thuộc**: Phase 1 (chỉ cần Postgres, không phụ thuộc destination xong).
 **Nguồn**: `dichoithoi-affiliate-link-conversion-spec.md`.

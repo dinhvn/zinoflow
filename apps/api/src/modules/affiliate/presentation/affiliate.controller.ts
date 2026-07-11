@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Patch, Post } from "@nestjs/common";
 import {
   createAffiliateLinkRuleRequestSchema,
   reapplyAffiliateRuleRequestSchema,
@@ -6,7 +6,6 @@ import {
   updateAffiliateLinkRuleRequestSchema,
   type AffiliateLinkRule,
   type CreateAffiliateLinkRuleRequest,
-  type ReapplyAffiliateRuleReport,
   type ReapplyAffiliateRuleRequest,
   type ResolveAffiliateLinkRequest,
   type ResolveAffiliateLinkResponse,
@@ -15,7 +14,7 @@ import {
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { ManageAffiliateRulesUseCase } from "../application/use-cases/manage-affiliate-rules.usecase";
 import { ResolveAffiliateLinkUseCase } from "../application/use-cases/resolve-affiliate-link.usecase";
-import { ReapplyAffiliateRuleUseCase } from "../application/use-cases/reapply-affiliate-rule.usecase";
+import { JOB_QUEUE, QUEUE_NAMES, type JobQueue } from "../../shared/jobs/job-queue.port";
 
 /** REST man "Quy tắc affiliate" (spec affiliate-link-conversion §5) */
 @Controller("affiliate")
@@ -23,7 +22,7 @@ export class AffiliateController {
   constructor(
     private readonly manageRules: ManageAffiliateRulesUseCase,
     private readonly resolveLink: ResolveAffiliateLinkUseCase,
-    private readonly reapply: ReapplyAffiliateRuleUseCase,
+    @Inject(JOB_QUEUE) private readonly jobQueue: JobQueue,
   ) {}
 
   @Get("rules")
@@ -57,12 +56,19 @@ export class AffiliateController {
     return this.resolveLink.execute(request.sourceUrl, request.provider ?? null);
   }
 
-  /** Ap dung lai 1 rule (hoac toan bo neu ruleId=null) cho toan bo module da dang ky */
+  /**
+   * Ap dung lai 1 rule (hoac toan bo neu ruleId=null) cho toan bo module da
+   * dang ky — qua pg-boss (fire-and-forget, xem ReapplyAffiliateRuleWorker),
+   * KHONG con chay dong bo trong request nhu truoc (spec §4 build item 3).
+   */
   @Post("reapply")
-  reapplyRule(
+  async reapplyRule(
     @Body(new ZodValidationPipe(reapplyAffiliateRuleRequestSchema))
     request: ReapplyAffiliateRuleRequest,
-  ): Promise<ReapplyAffiliateRuleReport> {
-    return this.reapply.execute(request.ruleId);
+  ): Promise<{ jobId: string | null }> {
+    const jobId = await this.jobQueue.send(QUEUE_NAMES.affiliateReapply, {
+      ruleId: request.ruleId,
+    });
+    return { jobId };
   }
 }
