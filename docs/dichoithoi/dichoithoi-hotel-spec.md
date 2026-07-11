@@ -136,9 +136,11 @@ idempotent, có report ở màn "Công cụ".
 2. **Cập nhật giá định kỳ**: re-fetch các khách sạn đã published theo lịch (vd
    hàng tuần), so sánh `price_from`/`rating` — chỉ ghi khi khác (giống nguyên tắc
    "khác mới UPDATE" ở destination-spec §12.3).
-3. **Gán tự động theo khoảng cách**: tính lại `hotel_destination_map` khi có
-   khách sạn mới hoặc điểm đến đổi toạ độ (tái dùng công thức haversine đã có ở
-   `recompute related` của Destination).
+3. ✅ **XONG (07/2026)** — **Gán tự động theo khoảng cách**: `AutoAssignHotelsByDistanceUseCase`
+   tính lại `hotel_destination_map` (tái dùng `haversineMeters` của Destination),
+   chạy qua pg-boss `hotel.auto-assign` — tự động khi tạo khách sạn mới có
+   toạ độ, hoặc bấm nút "Tính lại gán tự động" ở UI khi điểm đến đổi toạ độ.
+   Không bao giờ đụng khách sạn đã có dòng gán tay.
 4. **Áp dụng lại affiliate rule**: dùng chung job ở
    `dichoithoi-affiliate-link-conversion-spec.md` §4 khi rule đổi (không viết
    riêng job này cho hotel).

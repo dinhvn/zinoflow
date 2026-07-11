@@ -49,16 +49,17 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
   `ProvinceId` (flight-spec §5, bus-spec §5).
 
 - **4 khối nội dung mới cho trang điểm đến** (`dichoithoi-content-seo-ux-plan.md`
-  §5.4-§5.7, phân tích 07/2026 — vai khách du lịch): chi phí ước tính (§5.4,
-  không cần cột mới); giá vé theo đối tượng (§5.5, **2 NGUỒN khác nhau**: (a)
-  giá cố định chính thức do điểm đến quy định → cột `PriceBreakdownJson` mới,
-  (b) giá riêng từng nhà cung cấp booking → thêm field `price` tuỳ chọn vào
-  `ticketLinks[]`, xem `dichoithoi-affiliate-link-conversion-spec.md` §2); câu
-  chuyện văn hoá - lịch sử (§5.6, không cần cột mới, chỉ sửa prompt pack); khối
-  "Lưu ý thực tế" gộp bãi xe/nhà vệ sinh/an toàn/quy định (§5.7, cột
-  `PracticalNotesJson` mới). Đã thêm vào khung "ai cũng cần" (destination-spec
-  §2.2) và ghi chú kế hoạch cột ở database-redesign §4.3 — **CHƯA đưa vào
-  prompt pack/structure gate/migration thật**.
+  §5.4-§5.7) — ✅ **3/4 ĐÃ XONG (xác nhận qua code + DB thật, 07/2026, Phase 12)**:
+  giá vé theo đối tượng (§5.5a, cột `PriceBreakdownJson` đã có trên
+  `v2.DestinationContent`, form `destination-price-breakdown-editor.tsx` +
+  use-case `update-practical-notes`/`get-destination-detail` đọc/ghi đầy đủ);
+  khối "Lưu ý thực tế" (§5.7, cột `PracticalNotesJson` đã có, form
+  `destination-practical-notes-editor.tsx`); câu chuyện văn hoá - lịch sử
+  (§5.6, đã vào structure gate — `destination-gates.ts` bắt buộc section này,
+  `CULTURAL_STORY_HEADING_KEYWORDS`). **Còn thiếu duy nhất**: giá theo nhà
+  cung cấp booking (§5.5b, field `price` trong `ticketLinks[]` — chưa sửa
+  `affiliateLinkItemSchema`), và chi phí ước tính (§5.4) chưa xác nhận có
+  render tự tính lúc hiển thị hay chưa.
   Cách nhập từng khối (bổ sung 07/2026, hỏi "có cần nhập ở zinoflow không"):
   giá cố định (a) + giá theo nhà cung cấp (b) → **nhập tay** trong màn sửa
   điểm đến (AI không được bịa số); câu chuyện văn hoá - lịch sử → **AI viết,
@@ -72,8 +73,9 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
   mega-menu), trang chủ, trang danh mục (Loại/Tỉnh), trang chi tiết điểm đến —
   mobile-first (CSS base cho mobile, desktop thêm bằng `min-width`), có wireframe
   ASCII chi tiết từng loại trang, thanh CTA dính đáy trên mobile ở trang chi
-  tiết, `<details>` gốc HTML cho khối dài (không JS ẩn/hiện, giữ SEO). **CHƯA
-  vào implementation-plan**, cần chốt duyệt lần cuối trước khi build.
+  tiết, `<details>` gốc HTML cho khối dài (không JS ẩn/hiện, giữ SEO). ✅ **ĐÃ
+  XONG (xác nhận qua code 07/2026)** — vào implementation-plan làm Phase 18
+  (18.0-18.5), đã build và deploy.
 
   ⚠️ **Cần bạn xác nhận 1 điểm**: mục "thời điểm đẹp" (mùa/giờ nên đi) trước đó
   đã CHỐT giữ dạng văn xuôi trong `ContentHtml`, không tạo field cấu trúc riêng
@@ -112,8 +114,12 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
   **ĐÃ MỞ LẠI 07/2026** — nhu cầu chủ đề cắt ngang (vd "Kiến trúc") đã phát
   sinh thật: chốt bảng `DestinationTag`/`DestinationTagMap` + trang
   `/chu-de/{slug}` (bộ từ vựng ĐÓNG quản lý trong CMS, không phải tag nhập tự
-  do — database-redesign §3.2.1, destination-spec §2.4).
-  **CHƯA thêm vào DDL/migration thật**, chỉ ghi nhận phân tích.
+  do — database-redesign §3.2.1, destination-spec §2.4). ✅ **Toàn bộ đã build
+  và xác nhận qua DB thật (07/2026)**: cột `AncestorsJson`/`ChildrenJson` ĐÃ
+  có trên `v2.DestinationContent` (builder `ancestors-children-builder.ts`,
+  ghi khi publish/relink — chỉ cần chạy `relink` để backfill cho các điểm
+  cũ chưa có); bảng `DestinationTag`/`DestinationTagMap` + trang `/chu-de`
+  đã build (xem Phase B/C). Dòng "CHƯA thêm vào DDL" trước đó đã lỗi thời.
 
 - **URL điểm đến giữ PHẲNG, không theo cấp bậc** (`content-seo-ux-plan.md`
   §10.7, **CHỐT 07/2026**): `/diem-den/{slug}` giữ nguyên như hiện tại, KHÔNG
@@ -140,8 +146,11 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
   toàn bộ list review MỖI LẦN RENDER → sửa thành UPDATE 2 cột cache
   `AvgRating`/`ReviewCount` (đã có sẵn trên `V2Destination`) ngay lúc website
   ghi review mới, trang detail đọc thẳng cột cache. Mục tiêu: từ 7 query rời
-  rạc hiện tại/trang detail → còn 1 query chính + tối đa 1 query phụ. **Đây là
-  việc SỬA hiện trạng, chưa code — CHƯA vào migration/refactor thật.**
+  rạc hiện tại/trang detail → còn 1 query chính + tối đa 1 query phụ. ✅ **CẢ 2
+  VI PHẠM ĐÃ SỬA (xác nhận qua code thật 07/2026, Phase 15)**:
+  `DestinationExtrasRepository` giờ đọc thẳng `HotelCardsJson`/`TourCardsJson`
+  (precompute, không JOIN sống) và đọc thẳng cột cache `AvgRating`/`ReviewCount`
+  trên `Destination` (không còn `.Average()` mỗi lần render).
 
 - **Tối ưu hạ tầng cho hosting SmarterASP .NET Advance** (`content-seo-ux-
   plan.md` §10.5.1, `system-design.md` §5 mục 9, phân tích 07/2026 — rà soát
@@ -371,7 +380,7 @@ lịch sử + 2 gap thật còn sót:
 |---|---|---|
 | 1 | M4 destination: mirror + generate + review + publisher | ✅ XONG — `publish-destination.usecase.ts` UPSERT thẳng vào `v2.Destination`/`DestinationContent` qua `mssql-site-db.adapter.ts`, có auto-link + cache purge + RelatedJson. |
 | 2 | Affiliate link conversion trước/cùng Hotel/Tour | ✅ XONG — module `affiliate/` đầy đủ, Hotel/Tour upsert gọi `ResolveAffiliateLinkUseCase` khi lưu. |
-| 3 | Hotel+Tour+Product kèm pipeline ảnh (sharp/FTP) + import Google Sheet | 🔄 **BACKEND XONG (07/2026, đợt tự động)** — pipeline ảnh + Sheet import (dry-run/upsert/fallback) đều xong; chỉ còn thiếu trang web UI preview. Xem chi tiết ngay dưới bảng. |
+| 3 | Hotel+Tour+Product kèm pipeline ảnh (sharp/FTP) + import Google Sheet | ✅ **XONG (07/2026, đợt tự động)** — pipeline ảnh + Sheet import (dry-run/upsert/fallback) VÀ trang web UI paste-link-Sheet cho cả 3 module đều đã build. Xem chi tiết ngay dưới bảng. |
 | 4 | "Viết tay thủ công" (`sourceType=Manual`) trong `ai-content` | ✅ XONG — `create-manual-draft.usecase.ts`, đi qua đủ gate review/publish như bài AI. |
 | 5 | Article: khối động + publisher + auto-link engine DÙNG CHUNG với destination | ✅ **XONG (07/2026, đợt tự động)** — xem chi tiết ngay dưới bảng. |
 | 6 | UI Chủ đề (tag) + Coverage Score | ✅ **XONG (07/2026, đợt tự động)** — xem chi tiết ngay dưới bảng. Flight/Bus vẫn CHƯA XÂY (lý do dưới, spec tự ghi chưa chốt). |

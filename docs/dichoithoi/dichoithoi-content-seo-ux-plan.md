@@ -49,7 +49,7 @@ database-redesign §4.3) và audit (mục 3 — "Thiếu hoàn toàn").
 | Lưu trú / khách sạn | Đã có (HotelText + `HotelDestinationMap` → module Hotel) | Module Hotel chuyển về zinoflow làm CMS (cào/nhập tay), chỉ hiển thị dạng card gợi ý, KHÔNG có trang riêng — xem [dichoithoi-hotel-spec.md](dichoithoi-hotel-spec.md). Audit: hiện SSR sau (AJAX), nên fix (xem §3) |
 | **Tour gợi ý** | MỚI (module Tour, quyết định 07/2026) | Card gợi ý tour đi qua điểm đến này HOẶC điểm liên quan, KHÔNG có trang riêng — xem [dichoithoi-tour-spec.md](dichoithoi-tour-spec.md) |
 | Mẹo & lưu ý | Đã có (Tip) | |
-| FAQ | Đã có (FaqJson, render JSON-LD FAQPage) | website hiện CHƯA render — cần làm khi viết lại |
+| FAQ | Đã có (FaqJson, render JSON-LD FAQPage) | ✅ ĐÃ XONG (xác nhận qua code 07/2026) — `SchemaUtil.cs` có `CreateFaqJsonLD` |
 | Điểm đến liên quan | Đã có (RelatedJson precompute) | |
 | CTA mua vé online | Đã có (`ticketLinks[]`, nhiều nhà cung cấp) | render 1 nút/dòng, xem §2 |
 | **Đánh giá biên tập** (DiChoiThoi tự chấm) | MỚI — chưa build | Badge điểm số riêng, KHÔNG dùng schema `AggregateRating` (schema đó chỉ dành cho review người dùng thật — xem ghi chú dưới) |
@@ -137,20 +137,13 @@ chết, bỏ `async` sai trên CSS + thêm `defer` cho JS.
    sách Google — xem §1). Việc còn lại: (a) build "Đánh giá biên tập" (badge
    điểm số, không cần schema `AggregateRating`); (b) thiết kế cơ chế review
    khách THẬT (form gửi + duyệt) — phân tích sau, chưa chốt.
-2. **JSON-LD `FAQPage`** từ `FaqJson` — data đã có, website chưa render.
-3. **Trang landing theo loại (2 tầng) và theo tỉnh** — đây là gap SEO long-tail
-   lớn nhất: schema mới đã có `DestinationTypeGroup`/`DestinationType`/`ProvinceId`
-   (database-redesign §3.2, §4.1, §4.4 — cập nhật 07/2026 thành 2 tầng nhóm/loại)
-   nhưng audit không thấy trang loại/tỉnh nào tồn tại trên website hiện tại.
-   Cấu trúc silo: `/loai/{groupSlug}` (trang nhóm, vd "Thiên nhiên" — pillar,
-   gộp mọi loại con) → `/loai/{groupSlug}/{typeSlug}` (trang loại cụ thể, vd
-   "Sông - suối - hồ - thác" — cluster) → bài điểm đến. Không có trang landing
-   = mất toàn bộ traffic tìm kiếm dạng "địa điểm thiên nhiên ở Quảng Ninh", "sông
-   suối đẹp miền Bắc", "kiến trúc cổ Việt Nam"... Đây là việc SEO có ROI cao
-   nhất khi viết lại UI, vì data đã sẵn sàng, chỉ thiếu route + view. Nav chính
-   của website cũng nên có menu 3 nhóm (Thiên nhiên / Văn hóa - Lịch sử / Vui
-   chơi - Trải nghiệm) trỏ tới 3 trang pillar này, giúp người dùng vào thẳng
-   theo cách họ nghĩ ("muốn đi chỗ tự nhiên") thay vì chỉ tìm theo tên/tỉnh.
+2. **JSON-LD `FAQPage`** từ `FaqJson` — ✅ ĐÃ XONG (xác nhận qua code 07/2026,
+   `SchemaUtil.cs` `CreateFaqJsonLD`).
+3. **Trang landing theo loại (2 tầng) và theo tỉnh** — ✅ route + view ĐÃ XONG
+   (xác nhận qua code 07/2026: `DestinationTypeController` có `/loai/{groupSlug}`
+   + `/loai/{groupSlug}/{typeSlug}`, `ProvinceController` có `/tinh/{slug}`,
+   nav chính đã có menu 3 nhóm). Việc còn lại: JSON-LD `ItemList` cho 2 loại
+   trang này (xem §8.2) — data + trang đã có, chỉ thiếu structured data.
 4. **Sitemap.xml động** (theo `UpdatedAt`) + kiểm tra đã submit Google Search
    Console chưa — audit chưa xác nhận trạng thái hiện tại, cần rà khi viết lại.
 5. **Core Web Vitals ngoài ảnh**: SSR khối khách sạn (§3.3), giảm JS không module

@@ -87,7 +87,7 @@ việc chưa cần dùng ngay.
 - **DoD**: thêm 1 khách sạn tay, gán vào 1 điểm đến → publish → query
   `HotelDestinationMap JOIN Hotel WHERE DestinationSlug=@slug` ra đúng card data.
 
-## Phase 6 — Module `tour` (PHẦN LỚN XONG — re-verify 07/2026: nhiều-điểm-đến (many-to-many) đúng, nhưng cùng thiếu job tự gán theo khoảng cách + preview affiliateUrl UI như Hotel)
+## Phase 6 — Module `tour` (PHẦN LỚN XONG — re-verify 07/2026: nhiều-điểm-đến (many-to-many) đúng; job tự gán theo khoảng cách KHÔNG áp dụng cho Tour — tour-spec xác nhận Tour không có lat/lng riêng, chỉ gắn qua bảng map; còn thiếu preview affiliateUrl UI như Hotel)
 
 **Phụ thuộc**: Phase 3. **Nguồn**: `dichoithoi-tour-spec.md`. Giống hệt cấu
 trúc Phase 5 (Hotel), khác field đặc thù (`duration_days/nights`,
