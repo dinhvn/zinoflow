@@ -147,9 +147,10 @@ chết, bỏ `async` sai trên CSS + thêm `defer` cho JS.
    trang này (xem §8.2) — data + trang đã có, chỉ thiếu structured data.
 4. **Sitemap.xml động** (theo `UpdatedAt`) + kiểm tra đã submit Google Search
    Console chưa — audit chưa xác nhận trạng thái hiện tại, cần rà khi viết lại.
-5. **Core Web Vitals ngoài ảnh**: SSR khối khách sạn (§3.3), giảm JS không module
-   hoá (`common.js`), `font-display: swap` nếu dùng web font, preconnect tới CDN
-   ảnh nếu bật Cloudflare (đã đề cập ở destination-spec §14.2).
+5. **Core Web Vitals ngoài ảnh**: ~~SSR khối khách sạn (§3.3)~~ ✅ ĐÃ XONG (xem
+   §6-7); còn lại: giảm JS không module hoá (`common.js`), `font-display: swap`
+   nếu dùng web font, preconnect tới CDN ảnh nếu bật Cloudflare (đã đề cập ở
+   destination-spec §14.2).
 6. **Internal linking từ trang landing mới**: breadcrumb thêm cấp Tỉnh/Loại khi
    các trang này ra đời; card trên landing dùng anchor text = tên điểm (đã tốt ở
    related/child hiện tại, giữ nguyên pattern).
@@ -342,53 +343,33 @@ tên bảng, đổi tên cột, đồng bộ SQL Server) vẫn ở trạng thái
 vào lộ trình build chính thức" như `dichoithoi-flight-spec.md` đang ghi, chờ
 xếp độ ưu tiên chung.
 
-## 6) Việc phát sinh cần chốt trước khi build UI mới
+## 6-7) Trạng thái các đề xuất SEO/UX (bảng gộp, thay 2 mục cũ từng lặp/mâu thuẫn nhau)
 
-| # | Việc | Thuộc về |
-|---|---|---|
-| 1 | ✅ Đã gỡ UI + JSON-LD review tự nhập (07/2026) — còn lại: build "Đánh giá biên tập" + thiết kế cơ chế review khách thật (chưa chốt, phân tích sau) | Repo dichoithoi (.NET) |
-| 2 | Route + view mới `/loai/{groupSlug}` (2 tầng: nhóm + loại con), `/tinh/{slug}` | Repo dichoithoi (.NET) — ưu tiên cao nhất theo §4.2.3 |
-| 3 | ✅ Cột `GalleryJson`/`TicketPriceFrom` đã thêm vào DDL (database-redesign §4.3, 07/2026) — còn lại: bảng `destination_images` build sớm hơn kế hoạch (giai đoạn 2 → gộp vào M4) để có nguồn điền `GalleryJson` ngay khi viết lại UI | zinoflow (spec §14.4) |
-| 4 | ✅ Đã thêm `TicketPriceFrom` (decimal, optional) vào DDL cho JSON-LD `offers` (database-redesign §4.3, 07/2026) | zinoflow (schema) + repo dichoithoi (cột DB) |
-| 5 | ✅ SSR khối khách sạn/tour thay AJAX (xác nhận qua code 07/2026 — `Detail.cshtml` dùng `Html.PartialAsync("_HotelCardList"/"_TourCardList")`, không AJAX) | Repo dichoithoi (.NET) |
-| 6 | Sitemap.xml + xác nhận Search Console | Repo dichoithoi (vận hành) |
-| 7 | ✅ `rel="sponsored"` + dòng disclosure trên mọi CTA affiliate (xác nhận qua code 07/2026 — `_QuickDecisionCard.cshtml` mọi link vé dùng `rel="sponsored noopener"` + dòng disclosure hoa hồng) | Repo dichoithoi (template) |
-| 8 | ✅ Render danh sách `ticketLinks[]` thành nhiều nút CTA (xác nhận qua code 07/2026 — `_QuickDecisionCard.cshtml` foreach `extras.TicketLinks`, mỗi item 1 nút) | zinoflow (schema, đã cập nhật destination-spec §2.3) + Repo dichoithoi (template render mảng thay 1 link) |
+> §6 và §7 trước đây theo dõi trùng gần như cùng 1 danh sách 2 lần (1 lần theo
+> "thuộc về", 1 lần theo "độ ưu tiên"), rồi lại có ghi chú cuối bài tính lại
+> lần 3 cái nào đã xong — gộp thành 1 bảng duy nhất. Trạng thái build mới
+> nhất LUÔN tra ở `dichoithoi-backlog.md`; bảng dưới chỉ để biết ý tưởng gốc
+> nằm ở đâu trong tài liệu này.
 
-## 7) Ưu tiên triển khai (gợi ý thứ tự, chưa quyết)
-
-**Cao (ROI cao, không chặn bởi việc khác):**
-1. ✅ Đã gỡ Review/Rating tự nhập + JSON-LD AggregateRating (07/2026). Build
-   "Đánh giá biên tập" (không cần schema AggregateRating).
-2. Render FAQ (FaqJson) + JSON-LD FAQPage — data đã có sẵn.
-3. Trang landing theo Loại + Tỉnh — SEO long-tail lớn nhất, data đã sẵn sàng.
-4. ✅ SSR khối khách sạn/tour giữa bài (bỏ AJAX) — đã build.
-
-**Trung bình (cần thêm việc nhỏ ở data trước):**
-5. Gallery ảnh (bảng `destination_images`).
-6. ~~Bản đồ nhúng + nút chỉ đường~~ — CHỦ Ý bỏ (Phase 18, gỡ iframe bản đồ khỏi trang chi tiết).
-7. ✅ `rel=sponsored` + disclosure — đã build.
-
-**Sau (đủ nền tảng rồi mới đáng làm):**
-8. Mini lịch trình / gợi ý kết hợp.
-9. So sánh giá tại quầy vs online.
-10. `TicketPriceFrom` cho JSON-LD offers.
-
-**Mới đề xuất — phân tích vai khách du lịch, 07/2026 (CHƯA build, chưa vào
-implementation-plan chính thức):**
-11. Chi phí ước tính cho 1 chuyến (§5.4) — không cần cột DB mới, ROI cao nhất
-    trong nhóm này vì chỉ là logic tổng hợp dữ liệu đã có.
-12. Giá vé theo đối tượng (§5.5) — cần cột `PriceBreakdownJson` mới.
-13. Câu chuyện văn hoá - lịch sử (§5.6) — không cần cột mới, chỉ sửa prompt pack.
-14. Khối "Lưu ý thực tế" gộp (§5.7) — cần cột `PracticalNotesJson` mới.
-
-1-10 ở trên (trừ #1 Review/Rating, #2 FAQ, #3 landing Loại/Tỉnh, #4 SSR khách
-sạn/tour, #6 bản đồ (chủ ý bỏ), #7 rel=sponsored, #8 ticketLinks nhiều nút,
-#9 so sánh giá, #10 TicketPriceFrom — đã build Phase 9/12/15, xem
-`dichoithoi-backlog.md`) vẫn giữ nguyên để tra cứu lịch sử quyết định; chỉ
-còn thật sự mở: #5 Gallery ảnh (`destination_images`, để Giai đoạn 2 theo
-implementation-plan Phase 11). Trạng thái build mới nhất luôn tra ở
-`dichoithoi-backlog.md`.
+| Việc | Trạng thái |
+|---|---|
+| Gỡ Review/Rating tự nhập + JSON-LD AggregateRating | ✅ ĐÃ XONG (07/2026) |
+| "Đánh giá biên tập" + cơ chế review khách thật | ⚠️ CHƯA chốt cơ chế, phân tích sau |
+| FAQ (`FaqJson`) + JSON-LD FAQPage | ✅ ĐÃ XONG |
+| Trang landing theo Loại (`/loai/{group}/{type}`) + Tỉnh (`/tinh/{slug}`) | ✅ ĐÃ XONG |
+| SSR khối khách sạn/tour giữa bài (bỏ AJAX) | ✅ ĐÃ XONG |
+| `rel="sponsored"` + dòng disclosure trên CTA affiliate | ✅ ĐÃ XONG |
+| Render `ticketLinks[]` thành nhiều nút CTA | ✅ ĐÃ XONG |
+| `TicketPriceFrom` cho JSON-LD `offers` | ✅ ĐÃ XONG (Phase 12) |
+| So sánh giá tại quầy vs online (2 số thật) | ✅ ĐÃ XONG (Phase 12) |
+| Chi phí ước tính cho 1 chuyến (§5.4) | ✅ ĐÃ XONG (Phase 12) |
+| Giá vé theo đối tượng (§5.5) | ✅ ĐÃ XONG (Phase 12) |
+| Câu chuyện văn hoá - lịch sử (§5.6) | ✅ ĐÃ XONG (Phase 12) |
+| Khối "Lưu ý thực tế" (§5.7) | ✅ ĐÃ XONG (Phase 12) |
+| Bản đồ nhúng + nút chỉ đường | ❌ CHỦ Ý bỏ (Phase 18, gỡ iframe bản đồ) |
+| Gallery ảnh (bảng `destination_images`) | ⚠️ CHƯA — cột `GalleryJson` đã có DDL, còn thiếu bảng ảnh + UI upload; xếp Giai đoạn 2 (implementation-plan Phase 11) |
+| Sitemap.xml + xác nhận Search Console | ⚠️ CHƯA — việc vận hành, cần bạn xác nhận |
+| Mini lịch trình / gợi ý kết hợp | ⚠️ CHƯA — độ ưu tiên thấp, chưa vào lộ trình |
 
 Tài liệu này không thay thế phần thiết kế backend/schema đã chốt ở
 `dichoithoi-database-redesign.md` và `dichoithoi-destination-spec.md` — mọi thay
@@ -650,6 +631,10 @@ dụng cho thiết kế đã đề xuất ở §2-3:
   cache invalidation (system-overview §2) nên áp dụng nhất quán ở UI luôn.
 
 ## 10) Layout mobile-first — thiết kế lại toàn bộ (đề xuất 07/2026)
+
+> ✅ **ĐÃ BUILD (Phase 18, xác nhận qua code 07/2026)** — toàn bộ mục này giữ
+> làm tài liệu thiết kế/as-built tham khảo (rationale, wireframe), KHÔNG phải
+> việc còn mở. Trạng thái mới nhất: `dichoithoi-implementation-plan.md` Phase 18.
 
 Thiết kế mới hoàn toàn, KHÔNG dựa trên layout hiện có — được phép đập đi làm lại
 theo mục tiêu §0 (giá trị người dùng + tốc độ + SEO), ưu tiên **mobile-first**:
