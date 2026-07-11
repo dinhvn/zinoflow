@@ -167,20 +167,29 @@ export default function DichoithoiPage() {
     },
   });
 
-  // Cong cu van hanh (spec §12.2, §12.3): re-link xem truoc -> xac nhan ghi; recompute related
+  // Cong cu van hanh (spec §12.2, §12.3): re-link xem truoc (dong bo) -> ap dung
+  // that qua pg-boss (fire-and-forget, xem RelinkAllWorker) -> recompute related.
   const [relinkReport, setRelinkReport] = useState<RelinkAllReport | null>(null);
+  const [relinkApplyQueued, setRelinkApplyQueued] = useState(false);
   const [relatedReport, setRelatedReport] = useState<RecomputeRelatedReport | null>(null);
   const relinkMutation = useMutation({
-    mutationFn: async (dryRun: boolean) =>
-      relinkAllReportSchema.parse(await apiSend("POST", "/destinations/relink", { dryRun })),
+    mutationFn: async () =>
+      relinkAllReportSchema.parse(await apiSend("POST", "/destinations/relink", { dryRun: true })),
     onSuccess: (report) => {
       setRelinkReport(report);
+      setRelinkApplyQueued(false);
       setSyncError(null);
-      if (!report.dryRun) {
-        void queryClient.invalidateQueries({ queryKey: ["dichoithoi-destinations"] });
-      }
     },
     onError: (err) => setSyncError(err instanceof Error ? err.message : "Re-link thất bại"),
+  });
+  const relinkApplyMutation = useMutation({
+    mutationFn: async () => apiSend("POST", "/destinations/relink/apply", {}),
+    onSuccess: () => {
+      setRelinkApplyQueued(true);
+      setSyncError(null);
+      void queryClient.invalidateQueries({ queryKey: ["dichoithoi-destinations"] });
+    },
+    onError: (err) => setSyncError(err instanceof Error ? err.message : "Đưa vào hàng đợi thất bại"),
   });
   const recomputeMutation = useMutation({
     mutationFn: async () =>
@@ -416,17 +425,20 @@ export default function DichoithoiPage() {
       <div className="rounded border border-zinc-200 p-3 dark:border-zinc-800">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-medium">Công cụ:</span>
-          <Button size="sm" loading={relinkMutation.isPending} onClick={() => relinkMutation.mutate(true)}>
+          <Button size="sm" loading={relinkMutation.isPending} onClick={() => relinkMutation.mutate()}>
             {relinkMutation.isPending ? "Đang quét..." : "Re-link toàn bộ (xem trước)"}
           </Button>
-          {relinkReport?.dryRun && relinkReport.changed > 0 && (
+          {relinkReport && relinkReport.changed > 0 && (
             <Button
               size="sm"
               className="bg-blue-600 text-white hover:bg-blue-700"
-              loading={relinkMutation.isPending}
-              onClick={() => relinkMutation.mutate(false)}
+              loading={relinkApplyMutation.isPending}
+              disabled={relinkApplyQueued}
+              onClick={() => relinkApplyMutation.mutate()}
             >
-              Áp dụng {relinkReport.linksAdded} link vào website
+              {relinkApplyQueued
+                ? "Đã đưa vào hàng đợi ✓"
+                : `Áp dụng ${relinkReport.linksAdded} link vào website`}
             </Button>
           )}
           <Button size="sm" loading={recomputeMutation.isPending} onClick={() => recomputeMutation.mutate()}>
@@ -472,10 +484,11 @@ export default function DichoithoiPage() {
         {relinkReport && (
           <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             <p>
-              {relinkReport.dryRun ? "🔍 Xem trước" : "✅ Đã ghi"}: quét {relinkReport.scanned} bài,{" "}
+              🔍 Xem trước: quét {relinkReport.scanned} bài,{" "}
               {relinkReport.changed} bài thay đổi, thêm {relinkReport.linksAdded} link nội bộ,
               chuẩn hóa {relinkReport.linksNormalized} link cũ (
               {(relinkReport.durationMs / 1000).toFixed(1)}s).
+              {relinkApplyQueued && " Đã đưa vào hàng đợi — website sẽ cập nhật trong giây lát."}
             </p>
             {relinkReport.details.length > 0 && (
               <ul className="mt-1 max-h-48 list-inside list-disc overflow-y-auto text-xs">

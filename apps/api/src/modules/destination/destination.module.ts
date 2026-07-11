@@ -10,6 +10,7 @@ import { GetDestinationTaxonomyUseCase } from "./application/use-cases/get-desti
 import { CreateDestinationJobUseCase } from "./application/use-cases/create-destination-job.usecase";
 import { PublishDestinationUseCase } from "./application/use-cases/publish-destination.usecase";
 import { RelinkAllUseCase } from "./application/use-cases/relink-all.usecase";
+import { RelinkAllWorker } from "./infrastructure/workers/relink-all.worker";
 import { RecomputeRelatedService } from "./application/services/recompute-related.service";
 import { DICHOITHOI_SITE_DB } from "./application/ports/dichoithoi-site-db.port";
 import { CACHE_PURGE } from "./application/ports/cache-purge.port";
@@ -102,6 +103,7 @@ import {
     CreateDestinationJobUseCase,
     PublishDestinationUseCase,
     RelinkAllUseCase,
+    RelinkAllWorker,
     UpdateThumbnailUseCase,
     UpdateTicketLinksUseCase,
     UpdatePriceBreakdownUseCase,

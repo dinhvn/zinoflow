@@ -113,6 +113,7 @@ import {
   SHEET_CSV_FETCHER,
   type SheetCsvFetcher,
 } from "../../shared/sheet-import/ports/sheet-csv-fetcher.port";
+import { JOB_QUEUE, QUEUE_NAMES, type JobQueue } from "../../shared/jobs/job-queue.port";
 import { Inject } from "@nestjs/common";
 
 /** Gioi han kich thuoc anh goc upload (truoc khi convert) — 15MB */
@@ -154,6 +155,7 @@ export class DestinationsController {
     private readonly recomputeRelated: RecomputeRelatedService,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
     @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
+    @Inject(JOB_QUEUE) private readonly jobQueue: JobQueue,
   ) {}
 
   @Get()
@@ -289,14 +291,28 @@ export class DestinationsController {
   }
 
   /**
-   * Re-link toan bo (spec §12.2). DAT TRUOC :slug/publish de Nest khong nuot
-   * "relink" thanh slug. Body {dryRun:true} = xem truoc, khong ghi.
+   * Re-link toan bo — XEM TRUOC (spec §12.2). DAT TRUOC :slug/publish de Nest
+   * khong nuot "relink" thanh slug. LUON chay dong bo o che do doc-only (khong
+   * ghi) — tra bao cao chi tiet ngay de admin xem truoc khi bam "Ap dung".
+   * Ghi that da chuyen sang POST relink/apply (qua pg-boss, xem duoi).
    */
   @Post("relink")
   relink(
-    @Body(new ZodValidationPipe(relinkAllRequestSchema)) request: RelinkAllRequest,
+    @Body(new ZodValidationPipe(relinkAllRequestSchema)) _request: RelinkAllRequest,
   ): Promise<RelinkAllReport> {
-    return this.relinkAll.execute(request.dryRun);
+    return this.relinkAll.execute(true);
+  }
+
+  /**
+   * Re-link toan bo — AP DUNG THAT, qua pg-boss (Phase 2 build item 3, khong
+   * con chay dong bo trong request nhu truoc — xem RelinkAllWorker). Fire-
+   * and-forget, cung pattern voi POST /hotels/auto-assign — admin da xem bao
+   * cao chi tiet o buoc xem truoc ngay truoc do roi moi bam nut nay.
+   */
+  @Post("relink/apply")
+  async relinkApply(): Promise<{ jobId: string | null }> {
+    const jobId = await this.jobQueue.send(QUEUE_NAMES.destinationRelink, {});
+    return { jobId };
   }
 
   /** Tinh lai RelatedJson TOAN BO diem published (spec §12.3) */

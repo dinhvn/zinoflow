@@ -20,4 +20,5 @@ export const QUEUE_NAMES = {
   hotelAutoAssign: "hotel.auto-assign",
   hotelImageIngest: "hotel.image-ingest",
   tourImageIngest: "tour.image-ingest",
+  destinationRelink: "destination.relink",
 } as const;

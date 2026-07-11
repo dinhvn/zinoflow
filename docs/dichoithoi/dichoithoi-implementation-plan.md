@@ -34,12 +34,12 @@ việc chưa cần dùng ngay.
 - **DoD**: Query thử `SELECT` mọi bảng mới trên `dichoithoi_dev` ra đúng số
   dòng kỳ vọng; chưa chạm production.
 
-## Phase 2 — Module `destination` (lõi M4) (PHẦN LỚN XONG — re-verify 07/2026: thiếu quality gate ≥800 từ/bài; relink chạy đồng bộ qua API, CHƯA qua pg-boss worker như spec yêu cầu)
+## Phase 2 — Module `destination` (lõi M4) (ĐÃ XONG — re-verify 07/2026: gate ≥800 từ đã có sẵn từ trước (header cũ ghi nhầm "thiếu", đã sửa — xem commit `2aaedf4`); relink giờ đã qua pg-boss worker — xem mục dưới)
 
 **Phụ thuộc**: Phase 1. **Nguồn**: `dichoithoi-destination-spec.md`.
 1. `domain/`: entity mirror, engine auto-link (unit test kỹ — escape regex,
    không replace trong thẻ `<a>`, sort tên dài→ngắn), quality gates travel
-   (kèm ngưỡng ≥800 từ mới vá 07/2026).
+   (kèm ngưỡng ≥800 từ — `destination-gates.ts` `MIN_TOTAL_WORDS`).
 2. `application/`: `SyncDestinationsFromSite`, `CreateDestinationJob`
    (mode create/update), `PublishDestination`, `RelinkAllDestinations`.
 3. `infrastructure/`: TypeORM mssql DataSource (lazy connect), publisher
@@ -50,6 +50,16 @@ việc chưa cần dùng ngay.
 - **DoD**: tạo 1 điểm đến mới bằng AI → generate → duyệt → publish → thấy bài
   thật trên `dichoithoi_dev` (chưa lên web thật); chạy `relink` không lỗi;
   chạy 2 lần liên tiếp không đổi thêm gì (idempotent).
+
+**Relink qua pg-boss (07/2026)**: `POST /destinations/relink` giờ CHỈ còn xem
+trước (dryRun, đọc-only, chạy đồng bộ — cần trả báo cáo chi tiết ngay để admin
+duyệt trước khi ghi). Ghi thật chuyển sang `POST /destinations/relink/apply`
+(fire-and-forget qua queue `destination.relink`, `RelinkAllWorker` — cùng
+pattern với `hotel.auto-assign`). UI: nút "Re-link (xem trước)" không đổi;
+nút "Áp dụng N link" giờ gọi endpoint mới, hiện toast "Đã đưa vào hàng đợi"
+thay vì chờ report — report đã hiện đủ ở bước xem trước ngay trước đó, không
+mất thông tin. Verify thật: dry-run trước cho `changed=14`, gọi apply, dry-run
+lại ngay sau đó cho `changed=0` — xác nhận worker đã ghi xong.
 
 ## Phase 3 — Module `affiliate` (nền tảng, TRƯỚC Hotel/Tour) (PHẦN LỚN XONG — re-verify 07/2026: resolver + manual-override đúng, nhưng job 'áp dụng lại' đang chạy ĐỒNG BỘ qua REST (không qua pg-boss), UI chưa nhóm dưới 'Công cụ')
 
