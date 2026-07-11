@@ -169,11 +169,6 @@ Thêm dưới khu "Dichoithoi" (system-overview §7 cấu trúc menu hiện tạ
 
 ## 7) Việc cần chốt trước khi build
 
-1. Chọn OTA nào cào trước (Booking.com/Agoda/Traveloka) — ảnh hưởng cấu trúc
-   parser, và cần xác nhận rủi ro ToS (§1) trước khi build crawler thật.
-2. Xác nhận mạng affiliate đang/sẽ tham gia đã có rule trong
-   `affiliate_link_rules` chưa (deep-link theo từng khách sạn hay chỉ link
-   chung) — ảnh hưởng cách build CTA, xem
-   `dichoithoi-affiliate-link-conversion-spec.md`.
-3. Ngưỡng khối lượng khách sạn cần có trước khi đáng xây job cào tự động (§5) —
-   MVP có thể chỉ cần vài chục khách sạn nhập tay cho các điểm đến hot nhất.
+⚠️ Xem `dichoithoi-backlog.md` mục A#4, A#6, A#7 (chọn OTA cào trước, quy tắc
+mạng affiliate, ngưỡng khối lượng xây crawler) — đây là nguồn theo dõi duy
+nhất cho 3 quyết định còn mở này, không lặp lại nội dung ở đây để tránh lệch.

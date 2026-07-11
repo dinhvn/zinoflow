@@ -295,22 +295,11 @@ phải có luật chặt để không thành spam:
 
 ## 10) Việc cần chốt trước khi build
 
-1. ✅ **CHỐT 07/2026**: URL bài viết = `/blog/{slug}` (đổi từ đề xuất ban đầu
-   `/cam-nang/{slug}` — người dùng chọn giữ tên quen thuộc `/blog/`). Đã đồng
-   bộ ở mọi chỗ nhắc route này (§3.2 DDL, `content-seo-ux-plan.md` §5.3/§8.6,
-   `database-redesign.md` §3.4 mẫu `DynamicBlocksJson`, `implementation-plan.md`,
-   `system-design.md`).
-2. Website .NET cần route + view mới cho Article (chưa tồn tại) — việc bên
-   repo dichoithoi, song song các route landing khác (`/loai/...`, `/tinh/...`).
-3. ✅ **CHỐT 07/2026**: THÊM NGAY khối "món ăn/quán ăn" riêng vào bộ khối hỗ
-   trợ MVP (không chờ có module ẩm thực riêng) — xem §3.1 (đã thêm khối
-   `foodSpots`).
-4. ✅ **CHỐT 07/2026**: AI **tự gợi ý** chèn khối động lúc generate (dựa chủ đề
-   bài, chèn sẵn `[[block:...]]` vào outline draft) nhưng chỉ là gợi ý — người
-   dùng xem/sửa/xoá trong màn review trước khi Approve→Publish, không tự động
-   publish thẳng không qua duyệt. Áp dụng cho MỌI kind kể cả `products` mới
-   (`dichoithoi-product-spec.md` §7).
-5. Luồng "Viết tay" (§1.1) là thay đổi ở tầng CORE module `ai-content` (state
-   machine + use case mới), không nằm gọn trong module destination/article —
-   cần làm TRƯỚC hoặc CÙNG lúc với phần publisher/khối động của Article, vì
-   Article là nơi đầu tiên cần `sourceType=Manual`.
+~~CHỐT 07/2026: URL bài viết = `/blog/{slug}`~~ → **SỬA LẠI (07/2026, xem
+`dichoithoi-backlog.md` A#1)**: quyết định này SAI, `/blog` là route legacy v1
+đang chạy thật, không đè lên được. Route thật đã build = `/cam-nang/{slug}`.
+
+✅ Các mục còn lại đã chốt/build xong: khối `foodSpots` (§3.1), AI tự gợi ý
+chèn khối động lúc generate (§10.4 cũ, xem product-spec §7), luồng "Viết tay"
+ở core `ai-content` (Phase 7, ĐÃ XONG). Chi tiết trạng thái mới nhất: xem
+`dichoithoi-backlog.md` mục A#1-3, A#9.

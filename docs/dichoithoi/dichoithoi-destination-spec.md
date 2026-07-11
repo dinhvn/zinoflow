@@ -749,19 +749,17 @@ Nút chạy + bảng lịch sử pg-boss job (thời gian, kết quả, số bà
 - Sanitize HTML trước khi ghi (XSS) — tái dùng pipeline M3.
 
 ## 9) Rủi ro & việc cần chốt trước khi build
-1. ✅ Quyền kết nối SQL Server từ máy local — **đã xác nhận kết nối được (12/06/2026)**.
-2. ⚠️ Sau go-live phải khóa/ngừng nút import destination trên CMS cũ (tránh wipe).
-3. Encoding tiếng Việt khi ghi nvarchar qua driver `mssql` — cần test sớm 1 record.
-4. Ảnh điểm đến: ĐÃ CÓ THIẾT KẾ riêng (§14) — M4 giữ luồng FTP tay + cột path
-   trong DB; trình upload tích hợp ở giai đoạn 2.
-5. Nâng cấp schema (§11) cần sửa code website (.NET) để render trường mới —
-   việc bên repo dichoithoi, làm song song Phase A.
+
+✅ Module destination đã build xong (Phase 2) — mục này giữ tham khảo lịch
+sử. Rủi ro vận hành còn thật sự cần nhớ (khóa nút import CMS cũ trước
+go-live, test encoding tiếng Việt) đã gộp vào `dichoithoi-backlog.md` mục C —
+xem đó để biết trạng thái mới nhất, không lặp lại ở đây.
 
 ## 10) Ngoài phạm vi MVP (để giai đoạn sau)
-- Tự động refresh content theo lịch (scheduler) — sau khi nút update tay chạy ổn.
-- Tạo hàng loạt từ danh sách điểm đến.
-- Quản lý ảnh / sinh ảnh (chờ Image Tool).
-- Viết bài Post/Phượt/Tour của dichoithoi (chỉ làm Destination trước).
+
+Trùng với `dichoithoi-implementation-plan.md` Phase 11 "Giai đoạn 2" — xem
+phase đó để biết đầy đủ + trạng thái mới nhất (tự động refresh theo lịch,
+tab Ảnh/upload, quản lý taxonomy, viết bài Post/Phượt/Tour cũ).
 
 ## 12) Chi tiết 3 job vận hành (re-link, recompute related, đồng bộ mirror)
 

@@ -532,34 +532,11 @@ nội dung; sitemap diff = 0 URL mất.
    website chỉ đọc `AffiliateUrl` đã tính sẵn.
 
 ## 9) Việc cần chốt tiếp (làm cùng nhau trước khi code)
-1. ~~Danh sách map tỉnh cũ → 34 tỉnh mới (rà tay)~~ **ĐÃ CÓ GIẢI PHÁP 12/06/2026**:
-   seed dataset dvhcvn (provinces/wards/ward_mappings) vào Postgres của AI tool —
-   map tỉnh + phường tự động, chỉ rà các dòng match mờ.
-   Chi tiết: `dichoithoi-destination-spec.md` §13.
-2. Bộ `DestinationType` chuẩn — **ĐỀ XUẤT 12/06/2026, cập nhật 07/2026 thành 2
-   tầng thật trong DB (§3.2, §4.4)** thay vì chỉ trình bày trong tài liệu (đối
-   chiếu với giá trị CSV thật lúc migration §7.4, dòng nào không map được thì
-   bổ sung/gộp):
 
-   | `DestinationTypeGroup` (slug) | `DestinationType` con (slug) |
-   |---|---|
-   | `thien-nhien` (Thiên nhiên) | bien-dao (biển - đảo), nui-cao-nguyen, thac-ho-suoi (sông - suối - hồ - thác), hang-dong, rung-vuon-quoc-gia, dong-que-mien-tay (sông nước) |
-   | `van-hoa-lich-su` (Văn hóa - Lịch sử) | di-tich-lich-su, chua-den (chùa - đền - miếu), nha-tho, lang-nghe-truyen-thong, bao-tang, cong-trinh-kien-truc |
-   | `vui-choi-trai-nghiem` (Vui chơi - Trải nghiệm) | khu-vui-choi (công viên/giải trí), check-in-song-ao, cho-pho-dem (chợ - phố đêm), am-thuc (khu/phố ẩm thực), pho-co-pho-di-bo, nghi-duong (resort/suối khoáng) |
-
-   3 nhóm, 18 loại con — slug không dấu cho cả `DestinationTypeGroup.Slug` (mở
-   `/loai/{groupSlug}`) và `DestinationType.Slug` (mở
-   `/loai/{groupSlug}/{typeSlug}`), tên có dấu hiển thị. Mỗi điểm 1-3 loại CON
-   (không gán trực tiếp nhóm — nhóm suy ra qua `Type.GroupId`), loại đầu =
-   `PrimaryTypeId`.
-3. ~~Quy tắc trộn khối "liên quan"~~ **ĐÃ DUYỆT 12/06/2026** theo mặc định ở
-   `dichoithoi-destination-spec.md` §12.3 pha 2: con trực tiếp (max 4) → related
-   curated → nearby → anh em cùng cha → cùng loại cùng tỉnh; dedupe, published,
-   đủ 8 mục. (Chỉnh được sau qua config, không cần đổi schema.)
-4. ~~Website mới: giữ .NET hay đổi stack?~~ **ĐÃ CHỐT 12/06/2026: giữ .NET**,
-   chỉ sửa tầng đọc theo schema mới; vai trò CMS chuyển sang AI tool —
-   xem `dichoithoi-system-overview.md`.
-5. ~~Module Hotel/Tour nối vào cây mới thế nào — đại tu đợt 2~~ **ĐÃ CHỐT
-   07/2026: làm CÙNG Giai đoạn 1** (không phải giai đoạn 3 như dự kiến ban đầu)
-   — xem `dichoithoi-hotel-spec.md`, `dichoithoi-tour-spec.md`,
-   `dichoithoi-system-overview.md` §5.
+✅ Toàn bộ 5 mục ở đây đã chốt/build xong từ lâu (giữ lại chỉ để tham khảo
+lịch sử quyết định, không còn việc mở): map tỉnh cũ→mới qua dataset dvhcvn
+(destination-spec §13); `DestinationType` 2 tầng thật trong DB — 3 nhóm/18
+loại con (§3.2, §4.4, đã seed + build Phase 1); quy tắc trộn khối "liên quan"
+(destination-spec §12.3 pha 2); giữ .NET cho website, chỉ đổi tầng đọc; Hotel/
+Tour làm cùng Giai đoạn 1 (không phải giai đoạn 3 như dự kiến ban đầu). Trạng
+thái/việc còn mở mới nhất: xem `dichoithoi-backlog.md`.

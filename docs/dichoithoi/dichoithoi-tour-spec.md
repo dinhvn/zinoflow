@@ -129,10 +129,6 @@ Thêm dưới khu "Dichoithoi", mục mới `Tour` (song song mục `Khách sạ
 
 ## 7) Việc cần chốt trước khi build
 
-1. Chọn nguồn cào trước (Klook tour, TripVision, hay nhà cung cấp khác) — ảnh
-   hưởng parser đầu tiên.
-2. Xác nhận mạng affiliate của từng nguồn đã có rule trong
-   `affiliate_link_rules` chưa trước khi tour đầu tiên lên web (không thì
-   `link_status='no-rule'`, mất hoa hồng).
-3. Ngưỡng khối lượng tour cần có trước khi đáng xây job cào tự động (§5) — MVP
-   có thể chỉ vài tour nhập tay cho các điểm đến hot nhất.
+⚠️ Xem `dichoithoi-backlog.md` mục A#5, A#6, A#7 (chọn nguồn cào tour trước,
+quy tắc mạng affiliate, ngưỡng khối lượng xây crawler) — nguồn theo dõi duy
+nhất cho 3 quyết định còn mở này.

@@ -178,7 +178,7 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
 
 | # | Việc | Ảnh hưởng | Nguồn |
 |---|---|---|---|
-| 1 | ✅ **CHỐT 07/2026** — URL bài cẩm nang = `/blog/{slug}` (đổi từ đề xuất `/cam-nang/`) | Route website + SEO | article-spec §10.1 |
+| 1 | ~~CHỐT — URL bài cẩm nang = `/blog/{slug}`~~ → **SỬA LẠI (07/2026)**: quyết định ban đầu SAI, `/blog` là route legacy v1 đang chạy thật (`BlogController`), không thể đè lên. Route thật đã build = `/cam-nang/{slug}` (`ArticleController.cs`, entity `V2Article`) — xem Phase D mục 1 | Route website + SEO | article-spec §10.1, implementation-plan Phase D#1 |
 | 2 | ✅ **CHỐT 07/2026** — thêm ngay khối `foodSpots` (món ăn/quán ăn, tái dùng bảng `products` lọc category) | Độ phức tạp compile engine | article-spec §3.1/§10.3 |
 | 3 | ✅ AI tự đề xuất chèn khối động lúc generate, người dùng duyệt/sửa trước khi publish (chốt 07/2026, áp dụng mọi kind) | Độ phức tạp prompt pack | article-spec §10.4, product-spec §7 |
 | 4 | Chọn OTA nào cào khách sạn trước (Booking.com/Agoda/Traveloka) | Parser đầu tiên cần build | hotel-spec §7.1 |
@@ -188,6 +188,7 @@ duy nhất — đọc trước khi bắt tay build phần tiếp theo. Danh sác
 | 8 | ✅ **XONG (07/2026, vòng 2)** — rà lại TOÀN BỘ 246 điểm published (không chỉ "Di tích lịch sử" như vòng 1 ở Phase B bước 1) → phát hiện + sửa 5 lỗi gán sai/thiếu thật: Cao nguyên đá Đồng Văn (gán nhầm "Di tích lịch sử" cho cảnh quan tự nhiên, cùng loại lỗi Bãi đá cổ Sa Pa), Khu di chỉ Óc Eo An Giang (gán "Khu vui chơi" cho 1 di chỉ khảo cổ — sai hoàn toàn), Khu Thất Sơn An Giang (thiếu "Núi - Cao nguyên"), Nhà thờ Lớn Hà Nội (thiếu type "Nhà thờ"), Phố cổ Đồng Văn (thiếu "Phố cổ - phố đi bộ"). Script `scripts/address-migration/phase-b-04-fix-typemap-round2.sql`, đã chạy + xác nhận idempotent trên `dichoithoi_dev`. 3 case khác (Chùa Cầu Hội An/Ga Hà Nội/Chợ Đồng Xuân) độ tin cậy thấp hơn, để ngỏ chưa sửa. | Chất lượng taxonomy ảnh hưởng trang `/loai` (SEO) + khối động theo `type` | destination-spec §2.4 |
 | 9 | ✅ **CHỐT 07/2026** — Ô "Tư liệu tham khảo" trong form tạo bài Article bằng AI: giống mẫu Destination §2.2.1, lưu cùng `ContentJob` | Chất lượng bài Article + tín hiệu Who/How/Why | article-spec §1.2 |
 | 10 | ✅ **CHỐT 07/2026** — Khoá phụ UPSERT = slug + tên chuẩn hoá (bỏ dấu, lowercase) + tỉnh/tuyến; nghi trùng → để nháp chờ người dùng xác nhận gộp, KHÔNG tự động ghi đè | Import sheet không tạo trùng với data nhập tay | product-spec §5.1 |
+| 11 | Chọn sàn TMĐT nào cấu hình affiliate rule trước (Shopee/Lazada/Tiki...) — sẽ có NHIỀU sàn, chưa chọn thứ tự cụ thể (không chặn build phần còn lại, `affiliate_link_rules` đã hỗ trợ nhiều provider sẵn) | Thứ tự cấu hình rule Product | product-spec §8.4 |
 
 ## B) Lộ trình thực hiện theo PHASE (viết lại 07/2026 sau đợt rà toàn bộ — thứ tự theo PHỤ THUỘC, không theo thứ tự nghĩ ra)
 
