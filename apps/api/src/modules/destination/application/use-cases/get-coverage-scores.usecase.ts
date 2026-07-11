@@ -19,10 +19,11 @@ export class GetCoverageScoresUseCase {
   ) {}
 
   async execute(): Promise<ListCoverageScoresResponse> {
-    const [mirrors, coverageRows, tagAssignments] = await Promise.all([
+    const [mirrors, coverageRows, tagAssignments, articleCoveredSlugs] = await Promise.all([
       this.mirrorRepo.findAll(),
       this.siteDb.fetchContentCoverageRows(),
       this.siteDb.fetchTagAssignments(),
+      this.siteDb.fetchArticleTopicCoverage(),
     ]);
 
     const published = mirrors.filter((m) => m.siteId !== null && m.siteStatus === 1);
@@ -33,12 +34,14 @@ export class GetCoverageScoresUseCase {
     const featuredChildBySlug = new Set(
       published.filter((m) => m.isFeatured && m.parentSlug).map((m) => m.parentSlug as string),
     );
+    const articleCoveredSlugSet = new Set(articleCoveredSlugs);
 
     const items = published
       .map((m) => {
         const content = coverageById.get(m.siteId as number);
         const input: CoverageInput = {
           kind: m.kind as CoverageInput["kind"],
+          contentTier: m.contentTier,
           hasAddress: Boolean(m.addressNew ?? m.addressOld),
           hasCoordinates: m.lat !== null && m.lng !== null,
           hasThumbnail: Boolean(m.thumbnail),
@@ -50,6 +53,10 @@ export class GetCoverageScoresUseCase {
           hasTicketLinks: content?.hasTicketLinks ?? false,
           hasTag: taggedSlugs.has(m.slug),
           hasFeaturedChild: featuredChildBySlug.has(m.slug),
+          hasItinerary: m.itinerary.length > 0,
+          hasArticleTopicCoverage: articleCoveredSlugSet.has(m.slug),
+          hasEditorialReview: Boolean(m.editorialReview?.trim()),
+          hasExternalReviewUrl: m.externalReviewUrls.length > 0,
         };
         const score = computeCoverageScore(input);
         return {

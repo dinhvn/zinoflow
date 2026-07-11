@@ -1169,10 +1169,44 @@ Maps/TripAdvisor hiện đúng trên cả Đà Lạt và Biệt thự Hằng Nga
 console cả 3 trang. Giữ lại dữ liệu EditorialReview/ExternalReviewUrls thật
 đã tạo (không phải placeholder).
 
-### 28.6 — CHƯA LÀM
+### 28.6 — Coverage Score: checklist theo tier thật (ĐÃ XONG 07/2026)
 
-Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (Coverage
-Score theo tier thật).
+`computeCoverageScore` (domain) bỏ proxy `kind` — `tier` nay tính tu
+`ContentTier` THAT (Phase 25): `kind=poi` → tier "poi"; `kind IN
+(province,cluster)` + `ContentTier="flagship"` → tier "flagship"; con lai
+(standard/null, kể cả chưa gán) → tier "standard" MOI (checklist rut gon
+giong POI, khong co 5 muc rieng). 4 muc Flagship-only truoc day ghi "chua
+tinh duoc do thieu ha tang" (xem `packages/contracts/src/dichoithoi/coverage-score.ts`)
+nay tinh duoc du ca:
+
+- `itinerary` — `mirror.itinerary.length > 0` (Phase 28.0).
+- `article-topic-coverage` — co bai cam nang published gan qua
+  `ArticleDestinationMap` (Phase 26) — port `DichoithoiSiteDb` them
+  `fetchArticleTopicCoverage()` (1 query JOIN `ArticleDestinationMap` ×
+  `Article`, tra ve danh sach slug).
+- `editorial-review` — `mirror.editorialReview` khong rong (Phase 28.0).
+- `external-review-url` — `mirror.externalReviewUrls.length > 0` (Phase 28.0).
+
+Contract `destinationCoverageScoreSchema.tier` doi tu 2 gia tri
+(`poi|flagship`) sang 3 (`poi|standard|flagship`) — UI `do-phu/page.tsx`
+them nhan "Standard".
+
+**Phát hiện thêm (cùng gốc lỗi encoding LocalDB đã ghi ở Phase 28.4/28.5)**:
+`v2.Destination.Name` của chính Đà Lạt cũng bị hỏng dấu (`?? L?t`) do 1 lần
+ghi qua Node driver trước đây trong phiên làm việc — đã sửa lại bằng
+`sqlcmd -f 65001` + chạy lại `/api/destinations/sync` để mirror nhận tên
+đúng. Quét toàn bộ 271 điểm xác nhận CHỈ Đà Lạt bị ảnh hưởng, không có điểm
+nào khác.
+
+Verify: `tsc --noEmit` (api+web) + `npx jest` (10 test coverage-score/
+get-coverage-scores, có 4 test flagship/standard/4-mục-mới) sạch, gọi API
+thật xác nhận Đà Lạt tier=flagship 15 mục (đủ 5 mục riêng, đúng trạng thái
+done/chưa done theo dữ liệu mirror thật), Biệt thự Hằng Nga tier=poi 10 mục,
+Nha Trang (ContentTier chưa gán) tier=standard 10 mục — Playwright xác nhận
+trang "Độ phủ nội dung" hiện đúng badge + danh sách 15 mục cho Đà Lạt, 0 lỗi
+console.
+
+**Phase 28 (Nội dung đầy đủ trang Flagship/POI) hoàn tất toàn bộ 28.0-28.6.**
 
 ---
 

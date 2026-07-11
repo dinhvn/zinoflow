@@ -61,7 +61,9 @@ function CoverageRow({ item }: { item: DestinationCoverageScore }) {
       >
         <Badge tone={toneForScore(item.scorePercent)}>{item.scorePercent}%</Badge>
         <span className="text-sm font-medium">{item.destinationName}</span>
-        <Badge tone="gray">{item.tier === "flagship" ? "Flagship" : "POI"}</Badge>
+        <Badge tone="gray">
+          {item.tier === "flagship" ? "Flagship" : item.tier === "standard" ? "Standard" : "POI"}
+        </Badge>
         <span className="ml-auto text-xs text-zinc-400">{expanded ? "Thu gọn ▲" : "Xem chi tiết ▼"}</span>
       </button>
       {expanded && (

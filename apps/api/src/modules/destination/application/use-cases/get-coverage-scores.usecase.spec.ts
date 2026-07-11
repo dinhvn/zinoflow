@@ -23,8 +23,12 @@ function fakeMirror(overrides: Partial<DestinationMirrorEntity> = {}): Destinati
     ticketLinks: [],
     priceBreakdown: [],
     practicalNotes: [],
+    itinerary: [],
+    editorialReview: null,
+    externalReviewUrls: [],
     hotelGroupId: null,
     isFeatured: false,
+    contentTier: null,
     siteStatus: 1,
     contentSource: 1,
     contentHash: null,
@@ -62,6 +66,7 @@ describe("GetCoverageScoresUseCase (destination-spec §2.2.2)", () => {
       fetchTagAssignments: async () => [
         { destinationId: 1, destinationSlug: "day-du", destinationName: "Đầy đủ", tagSlugs: ["hoang-so"] },
       ],
+      fetchArticleTopicCoverage: async () => [],
     } as unknown as DichoithoiSiteDb;
     const usecase = new GetCoverageScoresUseCase(mirrorRepo, siteDb);
 
@@ -72,15 +77,16 @@ describe("GetCoverageScoresUseCase (destination-spec §2.2.2)", () => {
     expect(result.items.find((i) => i.destinationSlug === "trong-rong")?.scorePercent).toBe(0);
   });
 
-  it("cluster co con IsFeatured -> tinh hasFeaturedChild true", async () => {
+  it("cluster ContentTier=flagship, co con IsFeatured -> tinh hasFeaturedChild true", async () => {
     const mirrors = [
-      fakeMirror({ slug: "vung", siteId: 1, kind: "cluster", name: "Vùng" }),
+      fakeMirror({ slug: "vung", siteId: 1, kind: "cluster", name: "Vùng", contentTier: "flagship" }),
       fakeMirror({ slug: "con-noi-bat", siteId: 2, parentSlug: "vung", isFeatured: true, name: "Con" }),
     ];
     const mirrorRepo = { findAll: async () => mirrors } as unknown as DestinationMirrorRepository;
     const siteDb = {
       fetchContentCoverageRows: async () => [],
       fetchTagAssignments: async () => [],
+      fetchArticleTopicCoverage: async () => [],
     } as unknown as DichoithoiSiteDb;
     const usecase = new GetCoverageScoresUseCase(mirrorRepo, siteDb);
 
@@ -89,5 +95,52 @@ describe("GetCoverageScoresUseCase (destination-spec §2.2.2)", () => {
     const vung = result.items.find((i) => i.destinationSlug === "vung");
     expect(vung?.tier).toBe("flagship");
     expect(vung?.items.find((it) => it.key === "featured-child")?.done).toBe(true);
+  });
+
+  it("cluster ContentTier=null (chua gan) -> tier standard, KHONG co 5 muc rieng Flagship", async () => {
+    const mirrors = [fakeMirror({ slug: "vung-chua-gan", siteId: 1, kind: "cluster", name: "Vùng" })];
+    const mirrorRepo = { findAll: async () => mirrors } as unknown as DestinationMirrorRepository;
+    const siteDb = {
+      fetchContentCoverageRows: async () => [],
+      fetchTagAssignments: async () => [],
+      fetchArticleTopicCoverage: async () => [],
+    } as unknown as DichoithoiSiteDb;
+    const usecase = new GetCoverageScoresUseCase(mirrorRepo, siteDb);
+
+    const result = await usecase.execute();
+
+    const item = result.items.find((i) => i.destinationSlug === "vung-chua-gan");
+    expect(item?.tier).toBe("standard");
+    expect(item?.items.some((it) => it.key === "itinerary")).toBe(false);
+  });
+
+  it("flagship co lich trinh + bai cam nang + danh gia bien tap + external review -> tinh done ca 4 muc moi", async () => {
+    const mirrors = [
+      fakeMirror({
+        slug: "da-lat",
+        siteId: 1,
+        kind: "cluster",
+        name: "Đà Lạt",
+        contentTier: "flagship",
+        itinerary: [{ label: "2N1D", days: [{ dayLabel: "Ngày 1", items: [{ period: "Sáng", poiSlug: null, note: "x" }] }] }],
+        editorialReview: "Nhận định biên tập",
+        externalReviewUrls: [{ label: "Google Maps", url: "https://maps.google.com/?q=x" }],
+      }),
+    ];
+    const mirrorRepo = { findAll: async () => mirrors } as unknown as DestinationMirrorRepository;
+    const siteDb = {
+      fetchContentCoverageRows: async () => [],
+      fetchTagAssignments: async () => [],
+      fetchArticleTopicCoverage: async () => ["da-lat"],
+    } as unknown as DichoithoiSiteDb;
+    const usecase = new GetCoverageScoresUseCase(mirrorRepo, siteDb);
+
+    const result = await usecase.execute();
+
+    const item = result.items.find((i) => i.destinationSlug === "da-lat");
+    expect(item?.items.find((it) => it.key === "itinerary")?.done).toBe(true);
+    expect(item?.items.find((it) => it.key === "article-topic-coverage")?.done).toBe(true);
+    expect(item?.items.find((it) => it.key === "editorial-review")?.done).toBe(true);
+    expect(item?.items.find((it) => it.key === "external-review-url")?.done).toBe(true);
   });
 });

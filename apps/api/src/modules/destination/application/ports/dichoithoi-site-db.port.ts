@@ -248,4 +248,10 @@ export interface DichoithoiSiteDb {
 
   /** Co du lieu content (chi diem da published) — dung tinh Coverage Score (spec §2.2.2) */
   fetchContentCoverageRows(): Promise<SiteContentCoverageRow[]>;
+  /**
+   * Slug cac diem den co it nhat 1 bai cam nang published gan qua
+   * ArticleDestinationMap (bat ky topic nao) — dung tinh muc "do phu bai cam
+   * nang theo topic" trong Coverage Score Flagship (Phase 26, Phase 28.6).
+   */
+  fetchArticleTopicCoverage(): Promise<string[]>;
 }

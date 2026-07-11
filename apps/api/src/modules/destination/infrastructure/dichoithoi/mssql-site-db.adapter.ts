@@ -750,6 +750,17 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     }));
   }
 
+  /** Coverage Score Flagship — muc "do phu bai cam nang theo topic" (Phase 28.6) */
+  async fetchArticleTopicCoverage(): Promise<string[]> {
+    const rows = await this.queryWithRetry<{ DestinationSlug: string }>(`
+      SELECT DISTINCT m.DestinationSlug
+      FROM v2.ArticleDestinationMap m
+      JOIN v2.Article a ON a.Id = m.ArticleId
+      WHERE a.Status = 1
+    `);
+    return rows.map((r) => r.DestinationSlug);
+  }
+
   async onModuleDestroy(): Promise<void> {
     if (this.pool) {
       await this.pool.close();

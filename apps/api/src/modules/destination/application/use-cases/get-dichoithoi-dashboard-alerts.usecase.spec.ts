@@ -43,6 +43,7 @@ describe("GetDichoithoiDashboardAlertsUseCase (destination-spec §7.2, Phase 23)
       fetchTags: async () => overrides.tags ?? [],
       fetchTagAssignments: async () => overrides.tagAssignments ?? [],
       fetchContentCoverageRows: async () => overrides.coverageRows ?? [],
+      fetchArticleTopicCoverage: async () => [],
     } as unknown as DichoithoiSiteDb;
     const mirrorRepo = { findAll: async () => overrides.mirrors ?? [] } as unknown as ConstructorParameters<
       typeof GetCoverageScoresUseCase
