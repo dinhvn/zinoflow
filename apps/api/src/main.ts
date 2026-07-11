@@ -4,9 +4,11 @@ import { NestFactory } from "@nestjs/core";
 import { Logger } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
+import { warnAboutProductionEndpoints } from "./modules/shared/observability/production-endpoint-warning";
 
 async function bootstrap(): Promise<void> {
   const logger = new Logger("Bootstrap");
+  warnAboutProductionEndpoints(logger);
 
   if (!process.env.DATABASE_URL) {
     logger.error(

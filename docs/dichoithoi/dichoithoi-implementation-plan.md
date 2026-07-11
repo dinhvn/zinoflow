@@ -10,7 +10,7 @@ Nguyên tắc lập kế hoạch: build từng lát mỏng kiểm chứng đư�
 đại tu toàn bộ rồi mới test), ưu tiên ROI cao trước, không chặn phase sau bởi
 việc chưa cần dùng ngay.
 
-## Phase 0 — Môi trường dev an toàn (làm TRƯỚC MỌI THỨ) (PHẦN LỚN XONG — re-verify 07/2026: hạ tầng LocalDB đúng, NHƯNG apps/api/.env dev đang chứa credential DB+FTP production thật — vi phạm DoD nghĩa đen dù không lộ vào git)
+## Phase 0 — Môi trường dev an toàn (làm TRƯỚC MỌI THỨ) (PHẦN LỚN XONG — re-verify 07/2026: hạ tầng LocalDB đúng; `DICHOITHOI_DB_HOST` đã trỏ LocalDB an toàn; 4 tích hợp còn lại (FTP ảnh, SQL Server khuyến mãi, WordPress laruki/dochoi3s) CHƯA có sandbox riêng — giữ nguyên credential thật theo quyết định 07/2026 của user, đã thêm cảnh báo rõ ràng lúc khởi động thay vì âm thầm dùng — xem `modules/shared/observability/production-endpoint-warning.ts`)
 
 **Mục tiêu**: không ai code/test chạm production trong lúc build.
 - Chạy `pnpm clone:dichoithoi` → tạo `dichoithoi_dev` LocalDB.
