@@ -5,13 +5,23 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
 
-type BlockKind = "destinations" | "hotels" | "tours" | "destination";
+type BlockKind =
+  | "destinations"
+  | "hotels"
+  | "tours"
+  | "destination"
+  | "products"
+  | "product"
+  | "food-spots";
 
 const BLOCK_LABELS: Record<BlockKind, string> = {
   destinations: "Danh sách điểm đến (theo loại/tỉnh)",
   hotels: "Danh sách khách sạn (theo tỉnh)",
   tours: "Danh sách tour (theo điểm đến/tỉnh)",
   destination: "1 điểm đến cụ thể (card đơn)",
+  products: "Danh sách sản phẩm (theo tag)",
+  product: "1 sản phẩm cụ thể (card đơn)",
+  "food-spots": "Món ăn/quán ăn gần đây (theo tag)",
 };
 
 const SORT_OPTIONS = [
@@ -25,6 +35,9 @@ interface FormState {
   province: string;
   destination: string;
   slug: string;
+  id: string;
+  tag: string;
+  category: string;
   limit: string;
   sort: string;
 }
@@ -34,6 +47,9 @@ const EMPTY_FORM: FormState = {
   province: "",
   destination: "",
   slug: "",
+  id: "",
+  tag: "",
+  category: "",
   limit: "8",
   sort: "featured",
 };
@@ -43,6 +59,10 @@ function buildToken(kind: BlockKind, form: FormState): string | null {
   if (kind === "destination") {
     if (!form.slug.trim()) return null;
     return `[[block:destination slug=${form.slug.trim()}]]`;
+  }
+  if (kind === "product") {
+    if (!form.id.trim()) return null;
+    return `[[block:product id=${form.id.trim()}]]`;
   }
 
   const params: string[] = [];
@@ -57,6 +77,13 @@ function buildToken(kind: BlockKind, form: FormState): string | null {
     if (!form.destination.trim() && !form.province.trim()) return null;
     if (form.destination.trim()) params.push(`destination=${form.destination.trim()}`);
     if (form.province.trim()) params.push(`province=${form.province.trim()}`);
+  } else if (kind === "products") {
+    if (!form.tag.trim()) return null;
+    params.push(`tag=${form.tag.trim()}`);
+    if (form.category.trim()) params.push(`category=${form.category.trim()}`);
+  } else if (kind === "food-spots") {
+    if (!form.tag.trim()) return null;
+    params.push(`tag=${form.tag.trim()}`);
   }
 
   const limit = Number(form.limit);
@@ -67,10 +94,9 @@ function buildToken(kind: BlockKind, form: FormState): string | null {
 }
 
 /**
- * Palette + form tham số "Chèn khối động" (article-spec §9) — chỉ liệt kê 4
- * loại khối ĐÃ build trong compiler thật (destinations/hotels/tours/destination
- * số ít); products/product/foodSpots chưa build (article-spec §3.1) nên KHÔNG
- * đưa vào palette để tránh chèn token chắc chắn lỗi validate lúc Approve.
+ * Palette + form tham số "Chèn khối động" (article-spec §9) — 7 loại khối đã
+ * build trong compiler thật (destinations/hotels/tours/destination/products/
+ * product/food-spots, xem article-block-compiler.service.ts).
  */
 export function InsertDynamicBlockPanel({ onInsert }: { onInsert: (token: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -106,6 +132,12 @@ export function InsertDynamicBlockPanel({ onInsert }: { onInsert: (token: string
               value={form.slug}
               onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
             />
+          ) : kind === "product" ? (
+            <Input
+              placeholder="ID sản phẩm"
+              value={form.id}
+              onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))}
+            />
           ) : (
             <>
               {kind === "destinations" && (
@@ -122,11 +154,27 @@ export function InsertDynamicBlockPanel({ onInsert }: { onInsert: (token: string
                   onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))}
                 />
               )}
-              <Input
-                placeholder="Mã/slug tỉnh (tuỳ chọn, vd: lam-dong)"
-                value={form.province}
-                onChange={(e) => setForm((f) => ({ ...f, province: e.target.value }))}
-              />
+              {(kind === "products" || kind === "food-spots") && (
+                <Input
+                  placeholder="Tag (vd: da-lat — thường là slug điểm đến, cách nhau dấu phẩy)"
+                  value={form.tag}
+                  onChange={(e) => setForm((f) => ({ ...f, tag: e.target.value }))}
+                />
+              )}
+              {kind === "products" && (
+                <Input
+                  placeholder="Category (tuỳ chọn, vd: Đồ lưu niệm)"
+                  value={form.category}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                />
+              )}
+              {(kind === "destinations" || kind === "hotels" || kind === "tours") && (
+                <Input
+                  placeholder="Mã/slug tỉnh (tuỳ chọn, vd: lam-dong)"
+                  value={form.province}
+                  onChange={(e) => setForm((f) => ({ ...f, province: e.target.value }))}
+                />
+              )}
               <div className="flex gap-2">
                 <Input
                   type="number"

@@ -12,12 +12,14 @@ import { AssignHotelToDestinationUseCase } from "./application/use-cases/assign-
 import { ListHotelsForDestinationUseCase } from "./application/use-cases/list-hotels-for-destination.usecase";
 import { RecomputeHotelCardsUseCase } from "./application/use-cases/recompute-hotel-cards.usecase";
 import { AutoAssignHotelsByDistanceUseCase } from "./application/use-cases/auto-assign-hotels-by-distance.usecase";
+import { IngestHotelImagesUseCase } from "./application/use-cases/ingest-hotel-images.usecase";
 import { HotelAffiliateReapplyService } from "./application/services/hotel-affiliate-reapply.service";
 import { HOTEL_REPOSITORY } from "./application/ports/hotel.repository";
 import { HOTEL_SITE_DB } from "./application/ports/hotel-site-db.port";
 import { TypeOrmHotelRepository } from "./infrastructure/repositories/typeorm-hotel.repository";
 import { MssqlHotelSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-hotel-site-db.adapter";
 import { HotelAutoAssignWorker } from "./infrastructure/workers/hotel-auto-assign.worker";
+import { HotelImageIngestWorker } from "./infrastructure/workers/hotel-image-ingest.worker";
 import { HotelEntity } from "./infrastructure/entities/hotel.entity";
 import { HotelDestinationMapEntity } from "./infrastructure/entities/hotel-destination-map.entity";
 
@@ -44,6 +46,8 @@ import { HotelDestinationMapEntity } from "./infrastructure/entities/hotel-desti
     RecomputeHotelCardsUseCase,
     AutoAssignHotelsByDistanceUseCase,
     HotelAutoAssignWorker,
+    IngestHotelImagesUseCase,
+    HotelImageIngestWorker,
     HotelAffiliateReapplyService,
     { provide: HOTEL_REPOSITORY, useClass: TypeOrmHotelRepository },
     { provide: HOTEL_SITE_DB, useClass: MssqlHotelSiteDbAdapter },

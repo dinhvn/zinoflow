@@ -166,4 +166,86 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]!.message).toContain("tham số tag");
   });
+
+  it("khoi food-spots khop tag VA loc dung category am thuc (article-spec §3.1)", async () => {
+    const products = makeProducts({
+      findAll: async () => [
+        {
+          id: "p1",
+          name: "Quán Bánh Căn Dì Ba",
+          category: "Quán ăn",
+          tags: ["da-lat"],
+          thumbnailUrl: "banh-can.webp",
+          thumbnailSourceUrl: null,
+          price: 30000,
+          provider: null,
+          sourceUrl: "https://maps.google.com/banh-can",
+          affiliateUrl: null,
+          linkStatus: "no-rule",
+          source: 0,
+          status: 1,
+          createdAt: new Date("2026-01-01"),
+          updatedAt: new Date("2026-01-01"),
+        },
+        {
+          id: "p2",
+          name: "Balo phượt 40L",
+          category: "balo",
+          tags: ["da-lat"],
+          thumbnailUrl: "balo.webp",
+          thumbnailSourceUrl: null,
+          price: 590000,
+          provider: "shopee",
+          sourceUrl: "https://shopee.vn/balo",
+          affiliateUrl: "https://shopee.vn/balo?aff=1",
+          linkStatus: "converted",
+          source: 0,
+          status: 1,
+          createdAt: new Date("2026-01-01"),
+          updatedAt: new Date("2026-01-01"),
+        },
+      ],
+    });
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), products);
+    const result = await compiler.compile("## Ăn gì ở Đà Lạt\n\n[[block:food-spots tag=da-lat]]");
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.html).toContain("Quán Bánh Căn Dì Ba");
+    expect(result.html).not.toContain("Balo phượt 40L");
+  });
+
+  it("khoi food-spots thieu tham so tag -> error", async () => {
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
+    const result = await compiler.compile("[[block:food-spots limit=4]]");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]!.message).toContain("tham số tag");
+  });
+
+  it("khoi food-spots khong khop category am thuc nao -> warning, khong render", async () => {
+    const products = makeProducts({
+      findAll: async () => [
+        {
+          id: "p2",
+          name: "Balo phượt 40L",
+          category: "balo",
+          tags: ["da-lat"],
+          thumbnailUrl: "balo.webp",
+          thumbnailSourceUrl: null,
+          price: 590000,
+          provider: "shopee",
+          sourceUrl: "https://shopee.vn/balo",
+          affiliateUrl: "https://shopee.vn/balo?aff=1",
+          linkStatus: "converted",
+          source: 0,
+          status: 1,
+          createdAt: new Date("2026-01-01"),
+          updatedAt: new Date("2026-01-01"),
+        },
+      ],
+    });
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), products);
+    const result = await compiler.compile("## Ăn gì\n\n[[block:food-spots tag=da-lat]]");
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(1);
+  });
 });

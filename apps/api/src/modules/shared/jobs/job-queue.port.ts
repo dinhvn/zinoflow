@@ -18,4 +18,6 @@ export const QUEUE_NAMES = {
   contentGenerate: "content.generate",
   imageRender: "image.render",
   hotelAutoAssign: "hotel.auto-assign",
+  hotelImageIngest: "hotel.image-ingest",
+  tourImageIngest: "tour.image-ingest",
 } as const;

@@ -60,6 +60,27 @@ describe("autoLinkContent (spec dichoithoi §1.3, §12.2)", () => {
     const result = autoLinkContent(html, [{ slug: "hue", name: "Huế" }], "self");
     expect(result.addedLinks).toEqual([]);
   });
+
+  it("bo qua ten trung giua nhieu diem khac nhau — khong tu chon bua (audit 07/2026)", () => {
+    const html = "<p>Bãi Dài là bãi biển đẹp.</p>";
+    const ambiguousTargets = [
+      { slug: "bai-dai-phu-quoc", name: "Bãi Dài" },
+      { slug: "bai-dai-cam-ranh", name: "Bãi Dài" },
+    ];
+    const result = autoLinkContent(html, ambiguousTargets, "self");
+    expect(result.addedLinks).toEqual([]);
+    expect(result.html).toBe(html);
+  });
+
+  it("gioi han toi da 10 link auto-chen moi bai", () => {
+    const manyTargets = Array.from({ length: 15 }, (_, i) => ({
+      slug: `diem-${i}`,
+      name: `Điểm Test Số ${i}`,
+    }));
+    const html = `<p>${manyTargets.map((t) => t.name).join(". ")}.</p>`;
+    const result = autoLinkContent(html, manyTargets, "self");
+    expect(result.addedLinks).toHaveLength(10);
+  });
 });
 
 describe("normalizeDestinationLinks (spec dichoithoi §12.2 buoc 4)", () => {

@@ -9,19 +9,19 @@ import {
 } from "../ports/tour.repository";
 import { TOUR_SITE_DB, type TourSiteDb } from "../ports/tour-site-db.port";
 import { ResolveAffiliateLinkUseCase } from "../../../affiliate/application/use-cases/resolve-affiliate-link.usecase";
-import { IngestExternalImageUseCase } from "../../../shared/media/application/ingest-external-image.usecase";
+import { JOB_QUEUE, QUEUE_NAMES, type JobQueue } from "../../../shared/jobs/job-queue.port";
 import { tourToDto } from "./list-tours.usecase";
 import { RecomputeTourCardsUseCase } from "./recompute-tour-cards.usecase";
-
-const TOUR_FTP_BASE_DIR_ENV = "DICHOITHOI_FTP_TOUR_BASE_DIR";
 
 /**
  * Tao moi / sua tour — publish THANG xuong SQL Server ngay (tour-spec §2/§4:
  * khong AI, khong quality gate, khong review 2 chot).
  *
- * Anh (thumbnailUrl/images) — neu la URL ngoai thi ingest ve hosting minh
- * truoc khi luu (destination-spec §14.5, backlog §B Phase C muc 3), giong
- * het co che dung cho Hotel. Ingest loi -> giu URL ngoai tam thoi, khong chan luu.
+ * Anh (thumbnailUrl/images) — neu la URL ngoai thi KHONG ingest dong bo o day
+ * nua (Phase 21.3, audit 07/2026, giong het thay doi cho Hotel) — publish
+ * NGAY voi URL hien co, enqueue job `tour.image-ingest` chay nen
+ * (xem ingest-tour-images.usecase.ts). Ingest loi trong job -> giu URL ngoai
+ * tam thoi, khong chan gi (never-block).
  */
 @Injectable()
 export class UpsertTourUseCase {
@@ -32,17 +32,16 @@ export class UpsertTourUseCase {
     @Inject(TOUR_SITE_DB) private readonly siteDb: TourSiteDb,
     private readonly resolveLink: ResolveAffiliateLinkUseCase,
     private readonly recomputeCards: RecomputeTourCardsUseCase,
-    private readonly ingestImage: IngestExternalImageUseCase,
+    @Inject(JOB_QUEUE) private readonly jobQueue: JobQueue,
   ) {}
 
   async create(request: UpsertTourRequest): Promise<Tour> {
     const input = await this.toInput(request, null);
     const created = await this.tours.create(input);
-    const withImages = await this.ingestImagesIfNeeded(created.id, input);
-    if (withImages) await this.tours.update(created.id, withImages);
-    await this.publish(created.id, null, withImages ?? input);
+    await this.publish(created.id, null, input);
     const withSite = await this.tours.findById(created.id);
     if (!withSite) throw new DomainRuleError("Tour biến mất ngay sau khi tạo");
+    await this.enqueueImageIngestIfNeeded(created.id, input);
     return tourToDto(withSite, 0);
   }
 
@@ -50,17 +49,25 @@ export class UpsertTourUseCase {
     const existing = await this.tours.findById(id);
     if (!existing) throw new DomainRuleError(`Không tìm thấy tour id=${id}`);
     const input = await this.toInput(request, existing);
-    const withImages = (await this.ingestImagesIfNeeded(id, input)) ?? input;
-    await this.tours.update(id, withImages);
-    await this.publish(id, existing.siteId, withImages);
+    await this.tours.update(id, input);
+    await this.publish(id, existing.siteId, input);
     const updated = await this.tours.findById(id);
     if (!updated) throw new DomainRuleError("Tour biến mất ngay sau khi cập nhật");
     // Gia/rating doi -> mọi diem den dang gan tour nay can tinh lai TourCardsJson
     if (updated.siteId !== null) {
       await this.recomputeCards.forTour(updated.siteId);
     }
+    await this.enqueueImageIngestIfNeeded(id, input);
     const counts = await this.tours.countDestinationsByTour();
     return tourToDto(updated, counts.get(id) ?? 0);
+  }
+
+  private async enqueueImageIngestIfNeeded(id: string, input: UpsertTourInput): Promise<void> {
+    const hasExternalImage =
+      isExternalUrl(input.thumbnailUrl) || input.images.some((url) => isExternalUrl(url));
+    if (hasExternalImage) {
+      await this.jobQueue.send(QUEUE_NAMES.tourImageIngest, { tourId: id });
+    }
   }
 
   /**
@@ -98,62 +105,6 @@ export class UpsertTourUseCase {
       affiliateUrl: resolved.affiliateUrl,
       linkStatus: resolved.linkStatus,
     };
-  }
-
-  private async ingestImagesIfNeeded(
-    tourId: string,
-    input: UpsertTourInput,
-  ): Promise<UpsertTourInput | null> {
-    let changed = false;
-    let thumbnailUrl = input.thumbnailUrl;
-    let thumbnailSourceUrl = input.thumbnailSourceUrl;
-    if (isExternalUrl(input.thumbnailUrl)) {
-      changed = true;
-      thumbnailSourceUrl = input.thumbnailUrl;
-      try {
-        const paths = await this.ingestImage.execute(
-          input.thumbnailUrl!,
-          `${tourId}/${tourId}-thumbnail`,
-          TOUR_FTP_BASE_DIR_ENV,
-        );
-        thumbnailUrl = paths.thumb;
-      } catch (err) {
-        this.logger.warn(
-          `Ingest ảnh đại diện tour ${tourId} thất bại, giữ tạm URL ngoài: ` +
-            (err instanceof Error ? err.message : String(err)),
-        );
-      }
-    }
-
-    const images: string[] = [];
-    const imageSourceUrls: string[] = [];
-    for (let i = 0; i < input.images.length; i += 1) {
-      const url = input.images[i]!;
-      if (!isExternalUrl(url)) {
-        images.push(url);
-        imageSourceUrls.push(input.imageSourceUrls[i] ?? "");
-        continue;
-      }
-      changed = true;
-      imageSourceUrls.push(url);
-      try {
-        const paths = await this.ingestImage.execute(
-          url,
-          `${tourId}/${tourId}-anh-${i + 1}`,
-          TOUR_FTP_BASE_DIR_ENV,
-        );
-        images.push(paths.medium);
-      } catch (err) {
-        this.logger.warn(
-          `Ingest ảnh phụ #${i + 1} tour ${tourId} thất bại, giữ tạm URL ngoài: ` +
-            (err instanceof Error ? err.message : String(err)),
-        );
-        images.push(url);
-      }
-    }
-
-    if (!changed) return null;
-    return { ...input, thumbnailUrl, thumbnailSourceUrl, images, imageSourceUrls };
   }
 
   private async publish(id: string, siteId: number | null, input: UpsertTourInput): Promise<void> {

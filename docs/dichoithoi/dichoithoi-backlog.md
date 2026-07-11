@@ -71,9 +71,15 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   link/bài (hiện không giới hạn), và phân biệt tên trùng theo tỉnh trước khi
   auto-link (hiện không có bước này — rủi ro link sai điểm nếu 2 nơi trùng
   tên khác tỉnh, vd "Bãi Dài" Phú Quốc vs Cam Ranh).
-- **`DestinationReview`** — đọc/cache đúng (`AvgRating`/`ReviewCount`), nhưng
-  KHÔNG tìm thấy đường ghi review mới nào ở cả v1/v2 — cần xác nhận tính năng
-  gửi review có thật sự hoạt động không.
+- ✅ **`DestinationReview` — ĐÃ ĐIỀU TRA (07/2026, Phase 21.4), KHÔNG PHẢI
+  BUG.** Xác nhận grep cả 2 repo: không có write path nào (không endpoint
+  public, không UI admin) — nhưng đây là quyết định đã ghi rõ ở
+  `dichoithoi-seo-principles.md` (mục "KHÔNG review/rating giả"): dữ liệu
+  review cũ là admin tự nhập (`IsAdmin`), đã CHỦ Ý gỡ UI + JSON-LD
+  `AggregateRating`/`Review` (Phase 9) vì vi phạm chính sách Google. "Cơ chế
+  review khách THẬT" được chính doc ghi "chưa chốt, phân tích sau" — không
+  phải việc bị bỏ sót, để nguyên chờ quyết định sản phẩm (thiết kế form +
+  chống spam) trước khi build.
 - **Mục lục 2 lớp** (`content-seo-ux-plan.md` §10.6.4) — chip nav vuốt ngang
   đã có, nhưng KHÔNG có nút "Mục lục ▾" nào, và chip hiện tại DÙNG CHUNG 1
   danh sách cho mọi trang (không tách bộ chip riêng Flagship/POI như thiết

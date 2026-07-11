@@ -29,6 +29,10 @@ export interface AutoLinkResult {
 /** Tag ma ben trong KHONG duoc chen link (anchor long nhau, heading, code) */
 const SKIP_TAGS = new Set(["a", "h1", "h2", "h3", "code", "pre", "script", "style"]);
 
+/** Tran an toan so link auto-chen toi da 1 bai — tranh spam link khi bai nhac
+ * rat nhieu ten diem den (backlog.md "MUC KHAN" — audit 07/2026). */
+const MAX_AUTO_LINKS_PER_ARTICLE = 10;
+
 interface HtmlSegment {
   text: string;
   isTag: boolean;
@@ -78,25 +82,52 @@ export function destinationHref(slug: string): string {
 }
 
 /**
+ * Ten trung nhau giua nhieu slug khac nhau (vd "Bai Dai" o ca Phu Quoc lan Cam
+ * Ranh) — khong co du ngu canh (tinh/vung) de biet dung noi nao, tu chon bua
+ * co rui ro link SAI diem. An toan hon la BO QUA hoan toan ten do (khong link
+ * ca 2 ung vien) — backlog.md "MUC KHAN", audit 07/2026.
+ */
+function findAmbiguousNames(targets: readonly LinkTarget[]): Set<string> {
+  const slugsByName = new Map<string, Set<string>>();
+  for (const t of targets) {
+    const key = t.name.trim().toLowerCase();
+    if (!key) continue;
+    const slugs = slugsByName.get(key) ?? new Set<string>();
+    slugs.add(t.slug);
+    slugsByName.set(key, slugs);
+  }
+  const ambiguous = new Set<string>();
+  for (const [name, slugs] of slugsByName) {
+    if (slugs.size > 1) ambiguous.add(name);
+  }
+  return ambiguous;
+}
+
+/**
  * Chen link noi bo vao than bai HTML (spec §12.2 buoc 1-3):
  * - targets sort ten DAI -> NGAN ("Pho di bo Ho Guom" truoc "Ho Guom" — chong an ten).
  * - Moi target chi replace LAN XUAT HIEN DAU TIEN, giu nguyen hoa thuong text goc.
  * - Bo qua chinh no (selfSlug) va target da co link trong bai.
  * - Ten ngan nam trong ten dai vua duoc link -> tu dong bo qua (da thanh <a>).
+ * - Ten trung giua nhieu diem khac nhau -> bo qua ca 2 (khong tu chon bua).
+ * - Toi da `MAX_AUTO_LINKS_PER_ARTICLE` link chen moi bai (chong spam link).
  */
 export function autoLinkContent(
   html: string,
   targets: readonly LinkTarget[],
   selfSlug: string,
 ): AutoLinkResult {
+  const ambiguousNames = findAmbiguousNames(targets);
   const sorted = [...targets]
     .filter((t) => t.slug !== selfSlug && t.name.trim().length > 0)
+    .filter((t) => !ambiguousNames.has(t.name.trim().toLowerCase()))
     .sort((a, b) => b.name.length - a.name.length);
 
   let currentHtml = html;
   const addedLinks: AddedLinkInfo[] = [];
 
   for (const target of sorted) {
+    if (addedLinks.length >= MAX_AUTO_LINKS_PER_ARTICLE) break;
     const href = destinationHref(target.slug);
     // Idempotent: bai da link toi diem nay roi thi khong chen them
     if (currentHtml.includes(`href="${href}"`)) continue;

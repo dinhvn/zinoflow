@@ -1,9 +1,9 @@
 import { UpsertHotelUseCase } from "./upsert-hotel.usecase";
 import { RecomputeHotelCardsUseCase } from "./recompute-hotel-cards.usecase";
 import { ResolveAffiliateLinkUseCase } from "../../../affiliate/application/use-cases/resolve-affiliate-link.usecase";
-import { IngestExternalImageUseCase } from "../../../shared/media/application/ingest-external-image.usecase";
 import type { HotelRecord, HotelRepository, UpsertHotelInput } from "../ports/hotel.repository";
 import type { HotelSiteDb } from "../ports/hotel-site-db.port";
+import { QUEUE_NAMES, type JobQueue } from "../../../shared/jobs/job-queue.port";
 
 function fakeRecord(overrides: Partial<HotelRecord> = {}): HotelRecord {
   return {
@@ -32,8 +32,8 @@ function fakeRecord(overrides: Partial<HotelRecord> = {}): HotelRecord {
   };
 }
 
-describe("UpsertHotelUseCase — ingest anh ngoai (destination-spec §14.5)", () => {
-  function setup(options: { ingestImage?: IngestExternalImageUseCase } = {}) {
+describe("UpsertHotelUseCase (Phase 21.3, audit 07/2026 — ingest anh chuyen sang job nen)", () => {
+  function setup() {
     const stored = { current: fakeRecord() };
     const hotels: HotelRepository = {
       findAll: async () => [stored.current],
@@ -62,30 +62,20 @@ describe("UpsertHotelUseCase — ingest anh ngoai (destination-spec §14.5)", ()
       execute: async () => ({ provider: null, affiliateUrl: null, linkStatus: "no-rule" as const }),
     } as unknown as ResolveAffiliateLinkUseCase;
     const recomputeCards = { forHotel: async () => {} } as unknown as RecomputeHotelCardsUseCase;
-    const ingested: string[] = [];
-    const ingestImage =
-      options.ingestImage ??
-      ({
-        execute: async (url: string) => {
-          ingested.push(url);
-          return { hero: "h.webp", medium: "m.webp", thumb: "t.webp" };
-        },
-      } as unknown as IngestExternalImageUseCase);
+    const sentJobs: Array<{ queueName: string; data: object }> = [];
+    const jobQueue: JobQueue = {
+      send: async (queueName, data) => {
+        sentJobs.push({ queueName, data });
+        return "job-1";
+      },
+    };
 
-    const jobQueue = { send: async () => null } as unknown as import("../../../shared/jobs/job-queue.port").JobQueue;
-    const usecase = new UpsertHotelUseCase(
-      hotels,
-      siteDb,
-      resolveLink,
-      recomputeCards,
-      ingestImage,
-      jobQueue,
-    );
-    return { usecase, stored, ingested };
+    const usecase = new UpsertHotelUseCase(hotels, siteDb, resolveLink, recomputeCards, jobQueue);
+    return { usecase, stored, sentJobs };
   }
 
-  it("ingest thumbnailUrl la URL ngoai va thay bang path noi bo, giu lai source", async () => {
-    const { usecase, stored, ingested } = setup();
+  it("thumbnailUrl la URL ngoai -> publish NGAY voi URL goc, enqueue job image-ingest", async () => {
+    const { usecase, stored, sentJobs } = setup();
 
     const result = await usecase.create({
       name: "Khách sạn A",
@@ -93,13 +83,18 @@ describe("UpsertHotelUseCase — ingest anh ngoai (destination-spec §14.5)", ()
       thumbnailUrl: "https://cdn.booking.com/photo.jpg",
     });
 
-    expect(ingested).toEqual(["https://cdn.booking.com/photo.jpg"]);
-    expect(result.thumbnailUrl).toBe("t.webp");
-    expect(stored.current.thumbnailSourceUrl).toBe("https://cdn.booking.com/photo.jpg");
+    // Khong ingest dong bo nua -> URL van la URL ngoai ngay sau khi tao
+    expect(result.thumbnailUrl).toBe("https://cdn.booking.com/photo.jpg");
+    expect(stored.current.thumbnailUrl).toBe("https://cdn.booking.com/photo.jpg");
+    expect(sentJobs).toHaveLength(1);
+    expect(sentJobs[0]).toEqual({
+      queueName: QUEUE_NAMES.hotelImageIngest,
+      data: { hotelId: "hotel-1" },
+    });
   });
 
-  it("khong ingest lai neu thumbnailUrl da la path noi bo (khong co scheme http)", async () => {
-    const { usecase, ingested } = setup();
+  it("khong enqueue job neu thumbnailUrl da la path noi bo (khong co scheme http)", async () => {
+    const { usecase, sentJobs } = setup();
 
     await usecase.create({
       name: "Khách sạn A",
@@ -107,24 +102,7 @@ describe("UpsertHotelUseCase — ingest anh ngoai (destination-spec §14.5)", ()
       thumbnailUrl: "hotel-1/hotel-1-thumb.webp",
     });
 
-    expect(ingested).toEqual([]);
-  });
-
-  it("ingest loi thi giu tam URL ngoai, khong chan viec luu", async () => {
-    const failingIngest = {
-      execute: async () => {
-        throw new Error("Tải ảnh thất bại");
-      },
-    } as unknown as IngestExternalImageUseCase;
-    const { usecase } = setup({ ingestImage: failingIngest });
-
-    const result = await usecase.create({
-      name: "Khách sạn A",
-      sourceUrl: "https://booking.com/x",
-      thumbnailUrl: "https://cdn.booking.com/photo.jpg",
-    });
-
-    expect(result.thumbnailUrl).toBe("https://cdn.booking.com/photo.jpg");
+    expect(sentJobs).toHaveLength(0);
   });
 
   it("sua truong khong lien quan anh (vd doi gia) khong duoc xoa mat thumbnailSourceUrl da ingest truoc do", async () => {

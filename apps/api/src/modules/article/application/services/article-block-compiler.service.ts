@@ -20,6 +20,10 @@ import {
 import { matchProducts } from "../../../product/domain/product-matcher";
 import { renderCardGrid, type CardItem } from "../../domain/card-template";
 
+/** Category Product coi la "quan an" cho khoi food-spots (article-spec §3.1) — khop nguyen
+ * van chuoi da nhap tay (category la free-text, khong bang chuan hoa rieng). */
+const FOOD_SPOT_CATEGORIES = new Set(["Quán ăn", "Ẩm thực", "Nhà hàng", "Đặc sản"]);
+
 export interface CompiledArticle {
   html: string;
   errors: ArticleBlockError[];
@@ -136,6 +140,9 @@ export class ArticleBlockCompiler {
     if (token.kind === "products" && !token.params.tag) {
       return `Khối "products" cần tham số tag (vd tag=phuot,leu-trai)`;
     }
+    if (token.kind === "food-spots" && !token.params.tag) {
+      return `Khối "food-spots" cần tham số tag (vd tag=da-lat — thường là slug điểm đến)`;
+    }
     return null;
   }
 
@@ -239,6 +246,29 @@ export class ArticleBlockCompiler {
       return matched
         .map((m) => byId.get(m.id))
         .filter((p): p is (typeof all)[number] => p !== undefined)
+        .map((p) => ({
+          href: p.affiliateUrl ?? p.sourceUrl,
+          name: p.name,
+          thumbnailUrl: p.thumbnailUrl,
+          badge: p.category,
+          meta: p.price ? `${p.price.toLocaleString("vi-VN")}đ` : null,
+        }));
+    }
+
+    if (token.kind === "food-spots") {
+      const all = await this.products.findAll();
+      const byId = new Map(all.map((p) => [p.id, p]));
+      // Khong tao bang rieng — tai dung Product, loc theo tag (thuong la slug
+      // diem den) + category nam trong nhom am thuc (article-spec §3.1).
+      const matched = matchProducts(all, {
+        tags: token.params.tag!.split(",").map((t) => t.trim()),
+        limit: all.length,
+      });
+      return matched
+        .map((m) => byId.get(m.id))
+        .filter((p): p is (typeof all)[number] => p !== undefined)
+        .filter((p) => FOOD_SPOT_CATEGORIES.has(p.category))
+        .slice(0, limit)
         .map((p) => ({
           href: p.affiliateUrl ?? p.sourceUrl,
           name: p.name,
