@@ -104,11 +104,14 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   qua pg-boss như thiết kế "async"), và module Product hoàn toàn CHƯA có
   ingest ảnh nào dù spec ghi áp dụng cho "mọi record" (Hotel/Tour có, Product
   không).
-- **Dashboard "Việc cần làm"** (destination-spec §7.2) — trang hub
-  `/dichoithoi` chỉ có bảng danh sách + filter, KHÔNG có khối cảnh báo 8 dòng
-  (coverage score thấp, tag dưới ngưỡng, draft chờ duyệt, ảnh gallery
-  thiếu...) như spec mô tả. Có 1 dashboard TOÀN CỤC 3-KPI chung cho cả 3 site
-  nhưng không phải khối đặc thù dichoithoi này.
+- ✅ **Dashboard "Việc cần làm" — ĐÃ XONG (Phase 23, 07/2026)** (destination-
+  spec §7.2). `GetDichoithoiDashboardAlertsUseCase` mới tổng hợp 5/8 cảnh báo
+  spec mô tả (độ phủ thấp, tag dưới ngưỡng, draft chờ duyệt, job lỗi, ảnh
+  gallery thiếu) — chỉ hiện mục có count > 0. **Phạm vi cắt bớt có chủ ý**:
+  chưa có "bài Chủ lực chưa có bài cẩm nang" (cần `ArticleDestinationMap`,
+  Phase 26) và "link affiliate no-rule/chết" (trải nhiều module, để riêng).
+  Card render trên hub `/dichoithoi`, tách `Card`/`ActionRow` thành
+  `shared/ui/card.tsx` dùng chung với dashboard tổng.
 
 ### Việc CHƯA sửa (chờ bạn quyết định ưu tiên — xem cuối cuộc trò chuyện)
 
