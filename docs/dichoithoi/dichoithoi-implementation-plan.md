@@ -10,7 +10,7 @@ Nguyên tắc lập kế hoạch: build từng lát mỏng kiểm chứng đư�
 đại tu toàn bộ rồi mới test), ưu tiên ROI cao trước, không chặn phase sau bởi
 việc chưa cần dùng ngay.
 
-## Phase 0 — Môi trường dev an toàn (làm TRƯỚC MỌI THỨ)
+## Phase 0 — Môi trường dev an toàn (làm TRƯỚC MỌI THỨ) (ĐÃ XONG — code xác nhận 07/2026)
 
 **Mục tiêu**: không ai code/test chạm production trong lúc build.
 - Chạy `pnpm clone:dichoithoi` → tạo `dichoithoi_dev` LocalDB.
@@ -19,7 +19,7 @@ việc chưa cần dùng ngay.
   nhận kết nối `dichoithoi_dev`, KHÔNG còn connection string production trong
   `.env` của bất kỳ máy dev nào.
 
-## Phase 1 — Schema v2 (chạy trên LocalDB clone trước)
+## Phase 1 — Schema v2 (chạy trên LocalDB clone trước) (ĐÃ XONG — code xác nhận 07/2026)
 
 **Phụ thuộc**: Phase 0. **Nguồn**: `dichoithoi-database-redesign.md`.
 1. Chạy `01-create-new-schema.sql` trên `dichoithoi_dev` — tạo toàn bộ bảng
@@ -34,7 +34,7 @@ việc chưa cần dùng ngay.
 - **DoD**: Query thử `SELECT` mọi bảng mới trên `dichoithoi_dev` ra đúng số
   dòng kỳ vọng; chưa chạm production.
 
-## Phase 2 — Module `destination` (lõi M4)
+## Phase 2 — Module `destination` (lõi M4) (ĐÃ XONG — code xác nhận 07/2026)
 
 **Phụ thuộc**: Phase 1. **Nguồn**: `dichoithoi-destination-spec.md`.
 1. `domain/`: entity mirror, engine auto-link (unit test kỹ — escape regex,
@@ -51,7 +51,7 @@ việc chưa cần dùng ngay.
   thật trên `dichoithoi_dev` (chưa lên web thật); chạy `relink` không lỗi;
   chạy 2 lần liên tiếp không đổi thêm gì (idempotent).
 
-## Phase 3 — Module `affiliate` (nền tảng, TRƯỚC Hotel/Tour)
+## Phase 3 — Module `affiliate` (nền tảng, TRƯỚC Hotel/Tour) (ĐÃ XONG — code xác nhận 07/2026)
 
 **Phụ thuộc**: Phase 1 (chỉ cần Postgres, không phụ thuộc destination xong).
 **Nguồn**: `dichoithoi-affiliate-link-conversion-spec.md`.
@@ -65,7 +65,7 @@ việc chưa cần dùng ngay.
   đúng `affiliateUrl` theo template; đổi rule → bấm áp dụng lại → link cũ đổi
   theo, trừ những cái đã `manual-override`.
 
-## Phase 4 — `ticketLinks[]` cho Destination (phụ thuộc Phase 2+3)
+## Phase 4 — `ticketLinks[]` cho Destination (phụ thuộc Phase 2+3) (ĐÃ XONG — code xác nhận 07/2026)
 
 Đổi `bookingUrl` (1 link, code hiện tại) → `ticketLinks[]` (nhiều link):
 1. Contracts: sửa Zod schema (`packages/contracts/src/dichoithoi/destination.ts`).
@@ -76,7 +76,7 @@ việc chưa cần dùng ngay.
 - **DoD**: thêm 2 link Klook + TripVision cho 1 điểm đến → publish → cả 2 có
   `affiliateUrl` đúng, field cũ `bookingUrl` không còn dùng.
 
-## Phase 5 — Module `hotel`
+## Phase 5 — Module `hotel` (ĐÃ XONG — code xác nhận 07/2026)
 
 **Phụ thuộc**: Phase 3 (affiliate). **Nguồn**: `dichoithoi-hotel-spec.md`.
 1. Bảng `hotels`/`hotel_destination_map` (Postgres) + `Hotel`/`HotelDestinationMap`
@@ -87,7 +87,7 @@ việc chưa cần dùng ngay.
 - **DoD**: thêm 1 khách sạn tay, gán vào 1 điểm đến → publish → query
   `HotelDestinationMap JOIN Hotel WHERE DestinationSlug=@slug` ra đúng card data.
 
-## Phase 6 — Module `tour`
+## Phase 6 — Module `tour` (ĐÃ XONG — code xác nhận 07/2026)
 
 **Phụ thuộc**: Phase 3. **Nguồn**: `dichoithoi-tour-spec.md`. Giống hệt cấu
 trúc Phase 5 (Hotel), khác field đặc thù (`duration_days/nights`,
@@ -95,7 +95,7 @@ trúc Phase 5 (Hotel), khác field đặc thù (`duration_days/nights`,
 - **DoD**: thêm 1 tour gán 2 điểm đến khác nhau → publish → cả 2 trang điểm
   đến đều query ra đúng tour đó.
 
-## Phase 7 — Năng lực "Viết tay" ở lõi `ai-content`
+## Phase 7 — Năng lực "Viết tay" ở lõi `ai-content` (ĐÃ XONG — code xác nhận 07/2026)
 
 **Phụ thuộc**: không phụ thuộc Hotel/Tour, có thể làm song song Phase 5-6.
 **Nguồn**: `dichoithoi-article-spec.md` §1.1, đồng bộ
@@ -108,7 +108,7 @@ trúc Phase 5 (Hotel), khác field đặc thù (`duration_days/nights`,
 - **DoD**: bấm "Viết tay" → có ngay `DraftReady` không qua job pg-boss nào,
   sửa/review/Approve/Publish chạy y hệt bài AI (không có đường tắt bỏ gate).
 
-## Phase 8 — Module `article`
+## Phase 8 — Module `article` (ĐÃ XONG — code xác nhận 07/2026)
 
 **Phụ thuộc**: Phase 7 (viết tay) + Phase 2/5/6 (destination/hotel/tour đã có
 data để khối động query vào). **Nguồn**: `dichoithoi-article-spec.md`.
@@ -125,7 +125,7 @@ data để khối động query vào). **Nguồn**: `dichoithoi-article-spec.md`
   thác; thêm 1 thác mới sau đó → bấm "Làm mới khối động" → bài cập nhật không
   cần viết lại văn bản.
 
-## Phase 9 — Website .NET (song song, không chặn phase AI tool)
+## Phase 9 — Website .NET (song song, không chặn phase AI tool) (ĐÃ XONG — code xác nhận 07/2026)
 
 **Nguồn**: `dichoithoi-content-seo-ux-plan.md` §4, §7; `dichoithoi-web-page-audit.md`.
 Ưu tiên theo ROI (đã sắp ở content-seo-ux-plan §7):
