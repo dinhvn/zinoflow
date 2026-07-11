@@ -7,7 +7,7 @@ function fakeProduct(overrides: Partial<ProductRecord> = {}): ProductRecord {
   return {
     id: "p1",
     name: "Mứt dâu Đà Lạt",
-    category: "đặc sản",
+    category: "Đặc sản",
     tags: ["da-lat"],
     thumbnailUrl: null,
     thumbnailSourceUrl: null,
@@ -45,7 +45,7 @@ describe("RecomputeSouvenirProductsUseCase (Phase 27 — Quà mang về MVP)", (
       JSON.stringify([
         {
           name: "Mứt dâu Đà Lạt",
-          category: "đặc sản",
+          category: "Đặc sản",
           price: 50_000,
           thumbnailUrl: null,
           href: "https://shopee.vn/a",

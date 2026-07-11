@@ -68,7 +68,6 @@ function makeProducts(overrides: Partial<ProductRepository> = {}): ProductReposi
     findById: async () => null,
     create: async () => { throw new Error("unused"); },
     update: async () => { throw new Error("unused"); },
-    listDistinctCategories: async () => [],
     ...overrides,
   } as ProductRepository;
 }
@@ -136,7 +135,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
         {
           id: "p1",
           name: "Balo phượt 40L",
-          category: "balo",
+          category: "Balo",
           tags: ["phuot", "leo-nui"],
           thumbnailUrl: "balo.webp",
           thumbnailSourceUrl: null,
@@ -173,7 +172,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
         {
           id: "p1",
           name: "Quán Bánh Căn Dì Ba",
-          category: "Quán ăn",
+          category: "Đặc sản",
           tags: ["da-lat"],
           thumbnailUrl: "banh-can.webp",
           thumbnailSourceUrl: null,
@@ -190,7 +189,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
         {
           id: "p2",
           name: "Balo phượt 40L",
-          category: "balo",
+          category: "Balo",
           tags: ["da-lat"],
           thumbnailUrl: "balo.webp",
           thumbnailSourceUrl: null,
@@ -227,7 +226,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
         {
           id: "p2",
           name: "Balo phượt 40L",
-          category: "balo",
+          category: "Balo",
           tags: ["da-lat"],
           thumbnailUrl: "balo.webp",
           thumbnailSourceUrl: null,

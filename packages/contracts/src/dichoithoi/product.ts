@@ -8,11 +8,41 @@ import { affiliateLinkStatusSchema } from "./affiliate";
  * KHONG dong bo SQL Server — compile thang vao ContentHtml luc publish bai.
  */
 
+/**
+ * Danh sach category CO KIEM SOAT (product-spec §3: "1 gia tri, dropdown quan
+ * ly san") — thay the "tu do nhap + autocomplete" cua Phase 16 (drift so voi
+ * spec goc, ghi trong dichoithoi-implementation-plan.md muc "Con treo").
+ * Chinh sua danh sach nay khi can them category moi (khong can migration DB
+ * vi cot van la varchar — chi validate o tang contract).
+ */
+export const PRODUCT_CATEGORIES = [
+  "Balo",
+  "Vali",
+  "Lều trại",
+  "Túi ngủ",
+  "Giày đi bộ",
+  "Áo khoác",
+  "Đèn pin",
+  "Bình nước",
+  "Dụng cụ nấu ăn",
+  "Phụ kiện leo núi",
+  // 4 gia tri duoi PHAI giu nguyen chuoi — article-block-compiler.service.ts
+  // FOOD_SPOT_CATEGORIES khop CHINH XAC 4 ten nay de loc khoi [[block:food-spots]]
+  // (article-spec §3.1). Doi ten o day thi phai doi ca FOOD_SPOT_CATEGORIES.
+  "Quán ăn",
+  "Nhà hàng",
+  "Ẩm thực",
+  "Đặc sản",
+  "Khác",
+] as const;
+export const productCategorySchema = z.enum(PRODUCT_CATEGORIES);
+export type ProductCategory = z.infer<typeof productCategorySchema>;
+
 export const productSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(256),
   /** 1 gia tri co kiem soat — dung de duyet/loc man quan ly, KHONG dung de match trong bai */
-  category: z.string().min(1).max(64),
+  category: productCategorySchema,
   /** Nhieu gia tri tu do — dung de match voi tham so tag= trong token chen bai */
   tags: z.array(z.string().min(1).max(64)),
   thumbnailUrl: z.string().max(512).nullable(),
@@ -30,7 +60,7 @@ export type Product = z.infer<typeof productSchema>;
 
 export const upsertProductRequestSchema = z.object({
   name: z.string().min(1).max(256),
-  category: z.string().min(1).max(64),
+  category: productCategorySchema,
   tags: z.array(z.string().min(1).max(64)).max(20).optional(),
   thumbnailUrl: z.string().max(512).nullable().optional(),
   price: z.number().nonnegative().nullable().optional(),

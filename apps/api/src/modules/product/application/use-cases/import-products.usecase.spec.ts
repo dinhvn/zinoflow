@@ -7,7 +7,7 @@ function fakeRecord(overrides: Partial<ProductRecord> = {}): ProductRecord {
   return {
     id: "p1",
     name: "Balo phượt 40L",
-    category: "balo",
+    category: "Balo",
     tags: ["phuot"],
     thumbnailUrl: null,
     thumbnailSourceUrl: null,
@@ -39,7 +39,6 @@ describe("ImportProductsUseCase (product-spec §5.1 — chi UPSERT theo sourceUr
         updated.push("x");
         return fakeRecord();
       },
-      listDistinctCategories: async () => [],
     };
     const upsertProduct = {
       create: async (r: { sourceUrl: string }) => {

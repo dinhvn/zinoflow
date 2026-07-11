@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import type { AffiliateLinkStatus } from "@zinoflow/contracts";
+import type { AffiliateLinkStatus, ProductCategory } from "@zinoflow/contracts";
 
 /**
  * Bang products (Postgres) — nguon su that duy nhat, KHONG dong bo SQL Server
@@ -13,9 +13,10 @@ export class ProductEntity {
   @Column({ type: "varchar", length: 256 })
   name!: string;
 
-  /** 1 gia tri co kiem soat, dung de duyet/loc man quan ly (KHONG dung de match) */
+  /** 1 gia tri co kiem soat (danh sach co dinh o contracts PRODUCT_CATEGORIES),
+   * dung de duyet/loc man quan ly (KHONG dung de match) */
   @Column({ type: "varchar", length: 64 })
-  category!: string;
+  category!: ProductCategory;
 
   /** Nhieu gia tri tu do, dung de match tham so tag= trong token chen bai */
   @Column({ type: "text", array: true, default: () => "'{}'" })

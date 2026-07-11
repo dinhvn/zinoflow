@@ -8,7 +8,6 @@ import { ProductsController } from "./presentation/products.controller";
 import { ListProductsUseCase } from "./application/use-cases/list-products.usecase";
 import { UpsertProductUseCase } from "./application/use-cases/upsert-product.usecase";
 import { ImportProductsUseCase } from "./application/use-cases/import-products.usecase";
-import { ListProductCategoriesUseCase } from "./application/use-cases/list-product-categories.usecase";
 import { RecomputeSouvenirProductsUseCase } from "./application/use-cases/recompute-souvenir-products.usecase";
 import { PRODUCT_REPOSITORY } from "./application/ports/product.repository";
 import { TypeOrmProductRepository } from "./infrastructure/repositories/typeorm-product.repository";
@@ -32,7 +31,6 @@ import { ProductEntity } from "./infrastructure/entities/product.entity";
     ListProductsUseCase,
     UpsertProductUseCase,
     ImportProductsUseCase,
-    ListProductCategoriesUseCase,
     RecomputeSouvenirProductsUseCase,
     { provide: PRODUCT_REPOSITORY, useClass: TypeOrmProductRepository },
   ],

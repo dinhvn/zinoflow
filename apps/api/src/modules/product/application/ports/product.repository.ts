@@ -1,11 +1,11 @@
-import type { AffiliateLinkStatus } from "@zinoflow/contracts";
+import type { AffiliateLinkStatus, ProductCategory } from "@zinoflow/contracts";
 
 export const PRODUCT_REPOSITORY = Symbol("PRODUCT_REPOSITORY");
 
 export interface ProductRecord {
   readonly id: string;
   readonly name: string;
-  readonly category: string;
+  readonly category: ProductCategory;
   readonly tags: string[];
   readonly thumbnailUrl: string | null;
   readonly thumbnailSourceUrl: string | null;
@@ -22,7 +22,7 @@ export interface ProductRecord {
 
 export interface UpsertProductInput {
   readonly name: string;
-  readonly category: string;
+  readonly category: ProductCategory;
   readonly tags: string[];
   readonly thumbnailUrl: string | null;
   readonly thumbnailSourceUrl: string | null;
@@ -39,6 +39,4 @@ export interface ProductRepository {
   findById(id: string): Promise<ProductRecord | null>;
   create(input: UpsertProductInput): Promise<ProductRecord>;
   update(id: string, input: UpsertProductInput): Promise<ProductRecord>;
-  /** Danh sach category da dung, sap ABC — goi y autocomplete cho form quan ly (khong bang rieng) */
-  listDistinctCategories(): Promise<string[]>;
 }

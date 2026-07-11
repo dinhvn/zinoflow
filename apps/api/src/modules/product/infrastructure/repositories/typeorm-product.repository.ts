@@ -62,13 +62,4 @@ export class TypeOrmProductRepository implements IProductRepository {
     if (!updated) throw new Error(`Product id=${id} bien mat sau update`);
     return updated;
   }
-
-  async listDistinctCategories(): Promise<string[]> {
-    const rows = await this.repo
-      .createQueryBuilder("p")
-      .select("DISTINCT p.category", "category")
-      .orderBy("p.category", "ASC")
-      .getRawMany<{ category: string }>();
-    return rows.map((r) => r.category);
-  }
 }

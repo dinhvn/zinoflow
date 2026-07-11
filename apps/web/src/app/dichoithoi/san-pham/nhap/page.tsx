@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import {
   fetchSheetResponseSchema,
   importProductsResultSchema,
+  PRODUCT_CATEGORIES,
   type ImportProductRowResult,
   type ProductImportRow,
 } from "@zinoflow/contracts";
@@ -21,10 +22,17 @@ function parseTags(s: string | undefined): string[] | undefined {
   return tags.length ? tags : undefined;
 }
 
+function isKnownCategory(value: string): value is (typeof PRODUCT_CATEGORIES)[number] {
+  return (PRODUCT_CATEGORIES as readonly string[]).includes(value);
+}
+
 function rowFromObject(o: Record<string, string>): ProductImportRow {
+  const category = (o.category ?? "").trim();
   return {
     name: (o.name ?? "").trim(),
-    category: (o.category ?? "").trim(),
+    // Zod se chan o server neu khong hop le — ep kieu tam de qua TS, loi that
+    // duoc bat va bao ro dong nao o handleParse ben duoi truoc khi goi API.
+    category: category as ProductImportRow["category"],
     tags: parseTags(o.tags),
     thumbnailUrl: emptyToUndef(o.thumbnailUrl) ?? null,
     price: parseNumber(o.price) ?? null,
@@ -80,6 +88,13 @@ export default function ImportProductsPage() {
       const parsed = parseInput(text);
       const bad = parsed.findIndex((r) => !r.name.trim() || !r.category.trim() || !r.sourceUrl.trim());
       if (bad >= 0) throw new Error(`Dòng ${bad + 1}: thiếu tên/danh mục/link gốc (sourceUrl)`);
+      const badCategory = parsed.findIndex((r) => !isKnownCategory(r.category));
+      if (badCategory >= 0) {
+        throw new Error(
+          `Dòng ${badCategory + 1}: category "${parsed[badCategory]!.category}" không hợp lệ — ` +
+            `phải là 1 trong: ${PRODUCT_CATEGORIES.join(", ")}`,
+        );
+      }
       if (parsed.length === 0) throw new Error("Không có dòng nào");
       setItems(parsed);
     } catch (e) {

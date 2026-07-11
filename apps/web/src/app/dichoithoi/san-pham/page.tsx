@@ -3,23 +3,22 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
-import { productSchema, type Product } from "@zinoflow/contracts";
+import { productSchema, PRODUCT_CATEGORIES, type Product } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import { Select } from "@/shared/ui/select";
 import { Badge } from "@/shared/ui/badge";
 import { AffiliateUrlPreview } from "@/features/dichoithoi/affiliate-url-preview";
 
 const EMPTY_FORM = {
   name: "",
-  category: "",
+  category: "" as "" | (typeof PRODUCT_CATEGORIES)[number],
   tags: "",
   thumbnailUrl: "",
   price: "",
   sourceUrl: "",
 };
-
-const CATEGORY_DATALIST_ID = "product-category-suggestions";
 
 /**
  * Man "Sản phẩm" (product-spec §6) — affiliate dung chung, ghep vao bai viet
@@ -36,17 +35,11 @@ export default function ProductsPage() {
     queryFn: () => apiGet("/products", z.array(productSchema)),
   });
 
-  const categoriesQuery = useQuery({
-    queryKey: ["product-categories"],
-    queryFn: () => apiGet("/products/categories", z.array(z.string())),
-    staleTime: 5 * 60 * 1000,
-  });
-
   const save = useMutation({
     mutationFn: async () => {
       const body = {
         name: form.name.trim(),
-        category: form.category.trim(),
+        category: form.category,
         tags: form.tags
           .split(",")
           .map((t) => t.trim())
@@ -65,7 +58,6 @@ export default function ProductsPage() {
       setForm(EMPTY_FORM);
       setEditingId(null);
       void queryClient.invalidateQueries({ queryKey: ["products"] });
-      void queryClient.invalidateQueries({ queryKey: ["product-categories"] });
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : String(e)),
   });
@@ -113,15 +105,19 @@ export default function ProductsPage() {
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           />
-          <Input
-            list={CATEGORY_DATALIST_ID}
-            placeholder="Category * (vd: Balo)"
+          <Select
             value={form.category}
-            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-          />
-          <datalist id={CATEGORY_DATALIST_ID}>
-            {categoriesQuery.data?.map((c) => <option key={c} value={c} />)}
-          </datalist>
+            onChange={(e) =>
+              setForm((f) => ({ ...f, category: e.target.value as (typeof PRODUCT_CATEGORIES)[number] }))
+            }
+          >
+            <option value="">Chọn category *</option>
+            {PRODUCT_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </Select>
           <Input
             className="md:col-span-3"
             placeholder="Tags, cách nhau dấu phẩy (vd: phuot, leo-nui)"

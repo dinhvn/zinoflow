@@ -67,7 +67,9 @@ export class UpsertProductUseCase {
     const thumbnailUrl = request.thumbnailUrl?.trim() || null;
     return {
       name: request.name.trim(),
-      category: request.category.trim(),
+      // category la 1 trong PRODUCT_CATEGORIES (da qua Zod enum validate o controller,
+      // luon la chuoi chinh xac) — khong can trim nhu truoc khi con la free text.
+      category: request.category,
       tags: (request.tags ?? []).map((t) => t.trim()).filter((t) => t.length > 0),
       thumbnailUrl,
       thumbnailSourceUrl:

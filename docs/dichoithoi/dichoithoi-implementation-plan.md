@@ -1215,8 +1215,24 @@ console.
 ~~Rà soát lại `DestinationType`/`DestinationTypeMap`~~ → **✅ ĐÃ XONG (07/2026,
 vòng 2)** — xem `dichoithoi-backlog.md` mục A#8, dòng này đã lỗi thời.
 
-- **Chuẩn hoá danh sách `category` cho Product** (product-spec §8.5) — chặn 1
-  phần nhỏ Phase 16 (màn quản lý), không chặn phần block compiler.
+~~Chuẩn hoá danh sách `category` cho Product (product-spec §3)~~ →
+**✅ ĐÃ XONG (07/2026)** — Phase 16 trước đây build "tự do nhập + autocomplete"
+(drift so với spec gốc "1 giá trị, dropdown quản lý sẵn"). Đổi thành enum cố
+định `PRODUCT_CATEGORIES` trong `packages/contracts/src/dichoithoi/product.ts`
+(15 giá trị, gồm 4 giá trị BẮT BUỘC giữ nguyên chuỗi vì
+`article-block-compiler.service.ts` `FOOD_SPOT_CATEGORIES` khớp chính xác:
+"Quán ăn"/"Nhà hàng"/"Ẩm thực"/"Đặc sản") — validate ngay ở Zod schema
+(`productSchema`/`upsertProductRequestSchema`, áp dụng luôn cho Sheet import
+vì dùng chung schema). Xoá hẳn `GET /products/categories` +
+`ListProductCategoriesUseCase` + `listDistinctCategories()` (không cần
+autocomplete nữa vì danh sách đã cố định) — UI `san-pham/page.tsx` đổi từ
+`<Input list=... /><datalist>` sang `<Select>` thật; màn nhập Sheet
+(`san-pham/nhap/page.tsx`) thêm validate category client-side trước khi gọi
+API. Verify: `tsc --noEmit` (api+web) sạch, `npx jest` 339 test sạch (sửa vài
+fixture dùng category cũ "balo"/"đặc sản" thường → giá trị enum chính xác),
+test thật qua API: tạo sản phẩm category hợp lệ → OK, category không hợp lệ →
+Zod chặn đúng thông báo liệt kê đủ 15 giá trị, `/products/categories` xác
+nhận trả 404 (đã xoá), dọn sạch sản phẩm test.
 ~~[Bug tiềm ẩn, phát hiện lúc làm Phase 19] Điểm đến hoàn toàn mới qua
 zinoflow bị 404 trên `/diem-den/{slug}`~~ → **✅ ĐÃ XONG (07/2026)** — người
 dùng xác nhận sửa ngay, không chờ go-live toàn bộ Phase 10. Khảo sát thực tế

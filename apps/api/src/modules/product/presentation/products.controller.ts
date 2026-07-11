@@ -18,7 +18,6 @@ import {
 import { ListProductsUseCase } from "../application/use-cases/list-products.usecase";
 import { UpsertProductUseCase } from "../application/use-cases/upsert-product.usecase";
 import { ImportProductsUseCase } from "../application/use-cases/import-products.usecase";
-import { ListProductCategoriesUseCase } from "../application/use-cases/list-product-categories.usecase";
 
 /** REST man "Sản phẩm" (product-spec §6) */
 @Controller("products")
@@ -27,7 +26,6 @@ export class ProductsController {
     private readonly listProducts: ListProductsUseCase,
     private readonly upsertProduct: UpsertProductUseCase,
     private readonly importProducts: ImportProductsUseCase,
-    private readonly listCategories: ListProductCategoriesUseCase,
     @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
   ) {}
 
@@ -48,12 +46,6 @@ export class ProductsController {
     @Body(new ZodValidationPipe(importProductsRequestSchema)) request: ImportProductsRequest,
   ): Promise<ImportProductsResult> {
     return this.importProducts.execute(request);
-  }
-
-  /** Goi y category cho form (autocomplete) — tu do nhap, khong bang quan ly rieng */
-  @Get("categories")
-  categories(): Promise<string[]> {
-    return this.listCategories.execute();
   }
 
   @Post()
