@@ -191,7 +191,7 @@ cơ chế đã có.
 ```sql
 CREATE TABLE Article (
   Id               int IDENTITY PRIMARY KEY,
-  Slug             varchar(128)  NOT NULL UNIQUE,   -- /blog/{slug}
+  Slug             varchar(128)  NOT NULL UNIQUE,   -- /cam-nang/{slug}
   Title            nvarchar(200) NOT NULL,
   ShortDescription nvarchar(500),
   Thumbnail        varchar(256),

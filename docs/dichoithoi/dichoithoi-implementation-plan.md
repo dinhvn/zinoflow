@@ -131,7 +131,7 @@ data để khối động query vào). **Nguồn**: `dichoithoi-article-spec.md`
 Ưu tiên theo ROI (đã sắp ở content-seo-ux-plan §7):
 1. **Cao**: bật lại Review/Rating + JSON-LD AggregateRating; render FAQ +
    JSON-LD FAQPage; route `/loai/{group}[/{type}]` + `/tinh/{slug}`; SSR khối
-   khách sạn/tour giữa bài (bỏ AJAX); route mới `/blog/{slug}` cho Article.
+   khách sạn/tour giữa bài (bỏ AJAX); route mới `/cam-nang/{slug}` cho Article.
 2. **Trung bình**: gallery ảnh (đọc `GalleryJson`); bản đồ nhúng; `rel=sponsored`
    + disclosure; render `TicketLinksJson` thành nhiều nút.
 3. **Sau**: mini lịch trình; so sánh giá; sitemap.xml + Search Console; critical

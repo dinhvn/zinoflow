@@ -206,7 +206,7 @@ giai đoạn sau.
   §4) đủ để match chính xác với lịch trình 2/3/4 ngày, chỉ cần website query
   lọc theo field này khi ghép tour vào đúng lịch trình.
 - Khối trên trang chỉ là **bản tóm tắt** (vài dòng/ngày) — bản chi tiết đầy đủ
-  viết thành 1 bài **cẩm nang riêng** (`/blog/{slug}`, module Article —
+  viết thành 1 bài **cẩm nang riêng** (`/cam-nang/{slug}`, module Article —
   `dichoithoi-article-spec.md`, đúng loại bài "listicle" đã thiết kế sẵn, có
   ví dụ tương tự "1 ngày ở TP.HCM"), có link "Xem lịch trình chi tiết →" từ
   bản tóm tắt sang bài đầy đủ. Lý do tách: mỗi bài chiếm 1 URL/cơ hội SEO riêng
@@ -491,7 +491,7 @@ Trang chủ
  │    └─ bài điểm đến (cùng tỉnh)
  ├─ /chu-de/{slug}              (HUB NGANG — tag chủ đề cắt qua loại/tỉnh,
  │    └─ bài điểm đến (cùng chủ đề)   vd "Kiến trúc" — thêm 07/2026)
- └─ /blog/{slug}                (HUB NGANG — cắt qua nhiều silo dọc,
+ └─ /cam-nang/{slug}            (HUB NGANG — cắt qua nhiều silo dọc,
                                   link chéo tới bài điểm đến qua khối động)
 ```
 Bài cẩm nang là lý do chính đáng để đầu tư cơ chế "khối động"

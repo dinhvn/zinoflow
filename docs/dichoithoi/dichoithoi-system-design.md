@@ -70,7 +70,7 @@ thẳng "đây là 1 module NestJS riêng").
 | `Hotel` | AI tool | Card khách sạn |
 | `HotelDestinationMap` (mới, thay `HotelGroupId` legacy) | AI tool | JOIN theo `DestinationSlug` — hotel-spec §4 (sửa 07/2026, khớp pattern Tour) |
 | `Tour`, `TourDestinationMap` | AI tool | Card tour — tour-spec §4-5 |
-| `Article` (mới hoàn toàn) | AI tool | Trang `/blog/{slug}` — article-spec §8 |
+| `Article` (mới hoàn toàn) | AI tool | Trang `/cam-nang/{slug}` — article-spec §8 |
 
 Nguyên tắc bao trùm: **mỗi bảng đúng 1 nơi ghi** (system-overview §1) — website
 CHỈ ghi `DestinationReview`; mọi bảng còn lại AI tool ghi, website chỉ SELECT.
