@@ -1043,12 +1043,55 @@ nhận layout KHÔNG đổi so với trước (vẫn lưới phẳng "Các khu t
 Trang", không có area-tabs); Biệt thự Hằng Nga (POI) không ảnh hưởng, 0 lỗi
 console cả 3 trang.
 
-### 28.3-28.6 — CHƯA LÀM
+### 28.3 — AI content: nhánh Flagship cho outline/section/frame + gate (ĐÃ XONG 07/2026)
 
-Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (nhánh AI
-Flagship + gate mới, Lịch trình + link bài cẩm nang theo topic, banner "Về
-node cha" + đánh giá biên tập + external review, Coverage Score theo tier
-thật).
+Thêm dimension "tier" xuyên suốt pipeline generate — CHỈ ảnh hưởng khi
+`articleType=guide-diem-den`, không đụng loại bài khác:
+
+- `content_jobs.content_tier` (migration `1782040000000-ContentJobTier`,
+  cột mới trên Postgres) — set 1 LẦN lúc tạo job
+  (`CreateDestinationJobUseCase.execute()` đọc thẳng `destination.contentTier`
+  từ mirror, không tự suy hay query lại), đi xuyên suốt vòng đời job
+  (generate → quality-check → review) mà KHÔNG cần module `ai-content` phá vỡ
+  ranh giới clean architecture để tự lookup ngược sang module `destination`.
+- `PromptJobContext.contentTier` (`prompt-builder.ts`) — `stepKeys()` chèn 2
+  key ứng viên `guide-diem-den-flagship.<step>.vi`
+  (`<site>.guide-diem-den-flagship...` trước, rồi bản chung) NGAY TRƯỚC cặp
+  key `guide-diem-den.<step>.vi` bình thường, CHỈ khi
+  `articleType===guide-diem-den && contentTier==="flagship"` — tier
+  `standard`/`null` đi thẳng qua nhánh cũ, không đổi hành vi.
+- 3 prompt mặc định mới trong `default-prompts.ts`
+  (`guide-diem-den-flagship.{outline,section,frame}.vi`) — khác khung POI
+  đơn lẻ: outline bắt buộc 1 heading "mùa"/"thời điểm" (thay vì "văn hoá/lịch
+  sử"), bỏ heading giờ mở cửa/giá vé riêng (node lớn không có 1 giá/giờ duy
+  nhất), quickFacts.transport/food/hotel/tip viết ở tầm CẢ VÙNG thay vì 1
+  điểm cụ thể — vẫn đúng y nguyên `destinationArticleFrameSchema` cũ, chỉ đổi
+  nội dung prompt, không đổi schema/pipeline.
+  Đăng ký thêm vào `prompt-catalog.ts` (`PromptArticleType` +
+  `ARTICLE_TYPE_LABELS`) để màn quản lý prompt nhìn thấy 3 key mới.
+- Gate mới: `evaluateDestinationStructureGate` nhánh theo
+  `input.contentTier` — Flagship yêu cầu section "mùa/thời điểm"
+  (`SEASON_HEADING_KEYWORDS`), Standard/null giữ nguyên yêu cầu "câu
+  chuyện/ý nghĩa văn hoá - lịch sử" cũ. `evaluateGatesForArticle`
+  (gate-dispatcher) + 2 nơi gọi (`run-quality-checks.usecase.ts`,
+  `review-draft.usecase.ts`) đọc `job.toSnapshot().contentTier` và forward
+  xuống gate.
+
+Verify: `tsc --noEmit` (api+web) + `npx jest` (336 test, thêm test gate
+Flagship/Standard + test PromptBuilder phân giải key theo tier) sạch;
+migration Postgres chạy thật; tạo job thật cho Đà Lạt (Flagship,
+`mode=update`) và Biệt thự Hằng Nga (POI, `contentTier=null`) qua API thật —
+xác nhận `content_jobs.content_tier` lưu đúng (`flagship` vs `null`) và
+quality-check của 2 job cho kết quả gate KHÁC NHAU đúng như thiết kế: bài
+Đà Lạt không bị chặn ở gate "thiếu section văn hoá-lịch sử" (vì kiểm tra
+"mùa/thời điểm" thay thế), bài Biệt thự Hằng Nga vẫn bị chặn đúng như trước
+(gate cũ không đổi cho POI) — cả 2 job test đã reject dọn sạch sau verify.
+
+### 28.4-28.6 — CHƯA LÀM
+
+Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (Lịch trình +
+link bài cẩm nang theo topic, banner "Về node cha" + đánh giá biên tập +
+external review, Coverage Score theo tier thật).
 
 ---
 

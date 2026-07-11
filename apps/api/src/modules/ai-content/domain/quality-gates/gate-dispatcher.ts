@@ -15,12 +15,15 @@ export function evaluateGatesForArticle(input: {
   article: DraftArticle;
   draftMarkdown: string;
   keywordSeed: readonly string[];
+  /** Chi dung khi articleType=guide-diem-den (Phase 28.3) — doi gate cau chuyen van hoa->mua/thoi diem */
+  contentTier?: "flagship" | "standard" | null;
 }): { checks: QualityCheck[]; allPassed: boolean } {
   if (input.articleType === "guide-diem-den") {
     return evaluateDestinationGates({
       article: input.article as DestinationArticle,
       draftMarkdown: input.draftMarkdown,
       keywordSeed: input.keywordSeed,
+      contentTier: input.contentTier,
     });
   }
   if (input.articleType === "cam-nang") {

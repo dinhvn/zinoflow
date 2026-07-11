@@ -46,6 +46,7 @@ export class RunQualityChecksUseCase {
       article: draft.article,
       draftMarkdown: draft.draftMarkdown,
       keywordSeed,
+      contentTier: job?.toSnapshot().contentTier,
     });
     await this.results.replaceForDraft(draft.id, checks);
 

@@ -43,6 +43,10 @@ export class ContentJobEntity {
   @Column({ name: "source_context", type: "text", nullable: true })
   sourceContext!: string | null;
 
+  /** flagship | standard | null — chi y nghia voi articleType guide-diem-den (Phase 28.3) */
+  @Column({ name: "content_tier", type: "varchar", length: 16, nullable: true })
+  contentTier!: "flagship" | "standard" | null;
+
   @Index()
   @Column({ type: "varchar", length: 30 })
   status!: ContentJobStatus;

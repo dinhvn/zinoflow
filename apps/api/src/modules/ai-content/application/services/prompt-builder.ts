@@ -29,6 +29,12 @@ export interface PromptJobContext {
   /** Ngu canh nguon (du lieu diem den, content cu khi update...) — null voi bai thuong */
   sourceContext: string | null;
   products: readonly ProductContext[];
+  /**
+   * flagship | standard | null — chi y nghia voi articleType guide-diem-den
+   * (Phase 28.3): chon prompt Flagship rieng khi = "flagship", fallback ve
+   * prompt guide-diem-den binh thuong voi moi gia tri khac.
+   */
+  contentTier?: "flagship" | "standard" | null;
 }
 
 // max_tokens theo do dai du kien cua tung buoc (output JSON)
@@ -125,7 +131,15 @@ export class PromptBuilder {
   private stepKeys(step: "outline" | "section" | "frame", ctx: PromptJobContext): string[] {
     const at = ctx.articleType;
     const site = ctx.siteCode;
-    const keys = [`${site}.${at}.${step}.vi`, `${at}.${step}.vi`];
+    const keys: string[] = [];
+    // Phase 28.3 — diem den Flagship dung bo prompt rieng (mua/thoi diem, di
+    // chuyen 2 chieu, an gi dac trung, qua mang ve... thay vi khung POI thuong),
+    // uu tien TRUOC cap key guide-diem-den binh thuong; tier != "flagship"
+    // (standard/null) roi thang xuong cap duoi, khong doi hanh vi cu.
+    if (at === "guide-diem-den" && ctx.contentTier === "flagship") {
+      keys.push(`${site}.guide-diem-den-flagship.${step}.vi`, `guide-diem-den-flagship.${step}.vi`);
+    }
+    keys.push(`${site}.${at}.${step}.vi`, `${at}.${step}.vi`);
     if (at.startsWith("km-")) {
       keys.push(`${site}.km-bai-viet.${step}.vi`, `km-bai-viet.${step}.vi`);
     }

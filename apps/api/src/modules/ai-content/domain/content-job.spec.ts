@@ -13,6 +13,7 @@ function makeJob(status: ContentJobStatus): ContentJob {
     keywordSeed: ["cũ"],
     toneProfile: null,
     sourceContext: null,
+    contentTier: null,
     status,
     aiProvider: "anthropic",
     aiModel: "claude-opus-4-8",

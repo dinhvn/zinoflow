@@ -56,6 +56,7 @@ export class CreateContentJobUseCase {
       keywordSeed: request.keywordSeed,
       toneProfile: request.toneProfile ?? null,
       sourceContext: request.sourceContext ?? null,
+      contentTier: request.contentTier ?? null,
       aiProvider,
       aiModel:
         request.aiModel ??

@@ -15,6 +15,7 @@ function fakeJob(overrides: Partial<ContentJobProps>): ContentJob {
     keywordSeed: [],
     toneProfile: null,
     sourceContext: null,
+    contentTier: null,
     status: "Created",
     aiProvider: "gemini",
     aiModel: "gemini-2.5-flash",

@@ -52,3 +52,35 @@ describe("PromptBuilder phan giai key (km site x postType)", () => {
     expect(req.prompt).toContain("TOP-LIST");
   });
 });
+
+const destinationCtx: PromptJobContext = {
+  model: "m",
+  articleType: "guide-diem-den",
+  topic: "Đà Lạt",
+  siteCode: "dichoithoi",
+  keywordSeed: [],
+  toneProfile: null,
+  sourceContext: "ngu canh",
+  products: [],
+};
+
+describe("PromptBuilder phan giai key theo ContentTier (Phase 28.3)", () => {
+  it("contentTier=flagship -> uu tien key guide-diem-den-flagship (khong co DB -> dung DEFAULT)", async () => {
+    const b = new PromptBuilder(repoWithKey(null));
+    const req = await b.buildOutline({ ...destinationCtx, contentTier: "flagship" });
+    expect(req.prompt).toContain("mùa");
+    expect(req.prompt).not.toContain("Câu chuyện/ý nghĩa văn hoá");
+  });
+
+  it("contentTier=standard/null -> giu nguyen prompt guide-diem-den binh thuong", async () => {
+    const b = new PromptBuilder(repoWithKey(null));
+    const req = await b.buildOutline({ ...destinationCtx, contentTier: "standard" });
+    expect(req.prompt).toContain("Câu chuyện/ý nghĩa văn hoá");
+  });
+
+  it("contentTier=flagship uu tien override DB rieng cho site truoc default chung", async () => {
+    const b = new PromptBuilder(repoWithKey("dichoithoi.guide-diem-den-flagship.outline.vi"));
+    const req = await b.buildOutline({ ...destinationCtx, contentTier: "flagship" });
+    expect(req.prompt).toBe("SPECIFIC");
+  });
+});

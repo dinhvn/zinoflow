@@ -104,6 +104,7 @@ function createJob(): ContentJob {
     keywordSeed: ["túi xách nữ"],
     toneProfile: null,
     sourceContext: null,
+    contentTier: null,
     aiProvider: "anthropic",
     aiModel: "stub-model",
   });

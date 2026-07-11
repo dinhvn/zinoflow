@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { aiProviderKeySchema } from "./ai-provider";
+import { destinationContentTierSchema } from "../dichoithoi/destination";
 
 /**
  * Trang thai content job — state machine theo spec §5.
@@ -52,6 +53,12 @@ export const createContentJobRequestSchema = z.object({
    * AI CHI duoc dung thong tin trong day + kien thuc nen, khong tu che so lieu.
    */
   sourceContext: z.string().max(60_000).optional(),
+  /**
+   * flagship | standard | null — CHI co y nghia voi articleType guide-diem-den
+   * (Phase 28.3): chon nhanh prompt/gate Flagship khi tao job cho diem den
+   * ContentTier=flagship. Null/undefined voi moi loai bai khac.
+   */
+  contentTier: destinationContentTierSchema.nullable().optional(),
   /** Optional — default theo SiteProfile neu khong truyen. */
   aiProvider: aiProviderKeySchema.optional(),
   aiModel: z.string().optional(),

@@ -18,6 +18,8 @@ export interface ContentJobProps {
   toneProfile: string | null;
   /** Ngu canh nguon cho prompt (du lieu diem den, content cu...) — null voi bai thuong */
   sourceContext: string | null;
+  /** flagship | standard | null — chi y nghia voi articleType guide-diem-den (Phase 28.3) */
+  contentTier: "flagship" | "standard" | null;
   status: ContentJobStatus;
   aiProvider: AiProviderKey;
   aiModel: string;

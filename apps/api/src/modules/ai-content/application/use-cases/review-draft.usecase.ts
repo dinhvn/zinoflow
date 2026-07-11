@@ -100,6 +100,7 @@ export class ReviewDraftUseCase {
       article: draft.article,
       draftMarkdown: draft.draftMarkdown,
       keywordSeed: job ? job.toSnapshot().keywordSeed : [],
+      contentTier: job?.toSnapshot().contentTier,
     });
     await this.results.replaceForDraft(draftId, checks);
 

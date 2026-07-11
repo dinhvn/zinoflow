@@ -101,6 +101,7 @@ export class CreateDestinationJobUseCase {
       articleType: "guide-diem-den",
       keywordSeed: [destination.name],
       sourceContext,
+      contentTier: destination.contentTier,
       aiProvider: request.aiProvider
         ? aiProviderKeySchema.parse(request.aiProvider)
         : undefined,

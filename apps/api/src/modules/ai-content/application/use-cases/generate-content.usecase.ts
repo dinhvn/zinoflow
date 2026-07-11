@@ -89,6 +89,7 @@ export class GenerateContentUseCase {
         keywordSeed: snapshot.keywordSeed,
         toneProfile: snapshot.toneProfile,
         sourceContext: snapshot.sourceContext,
+        contentTier: snapshot.contentTier,
         products,
       };
 

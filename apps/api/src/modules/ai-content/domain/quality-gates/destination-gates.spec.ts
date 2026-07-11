@@ -159,3 +159,39 @@ describe("destination gates (spec dichoithoi §6)", () => {
     expect(result.details.join(" ")).toContain("Di chuyển");
   });
 });
+
+describe("destination gates — Flagship tier (Phase 28.3)", () => {
+  it("structure: bai Flagship fail khi KHONG co section mua/thoi diem (du co van hoa - lich su)", () => {
+    const article = validArticle();
+    // Doi ca 2 section co the khop tu khoa "mua"/"thoi diem" thanh section khac
+    article.sections[2] = { heading: "Ăn gì khi tới đây", content: longContent("Đặc sản") };
+    const result = evaluateDestinationStructureGate({
+      ...gateInput(article),
+      contentTier: "flagship",
+    });
+    expect(result.passed).toBe(false);
+    expect(result.details.join(" ")).toContain("mùa/thời điểm");
+    expect(result.details.join(" ")).not.toContain("văn hoá - lịch sử");
+  });
+
+  it("structure: Flagship pass khi co section mua/thoi diem (khong can van hoa - lich su)", () => {
+    const article = validArticle();
+    article.sections[3] = { heading: "Nên đi mùa nào đẹp nhất", content: longContent("Mùa khô") };
+    const result = evaluateDestinationStructureGate({
+      ...gateInput(article),
+      contentTier: "flagship",
+    });
+    expect(result.passed).toBe(true);
+  });
+
+  it("structure: node Standard (contentTier khac flagship) giu nguyen yeu cau van hoa - lich su", () => {
+    const article = validArticle();
+    article.sections[3] = { heading: "Nên đi mùa nào đẹp nhất", content: longContent("Mùa khô") };
+    const result = evaluateDestinationStructureGate({
+      ...gateInput(article),
+      contentTier: "standard",
+    });
+    expect(result.passed).toBe(false);
+    expect(result.details.join(" ")).toContain("văn hoá - lịch sử");
+  });
+});

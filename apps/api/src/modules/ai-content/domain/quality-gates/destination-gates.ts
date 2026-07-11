@@ -15,6 +15,12 @@ export interface DestinationGateInput {
   keywordSeed: readonly string[];
   /** Slug cac diem den dang ton tai — check trung slug khi mode create (null = bo qua) */
   existingSlugs?: readonly string[] | null;
+  /**
+   * flagship | standard | null — chi anh huong structure gate (Phase 28.3):
+   * Flagship doi yeu cau "cau chuyen van hoa-lich su" thanh "mua/thoi diem dep
+   * nhat" (diem tong quan ca vung khong hop voi khung 1 diem tham quan don le).
+   */
+  contentTier?: "flagship" | "standard" | null;
 }
 
 const MIN_SECTION_WORDS = 60;
@@ -48,6 +54,13 @@ const CULTURAL_STORY_HEADING_KEYWORDS: readonly string[] = [
   "truyền thuyết",
   "ý nghĩa",
 ];
+
+/**
+ * Bai Flagship (tinh/cum tong hop) thay yeu cau "cau chuyen van hoa-lich su"
+ * bang yeu cau "mua/thoi diem dep nhat" — cau hoi search intent hang dau voi
+ * diem den lon, khung 1 diem tham quan don le khong hop (Phase 28.3).
+ */
+const SEASON_HEADING_KEYWORDS: readonly string[] = ["mùa", "thời điểm"];
 
 /**
  * Structure gate (§6.1): 1 H1, >=3 section du noi dung, FAQ >=3,
@@ -86,13 +99,24 @@ export function evaluateDestinationStructureGate(input: DestinationGateInput): Q
     details.push(`FAQ cần ít nhất 3 câu hỏi (hiện có ${article.faq.length})`);
   }
 
-  const hasCulturalStorySection = article.sections.some((section) =>
-    CULTURAL_STORY_HEADING_KEYWORDS.some((kw) => containsNormalized(section.heading, kw)),
-  );
-  if (!hasCulturalStorySection) {
-    details.push(
-      'Thiếu section "câu chuyện/ý nghĩa văn hoá - lịch sử" (bắt buộc theo khung bài §5.6)',
+  if (input.contentTier === "flagship") {
+    const hasSeasonSection = article.sections.some((section) =>
+      SEASON_HEADING_KEYWORDS.some((kw) => containsNormalized(section.heading, kw)),
     );
+    if (!hasSeasonSection) {
+      details.push(
+        'Thiếu section "mùa/thời điểm đẹp nhất để đi" (bắt buộc với bài điểm đến Flagship)',
+      );
+    }
+  } else {
+    const hasCulturalStorySection = article.sections.some((section) =>
+      CULTURAL_STORY_HEADING_KEYWORDS.some((kw) => containsNormalized(section.heading, kw)),
+    );
+    if (!hasCulturalStorySection) {
+      details.push(
+        'Thiếu section "câu chuyện/ý nghĩa văn hoá - lịch sử" (bắt buộc theo khung bài §5.6)',
+      );
+    }
   }
 
   return { gateName: "structure", passed: details.length === 0, details };

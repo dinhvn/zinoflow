@@ -40,6 +40,7 @@ export class CreateManualDraftUseCase {
       keywordSeed: request.keywordSeed,
       toneProfile: null,
       sourceContext: request.sourceContext ?? null,
+      contentTier: null,
       aiProvider: CreateManualDraftUseCase.INERT_PROVIDER,
       aiModel: CreateManualDraftUseCase.INERT_MODEL,
     });

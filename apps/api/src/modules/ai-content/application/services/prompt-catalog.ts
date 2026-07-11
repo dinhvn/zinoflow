@@ -20,6 +20,7 @@ export type PromptArticleType =
   | "toplist"
   | "review"
   | "guide-diem-den"
+  | "guide-diem-den-flagship"
   | "cam-nang"
   | "km-bai-viet";
 
@@ -37,6 +38,7 @@ const ARTICLE_TYPES: PromptArticleType[] = [
   "toplist",
   "review",
   "guide-diem-den",
+  "guide-diem-den-flagship",
   "cam-nang",
   "km-bai-viet",
 ];
@@ -45,6 +47,7 @@ export const ARTICLE_TYPE_LABELS: Record<PromptArticleType, string> = {
   toplist: "Top-list",
   review: "Review",
   "guide-diem-den": "Điểm đến (dichoithoi)",
+  "guide-diem-den-flagship": "Điểm đến Flagship — tỉnh/cụm tổng hợp (dichoithoi)",
   "cam-nang": "Cẩm nang tổng hợp (dichoithoi)",
   "km-bai-viet": "Khuyến mãi (laruki/dochoi3s)",
 };
