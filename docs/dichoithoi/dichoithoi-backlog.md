@@ -234,6 +234,17 @@ dữ liệu, output đổ vào migration Phase B — làm sau là phải migrate
    - Script SQL: `dichoithoi/scripts/address-migration/phase-b-0{1,2,3}-*.sql`
      (idempotent, có thể chạy lại an toàn — dùng `IF NOT EXISTS`/kiểm tra
      trước khi INSERT).
+   - ✅ **XONG thêm (07/2026, vòng 3)** — `phase-b-04-fix-typemap-round2.sql`:
+     rà lại TOÀN BỘ 246 điểm published (không chỉ nhóm "Di tích lịch sử"),
+     sửa 5 ca gán sai/thiếu Type thêm (chi tiết: `dichoithoi-backlog.md` §A.8).
+     `phase-b-05-standardize-format.sql`: chuẩn hoá format `AddressNew`/
+     `AddressOld` (bỏ hậu tố "Việt Nam"/"Vietnam", "Tp." → "Thành phố", bỏ
+     tiền tố "tỉnh " thừa) + sửa tay 2 ca dữ liệu sai (`bai-dai-phu-quoc`
+     nhầm tỉnh Khánh Hòa↔Kiên Giang; `bao-tang-my-thuat-cung-dinh-hue` địa chỉ
+     lặp cấu trúc "Thành phố Huế"/"Thừa Thiên–Huế"). Đã chạy + xác nhận
+     idempotent trên `dichoithoi_dev`. Còn lại: 36 dòng "nhiều phường/xã
+     trùng" vẫn để `AddressNew=NULL` (xem tay khi rảnh, không chặn gì) +
+     áp dụng lên production (việc người dùng tự làm sau).
 2. 🔄 **ĐANG LÀM (07/2026) — Website .NET đọc schema mới** (repo dichoithoi,
    song song). Khảo sát thực tế cho thấy đã v2-hoá SẴN 1 phần trước đây:
    `/loai/...` + `/tinh/{slug}` (100% v2), trang chi tiết `/diem-den/{slug}`
