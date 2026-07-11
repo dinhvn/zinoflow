@@ -47,6 +47,11 @@ export class CreateManualDraftUseCase {
     const profile = getArticleTypeProfile(request.articleType);
     const article = profile.createManualSkeleton(request.topic);
 
+    // Job PHAI ghi truoc draft — draft.jobId co FK tro toi content_jobs.id,
+    // ghi nguoc lai se vi pham foreign key constraint (job chua ton tai trong DB).
+    job.transitionTo("DraftReady");
+    await this.jobs.save(job);
+
     await this.drafts.save({
       id: randomUUID(),
       jobId: job.id,
@@ -58,8 +63,6 @@ export class CreateManualDraftUseCase {
       createdAt: new Date(),
     });
 
-    job.transitionTo("DraftReady");
-    await this.jobs.save(job);
     this.logger.log(`Job ${job.id} (Manual) -> DraftReady ngay, khong qua AI`);
 
     return { jobId: job.id, status: job.status };

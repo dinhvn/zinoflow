@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
 import {
@@ -21,6 +21,7 @@ import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
+import { InsertDynamicBlockPanel } from "@/features/dichoithoi/insert-dynamic-block-panel";
 
 /** Draft response tu GET /content/jobs/:id/draft (DraftRecord phia API). */
 const draftSchema = z.object({
@@ -72,6 +73,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const { id } = use(params);
   const queryClient = useQueryClient();
   const [editorText, setEditorText] = useState("");
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [actionError, setActionError] = useState<{ message: string; details: string[] } | null>(
     null,
@@ -283,6 +285,25 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   const isDirty = draft?.draftMarkdown != null && editorText !== draft.draftMarkdown;
   const checks = checksQuery.data?.checks ?? [];
+
+  /** Chen 1 token khoi dong vao vi tri con tro trong textarea (article-spec §9) */
+  function insertBlockToken(token: string) {
+    const el = editorRef.current;
+    const line = `\n${token}\n`;
+    if (!el) {
+      setEditorText((t) => `${t}${line}`);
+      return;
+    }
+    const start = el.selectionStart ?? editorText.length;
+    const end = el.selectionEnd ?? editorText.length;
+    const next = `${editorText.slice(0, start)}${line}${editorText.slice(end)}`;
+    setEditorText(next);
+    const cursor = start + line.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(cursor, cursor);
+    });
+  }
 
   return (
     <div className="max-w-6xl space-y-6">
@@ -637,15 +658,21 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center justify-between border-b border-zinc-200 p-3 dark:border-zinc-800">
               <h3 className="text-sm font-medium">Soạn thảo (Markdown)</h3>
-              <button
-                onClick={() => saveDraft.mutate()}
-                disabled={!isDirty || saveDraft.isPending}
-                className="rounded bg-zinc-900 px-3 py-1 text-xs font-medium text-white hover:bg-zinc-700 disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
-              >
-                {saveDraft.isPending ? "Đang lưu..." : isDirty ? "Lưu (tạo version mới)" : "Đã lưu"}
-              </button>
+              <div className="flex items-center gap-2">
+                {job?.articleType === "cam-nang" && (
+                  <InsertDynamicBlockPanel onInsert={insertBlockToken} />
+                )}
+                <button
+                  onClick={() => saveDraft.mutate()}
+                  disabled={!isDirty || saveDraft.isPending}
+                  className="rounded bg-zinc-900 px-3 py-1 text-xs font-medium text-white hover:bg-zinc-700 disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+                >
+                  {saveDraft.isPending ? "Đang lưu..." : isDirty ? "Lưu (tạo version mới)" : "Đã lưu"}
+                </button>
+              </div>
             </div>
             <textarea
+              ref={editorRef}
               value={editorText}
               onChange={(e) => setEditorText(e.target.value)}
               spellCheck={false}
