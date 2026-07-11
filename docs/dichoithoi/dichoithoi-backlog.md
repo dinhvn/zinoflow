@@ -43,12 +43,21 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
 
 ### Phát hiện nghiêm trọng khác (độc lập với 3 lỗ hổng trên)
 
-- **`RelatedJson` — zinoflow tính đúng + ghi vào DB, nhưng website
-  KHÔNG ĐỌC cột này.** `DestinationController.Detail` (dichoithoi) vẫn tự
-  tính "điểm liên quan" bằng code cũ (`GetRelationDestinationAsync`, join
-  `ParentId` + sort CSV `Type`) — toàn bộ cơ chế precompute RelatedJson
-  (Phase 2, tưởng đã xong từ lâu) hiện là **dead code với người dùng cuối**.
-  Đây là mục cần build lại/nối dây, không phải chỉ thiếu tính năng mới.
+- ✅ **`RelatedJson` — ĐÃ NỐI DÂY (07/2026)**. Trước đây zinoflow tính đúng +
+  ghi vào DB nhưng website không đọc, vẫn tự tính "điểm liên quan" bằng code
+  cũ (`GetRelationDestinationAsync`, join `ParentId` + sort CSV `Type`) — dead
+  code với người dùng cuối. Đã sửa: `DestinationExtrasModel`/
+  `DestinationExtrasRepository` (dichoithoi) đọc thẳng `RelatedJson` (model
+  mới `RelatedRefModel`); `DestinationController.Detail` ưu tiên dùng
+  `extras.Related` khi có, chỉ fallback gọi `GetRelationDestinationAsync` cho
+  điểm CHƯA relink (`RelatedJson` rỗng — an toàn, không breaking); partial
+  mới `_RelatedDestinationList.cshtml` (đọc `Thumbnail` trực tiếp, không suy
+  từ `Id+".webp"` như partial cũ). Đã chạy `POST /destinations/recompute-related`
+  backfill 271/271 điểm trên `dichoithoi_dev`, test qua Playwright thật:
+  `/diem-den/biet-thu-hang-nga-dalat` hiện đúng "Điểm đến liên quan" đọc từ
+  RelatedJson (badge khoảng cách "cách 527 m"), `/diem-den/da-lat` (cluster)
+  không bị ảnh hưởng (vẫn dùng "Các khu trong Đà Lạt" qua `ChildrenJson` như
+  cũ), build `dotnet build` sạch, 0 lỗi console.
 - **`SlugRedirect`** — bảng tồn tại, zinoflow đọc để chuẩn hoá auto-link nội
   bộ, nhưng KHÔNG có nơi nào ghi (INSERT) vào bảng, và website 404 thẳng khi
   slug miss thay vì check bảng này → 301 như thiết kế `database-redesign.md`
