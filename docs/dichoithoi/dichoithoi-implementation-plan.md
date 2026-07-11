@@ -19,7 +19,7 @@ việc chưa cần dùng ngay.
   nhận kết nối `dichoithoi_dev`, KHÔNG còn connection string production trong
   `.env` của bất kỳ máy dev nào.
 
-## Phase 1 — Schema v2 (chạy trên LocalDB clone trước) (PHẦN LỚN XONG — re-verify 07/2026: script/seed/taxonomy đúng theo spec, nhưng không tìm thấy bằng chứng đã chạy bước verify row-count trong DoD)
+## Phase 1 — Schema v2 (chạy trên LocalDB clone trước) (ĐÃ XONG — re-verify 07/2026: đã chạy lại checklist row-count trên `dichoithoi_dev` — Province=34, Destination=271, DestinationContent=271, DestinationTypeGroup=3, DestinationType=18, DestinationTypeMap=399, khớp kỳ vọng; Hotel/Tour/Article=0 đúng vì chưa publish cái nào lên SQL Server thật)
 
 **Phụ thuộc**: Phase 0. **Nguồn**: `dichoithoi-database-redesign.md`.
 1. Chạy `01-create-new-schema.sql` trên `dichoithoi_dev` — tạo toàn bộ bảng
