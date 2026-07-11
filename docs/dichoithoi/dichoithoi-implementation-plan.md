@@ -118,7 +118,7 @@ trúc Phase 5 (Hotel), khác field đặc thù (`duration_days/nights`,
 - **DoD**: bấm "Viết tay" → có ngay `DraftReady` không qua job pg-boss nào,
   sửa/review/Approve/Publish chạy y hệt bài AI (không có đường tắt bỏ gate).
 
-## Phase 8 — Module `article` (PHẦN LỚN XONG — re-verify 07/2026: backend (bảng, compile engine, 2 hành động publish, gate H2/H3) đúng đầy đủ, nhưng UI 'Chèn khối động' (nút + palette + form tham số) CHƯA có — phải gõ tay token [[block:...]] trong textarea)
+## Phase 8 — Module `article` (ĐÃ XONG — re-verify 07/2026 (vòng 2): backend (bảng, compile engine, 2 hành động publish, gate H2/H3) đúng đầy đủ; UI "Chèn khối động" ghi "CHƯA có" ở lần re-verify trước ĐÃ CÓ SẴN — `InsertDynamicBlockPanel` (nút + palette 7 loại khối + form tham số + chèn đúng vị trí con trỏ), wired vào `content/[id]/page.tsx` cho `articleType=cam-nang`. Verify thật qua Playwright: mở panel, điền tham số, bấm "Chèn vào bài" → token `[[block:destinations type=thac-ho-suoi ...]]` chèn đúng vào textarea tại vị trí con trỏ)
 
 **Phụ thuộc**: Phase 7 (viết tay) + Phase 2/5/6 (destination/hotel/tour đã có
 data để khối động query vào). **Nguồn**: `dichoithoi-article-spec.md`.
