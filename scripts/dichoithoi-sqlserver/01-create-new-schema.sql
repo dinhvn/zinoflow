@@ -150,6 +150,12 @@ IF COL_LENGTH('v2.DestinationContent', 'HotelCardsJson') IS NULL
 IF COL_LENGTH('v2.DestinationContent', 'TourCardsJson') IS NULL
   ALTER TABLE v2.DestinationContent ADD TourCardsJson nvarchar(max) NULL;
 GO
+-- Phase 27 (07/2026) — "Qua mang ve" MVP: card san pham khop tag=slug diem den
+-- (Product.tags — khong bang map rieng, khac Hotel/Tour), tinh khi Product
+-- upsert/import (RecomputeSouvenirProductsUseCase), website chi echo HTML.
+IF COL_LENGTH('v2.DestinationContent', 'SouvenirProductsJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD SouvenirProductsJson nvarchar(max) NULL;
+GO
 
 /* ===== Loai diem den — 2 tang (redesign §3.2, §4.4, vay 07/2026) ===== */
 IF OBJECT_ID('v2.DestinationTypeGroup') IS NULL

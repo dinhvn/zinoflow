@@ -10,6 +10,7 @@ import {
 import { ResolveAffiliateLinkUseCase } from "../../../affiliate/application/use-cases/resolve-affiliate-link.usecase";
 import { IngestExternalImageUseCase } from "../../../shared/media/application/ingest-external-image.usecase";
 import { productToDto } from "./list-products.usecase";
+import { RecomputeSouvenirProductsUseCase } from "./recompute-souvenir-products.usecase";
 
 const PRODUCT_FTP_BASE_DIR_ENV = "DICHOITHOI_FTP_PRODUCT_BASE_DIR";
 
@@ -31,6 +32,7 @@ export class UpsertProductUseCase {
     @Inject(PRODUCT_REPOSITORY) private readonly products: ProductRepository,
     private readonly resolveLink: ResolveAffiliateLinkUseCase,
     private readonly ingestImage: IngestExternalImageUseCase,
+    private readonly recomputeSouvenirProducts: RecomputeSouvenirProductsUseCase,
   ) {}
 
   async create(request: UpsertProductRequest): Promise<Product> {
@@ -38,6 +40,7 @@ export class UpsertProductUseCase {
     const created = await this.products.create(input);
     const withImage = await this.ingestThumbnailIfNeeded(created.id, input);
     const final = withImage ? await this.products.update(created.id, withImage) : created;
+    await this.recomputeSouvenirProducts.forProduct(final.id);
     return productToDto(final);
   }
 
@@ -47,6 +50,7 @@ export class UpsertProductUseCase {
     const input = await this.toInput(request, existing);
     const withImage = (await this.ingestThumbnailIfNeeded(id, input)) ?? input;
     const updated = await this.products.update(id, withImage);
+    await this.recomputeSouvenirProducts.forProduct(id);
     return productToDto(updated);
   }
 

@@ -893,6 +893,34 @@ Verify: `tsc --noEmit` api+web sạch, jest 51/51 suites (326/326 tests — thê
 
 ---
 
+## Phase 27 — Product "Quà mang về" MVP (ĐÃ XONG 07/2026)
+
+**Phụ thuộc**: không phụ thuộc phase nào — phạm vi cắt hẹp hơn thiết kế gốc để
+tránh chờ Phase 28 (ContentTier/ArticleDestinationMap không cần cho MVP này).
+
+Khối "Quà mang về" (content-seo-ux-plan §10.6.2 khối 8b) — card sản phẩm ở
+CUỐI mọi trang điểm đến, KHÔNG giới hạn Flagship. Khác Hotel/Tour: không có
+bảng map riêng — Product được gắn điểm đến qua chính `tags` (đúng field đã
+dùng cho khối `[[block:products]]` trong bài, tái dùng `matchProducts()`).
+
+- Cột mới `SouvenirProductsJson` trên `v2.DestinationContent` (cùng pattern
+  `HotelCardsJson`/`TourCardsJson` — đã cân nhắc và loại `DynamicBlocksJson`
+  hợp nhất, xem mục "Quyết định KHÔNG làm" ở plan gốc).
+- `RecomputeSouvenirProductsUseCase` (module Product) — `forDestination` tính
+  card cho 1 điểm đến; `forProduct` reverse-trigger khi sản phẩm đổi tag/giá/
+  ảnh (hook vào `UpsertProductUseCase.create/update`, tự động phủ cả import
+  hàng loạt vì import gọi lại usecase này).
+- Website: `DestinationExtrasModel.SouvenirProducts` đọc thẳng JSON, render
+  grid card đơn giản (ảnh/tên/giá, link thẳng affiliate — không có trang chi
+  tiết sản phẩm) trong `Detail.cshtml`, sau khối FAQ.
+
+Verify: `tsc --noEmit` api+web sạch, jest 52/52 suites (329/329 tests — thêm
+3 test mới), `dotnet build` sạch. Test thật: tạo 1 sản phẩm tag `da-lat` qua
+API, xác nhận `v2.DestinationContent.SouvenirProductsJson` ghi đúng và trang
+`/diem-den/da-lat` render đúng khối — xoá dữ liệu test sau khi verify.
+
+---
+
 ## Còn treo — CHƯA đủ điều kiện đưa vào phase code (cần bạn quyết định trước)
 
 ~~Rà soát lại `DestinationType`/`DestinationTypeMap`~~ → **✅ ĐÃ XONG (07/2026,

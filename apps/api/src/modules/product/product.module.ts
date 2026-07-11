@@ -3,11 +3,13 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { AffiliateModule } from "../affiliate/affiliate.module";
 import { SharedMediaModule } from "../shared/media/shared-media.module";
 import { SharedSheetImportModule } from "../shared/sheet-import/shared-sheet-import.module";
+import { DestinationModule } from "../destination/destination.module";
 import { ProductsController } from "./presentation/products.controller";
 import { ListProductsUseCase } from "./application/use-cases/list-products.usecase";
 import { UpsertProductUseCase } from "./application/use-cases/upsert-product.usecase";
 import { ImportProductsUseCase } from "./application/use-cases/import-products.usecase";
 import { ListProductCategoriesUseCase } from "./application/use-cases/list-product-categories.usecase";
+import { RecomputeSouvenirProductsUseCase } from "./application/use-cases/recompute-souvenir-products.usecase";
 import { PRODUCT_REPOSITORY } from "./application/ports/product.repository";
 import { TypeOrmProductRepository } from "./infrastructure/repositories/typeorm-product.repository";
 import { ProductEntity } from "./infrastructure/entities/product.entity";
@@ -22,6 +24,7 @@ import { ProductEntity } from "./infrastructure/entities/product.entity";
     AffiliateModule,
     SharedMediaModule,
     SharedSheetImportModule,
+    DestinationModule,
     TypeOrmModule.forFeature([ProductEntity]),
   ],
   controllers: [ProductsController],
@@ -30,6 +33,7 @@ import { ProductEntity } from "./infrastructure/entities/product.entity";
     UpsertProductUseCase,
     ImportProductsUseCase,
     ListProductCategoriesUseCase,
+    RecomputeSouvenirProductsUseCase,
     { provide: PRODUCT_REPOSITORY, useClass: TypeOrmProductRepository },
   ],
   exports: [PRODUCT_REPOSITORY],

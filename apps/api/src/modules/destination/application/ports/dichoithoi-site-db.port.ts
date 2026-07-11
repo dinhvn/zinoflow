@@ -192,6 +192,11 @@ export interface DichoithoiSiteDb {
    */
   updateHotelCards(siteId: number, hotelCardsJson: string): Promise<boolean>;
   updateTourCards(siteId: number, tourCardsJson: string): Promise<boolean>;
+  /**
+   * Ghi SouvenirProductsJson (Phase 27, "Quà mang về" MVP) — cung pattern
+   * Hotel/Tour: precompute card JSON, website chi echo, khong query song.
+   */
+  updateSouvenirProducts(siteId: number, souvenirProductsJson: string): Promise<boolean>;
   /** Cap nhat rieng cot Thumbnail (metadata — sua truc tiep, khong qua publish) */
   updateThumbnail(siteId: number, thumbnail: string | null): Promise<void>;
   /**
