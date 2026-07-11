@@ -349,10 +349,10 @@ xếp độ ưu tiên chung.
 | 2 | Route + view mới `/loai/{groupSlug}` (2 tầng: nhóm + loại con), `/tinh/{slug}` | Repo dichoithoi (.NET) — ưu tiên cao nhất theo §4.2.3 |
 | 3 | ✅ Cột `GalleryJson`/`TicketPriceFrom` đã thêm vào DDL (database-redesign §4.3, 07/2026) — còn lại: bảng `destination_images` build sớm hơn kế hoạch (giai đoạn 2 → gộp vào M4) để có nguồn điền `GalleryJson` ngay khi viết lại UI | zinoflow (spec §14.4) |
 | 4 | ✅ Đã thêm `TicketPriceFrom` (decimal, optional) vào DDL cho JSON-LD `offers` (database-redesign §4.3, 07/2026) | zinoflow (schema) + repo dichoithoi (cột DB) |
-| 5 | SSR khối khách sạn thay AJAX | Repo dichoithoi (.NET) |
+| 5 | ✅ SSR khối khách sạn/tour thay AJAX (xác nhận qua code 07/2026 — `Detail.cshtml` dùng `Html.PartialAsync("_HotelCardList"/"_TourCardList")`, không AJAX) | Repo dichoithoi (.NET) |
 | 6 | Sitemap.xml + xác nhận Search Console | Repo dichoithoi (vận hành) |
-| 7 | `rel="sponsored"` + dòng disclosure trên mọi CTA affiliate | Repo dichoithoi (template) |
-| 8 | Render danh sách `ticketLinks[]` thành nhiều nút CTA (thay 1 nút `BookingUrl` cũ) | zinoflow (schema, đã cập nhật destination-spec §2.3) + Repo dichoithoi (template render mảng thay 1 link) |
+| 7 | ✅ `rel="sponsored"` + dòng disclosure trên mọi CTA affiliate (xác nhận qua code 07/2026 — `_QuickDecisionCard.cshtml` mọi link vé dùng `rel="sponsored noopener"` + dòng disclosure hoa hồng) | Repo dichoithoi (template) |
+| 8 | ✅ Render danh sách `ticketLinks[]` thành nhiều nút CTA (xác nhận qua code 07/2026 — `_QuickDecisionCard.cshtml` foreach `extras.TicketLinks`, mỗi item 1 nút) | zinoflow (schema, đã cập nhật destination-spec §2.3) + Repo dichoithoi (template render mảng thay 1 link) |
 
 ## 7) Ưu tiên triển khai (gợi ý thứ tự, chưa quyết)
 
@@ -361,12 +361,12 @@ xếp độ ưu tiên chung.
    "Đánh giá biên tập" (không cần schema AggregateRating).
 2. Render FAQ (FaqJson) + JSON-LD FAQPage — data đã có sẵn.
 3. Trang landing theo Loại + Tỉnh — SEO long-tail lớn nhất, data đã sẵn sàng.
-4. SSR khối khách sạn giữa bài (bỏ AJAX).
+4. ✅ SSR khối khách sạn/tour giữa bài (bỏ AJAX) — đã build.
 
 **Trung bình (cần thêm việc nhỏ ở data trước):**
 5. Gallery ảnh (bảng `destination_images`).
-6. Bản đồ nhúng + nút chỉ đường.
-7. `rel=sponsored` + disclosure.
+6. ~~Bản đồ nhúng + nút chỉ đường~~ — CHỦ Ý bỏ (Phase 18, gỡ iframe bản đồ khỏi trang chi tiết).
+7. ✅ `rel=sponsored` + disclosure — đã build.
 
 **Sau (đủ nền tảng rồi mới đáng làm):**
 8. Mini lịch trình / gợi ý kết hợp.
@@ -382,9 +382,12 @@ implementation-plan chính thức):**
 14. Khối "Lưu ý thực tế" gộp (§5.7) — cần cột `PracticalNotesJson` mới.
 
 1-10 ở trên (trừ #1 Review/Rating, #2 FAQ, #3 landing Loại/Tỉnh, #4 SSR khách
-sạn, #6 bản đồ, #7 rel=sponsored, #9 so sánh giá, #10 TicketPriceFrom — đã build
-Phase 9, xem `dichoithoi-backlog.md`) vẫn giữ nguyên để tra cứu lịch sử quyết
-định; trạng thái build mới nhất luôn tra ở `dichoithoi-backlog.md`.
+sạn/tour, #6 bản đồ (chủ ý bỏ), #7 rel=sponsored, #8 ticketLinks nhiều nút,
+#9 so sánh giá, #10 TicketPriceFrom — đã build Phase 9/12/15, xem
+`dichoithoi-backlog.md`) vẫn giữ nguyên để tra cứu lịch sử quyết định; chỉ
+còn thật sự mở: #5 Gallery ảnh (`destination_images`, để Giai đoạn 2 theo
+implementation-plan Phase 11). Trạng thái build mới nhất luôn tra ở
+`dichoithoi-backlog.md`.
 
 Tài liệu này không thay thế phần thiết kế backend/schema đã chốt ở
 `dichoithoi-database-redesign.md` và `dichoithoi-destination-spec.md` — mọi thay
