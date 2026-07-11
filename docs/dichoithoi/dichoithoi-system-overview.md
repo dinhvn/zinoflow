@@ -2,30 +2,60 @@
 
 ĐÂY LÀ TÀI LIỆU VÀO CỬA cho mọi thứ liên quan dichoithoi.com. Toàn bộ tài liệu
 riêng cho dichoithoi nằm trong thư mục `docs/dichoithoi/` (tách khỏi `docs/specs/`
-chung của zinoflow vì đây là 1 sản phẩm/nội dung riêng). Đọc theo thứ tự:
+chung của zinoflow vì đây là 1 sản phẩm/nội dung riêng).
+
+**Quy ước nhãn trạng thái** dùng xuyên suốt mọi tài liệu dichoithoi (áp dụng
+cho mọi chỉnh sửa từ 07/2026 trở đi, không hồi tố toàn bộ file cũ): ✅ ĐÃ XONG
+· 🔄 ĐANG LÀM · ❌ CHỦ Ý CHƯA LÀM (đã quyết, không phải quên) · ⚠️ CẦN QUYẾT
+ĐỊNH (chờ bạn chốt) · ~~gạch ngang~~ = đã lỗi thời/bị thay thế bởi quyết định
+mới hơn. **"Cái gì đã xong / còn thiếu" chỉ theo dõi ở đúng 1 chỗ**:
+`dichoithoi-backlog.md` (việc mở + quyết định cần chốt) và
+`dichoithoi-implementation-plan.md` (nhật ký build theo Phase, có DoD) — các
+tài liệu spec khác dưới đây là THIẾT KẾ (data model/thuật toán/UI), không lặp
+lại tracking trạng thái.
+
+**Bắt đầu từ đâu tuỳ mục đích:**
+- Quay lại code / hỏi "còn gì phải làm" → `dichoithoi-backlog.md` rồi
+  `dichoithoi-implementation-plan.md`.
+- Thêm/sửa tính năng hiển thị công khai → đọc `dichoithoi-seo-principles.md`
+  TRƯỚC TIÊN (ưu tiên cao nhất, checklist SEO-owner bắt buộc).
+- Cần bức tranh kỹ thuật tổng thể nhanh → `dichoithoi-system-design.md`.
+- Cần chi tiết 1 module → đúng file spec module đó (danh sách dưới).
+
+Đọc theo thứ tự (lần đầu tiếp cận dự án):
 1. Tài liệu này — vai trò + quan hệ giữa 3 thành phần, lộ trình.
-2. `dichoithoi-database-redesign.md` — schema database mới (ưu tiên tốc độ).
-3. `dichoithoi-destination-spec.md` — tính năng tạo/cập nhật bài điểm đến trong AI tool.
-4. `dichoithoi-web-page-audit.md` — audit kỹ thuật hiện trạng 3 trang lưu lượng cao nhất (07/2026).
+2. `dichoithoi-seo-principles.md` — nguyên tắc SEO tối thượng, ĐỌC TRƯỚC KHI
+   CODE bất kỳ tính năng/field hiển thị nào (ưu tiên cao nhất, ghi trong CLAUDE.md).
+3. `dichoithoi-database-redesign.md` — schema database mới (ưu tiên tốc độ).
+4. `dichoithoi-destination-spec.md` — tính năng tạo/cập nhật bài điểm đến trong AI tool.
 5. `dichoithoi-content-seo-ux-plan.md` — mục tiêu sản phẩm, khung nội dung đầy đủ,
-   chiến lược SEO + kiếm tiền (booking khách sạn/vé), đề xuất UI/UX viết lại trang detail (07/2026).
-6. `dichoithoi-hotel-spec.md` — module Hotel chuyển về zinoflow làm CMS (cào/nhập tay,
-   chỉ hiển thị dạng khối gợi ý, KHÔNG có trang riêng — quyết định 07/2026).
+   chiến lược SEO + kiếm tiền (booking khách sạn/vé), thiết kế UI/UX trang detail.
+   Lưu ý: phần lớn nội dung §10 (mobile-first) đã build xong (Phase 18) — đọc
+   như tài liệu as-built/tham khảo, không phải việc còn mở.
+6. `dichoithoi-hotel-spec.md` — module Hotel (cào/nhập tay, chỉ hiển thị dạng
+   khối gợi ý, KHÔNG có trang riêng — quyết định 07/2026).
 7. `dichoithoi-tour-spec.md` — module Tour (cào/nhập tay, gắn vào 1-n điểm đến,
    cùng KHÔNG có trang riêng — quyết định 07/2026).
-8. `dichoithoi-affiliate-link-conversion-spec.md` — cơ chế chung: lưu link gốc,
+8. `dichoithoi-product-spec.md` — module Sản phẩm (affiliate, chèn qua tag
+   trong bài viết — đã build Phase 16).
+9. `dichoithoi-affiliate-link-conversion-spec.md` — cơ chế chung: lưu link gốc,
    tự sinh link affiliate theo rule cấu hình, dùng cho cả Hotel/Tour/vé điểm đến.
-9. `dichoithoi-article-spec.md` — bài viết tổng hợp/cẩm nang (khác Destination,
-   có cơ chế "khối động" tự nhúng danh sách điểm đến/hotel/tour — quyết định 07/2026).
-10. `dichoithoi-web-image-refactor-notes.md` — chi tiết kỹ thuật riêng phần ảnh.
-11. `dichoithoi-backlog.md` — gộp mọi quyết định cần chốt + rủi ro vận hành từ
-    tất cả tài liệu trên vào 1 chỗ (07/2026).
-12. `dichoithoi-system-design.md` — **đọc file này nếu chỉ có thời gian đọc 1
-    file**: tổng hợp toàn bộ 10 spec thành 1 bức tranh kỹ thuật đầy đủ (bảng dữ
-    liệu 2 database, sơ đồ luồng, API surface, nguyên tắc xuyên suốt — 07/2026).
-13. `dichoithoi-implementation-plan.md` — **BẮT ĐẦU TỪ ĐÂY khi quay lại code**:
+10. `dichoithoi-article-spec.md` — bài viết tổng hợp/cẩm nang (khác Destination,
+    có cơ chế "khối động" tự nhúng danh sách điểm đến/hotel/tour).
+11. `dichoithoi-flight-spec.md`, `dichoithoi-bus-spec.md` — vé máy bay/xe khách,
+    ❌ CHỦ Ý CHƯA vào lộ trình build (tự ghi "phân tích, chưa chốt" — chờ bạn
+    xem lại spec trước khi có đợt code tiếp theo).
+12. `dichoithoi-backlog.md` — **nguồn sự thật duy nhất** cho quyết định cần
+    chốt + việc còn mở + rủi ro vận hành từ tất cả tài liệu trên.
+13. `dichoithoi-system-design.md` — **đọc file này nếu chỉ có thời gian đọc 1
+    file**: tổng hợp toàn bộ spec thành 1 bức tranh kỹ thuật đầy đủ (bảng dữ
+    liệu 2 database, sơ đồ luồng, API surface, nguyên tắc xuyên suốt).
+14. `dichoithoi-implementation-plan.md` — **BẮT ĐẦU TỪ ĐÂY khi quay lại code**:
     kế hoạch build theo phase, có thứ tự phụ thuộc + Definition of Done từng
-    phase (07/2026).
+    phase.
+15. `archive/` — tài liệu audit/note một-lần đã lỗi thời (mô tả code TRƯỚC
+    Phase 18 rebuild UI / Phase B migrate schema v2), giữ lại chỉ để tham khảo
+    lịch sử, KHÔNG phản ánh trạng thái hiện tại.
 
 ## 1) Ba thành phần và vai trò (đã chốt)
 

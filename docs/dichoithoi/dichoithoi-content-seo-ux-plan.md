@@ -2,7 +2,8 @@
 
 Tài liệu này trả lời câu hỏi: **trang điểm đến cần có gì để đầy đủ nhất cho người
 đọc, tốt nhất cho SEO, và kiếm tiền hiệu quả nhất** — dựa trên hiện trạng đã audit
-([dichoithoi-web-page-audit.md](dichoithoi-web-page-audit.md)) và data model đã
+([archive/dichoithoi-web-page-audit.md](archive/dichoithoi-web-page-audit.md) —
+đã lỗi thời, giữ tham khảo lịch sử) và data model đã
 thiết kế ([dichoithoi-destination-spec.md](dichoithoi-destination-spec.md),
 [dichoithoi-database-redesign.md](dichoithoi-database-redesign.md)). Khác với 2 tài
 liệu đó (mô tả hiện trạng / thiết kế backend), đây là tài liệu **định hướng sản

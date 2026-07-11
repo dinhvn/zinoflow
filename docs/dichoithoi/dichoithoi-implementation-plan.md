@@ -127,7 +127,7 @@ data để khối động query vào). **Nguồn**: `dichoithoi-article-spec.md`
 
 ## Phase 9 — Website .NET (song song, không chặn phase AI tool) (PHẦN LỚN XONG (7/9 mục cao+trung) — re-verify 07/2026: AggregateRating/Review và nhúng bản đồ đã CHỦ Ý bỏ — quyết định ghi rõ trong SchemaUtil.cs và content-seo-ux-plan.md, không phải bug — nhưng DoD viết theo nghĩa đen thì 2 mục này chưa đạt)
 
-**Nguồn**: `dichoithoi-content-seo-ux-plan.md` §4, §7; `dichoithoi-web-page-audit.md`.
+**Nguồn**: `dichoithoi-content-seo-ux-plan.md` §4, §7; `archive/dichoithoi-web-page-audit.md` (lịch sử).
 Ưu tiên theo ROI (đã sắp ở content-seo-ux-plan §7):
 1. **Cao**: bật lại Review/Rating + JSON-LD AggregateRating; render FAQ +
    JSON-LD FAQPage; route `/loai/{group}[/{type}]` + `/tinh/{slug}`; SSR khối
@@ -675,7 +675,7 @@ scan mỗi lần search) + `RemoveUnicode()` tính lại mỗi request — chậ
 **Phát hiện quan trọng lúc code (làm thay đổi cách tiếp cận)**: `/search`,
 `/diem-den`, `/diem-den/{id}` **hiện KHÔNG đọc schema v2** — vẫn đọc thẳng
 bảng CŨ `dbo.Destination`/`dbo.DestinationDetail` (đã ghi nhận từ trước ở
-`dichoithoi-web-page-audit.md` §0, "chưa migrate"). Bảng cũ **không có cột
+`archive/dichoithoi-web-page-audit.md` §0, "chưa migrate"). Bảng cũ **không có cột
 `NameUnaccented`** (chỉ `V2Destination` mới có) và cột `SearchKeyword` hiện
 **không có nơi nào trong code ghi giá trị** (rà toàn bộ repo, kể cả
 `CmsDiChoiThoi.Web/Controllers/DestinationController.cs` nơi import Google
@@ -755,8 +755,9 @@ hiện hành động trên trang này".
 
 ## Còn treo — CHƯA đủ điều kiện đưa vào phase code (cần bạn quyết định trước)
 
-- **Rà soát lại `DestinationType`/`DestinationTypeMap`** đã gắn cho từng điểm
-  đến (backlog §A.8) — chưa chọn AI đánh giá hay tự tay chuẩn hoá.
+~~Rà soát lại `DestinationType`/`DestinationTypeMap`~~ → **✅ ĐÃ XONG (07/2026,
+vòng 2)** — xem `dichoithoi-backlog.md` mục A#8, dòng này đã lỗi thời.
+
 - **Chuẩn hoá danh sách `category` cho Product** (product-spec §8.5) — chặn 1
   phần nhỏ Phase 16 (màn quản lý), không chặn phần block compiler.
 - **[Bug tiềm ẩn, phát hiện lúc làm Phase 19] Điểm đến hoàn toàn mới qua

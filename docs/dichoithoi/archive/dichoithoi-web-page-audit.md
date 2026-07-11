@@ -1,5 +1,13 @@
 # Audit trang chủ / danh sách điểm đến / chi tiết điểm đến — DiChoiThoi.Web (07/2026)
 
+> ⚠️ **TÀI LIỆU LỊCH SỬ — ĐÃ LỖI THỜI (chuyển archive 07/2026).** Audit này mô
+> tả hiện trạng code TRƯỚC Phase 18 (đập đi làm lại UI mobile-first) và TRƯỚC
+> Phase B (migrate schema v2) — đã xác nhận qua code thật: view file cũ audit
+> nhắc tới không còn tồn tại, trang danh sách điểm đến đã có phân trang/facet
+> đầy đủ (Phase D faceted-search). KHÔNG còn phản ánh code hiện tại. Trạng
+> thái mới nhất: xem `dichoithoi-backlog.md` + `dichoithoi-implementation-plan.md`
+> (Phase 15/17/18/19). Giữ lại file này chỉ để tham khảo lịch sử quyết định.
+
 Audit kỹ thuật cho `D:\Gits\mmo\dichoithoi\DiChoiThoi.Web` (ASP.NET Core 9), tập trung
 3 trang lưu lượng cao nhất, theo 3 mục tiêu: **nội dung chi tiết, SEO chuẩn, tốc độ**.
 Bổ sung/đào sâu cho [dichoithoi-web-image-refactor-notes.md](dichoithoi-web-image-refactor-notes.md)

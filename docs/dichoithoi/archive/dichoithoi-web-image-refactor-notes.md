@@ -1,5 +1,13 @@
 # Note chỉnh sửa DiChoiThoi.Web — ảnh điểm đến theo solution mới (07/2026)
 
+> ⚠️ **TÀI LIỆU LỊCH SỬ — ĐÃ LỖI THỜI (chuyển archive 07/2026).** Note này viết
+> TRƯỚC khi migrate schema v2 (Phase B) — đã xác nhận qua code thật: cột
+> `Thumbnail` không còn tồn tại trên entity `Destination.cs` (đổi hướng khác
+> khi build v2), các view file `_DestinationList.cshtml`/`_ChildDestination.cshtml`
+> note này nhắc sửa đã bị xoá khi làm lại UI (Phase 18). KHÔNG còn phản ánh
+> code hiện tại. Trạng thái ảnh mới nhất: xem `dichoithoi-destination-spec.md`
+> §14 + `dichoithoi-backlog.md`. Giữ lại file này chỉ để tham khảo lịch sử.
+
 Ghi chú cho người sửa repo `D:\Gits\mmo\dichoithoi` (zinoflow KHÔNG sửa repo đó).
 Mục tiêu: website đọc đường dẫn ảnh từ **cột DB Thumbnail** thay vì suy từ Id,
 để khớp convention mới `diem-den/{slug}/{slug}-hero|medium|thumb.webp` (giữ slug
