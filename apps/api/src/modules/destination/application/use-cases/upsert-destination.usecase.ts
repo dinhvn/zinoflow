@@ -69,6 +69,7 @@ export class UpsertDestinationUseCase {
         contactWebsite: meta.contactWebsite,
         hotelGroupId: meta.hotelGroupId,
         isFeatured: meta.isFeatured,
+        contentTier: meta.contentTier,
       });
     }
 
@@ -121,5 +122,6 @@ function toMeta(request: UpsertDestinationRequest): DestinationMetadataInput {
     contactWebsite: request.contactWebsite ?? null,
     hotelGroupId: request.hotelGroupId ?? null,
     isFeatured: request.isFeatured ?? false,
+    contentTier: request.contentTier ?? null,
   };
 }

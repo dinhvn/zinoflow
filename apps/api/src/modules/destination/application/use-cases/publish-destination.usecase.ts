@@ -115,6 +115,7 @@ export class PublishDestinationUseCase {
         contactWebsite: destination.contactWebsite,
         hotelGroupId: destination.hotelGroupId,
         isFeatured: destination.isFeatured,
+        contentTier: destination.contentTier,
       });
       siteId = created.siteId;
       await this.mirrorRepo.setSiteId(slug, siteId);

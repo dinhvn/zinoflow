@@ -75,6 +75,7 @@ function detailToFormValues(d: DestinationDetail): DestinationMetaValues {
     contactWebsite: d.contactWebsite ?? "",
     hotelGroupId: d.hotelGroupId ?? "",
     isFeatured: d.isFeatured,
+    contentTier: d.contentTier ?? "",
   };
 }
 

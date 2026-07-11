@@ -93,6 +93,7 @@ export class ListDestinationsUseCase {
       practicalNotes: e.practicalNotes,
       hotelGroupId: e.hotelGroupId,
       isFeatured: e.isFeatured,
+      contentTier: e.contentTier,
       siteStatus: e.siteStatus,
       // contentState + productionState do repository.list() suy san (co status job)
       contentState: e.contentState,

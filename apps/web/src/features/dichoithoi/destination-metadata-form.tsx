@@ -50,6 +50,8 @@ export interface DestinationMetaValues {
   contactWebsite: string;
   hotelGroupId: string;
   isFeatured: boolean;
+  /** "" = chua gan (mac dinh nhu Standard) — chi y nghia voi kind province/cluster */
+  contentTier: "" | "flagship" | "standard";
 }
 
 export const EMPTY_META: DestinationMetaValues = {
@@ -68,6 +70,7 @@ export const EMPTY_META: DestinationMetaValues = {
   contactWebsite: "",
   hotelGroupId: "",
   isFeatured: false,
+  contentTier: "",
 };
 
 function toRequest(v: DestinationMetaValues): UpsertDestinationRequest {
@@ -89,6 +92,7 @@ function toRequest(v: DestinationMetaValues): UpsertDestinationRequest {
     contactWebsite: str(v.contactWebsite),
     hotelGroupId: str(v.hotelGroupId),
     isFeatured: v.isFeatured,
+    contentTier: v.contentTier === "" ? null : v.contentTier,
   };
 }
 
@@ -262,6 +266,21 @@ export function DestinationMetadataForm({
             Hiển thị ở khu nổi bật
           </label>
         </Field>
+        {(v.kind === "province" || v.kind === "cluster") && (
+          <Field label="Độ ưu tiên nội dung">
+            <Select
+              value={v.contentTier}
+              onChange={(e) =>
+                set("contentTier", e.target.value as DestinationMetaValues["contentTier"])
+              }
+              className="w-full"
+            >
+              <option value="">— Thường (Standard) —</option>
+              <option value="flagship">Chủ lực (Flagship)</option>
+              <option value="standard">Thường (Standard)</option>
+            </Select>
+          </Field>
+        )}
       </div>
 
       <Field label="Mô tả ngắn (card danh sách / SEO)">

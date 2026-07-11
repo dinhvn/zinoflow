@@ -34,6 +34,14 @@ export const destinationSyncFlagSchema = z.enum(["edited-outside", "conflict", "
 export type DestinationSyncFlag = z.infer<typeof destinationSyncFlagSchema>;
 
 /**
+ * Do uu tien noi dung, DOC LAP voi `kind` (content-seo-ux-plan §10.6.1, Phase 25).
+ * Chi co y nghia voi kind IN (province, cluster) — gan tay boi admin (curated).
+ * flagship = node duoc dau tu noi dung day du (8 khoi); standard = node con lai.
+ */
+export const destinationContentTierSchema = z.enum(["flagship", "standard"]);
+export type DestinationContentTier = z.infer<typeof destinationContentTierSchema>;
+
+/**
  * Gia ve CO DINH CHINH THUC theo doi tuong (nguoi lon/tre em/...), do chinh
  * diem den quy dinh — nhap tay HOAN TOAN, AI khong duoc tu sinh/doan so nay
  * (content-seo-ux-plan §5.5a). Khac han gia tung nha cung cap trong ticketLinks[].
@@ -85,6 +93,8 @@ export const destinationMirrorSchema = z.object({
   practicalNotes: z.array(practicalNoteItemSchema),
   hotelGroupId: z.string().nullable(),
   isFeatured: z.boolean(),
+  /** Chi y nghia voi kind IN (province, cluster) — null = chua gan (mac dinh nhu Standard) */
+  contentTier: destinationContentTierSchema.nullable(),
   /** 0 draft, 1 published, 2 hidden — theo cot Status SQL Server */
   siteStatus: z.number().int().min(0).max(2).nullable(),
   contentState: destinationContentStateSchema,
@@ -352,6 +362,7 @@ export const upsertDestinationRequestSchema = z.object({
   contactWebsite: z.string().max(256).nullable().optional(),
   hotelGroupId: z.string().max(50).nullable().optional(),
   isFeatured: z.boolean().optional(),
+  contentTier: destinationContentTierSchema.nullable().optional(),
 });
 export type UpsertDestinationRequest = z.infer<typeof upsertDestinationRequestSchema>;
 
@@ -379,6 +390,7 @@ export const destinationImportRowSchema = z.object({
   contactWebsite: z.string().max(256).nullable().optional(),
   hotelGroupId: z.string().max(50).nullable().optional(),
   isFeatured: z.boolean().optional(),
+  contentTier: destinationContentTierSchema.nullable().optional(),
   aiNotes: z.string().max(10_000).nullable().optional(),
   referenceUrls: z.array(referenceUrlSchema).max(5).optional(),
 });

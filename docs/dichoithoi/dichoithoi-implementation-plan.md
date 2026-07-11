@@ -834,6 +834,34 @@ slug" tường minh nếu muốn hoàn thiện — xem `dichoithoi-backlog.md`.
 
 ---
 
+## Phase 25 — Cột `ContentTier` — nền tảng, CHƯA đổi layout (ĐÃ XONG 07/2026)
+
+**Phụ thuộc**: không phụ thuộc phase nào — tách khỏi Phase 28 vì rủi ro thấp.
+
+Thêm cột `ContentTier` (`flagship` | `standard` | null, chỉ có ý nghĩa với
+`kind IN (province, cluster)`) theo đúng `content-seo-ux-plan.md` §10.6.1 —
+CHỈ nền tảng, chưa render nội dung Flagship 8 khối (để Phase 28):
+- SQL Server: `v2.Destination.ContentTier varchar(16) NULL` (idempotent DDL,
+  áp dụng `dichoithoi_dev` qua sqlcmd).
+- Postgres mirror: cột `content_tier` (migration
+  `1782010000000-DestinationContentTier`), entity + toàn bộ port/use-case/
+  adapter cập nhật theo (`DestinationMetadataInput`, `SiteDestinationMeta`,
+  `DestinationMirror`/`DestinationDetail` contract).
+- Form sửa điểm đến (`destination-metadata-form.tsx`): Select "Độ ưu tiên nội
+  dung" chỉ hiện khi `kind` là `province`/`cluster`.
+- Website (.NET): `V2Destination.ContentTier` + `DestinationExtrasModel.
+  ContentTier` đọc qua `DestinationExtrasRepository` — CHƯA dùng để đổi
+  layout, chỉ đọc sẵn cho Phase 28.
+
+Verify: `tsc --noEmit` api+web sạch, jest 48/48 suites (316/316 tests), `dotnet
+build` sạch, xác nhận round-trip thật qua PATCH `/api/destinations/da-lat`
+(`contentTier` -> Postgres mirror + SQL Server `v2.Destination.ContentTier`
+đều cập nhật đúng), trang `/diem-den/da-lat` load 200 sau khi đổi (server
+build lại, không phải process cũ) — đã gán Đà Lạt = `flagship` làm dữ liệu
+thật đầu tiên (đúng ví dụ trong content-seo-ux-plan §10.6.1).
+
+---
+
 ## Còn treo — CHƯA đủ điều kiện đưa vào phase code (cần bạn quyết định trước)
 
 ~~Rà soát lại `DestinationType`/`DestinationTypeMap`~~ → **✅ ĐÃ XONG (07/2026,

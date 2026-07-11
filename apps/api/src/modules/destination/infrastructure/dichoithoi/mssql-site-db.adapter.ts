@@ -75,7 +75,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       SELECT
         d.Id, d.Slug, d.Kind, d.Name, d.ShortDescription, d.Thumbnail,
         d.Lat, d.Lng, d.AddressNew, d.AddressOld, d.ContactPhone, d.ContactWebsite,
-        d.HotelGroupId, d.IsFeatured, d.Status, d.ContentSource, d.UpdatedAt,
+        d.HotelGroupId, d.IsFeatured, d.ContentTier, d.Status, d.ContentSource, d.UpdatedAt,
         p.Code AS ProvinceCode,
         par.Slug AS ParentSlug,
         CONVERT(varchar(64), HASHBYTES('SHA2_256', CAST(c.ContentHtml AS nvarchar(max))), 2) AS ContentHash
@@ -101,6 +101,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       contactWebsite: (r.ContactWebsite as string | null) ?? null,
       hotelGroupId: (r.HotelGroupId as string | null) ?? null,
       isFeatured: Boolean(r.IsFeatured),
+      contentTier: (r.ContentTier as "flagship" | "standard" | null) ?? null,
       siteStatus: Number(r.Status),
       contentSource: r.ContentSource === null ? null : Number(r.ContentSource),
       contentHash: (r.ContentHash as string | null) ?? null,
@@ -309,11 +310,11 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         INSERT INTO v2.Destination
           (Slug, Kind, ParentId, ProvinceId, Name, NameUnaccented, ShortDescription, Thumbnail,
            Lat, Lng, AddressNew, AddressOld, ContactPhone, ContactWebsite,
-           HotelGroupId, IsFeatured, Status, ContentSource)
+           HotelGroupId, IsFeatured, ContentTier, Status, ContentSource)
         VALUES
           (@slug, @kind, @parentId, @provinceId, @name, @nameUnaccented,
            COALESCE(@shortDescription, N''), @thumbnail, @lat, @lng, @addressNew, @addressOld,
-           @contactPhone, @contactWebsite, @hotelGroupId, @isFeatured, 1, 1);
+           @contactPhone, @contactWebsite, @hotelGroupId, @isFeatured, @contentTier, 1, 1);
         SELECT CAST(SCOPE_IDENTITY() AS int) AS SiteId;
       `);
       return result.recordset;
@@ -338,7 +339,8 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
           ShortDescription = COALESCE(@shortDescription, N''), Thumbnail = @thumbnail,
           Lat = @lat, Lng = @lng, AddressNew = @addressNew, AddressOld = @addressOld,
           ContactPhone = @contactPhone, ContactWebsite = @contactWebsite,
-          HotelGroupId = @hotelGroupId, IsFeatured = @isFeatured, UpdatedAt = SYSUTCDATETIME()
+          HotelGroupId = @hotelGroupId, IsFeatured = @isFeatured, ContentTier = @contentTier,
+          UpdatedAt = SYSUTCDATETIME()
         WHERE Id = @siteId;
       `);
     });
@@ -362,6 +364,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     request.input("contactWebsite", meta.contactWebsite);
     request.input("hotelGroupId", meta.hotelGroupId);
     request.input("isFeatured", meta.isFeatured);
+    request.input("contentTier", meta.contentTier);
     return request;
   }
 

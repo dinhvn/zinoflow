@@ -29,6 +29,7 @@ export interface SiteDestinationRow {
   contactWebsite: string | null;
   hotelGroupId: string | null;
   isFeatured: boolean;
+  contentTier: "flagship" | "standard" | null;
   siteStatus: number;
   contentSource: number | null;
   contentHash: string | null;

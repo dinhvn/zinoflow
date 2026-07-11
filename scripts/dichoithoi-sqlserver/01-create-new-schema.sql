@@ -59,6 +59,7 @@ BEGIN
     ContactFacebook varchar(256)  NULL,          -- link Fanpage chinh chu (them 07/2026, database-redesign §4.2)
     HotelGroupId    nvarchar(50)  NULL,
     IsFeatured      bit NOT NULL DEFAULT 0,
+    ContentTier     varchar(16)   NULL,           -- flagship|standard, chi Kind IN (1,2) (content-seo-ux-plan §10.6.1)
     [Order]         int NOT NULL DEFAULT 0,
     Status          tinyint NOT NULL DEFAULT 1, -- 0 draft, 1 published, 2 hidden
     ContentSource   tinyint NOT NULL DEFAULT 0, -- 0 viet tay, 1 AI
@@ -90,6 +91,11 @@ IF COL_LENGTH('v2.Destination', 'BookingUrl') IS NOT NULL
   ALTER TABLE v2.Destination DROP COLUMN BookingUrl;
 IF COL_LENGTH('v2.Destination', 'ContactFacebook') IS NULL
   ALTER TABLE v2.Destination ADD ContactFacebook varchar(256) NULL;
+GO
+-- Phase 25 (07/2026): ContentTier — do uu tien noi dung, doc lap voi Kind
+-- (content-seo-ux-plan §10.6.1). Idempotent cho install cu (bang da tao truoc).
+IF COL_LENGTH('v2.Destination', 'ContentTier') IS NULL
+  ALTER TABLE v2.Destination ADD ContentTier varchar(16) NULL;
 GO
 
 /* ===== DestinationContent — bang lanh 1-1 (redesign §4.3) ===== */

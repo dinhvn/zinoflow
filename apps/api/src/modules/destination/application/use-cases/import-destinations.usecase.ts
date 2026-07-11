@@ -88,5 +88,6 @@ function toMeta(row: DestinationImportRow): DestinationMetadataInput {
     contactWebsite: row.contactWebsite ?? null,
     hotelGroupId: row.hotelGroupId ?? null,
     isFeatured: row.isFeatured ?? false,
+    contentTier: row.contentTier ?? null,
   };
 }

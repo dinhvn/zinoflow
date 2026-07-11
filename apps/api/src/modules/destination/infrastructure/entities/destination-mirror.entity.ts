@@ -76,6 +76,10 @@ export class DestinationMirrorEntity {
   @Column({ name: "is_featured", type: "boolean", default: false })
   isFeatured!: boolean;
 
+  /** flagship | standard | null — chi y nghia voi kind IN (province, cluster), Phase 25 */
+  @Column({ name: "content_tier", type: "varchar", length: 16, nullable: true })
+  contentTier!: "flagship" | "standard" | null;
+
   /** Cot Status ben site: 0 draft, 1 published, 2 hidden */
   @Column({ name: "site_status", type: "smallint", nullable: true })
   siteStatus!: number | null;

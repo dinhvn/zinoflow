@@ -88,6 +88,7 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       contactWebsite: meta.contactWebsite,
       hotelGroupId: meta.hotelGroupId,
       isFeatured: meta.isFeatured,
+      contentTier: meta.contentTier,
     };
   }
 
@@ -188,6 +189,7 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       contactWebsite: row.contactWebsite,
       hotelGroupId: row.hotelGroupId,
       isFeatured: row.isFeatured,
+      contentTier: row.contentTier,
       siteStatus: row.siteStatus,
       contentSource: row.contentSource,
       contentHash: row.contentHash,

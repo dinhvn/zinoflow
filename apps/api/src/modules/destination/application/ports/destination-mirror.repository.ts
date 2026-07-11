@@ -42,6 +42,7 @@ export interface DestinationMetadataInput {
   contactWebsite: string | null;
   hotelGroupId: string | null;
   isFeatured: boolean;
+  contentTier: "flagship" | "standard" | null;
 }
 
 export interface DestinationMirrorRepository {

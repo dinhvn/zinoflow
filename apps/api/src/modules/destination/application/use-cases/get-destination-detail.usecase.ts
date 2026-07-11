@@ -115,6 +115,7 @@ export class GetDestinationDetailUseCase {
       practicalNotes: entity.practicalNotes,
       hotelGroupId: entity.hotelGroupId,
       isFeatured: entity.isFeatured,
+      contentTier: entity.contentTier,
       siteStatus: entity.siteStatus,
       contentState: deriveContentState({
         activeContentJobId: entity.activeContentJobId,

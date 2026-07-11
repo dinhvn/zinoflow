@@ -97,6 +97,8 @@ export interface SiteDestinationMeta {
   contactWebsite: string | null;
   hotelGroupId: string | null;
   isFeatured: boolean;
+  /** flagship | standard | null — chi y nghia voi kind IN (province, cluster), Phase 25 */
+  contentTier: "flagship" | "standard" | null;
 }
 
 /** 1 dong the du de render card (article-spec §5) — dung chung cho khoi destinations/destination */
