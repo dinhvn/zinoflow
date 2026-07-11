@@ -970,12 +970,46 @@ Server `v2.DestinationContent` có đúng dữ liệu, trang `/diem-den/da-lat` 
 200 (server rebuild, không phải process cũ) sau khi có dữ liệu — xoá dữ liệu
 test sau khi verify (cả Postgres mirror lẫn SQL Server).
 
-### 28.1-28.6 — CHƯA LÀM
+### 28.1 — Website: chip nav 2 lớp + mục lục + active-highlight (ĐÃ XONG 07/2026)
 
-Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (chip nav 2
-lớp, layout 2-lớp Điểm tham quan Flagship, nhánh AI Flagship + gate mới,
-Lịch trình + link bài cẩm nang theo topic, banner "Về node cha" + đánh giá
-biên tập + external review, Coverage Score theo tier thật).
+Áp dụng ngay cho bộ khối HIỆN CÓ (không chờ layout Flagship 28.2/28.4) —
+`Detail.cshtml` + `destination-detail.ts` + `destination-detail.scss` (repo
+dichoithoi):
+
+- Chip nav mobile (đầu trang) rút còn 6 mục ưu tiên, khác nhau theo
+  `ContentTier` (Flagship: Tổng quan|Di chuyển|Điểm tham quan|Ăn uống|Mẹo|FAQ;
+  POI: Vị trí|Tổng quan|Ăn uống|Lưu trú|Mẹo|FAQ) — tính động trong Razor từ
+  danh sách section thực tế tồn tại trên trang (`tocItems`), không hard-code
+  chip theo tier khi section chưa tồn tại. **Lưu ý CHƯA khớp 100% spec**:
+  "Lịch trình" (28.4) và 2-lớp "Điểm tham quan" thật (28.2) chưa build nên
+  tạm dùng anchor gần nghĩa nhất đã có (`#lien-quan`) — sẽ tự đúng khi 2
+  sub-phase đó lên code (cùng anchor, nội dung đổi).
+- Nút "Mục lục ▾" (mobile: bottom-sheet tái dùng `wireOverlay()` có sẵn từ
+  `overlay.ts`, đúng pattern bộ lọc `/diem-den`; desktop: `<nav>` tĩnh trong
+  sidebar cạnh `_QuickDecisionCard`) liệt kê ĐỦ mọi section hiện có trên
+  trang (không giới hạn 6 mục).
+- Thêm id còn thiếu để có anchor hợp lệ: `#di-chuyen` (Transport), `#tour`,
+  `#meo` (gộp Tip + PracticalNotes vào 1 container để có 1 anchor chung).
+- `IntersectionObserver` active-highlight (`wireActiveTocHighlight()`) —
+  thuật toán scrollspy chuẩn: browser chỉ báo entry LÚC ĐỔI trạng thái, phải
+  tự lưu lại toàn bộ trạng thái intersecting qua các lần gọi rồi chọn section
+  cuối cùng (theo thứ tự DOM) đang intersecting làm "đang đọc" — tránh bug 1
+  section rất dài (vd lưới ~50 POI phẳng của Đà Lạt, cao hơn 4000px) vẫn coi
+  là active dù đã cuộn qua section sau.
+
+Verify: `npx webpack --mode=development` sạch, `dotnet build` sạch,
+Playwright thật trên cả Flagship (Đà Lạt) và POI (Biệt thự Hằng Nga đúng ví
+dụ user nêu ban đầu) — xác nhận chip nav đúng bộ theo tier, cuộn trang thật
+đổi đúng chip active (test qua `window.scrollTo` từng nấc, KHÔNG dùng
+`scrollIntoView` vì có thể nhảy qua section không tồn tại gây hiểu nhầm khi
+debug), mở/đóng "Mục lục" đúng cả 2 breakpoint, 0 lỗi console.
+
+### 28.2-28.6 — CHƯA LÀM
+
+Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (layout 2-lớp
+Điểm tham quan Flagship, nhánh AI Flagship + gate mới, Lịch trình + link bài
+cẩm nang theo topic, banner "Về node cha" + đánh giá biên tập + external
+review, Coverage Score theo tier thật).
 
 ---
 
