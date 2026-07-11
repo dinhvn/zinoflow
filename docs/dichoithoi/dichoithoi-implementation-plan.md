@@ -1137,11 +1137,42 @@ Nga (POI) không ảnh hưởng — cả 3 trang 0 lỗi console. Giữ lại l�
 2N1D thật cho Đà Lạt (không phải placeholder — theo quyết định giữ dữ liệu
 thật của Phase 28.2).
 
-### 28.5-28.6 — CHƯA LÀM
+### 28.5 — Website: banner "Về node cha" + đánh giá biên tập + external review (ĐÃ XONG 07/2026)
 
-Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (banner "Về
-node cha" + đánh giá biên tập + external review, Coverage Score theo tier
-thật).
+- Banner "Về {tên cha}" trên trang POI: cha trực tiếp = phần tử CUỐI trong
+  `AncestorsJson` (đã có từ Phase 14, đúng thứ tự gốc→cha trực tiếp). Website
+  live-query 1 dòng `v2.Destination.ContentTier` theo slug cha đó (KHÔNG
+  thêm field mới vào `AncestorsJson` — đúng như plan gốc), chỉ set
+  `ParentFlagshipName/Slug` khi cha `ContentTier=="flagship"`. Banner dùng
+  template cố định (không phải nội dung AI riêng từng bài), đặt ngay đầu
+  trang (trước chip Loại điểm đến).
+- `EditorialReview` + `ExternalReviewUrls` (đã ghi dữ liệu từ Phase 28.0
+  nhưng CHƯA từng hiển thị) — hiện trên **MỌI** trang (POI lẫn Flagship),
+  đặt trong khối "Tổng quan": đánh giá biên tập dạng callout viền trái màu
+  primary, external link `rel="nofollow noopener"`.
+
+**Phát hiện thêm liên quan lỗi encoding LocalDB (xem ghi chú Phase 28.4)**:
+`AncestorsJson`/`ChildrenJson` precompute TỪ TRƯỚC (ghi qua Node driver lúc
+publish/recompute) cũng bị hỏng dấu tiếng Việt trên `dichoithoi_dev` vì
+cùng lỗi driver — phát hiện khi banner hiện tên cha bị mất dấu dù logic
+đúng. Đã sửa lại `AncestorsJson` của Biệt thự Hằng Nga bằng `sqlcmd -f
+65001` để verify — dữ liệu SQL Server thật (site thật, driver `tedious`)
+không bị ảnh hưởng, chỉ LocalDB dev sandbox.
+
+Verify: `dotnet build` sạch. Playwright xác nhận: Biệt thự Hằng Nga (POI,
+cha Đà Lạt=flagship) hiện đúng banner "Xem đầy đủ điểm tham quan... ở Đà
+Lạt →"; Đà Lạt (cha là tỉnh Lâm Đồng, không phải flagship) KHÔNG hiện
+banner; Bãi biển Đại Lãnh (POI, cha Nha Trang=standard) KHÔNG hiện banner —
+xác nhận link "Nha Trang" duy nhất trên trang là breadcrumb thường, không
+phải banner (khác class/style). Đánh giá biên tập + link Google
+Maps/TripAdvisor hiện đúng trên cả Đà Lạt và Biệt thự Hằng Nga, 0 lỗi
+console cả 3 trang. Giữ lại dữ liệu EditorialReview/ExternalReviewUrls thật
+đã tạo (không phải placeholder).
+
+### 28.6 — CHƯA LÀM
+
+Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (Coverage
+Score theo tier thật).
 
 ---
 
