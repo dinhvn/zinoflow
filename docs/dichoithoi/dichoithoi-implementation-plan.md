@@ -1217,13 +1217,25 @@ vòng 2)** — xem `dichoithoi-backlog.md` mục A#8, dòng này đã lỗi th�
 
 - **Chuẩn hoá danh sách `category` cho Product** (product-spec §8.5) — chặn 1
   phần nhỏ Phase 16 (màn quản lý), không chặn phần block compiler.
-- **[Bug tiềm ẩn, phát hiện lúc làm Phase 19] Điểm đến hoàn toàn mới qua
-  zinoflow bị 404** trên `/diem-den/{slug}`, không hiện ở `/search`/`/diem-den`
-  — vì các route này còn đọc bảng CŨ `dbo.Destination` (chưa cắt sang v2,
-  Phase 10). Chỉ điểm ĐÃ có sẵn trong `dbo.Destination` trước migration
-  `02-migrate-data.sql` mới hoạt động đầy đủ. Không sửa ở đây vì cần cắt hẳn
-  Detail/Index/Search sang schema v2 — thuộc phạm vi Phase 10 go-live, cần bạn
-  xác nhận thời điểm cắt trước khi code.
+~~[Bug tiềm ẩn, phát hiện lúc làm Phase 19] Điểm đến hoàn toàn mới qua
+zinoflow bị 404 trên `/diem-den/{slug}`~~ → **✅ ĐÃ XONG (07/2026)** — người
+dùng xác nhận sửa ngay, không chờ go-live toàn bộ Phase 10. Khảo sát thực tế
+(qua Explore agent) phát hiện `/diem-den` Index + `/search` + autocomplete
+**ĐÃ cắt sang v2 từ "Phase B"** (ghi chú cũ trong bug report đã lỗi thời) —
+chỉ còn đúng `DestinationRepository.GetDetailAsync` (v1-only) là điểm nghẽn
+404 thật. Sửa: `GetDetailAsync` thử v1 trước (không đổi), NULL thì fallback
+`GetDetailFromV2Async` mới — đọc thẳng `v2.Destination`+`v2.DestinationContent`
++ `v2.Province`/cha, ánh xạ đúng shape `DestinationDetailModel` (field-by-field
+khớp nhánh v1) để toàn bộ phần còn lại của controller/view dùng không đổi.
+Verify qua 2 destination test thật tạo trực tiếp trong `v2.Destination`
+(1 POI, 1 cluster, KHÔNG có dòng `dbo.Destination` tương ứng): xác nhận cả
+2 trang render đủ (title/content/giá vé/breadcrumb đúng tên cha qua
+`DestinationGroupName`, ảnh resolve đúng cả 2 convention thumbnail cũ/mới —
+đã kiểm chứng toán học phép resolve URL tương đối `../diem-den/` khớp y hệt
+cách các thẻ con/related dùng `src="@child.Thumbnail"` không tiền tố), 1
+regression fix dọc đường (`detail.Type` phải là chuỗi rỗng chứ không phải
+null — code cũ giả định luôn non-null tại `detail.Type.Split(',')`), 1
+destination v1 thật (Đà Lạt) xác nhận KHÔNG regression. Đã xoá dữ liệu test.
 
 ---
 

@@ -1,0 +1,213 @@
+- generic [active] [ref=f61e1]:
+  - banner [ref=f61e2]:
+    - generic [ref=f61e3]:
+      - link [ref=f61e4] [cursor=pointer]:
+        - /url: /
+        - img "logo dichoithoi" [ref=f61e5]
+      - navigation [ref=f61e6]:
+        - link "Trang chủ" [ref=f61e7] [cursor=pointer]:
+          - /url: /
+        - button "Điểm đến" [ref=f61e9] [cursor=pointer]
+        - link "Cẩm nang" [ref=f61e12] [cursor=pointer]:
+          - /url: /cam-nang
+      - searchbox "Tìm điểm đến, tỉnh thành..." [ref=f61e14]
+  - list [ref=f61e16]:
+    - listitem [ref=f61e17]:
+      - link "Trang chủ" [ref=f61e18] [cursor=pointer]:
+        - /url: http://localhost:5176
+      - generic [ref=f61e19]: ›
+    - listitem [ref=f61e20]:
+      - link "Điểm đến" [ref=f61e21] [cursor=pointer]:
+        - /url: http://localhost:5176/diem-den
+      - generic [ref=f61e22]: ›
+    - listitem [ref=f61e23]:
+      - generic [ref=f61e24]: Cụm Test V2 Only 28X
+  - generic [ref=f61e25]:
+    - img "Hình ảnh về Cụm Test V2 Only 28X" [ref=f61e27]
+    - generic [ref=f61e28]:
+      - generic [ref=f61e29]:
+        - heading "Cụm Test V2 Only 28X" [level=1] [ref=f61e30]
+        - generic [ref=f61e31]: "0900000001"
+        - generic [ref=f61e36]:
+          - heading "Tổng quan" [level=2] [ref=f61e37]
+          - paragraph [ref=f61e39]: Nội dung test cho cụm v2-only.
+        - generic [ref=f61e40]:
+          - heading "Vị trí" [level=2] [ref=f61e41]
+          - link "Chỉ đường tới Cụm Test V2 Only 28X" [ref=f61e42] [cursor=pointer]:
+            - /url: https://www.google.com/maps/dir/?api=1&destination=11.940419,108.458313
+        - generic [ref=f61e43]:
+          - heading "Khách sạn giá rẻ tại Cụm Test V2 Only 28X" [level=2] [ref=f61e44]
+          - generic [ref=f61e45]:
+            - text: Dưới đây là danh sách khách sạn giá rẻ bạn có thể ở.
+            - link "Xem tất cả" [ref=f61e46] [cursor=pointer]:
+              - /url: /khach-san/khach-san-tai-
+      - complementary [ref=f61e47]:
+        - navigation "Mục lục" [ref=f61e48]:
+          - list [ref=f61e50]:
+            - listitem [ref=f61e51]:
+              - link "Tổng quan" [ref=f61e52] [cursor=pointer]:
+                - /url: "#trai-nghiem"
+            - listitem [ref=f61e53]:
+              - link "Vị trí" [ref=f61e54] [cursor=pointer]:
+                - /url: "#vi-tri"
+            - listitem [ref=f61e55]:
+              - link "Lưu trú" [ref=f61e56] [cursor=pointer]:
+                - /url: "#luu-tru"
+  - generic [ref=f61e58]:
+    - link "Bảo tàng" [ref=f61e59] [cursor=pointer]:
+      - /url: /search?q=B%E1%BA%A3o%20t%C3%A0ng
+    - link "Biển - Đảo" [ref=f61e60] [cursor=pointer]:
+      - /url: /search?q=Bi%E1%BB%83n%20-%20%C4%90%E1%BA%A3o
+    - link "Check-in sống ảo" [ref=f61e61] [cursor=pointer]:
+      - /url: /search?q=Check-in%20s%E1%BB%91ng%20%E1%BA%A3o
+    - link "Chợ - Phố đêm" [ref=f61e62] [cursor=pointer]:
+      - /url: /search?q=Ch%E1%BB%A3%20-%20Ph%E1%BB%91%20%C4%91%C3%AAm
+    - link "Chùa - Đền - Miếu" [ref=f61e63] [cursor=pointer]:
+      - /url: /search?q=Ch%C3%B9a%20-%20%C4%90%E1%BB%81n%20-%20Mi%E1%BA%BFu
+    - link "Công trình kiến trúc" [ref=f61e64] [cursor=pointer]:
+      - /url: /search?q=C%C3%B4ng%20tr%C3%ACnh%20ki%E1%BA%BFn%20tr%C3%BAc
+    - link "Di tích lịch sử" [ref=f61e65] [cursor=pointer]:
+      - /url: /search?q=Di%20t%C3%ADch%20l%E1%BB%8Bch%20s%E1%BB%AD
+    - link "Đồng quê - Sông nước miền Tây" [ref=f61e66] [cursor=pointer]:
+      - /url: /search?q=%C4%90%E1%BB%93ng%20qu%C3%AA%20-%20S%C3%B4ng%20n%C6%B0%E1%BB%9Bc%20mi%E1%BB%81n%20T%C3%A2y
+    - link "Hang động" [ref=f61e67] [cursor=pointer]:
+      - /url: /search?q=Hang%20%C4%91%E1%BB%99ng
+    - link "Khu - Phố ẩm thực" [ref=f61e68] [cursor=pointer]:
+      - /url: /search?q=Khu%20-%20Ph%E1%BB%91%20%E1%BA%A9m%20th%E1%BB%B1c
+    - link "Khu vui chơi - Giải trí" [ref=f61e69] [cursor=pointer]:
+      - /url: /search?q=Khu%20vui%20ch%C6%A1i%20-%20Gi%E1%BA%A3i%20tr%C3%AD
+    - link "Làng nghề truyền thống" [ref=f61e70] [cursor=pointer]:
+      - /url: /search?q=L%C3%A0ng%20ngh%E1%BB%81%20truy%E1%BB%81n%20th%E1%BB%91ng
+    - link "Nghỉ dưỡng" [ref=f61e71] [cursor=pointer]:
+      - /url: /search?q=Ngh%E1%BB%89%20d%C6%B0%E1%BB%A1ng
+    - link "Nhà thờ" [ref=f61e72] [cursor=pointer]:
+      - /url: /search?q=Nh%C3%A0%20th%E1%BB%9D
+    - link "Núi - Cao nguyên" [ref=f61e73] [cursor=pointer]:
+      - /url: /search?q=N%C3%BAi%20-%20Cao%20nguy%C3%AAn
+    - link "Phố cổ - Phố đi bộ" [ref=f61e74] [cursor=pointer]:
+      - /url: /search?q=Ph%E1%BB%91%20c%E1%BB%95%20-%20Ph%E1%BB%91%20%C4%91i%20b%E1%BB%99
+    - link "Rừng - Vườn quốc gia" [ref=f61e75] [cursor=pointer]:
+      - /url: /search?q=R%E1%BB%ABng%20-%20V%C6%B0%E1%BB%9Dn%20qu%E1%BB%91c%20gia
+    - link "Sông - Suối - Hồ - Thác" [ref=f61e76] [cursor=pointer]:
+      - /url: /search?q=S%C3%B4ng%20-%20Su%E1%BB%91i%20-%20H%E1%BB%93%20-%20Th%C3%A1c
+  - contentinfo [ref=f61e77]:
+    - generic [ref=f61e78]:
+      - generic [ref=f61e79]:
+        - generic [ref=f61e80]:
+          - generic [ref=f61e81]: dichoithoi.com
+          - paragraph [ref=f61e82]: Cung cấp thông tin du lịch khoa học, rõ ràng, đầy đủ.
+        - generic [ref=f61e83]:
+          - generic [ref=f61e84]: Thông tin
+          - list [ref=f61e85]:
+            - listitem [ref=f61e86]:
+              - link "Trang chủ" [ref=f61e87] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f61e88]:
+              - link "Chính sách bảo mật" [ref=f61e89] [cursor=pointer]:
+                - /url: /chinh-sach-bao-mat
+            - listitem [ref=f61e90]:
+              - link "Điều khoản sử dụng" [ref=f61e91] [cursor=pointer]:
+                - /url: /dieu-khoan-su-dung
+        - generic [ref=f61e92]:
+          - generic [ref=f61e93]: Nổi bật
+          - list [ref=f61e94]:
+            - listitem [ref=f61e95]:
+              - link "Địa điểm nổi bật" [ref=f61e96] [cursor=pointer]:
+                - /url: /diem-den
+            - listitem [ref=f61e97]:
+              - link "Bản đồ du lịch" [ref=f61e98] [cursor=pointer]:
+                - /url: /map
+        - generic [ref=f61e99]:
+          - generic [ref=f61e100]: Kết nối
+          - list [ref=f61e101]:
+            - listitem [ref=f61e102]:
+              - link "Facebook fanpage" [ref=f61e103] [cursor=pointer]:
+                - /url: https://www.facebook.com
+            - listitem [ref=f61e104]:
+              - link "Đồ chơi 3s" [ref=f61e105] [cursor=pointer]:
+                - /url: https://dochoi3s.com
+            - listitem [ref=f61e106]:
+              - link "Laruki.com" [ref=f61e107] [cursor=pointer]:
+                - /url: https://laruki.com
+      - generic [ref=f61e108]:
+        - generic [ref=f61e109]:
+          - link "Miền Bắc" [ref=f61e110] [cursor=pointer]:
+            - /url: /vung/mien-bac
+          - generic [ref=f61e111]:
+            - link "Bắc Ninh" [ref=f61e112] [cursor=pointer]:
+              - /url: /tinh/bac-ninh
+            - link "Cao Bằng" [ref=f61e113] [cursor=pointer]:
+              - /url: /tinh/cao-bang
+            - link "Điện Biên" [ref=f61e114] [cursor=pointer]:
+              - /url: /tinh/dien-bien
+            - link "Hà Nội" [ref=f61e115] [cursor=pointer]:
+              - /url: /tinh/ha-noi
+            - link "Hải Phòng" [ref=f61e116] [cursor=pointer]:
+              - /url: /tinh/hai-phong
+            - link "Hưng Yên" [ref=f61e117] [cursor=pointer]:
+              - /url: /tinh/hung-yen
+            - link "Lai Châu" [ref=f61e118] [cursor=pointer]:
+              - /url: /tinh/lai-chau
+            - link "Lạng Sơn" [ref=f61e119] [cursor=pointer]:
+              - /url: /tinh/lang-son
+            - link "Lào Cai" [ref=f61e120] [cursor=pointer]:
+              - /url: /tinh/lao-cai
+            - link "Ninh Bình" [ref=f61e121] [cursor=pointer]:
+              - /url: /tinh/ninh-binh
+            - link "Phú Thọ" [ref=f61e122] [cursor=pointer]:
+              - /url: /tinh/phu-tho
+            - link "Quảng Ninh" [ref=f61e123] [cursor=pointer]:
+              - /url: /tinh/quang-ninh
+            - link "Sơn La" [ref=f61e124] [cursor=pointer]:
+              - /url: /tinh/son-la
+            - link "Thái Nguyên" [ref=f61e125] [cursor=pointer]:
+              - /url: /tinh/thai-nguyen
+            - link "Tuyên Quang" [ref=f61e126] [cursor=pointer]:
+              - /url: /tinh/tuyen-quang
+        - generic [ref=f61e127]:
+          - link "Miền Trung" [ref=f61e128] [cursor=pointer]:
+            - /url: /vung/mien-trung
+          - generic [ref=f61e129]:
+            - link "Đà Nẵng" [ref=f61e130] [cursor=pointer]:
+              - /url: /tinh/da-nang
+            - link "Đắk Lắk" [ref=f61e131] [cursor=pointer]:
+              - /url: /tinh/dak-lak
+            - link "Gia Lai" [ref=f61e132] [cursor=pointer]:
+              - /url: /tinh/gia-lai
+            - link "Hà Tĩnh" [ref=f61e133] [cursor=pointer]:
+              - /url: /tinh/ha-tinh
+            - link "Huế" [ref=f61e134] [cursor=pointer]:
+              - /url: /tinh/hue
+            - link "Khánh Hòa" [ref=f61e135] [cursor=pointer]:
+              - /url: /tinh/khanh-hoa
+            - link "Lâm Đồng" [ref=f61e136] [cursor=pointer]:
+              - /url: /tinh/lam-dong
+            - link "Nghệ An" [ref=f61e137] [cursor=pointer]:
+              - /url: /tinh/nghe-an
+            - link "Quảng Ngãi" [ref=f61e138] [cursor=pointer]:
+              - /url: /tinh/quang-ngai
+            - link "Quảng Trị" [ref=f61e139] [cursor=pointer]:
+              - /url: /tinh/quang-tri
+            - link "Thanh Hóa" [ref=f61e140] [cursor=pointer]:
+              - /url: /tinh/thanh-hoa
+        - generic [ref=f61e141]:
+          - link "Miền Nam" [ref=f61e142] [cursor=pointer]:
+            - /url: /vung/mien-nam
+          - generic [ref=f61e143]:
+            - link "An Giang" [ref=f61e144] [cursor=pointer]:
+              - /url: /tinh/an-giang
+            - link "Cà Mau" [ref=f61e145] [cursor=pointer]:
+              - /url: /tinh/ca-mau
+            - link "Cần Thơ" [ref=f61e146] [cursor=pointer]:
+              - /url: /tinh/can-tho
+            - link "Đồng Nai" [ref=f61e147] [cursor=pointer]:
+              - /url: /tinh/dong-nai
+            - link "Đồng Tháp" [ref=f61e148] [cursor=pointer]:
+              - /url: /tinh/dong-thap
+            - link "Hồ Chí Minh" [ref=f61e149] [cursor=pointer]:
+              - /url: /tinh/ho-chi-minh
+            - link "Tây Ninh" [ref=f61e150] [cursor=pointer]:
+              - /url: /tinh/tay-ninh
+            - link "Vĩnh Long" [ref=f61e151] [cursor=pointer]:
+              - /url: /tinh/vinh-long
+    - generic [ref=f61e152]: Copyright © 2024 dichoithoi.com. All rights reserved.
