@@ -12,6 +12,9 @@ function candidate(overrides: Partial<RelatedCandidate> & { slug: string }): Rel
     lat: overrides.lat ?? null,
     lng: overrides.lng ?? null,
     siteStatus: overrides.siteStatus ?? 1,
+    isFeatured: overrides.isFeatured ?? false,
+    order: overrides.order ?? 0,
+    distanceFromCenter: overrides.distanceFromCenter ?? null,
   };
 }
 
@@ -76,6 +79,19 @@ describe("buildChildren", () => {
   it("tra ve toan bo con truc tiep DA PUBLISH, sap xep theo ten", () => {
     const result = buildChildren(daLat, [daLat, thungLung, hoXuanHuong, unpublished]);
     expect(result.map((r) => r.slug)).toEqual(["ho-xuan-huong", "thung-lung-tinh-yeu"]);
+  });
+
+  it("mang theo isFeatured/order/distanceFromCenter cho lop 1/2 trang Flagship (Phase 28.2)", () => {
+    const featured = candidate({
+      slug: "hstc",
+      name: "Hồ Xuân Hương",
+      parentSlug: "da-lat",
+      isFeatured: true,
+      order: 1,
+      distanceFromCenter: 500,
+    });
+    const result = buildChildren(daLat, [daLat, featured]);
+    expect(result[0]).toMatchObject({ isFeatured: true, order: 1, distanceFromCenter: 500 });
   });
 
   it("khong gioi han so luong (khac RelatedJson cat 8)", () => {

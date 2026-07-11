@@ -15,6 +15,9 @@ function candidate(partial: Partial<RelatedCandidate> & { slug: string }): Relat
     lat: null,
     lng: null,
     siteStatus: 1,
+    isFeatured: false,
+    order: 0,
+    distanceFromCenter: null,
     ...partial,
   };
 }

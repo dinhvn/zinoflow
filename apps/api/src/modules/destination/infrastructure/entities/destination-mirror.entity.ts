@@ -98,6 +98,14 @@ export class DestinationMirrorEntity {
   @Column({ name: "content_tier", type: "varchar", length: 16, nullable: true })
   contentTier!: "flagship" | "standard" | null;
 
+  /** Thu tu hien thi thu cong (v2.Destination.Order) — Phase 28.2, lop 1 Diem tham quan Flagship */
+  @Column({ type: "int", default: 0 })
+  order!: number;
+
+  /** Khoang cach toi trung tam cum/tinh cha, don vi MET (v2.Destination.DistanceFromCenter) — Phase 28.2 */
+  @Column({ name: "distance_from_center", type: "decimal", precision: 18, scale: 0, nullable: true })
+  distanceFromCenter!: string | null;
+
   /** Cot Status ben site: 0 draft, 1 published, 2 hidden */
   @Column({ name: "site_status", type: "smallint", nullable: true })
   siteStatus!: number | null;

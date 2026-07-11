@@ -156,5 +156,8 @@ function toCandidate(d: DestinationMirrorEntity): RelatedCandidate {
     lat: d.lat === null ? null : Number(d.lat),
     lng: d.lng === null ? null : Number(d.lng),
     siteStatus: d.siteStatus,
+    isFeatured: d.isFeatured,
+    order: d.order,
+    distanceFromCenter: d.distanceFromCenter === null ? null : Number(d.distanceFromCenter),
   };
 }

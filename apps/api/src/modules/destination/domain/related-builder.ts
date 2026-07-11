@@ -21,6 +21,12 @@ export interface RelatedCandidate {
   lng: number | null;
   /** Status ben site — chi diem published (1) duoc vao khoi lien quan */
   siteStatus: number | null;
+  /** Nam trong khu "noi bat" (v2.Destination.IsFeatured) — Phase 28.2, lop 1 Diem tham quan */
+  isFeatured: boolean;
+  /** Thu tu hien thi thu cong (v2.Destination.Order) — Phase 28.2 */
+  order: number;
+  /** Khoang cach toi trung tam cum/tinh cha, don vi MET (v2.Destination.DistanceFromCenter) — Phase 28.2 */
+  distanceFromCenter: number | null;
 }
 
 /** 1 muc trong RelatedJson — website render truc tiep, khong query them */

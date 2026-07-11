@@ -1004,12 +1004,51 @@ dụ user nêu ban đầu) — xác nhận chip nav đúng bộ theo tier, cuộ
 `scrollIntoView` vì có thể nhảy qua section không tồn tại gây hiểu nhầm khi
 debug), mở/đóng "Mục lục" đúng cả 2 breakpoint, 0 lỗi console.
 
-### 28.2-28.6 — CHƯA LÀM
+### 28.2 — Website: layout Flagship — 2 lớp Điểm tham quan (ĐÃ XONG 07/2026)
 
-Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (layout 2-lớp
-Điểm tham quan Flagship, nhánh AI Flagship + gate mới, Lịch trình + link bài
-cẩm nang theo topic, banner "Về node cha" + đánh giá biên tập + external
-review, Coverage Score theo tier thật).
+`ChildrenJson` (zinoflow) mở rộng thêm 3 field lấy thẳng từ cột đã có sẵn
+trên `v2.Destination` (`IsFeatured`, `[Order]`, `DistanceFromCenter` — cột
+`DistanceFromCenter`/`Order` tồn tại từ trước nhưng CHƯA từng được website
+đọc, đã có dữ liệu thật từ migrate v1→v2 cho phần lớn điểm):
+
+- zinoflow: `RelatedCandidate`/`ChildRef` (`related-builder.ts`,
+  `ancestors-children-builder.ts`) + `SiteDestinationRow`/`fetchAllDestinations()`
+  (đọc thêm `d.[Order]`, `d.DistanceFromCenter`) + mirror Postgres (migration
+  `1782030000000-DestinationOrderDistanceFromCenter`, cột `order`,
+  `distance_from_center`) + `recompute-related.service.ts` `toCandidate()`
+  (bổ sung luôn `isFeatured` — trước đây bị bỏ sót, related/children build ra
+  chưa từng có field này dù entity đã có sẵn).
+- `ChildRefModel.cs` thêm `IsFeatured`/`Order`/`DistanceFromCenter`.
+- `Detail.cshtml`: khi `ContentTier == "flagship"` VÀ có ≥1 con — hiện 2 lớp
+  THAY lưới phẳng cũ (`showFlagshipChildrenLayers`, ưu tiên trước
+  `showClusterChildrenGrid` trong chuỗi `@if/else if`): lớp 1 "Nổi bật" (thẻ
+  lớn 16:9, lọc `IsFeatured`, sort `Order` rồi tên) + lớp 2 "Theo khu vực"
+  (nhóm theo `DistanceFromCenter`: <3km/3-15km/≥15km — thiếu dữ liệu khoảng
+  cách rơi vào nhóm xa nhất, không bỏ sót; 3 cột luôn hiện đủ trên desktop
+  qua `lg:block`, tab chip `wireAreaTabs()` lọc 1 cột trên mobile — TOÀN BỘ
+  render sẵn trong DOM, không AJAX theo tab). Trùng lặp giữa 2 lớp là chủ
+  đích. Node `Standard`/`ContentTier=null` giữ nguyên `showClusterChildrenGrid`
+  (lưới phẳng cũ) — không đổi.
+- Dữ liệu test thật: gán `IsFeatured=1` cho Hồ Xuân Hương (Order=1) và Thung
+  Lũng Tình Yêu (Order=2) dưới Đà Lạt để verify lớp 1 — giữ lại vì đúng là 2
+  điểm nổi bật thật (không phải placeholder cần dọn).
+
+Verify: `tsc --noEmit` + `npx jest` (thêm test `buildChildren` mang theo 3
+field mới) sạch, migration Postgres chạy thật, sync + recompute-related thật
+qua API xác nhận `ChildrenJson` trong SQL Server có đủ field, `dotnet build`
++ `npx webpack` sạch, Playwright thật: Đà Lạt hiện đúng 2 lớp (2 thẻ nổi bật,
+14/23/8 điểm ở 3 nhóm khoảng cách), tab chip mobile lọc đúng 1 nhóm, desktop
+luôn hiện đủ 3 cột bất kể tab đang chọn; Nha Trang (Standard, 12 con) xác
+nhận layout KHÔNG đổi so với trước (vẫn lưới phẳng "Các khu trong Nha
+Trang", không có area-tabs); Biệt thự Hằng Nga (POI) không ảnh hưởng, 0 lỗi
+console cả 3 trang.
+
+### 28.3-28.6 — CHƯA LÀM
+
+Xem breakdown đầy đủ trong plan đã duyệt lúc bắt tay Phase 28 (nhánh AI
+Flagship + gate mới, Lịch trình + link bài cẩm nang theo topic, banner "Về
+node cha" + đánh giá biên tập + external review, Coverage Score theo tier
+thật).
 
 ---
 

@@ -20,6 +20,10 @@ export interface ChildRef {
   name: string;
   thumbnail: string | null;
   kind: RelatedCandidate["kind"];
+  /** Phase 28.2 — 2 lop Diem tham quan trang Flagship (content-seo-ux-plan §10.6.2 khoi 5) */
+  isFeatured: boolean;
+  order: number;
+  distanceFromCenter: number | null;
 }
 
 /**
@@ -57,6 +61,14 @@ export function buildChildren(
 ): ChildRef[] {
   return all
     .filter((c) => c.parentSlug === self.slug && c.siteStatus === 1)
-    .map((c) => ({ slug: c.slug, name: c.name, thumbnail: c.thumbnail, kind: c.kind }))
+    .map((c) => ({
+      slug: c.slug,
+      name: c.name,
+      thumbnail: c.thumbnail,
+      kind: c.kind,
+      isFeatured: c.isFeatured,
+      order: c.order,
+      distanceFromCenter: c.distanceFromCenter,
+    }))
     .sort((a, b) => a.name.localeCompare(b.name, "vi"));
 }

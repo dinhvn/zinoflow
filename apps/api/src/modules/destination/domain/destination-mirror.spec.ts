@@ -27,6 +27,8 @@ function siteRow(overrides: Partial<SiteDestinationRow> = {}): SiteDestinationRo
     hotelGroupId: null,
     isFeatured: false,
     contentTier: null,
+    order: 0,
+    distanceFromCenter: null,
     siteStatus: 1,
     contentSource: 0,
     contentHash: "hash-a",

@@ -192,6 +192,8 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       hotelGroupId: row.hotelGroupId,
       isFeatured: row.isFeatured,
       contentTier: row.contentTier,
+      order: row.order,
+      distanceFromCenter: row.distanceFromCenter?.toString() ?? null,
       siteStatus: row.siteStatus,
       contentSource: row.contentSource,
       contentHash: row.contentHash,

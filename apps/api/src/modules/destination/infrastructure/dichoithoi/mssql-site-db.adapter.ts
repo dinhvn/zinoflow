@@ -75,7 +75,8 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       SELECT
         d.Id, d.Slug, d.Kind, d.Name, d.ShortDescription, d.Thumbnail,
         d.Lat, d.Lng, d.AddressNew, d.AddressOld, d.ContactPhone, d.ContactWebsite,
-        d.HotelGroupId, d.IsFeatured, d.ContentTier, d.Status, d.ContentSource, d.UpdatedAt,
+        d.HotelGroupId, d.IsFeatured, d.ContentTier, d.[Order], d.DistanceFromCenter,
+        d.Status, d.ContentSource, d.UpdatedAt,
         p.Code AS ProvinceCode,
         par.Slug AS ParentSlug,
         CONVERT(varchar(64), HASHBYTES('SHA2_256', CAST(c.ContentHtml AS nvarchar(max))), 2) AS ContentHash
@@ -102,6 +103,8 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       hotelGroupId: (r.HotelGroupId as string | null) ?? null,
       isFeatured: Boolean(r.IsFeatured),
       contentTier: (r.ContentTier as "flagship" | "standard" | null) ?? null,
+      order: Number(r.Order ?? 0),
+      distanceFromCenter: r.DistanceFromCenter === null ? null : Number(r.DistanceFromCenter),
       siteStatus: Number(r.Status),
       contentSource: r.ContentSource === null ? null : Number(r.ContentSource),
       contentHash: (r.ContentHash as string | null) ?? null,

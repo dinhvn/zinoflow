@@ -30,6 +30,10 @@ export interface SiteDestinationRow {
   hotelGroupId: string | null;
   isFeatured: boolean;
   contentTier: "flagship" | "standard" | null;
+  /** Thu tu hien thi thu cong (Phase 28.2) */
+  order: number;
+  /** Khoang cach toi trung tam cum/tinh cha, don vi MET (Phase 28.2) */
+  distanceFromCenter: number | null;
   siteStatus: number;
   contentSource: number | null;
   contentHash: string | null;
