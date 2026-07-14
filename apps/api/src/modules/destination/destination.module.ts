@@ -52,6 +52,8 @@ import { GetDestinationDetailUseCase } from "./application/use-cases/get-destina
 import { UpsertDestinationUseCase } from "./application/use-cases/upsert-destination.usecase";
 import { RenameDestinationSlugUseCase } from "./application/use-cases/rename-destination-slug.usecase";
 import { ImportDestinationsUseCase } from "./application/use-cases/import-destinations.usecase";
+import { ExportDestinationsUseCase } from "./application/use-cases/export-destinations.usecase";
+import { BulkUpdateDestinationFieldsUseCase } from "./application/use-cases/bulk-update-destination-fields.usecase";
 import { ListAddressMappingsUseCase } from "./application/use-cases/list-address-mappings.usecase";
 import { ManageTaxonomyContentUseCase } from "./application/use-cases/manage-taxonomy-content.usecase";
 import { ListDestinationTagAssignmentsUseCase } from "./application/use-cases/list-destination-tag-assignments.usecase";
@@ -134,6 +136,8 @@ import {
     UpsertDestinationUseCase,
     RenameDestinationSlugUseCase,
     ImportDestinationsUseCase,
+    ExportDestinationsUseCase,
+    BulkUpdateDestinationFieldsUseCase,
     ListAddressMappingsUseCase,
     ManageTaxonomyContentUseCase,
     ParseMapsLinkUseCase,

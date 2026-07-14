@@ -95,6 +95,7 @@ export class PublishDestinationUseCase {
         thumbnail: destination.thumbnail,
         lat: destination.lat === null ? null : Number(destination.lat),
         lng: destination.lng === null ? null : Number(destination.lng),
+        googleMapsUrl: destination.googleMapsUrl,
         addressNew: destination.addressNew,
         addressOld: destination.addressOld,
         contactPhone: destination.contactPhone,

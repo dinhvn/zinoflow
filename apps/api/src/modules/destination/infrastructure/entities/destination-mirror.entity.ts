@@ -54,6 +54,14 @@ export class DestinationMirrorEntity {
   @Column({ type: "decimal", precision: 9, scale: 6, nullable: true })
   lng!: string | null;
 
+  /**
+   * Link Google Maps nhap tay 1 lan — nguon duy nhat cho lat/lng (tu dong parse
+   * lai moi lan cot nay doi, xem UpsertDestinationUseCase). lat/lng o tren la
+   * CACHE suy ra tu day, khong con nhap tay truc tiep qua form nua.
+   */
+  @Column({ name: "google_maps_url", type: "text", nullable: true })
+  googleMapsUrl!: string | null;
+
   @Column({ name: "address_new", type: "varchar", length: 256, nullable: true })
   addressNew!: string | null;
 
@@ -86,7 +94,7 @@ export class DestinationMirrorEntity {
   @Column({ name: "editorial_review", type: "text", nullable: true })
   editorialReview!: string | null;
 
-  /** Link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */
+  /** Link TripAdvisor/Facebook/... nhap tay (Phase 28.0) — Google Maps rieng, xem google_maps_url */
   @Column({ name: "external_review_urls", type: "jsonb", default: () => "'[]'" })
   externalReviewUrls!: ExternalReviewUrlItem[];
 

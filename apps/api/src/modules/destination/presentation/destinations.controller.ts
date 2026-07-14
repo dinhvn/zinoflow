@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Post,
   Query,
@@ -18,8 +19,10 @@ import {
   generateDestinationBlockRequestSchema,
   destinationBlockKeySchema,
   importDestinationsRequestSchema,
+  exportDestinationsQuerySchema,
+  bulkUpdateDestinationFieldsRequestSchema,
+  DESTINATION_BULK_EDIT_FIELD_KEYS,
   listDestinationsQuerySchema,
-  parseMapsLinkRequestSchema,
   saveAiInputsRequestSchema,
   relinkAllRequestSchema,
   renameDestinationSlugRequestSchema,
@@ -54,10 +57,12 @@ import {
   type FetchSheetResponse,
   type ImportDestinationsRequest,
   type ImportDestinationsResult,
+  type ExportDestinationsQuery,
+  type DestinationBulkEditFieldKey,
+  type BulkUpdateDestinationFieldsRequest,
+  type BulkUpdateDestinationFieldsResult,
   type ListDestinationsQuery,
   type ListDestinationsResponse,
-  type ParseMapsLinkRequest,
-  type ParseMapsLinkResponse,
   type PublishDestinationResult,
   type RecomputeRelatedReport,
   type RelinkAllRequest,
@@ -108,10 +113,11 @@ import { UpdateExternalReviewUrlsUseCase } from "../application/use-cases/update
 import { UploadDestinationImageUseCase } from "../application/use-cases/upload-destination-image.usecase";
 import { MigrateDestinationImagesUseCase } from "../application/use-cases/migrate-destination-images.usecase";
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
-import { ParseMapsLinkUseCase } from "../application/use-cases/parse-maps-link.usecase";
 import { UpsertDestinationUseCase } from "../application/use-cases/upsert-destination.usecase";
 import { RenameDestinationSlugUseCase } from "../application/use-cases/rename-destination-slug.usecase";
 import { ImportDestinationsUseCase } from "../application/use-cases/import-destinations.usecase";
+import { ExportDestinationsUseCase } from "../application/use-cases/export-destinations.usecase";
+import { BulkUpdateDestinationFieldsUseCase } from "../application/use-cases/bulk-update-destination-fields.usecase";
 import { ListAddressMappingsUseCase } from "../application/use-cases/list-address-mappings.usecase";
 import { ManageTaxonomyContentUseCase } from "../application/use-cases/manage-taxonomy-content.usecase";
 import { GetCoverageScoresUseCase } from "../application/use-cases/get-coverage-scores.usecase";
@@ -163,6 +169,8 @@ export class DestinationsController {
     private readonly upsertDestination: UpsertDestinationUseCase,
     private readonly renameSlug: RenameDestinationSlugUseCase,
     private readonly importDestinations: ImportDestinationsUseCase,
+    private readonly exportDestinations: ExportDestinationsUseCase,
+    private readonly bulkUpdateFields: BulkUpdateDestinationFieldsUseCase,
     private readonly listAddressMappings: ListAddressMappingsUseCase,
     private readonly manageTaxonomyContent: ManageTaxonomyContentUseCase,
     private readonly getCoverageScores: GetCoverageScoresUseCase,
@@ -175,7 +183,6 @@ export class DestinationsController {
     private readonly previewPublishHtml: PreviewDestinationPublishHtmlUseCase,
     private readonly addGalleryImageUseCase: AddDestinationGalleryImageUseCase,
     private readonly updateGalleryUseCase: UpdateDestinationGalleryUseCase,
-    private readonly parseMapsLink: ParseMapsLinkUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
     @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
@@ -240,6 +247,45 @@ export class DestinationsController {
     @Body(new ZodValidationPipe(importDestinationsRequestSchema)) request: ImportDestinationsRequest,
   ): Promise<ImportDestinationsResult> {
     return this.importDestinations.execute(request.items);
+  }
+
+  /**
+   * Xuat CSV (slug + cot field da chon) theo dung bo loc dang xem tren trang
+   * list (khong cat trang) — buoc 1 cua luong sua nhanh hang loat qua Sheet.
+   */
+  @Get("export")
+  @Header("Content-Type", "text/csv; charset=utf-8")
+  @Header("Content-Disposition", 'attachment; filename="diem-den.csv"')
+  async exportCsv(
+    @Query(new ZodValidationPipe(exportDestinationsQuerySchema)) query: ExportDestinationsQuery,
+  ): Promise<string> {
+    const fields = query.fields
+      .split(",")
+      .map((f) => f.trim())
+      .filter((f): f is DestinationBulkEditFieldKey =>
+        (DESTINATION_BULK_EDIT_FIELD_KEYS as readonly string[]).includes(f),
+      );
+    if (fields.length === 0) {
+      throw new ValidationError("Chưa chọn cột hợp lệ nào để xuất");
+    }
+    const csv = await this.exportDestinations.execute(fields, {
+      q: query.q,
+      provinceCode: query.provinceCode,
+      kind: query.kind,
+      contentState: query.contentState,
+      production: query.production,
+    });
+    // BOM UTF-8 de Excel/Google Sheets doc dung tieng Viet co dau khi mo file
+    return `﻿${csv}`;
+  }
+
+  /** Buoc 4 luong sua nhanh hang loat: khop theo slug, GHI DE o co gia tri, bo qua o rong */
+  @Post("bulk-update-fields")
+  bulkUpdateDestinationFields(
+    @Body(new ZodValidationPipe(bulkUpdateDestinationFieldsRequestSchema))
+    request: BulkUpdateDestinationFieldsRequest,
+  ): Promise<BulkUpdateDestinationFieldsResult> {
+    return this.bulkUpdateFields.execute(request.items);
   }
 
   /** Sua metadata diem den (mirror; neu da co tren web thi ghi luon SQL Server) */
@@ -392,14 +438,6 @@ export class DestinationsController {
     @Body(new ZodValidationPipe(checkImageRequestSchema)) request: CheckImageRequest,
   ): Promise<CheckImageResponse> {
     return this.imageChecker.check(request.path);
-  }
-
-  /** Tach lat/lng tu link Google Maps dan vao (spec §2.1.1) */
-  @Post("parse-maps-link")
-  parseMapsLinkUrl(
-    @Body(new ZodValidationPipe(parseMapsLinkRequestSchema)) request: ParseMapsLinkRequest,
-  ): Promise<ParseMapsLinkResponse> {
-    return this.parseMapsLink.execute(request.url);
   }
 
   /** Cap nhat duong dan thumbnail cho 1 diem den (spec §14.3) */

@@ -192,6 +192,7 @@ function detailToFormValues(d: DestinationDetail): DestinationMetaValues {
     thumbnail: d.thumbnail ?? "",
     lat: d.lat === null ? "" : String(d.lat),
     lng: d.lng === null ? "" : String(d.lng),
+    googleMapsUrl: d.googleMapsUrl ?? "",
     addressNew: d.addressNew ?? "",
     addressOld: d.addressOld ?? "",
     contactPhone: d.contactPhone ?? "",
@@ -224,6 +225,34 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: ["destination-detail", slug] });
   }
+
+  // Highlight menu nhanh dang doc khi cuon trang — cung thuat toan
+  // wireActiveTocHighlight() ben website (destination-detail.ts, Phase 28.1):
+  // IntersectionObserver chi bao entry VUA DOI trang thai nen phai tu luu lai
+  // toan bo trang thai giao (isIntersecting) qua cac lan goi, roi chon section
+  // SAU CUNG (theo thu tu DOM = thu tu QUICK_NAV) dang giao lam "dang doc".
+  const [activeSection, setActiveSection] = useState<string>(QUICK_NAV[0].id);
+  useEffect(() => {
+    if (!d) return;
+    const ids: string[] = QUICK_NAV.map((item) => item.id);
+    const isIntersecting = new Map<string, boolean>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => isIntersecting.set(entry.target.id, entry.isIntersecting));
+        let active: string = QUICK_NAV[0].id;
+        for (const id of ids) {
+          if (isIntersecting.get(id)) active = id;
+        }
+        setActiveSection(active);
+      },
+      { rootMargin: "-64px 0px -70% 0px" },
+    );
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, [d]);
 
   // --- Chon AI provider / model (spec §7.4 "chon provider/model nhu form job") ---
   const [provider, setProvider] = useState("");
@@ -534,7 +563,11 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           <a
             key={item.id}
             href={`#${item.id}`}
-            className="rounded px-2 py-1 font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            className={
+              item.id === activeSection
+                ? "rounded bg-blue-100 px-2 py-1 font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                : "rounded px-2 py-1 font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            }
           >
             {item.label}
           </a>
@@ -1073,7 +1106,7 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       </Group>
 
       {/* Link "Xem them tren" (destination-spec §2.2 khoi #10/#15, Phase 28.0) */}
-      <Group title="Xem thêm trên (Google Maps/TripAdvisor...)">
+      <Group title="Xem thêm trên (TripAdvisor/Facebook...)">
         <DestinationExternalReviewUrlsEditor
           slug={d.slug}
           externalReviewUrls={d.externalReviewUrls}

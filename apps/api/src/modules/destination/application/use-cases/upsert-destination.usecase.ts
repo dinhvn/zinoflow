@@ -9,6 +9,7 @@ import {
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 import { normalizeVietnamese } from "../../../shared/text/vietnamese";
 import { RecomputeRelatedService } from "../services/recompute-related.service";
+import { ParseMapsLinkUseCase } from "./parse-maps-link.usecase";
 
 /**
  * Tao moi / sua metadata 1 diem den (spec §7.3 tab Thong tin).
@@ -25,6 +26,7 @@ export class UpsertDestinationUseCase {
     private readonly mirrorRepo: DestinationMirrorRepository,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     private readonly recomputeRelated: RecomputeRelatedService,
+    private readonly parseMapsLink: ParseMapsLinkUseCase,
   ) {}
 
   /** Tao moi — slug phai chua ton tai. */
@@ -36,7 +38,8 @@ export class UpsertDestinationUseCase {
       ]);
     }
     await this.assertParentAndProvince(request);
-    await this.mirrorRepo.createLocal(request.slug, toMeta(request));
+    const meta = await this.toMetaWithCoords(request);
+    await this.mirrorRepo.createLocal(request.slug, meta);
     this.logger.log(`Tao diem den moi (local): ${request.slug}`);
     return { slug: request.slug };
   }
@@ -47,7 +50,7 @@ export class UpsertDestinationUseCase {
     if (!existing) throw new DomainRuleError(`Không tìm thấy điểm đến "${slug}"`);
     await this.assertParentAndProvince(request, slug);
 
-    const meta = toMeta(request);
+    const meta = await this.toMetaWithCoords(request);
     await this.mirrorRepo.updateMetadata(slug, meta);
 
     // Da ton tai tren web -> day metadata sang SQL Server ngay (website phan anh)
@@ -63,6 +66,7 @@ export class UpsertDestinationUseCase {
         thumbnail: meta.thumbnail,
         lat: meta.lat,
         lng: meta.lng,
+        googleMapsUrl: meta.googleMapsUrl,
         addressNew: meta.addressNew,
         addressOld: meta.addressOld,
         contactPhone: meta.contactPhone,
@@ -88,6 +92,34 @@ export class UpsertDestinationUseCase {
     return { slug };
   }
 
+  /**
+   * Chuan hoa request thanh metadata + tu parse lat/lng tu googleMapsUrl (thay
+   * flow cu nguoi dung tu bam "Tu dong dien" — server luon tu tinh lai moi lan
+   * link doi, dam bao lat/lng khong bao gio lech link that su dang luu).
+   */
+  private async toMetaWithCoords(request: UpsertDestinationRequest): Promise<DestinationMetadataInput> {
+    const googleMapsUrl = request.googleMapsUrl?.trim() || null;
+    const coords = googleMapsUrl ? await this.parseMapsLink.execute(googleMapsUrl) : { lat: null, lng: null };
+    return {
+      name: request.name,
+      kind: request.kind,
+      parentSlug: request.parentSlug ?? null,
+      provinceCode: request.provinceCode ?? null,
+      shortDescription: request.shortDescription ?? null,
+      thumbnail: request.thumbnail ?? null,
+      googleMapsUrl,
+      lat: coords.lat,
+      lng: coords.lng,
+      addressNew: request.addressNew ?? null,
+      addressOld: request.addressOld ?? null,
+      contactPhone: request.contactPhone ?? null,
+      contactWebsite: request.contactWebsite ?? null,
+      hotelGroupId: request.hotelGroupId ?? null,
+      isFeatured: request.isFeatured ?? false,
+      contentTier: request.contentTier ?? null,
+    };
+  }
+
   /** Cha + tinh phai ton tai (neu duoc chi dinh) — tranh lien ket gay. */
   private async assertParentAndProvince(
     request: UpsertDestinationRequest,
@@ -103,25 +135,4 @@ export class UpsertDestinationUseCase {
       }
     }
   }
-}
-
-/** Chuan hoa request (optional/undefined -> null) thanh metadata input cho repo. */
-function toMeta(request: UpsertDestinationRequest): DestinationMetadataInput {
-  return {
-    name: request.name,
-    kind: request.kind,
-    parentSlug: request.parentSlug ?? null,
-    provinceCode: request.provinceCode ?? null,
-    shortDescription: request.shortDescription ?? null,
-    thumbnail: request.thumbnail ?? null,
-    lat: request.lat ?? null,
-    lng: request.lng ?? null,
-    addressNew: request.addressNew ?? null,
-    addressOld: request.addressOld ?? null,
-    contactPhone: request.contactPhone ?? null,
-    contactWebsite: request.contactWebsite ?? null,
-    hotelGroupId: request.hotelGroupId ?? null,
-    isFeatured: request.isFeatured ?? false,
-    contentTier: request.contentTier ?? null,
-  };
 }

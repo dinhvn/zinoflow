@@ -5,7 +5,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   destinationMetaSuggestionSchema,
   destinationTaxonomySchema,
-  parseMapsLinkResponseSchema,
   type DestinationKind,
   type UpsertDestinationRequest,
 } from "@zinoflow/contracts";
@@ -41,8 +40,10 @@ export interface DestinationMetaValues {
   provinceCode: string;
   shortDescription: string;
   thumbnail: string;
+  /** Toa do — CHI HIEN THI (read-only), server tu tinh lai tu googleMapsUrl luc luu */
   lat: string;
   lng: string;
+  googleMapsUrl: string;
   addressNew: string;
   addressOld: string;
   contactPhone: string;
@@ -63,6 +64,7 @@ export const EMPTY_META: DestinationMetaValues = {
   thumbnail: "",
   lat: "",
   lng: "",
+  googleMapsUrl: "",
   addressNew: "",
   addressOld: "",
   contactPhone: "",
@@ -73,7 +75,6 @@ export const EMPTY_META: DestinationMetaValues = {
 };
 
 function toRequest(v: DestinationMetaValues): UpsertDestinationRequest {
-  const num = (s: string) => (s.trim() === "" ? null : Number(s));
   const str = (s: string) => (s.trim() === "" ? null : s.trim());
   return {
     slug: v.slug.trim(),
@@ -83,8 +84,7 @@ function toRequest(v: DestinationMetaValues): UpsertDestinationRequest {
     provinceCode: str(v.provinceCode),
     shortDescription: str(v.shortDescription),
     thumbnail: str(v.thumbnail),
-    lat: num(v.lat),
-    lng: num(v.lng),
+    googleMapsUrl: str(v.googleMapsUrl),
     addressNew: str(v.addressNew),
     addressOld: str(v.addressOld),
     contactPhone: str(v.contactPhone),
@@ -109,7 +109,6 @@ export function DestinationMetadataForm({
   onSaved: (slug: string) => void;
 }) {
   const [v, setV] = useState<DestinationMetaValues>(initial);
-  const [mapsLink, setMapsLink] = useState("");
   const [error, setError] = useState<{ message: string; details: string[] } | null>(null);
   // Khi tao moi: tu sinh slug tu ten cho toi khi nguoi dung tu sua slug
   const [slugTouched, setSlugTouched] = useState(!isNew);
@@ -120,8 +119,12 @@ export function DestinationMetadataForm({
     staleTime: 5 * 60 * 1000,
   });
 
-  const set = <K extends keyof DestinationMetaValues>(k: K, val: DestinationMetaValues[K]) =>
+  const [justSaved, setJustSaved] = useState(false);
+
+  const set = <K extends keyof DestinationMetaValues>(k: K, val: DestinationMetaValues[K]) => {
+    setJustSaved(false);
     setV((prev) => ({ ...prev, [k]: val }));
+  };
 
   // AI goi y mo ta + phan loai (mem) — KHONG dung lat/lng/dia chi (spec §3.5)
   const suggest = useMutation({
@@ -138,18 +141,6 @@ export function DestinationMetadataForm({
     },
   });
 
-  // Tach lat/lng tu link Google Maps dan vao (spec §2.1.1) — van sua tay duoc sau khi dien
-  const parseMapsLink = useMutation({
-    mutationFn: async () =>
-      parseMapsLinkResponseSchema.parse(
-        await apiSend("POST", "/destinations/parse-maps-link", { url: mapsLink.trim() }),
-      ),
-    onSuccess: (r) => {
-      if (r.lat === null || r.lng === null) return;
-      setV((prev) => ({ ...prev, lat: String(r.lat), lng: String(r.lng) }));
-    },
-  });
-
   const save = useMutation({
     mutationFn: async () => {
       const body = toRequest(v);
@@ -162,6 +153,7 @@ export function DestinationMetadataForm({
     },
     onSuccess: (slug) => {
       setError(null);
+      setJustSaved(true);
       onSaved(slug);
     },
     onError: (e) =>
@@ -301,42 +293,20 @@ export function DestinationMetadataForm({
         />
       </Field>
 
-      <Field label="Dán link Google Maps (tự động điền toạ độ bên dưới)">
-        <div className="flex gap-2">
-          <input
-            value={mapsLink}
-            onChange={(e) => setMapsLink(e.target.value)}
-            placeholder="vd: https://www.google.com/maps/place/...@10.87,106.81,17z"
-            className={inputCls}
-          />
-          <Button
-            className="whitespace-nowrap"
-            loading={parseMapsLink.isPending}
-            disabled={!mapsLink.trim()}
-            onClick={() => mapsLink.trim() && parseMapsLink.mutate()}
-          >
-            Tự động điền
-          </Button>
-        </div>
-        {parseMapsLink.isSuccess && parseMapsLink.data.lat === null && (
-          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-            ⚠️ Không đọc được toạ độ từ link này — kiểm tra lại link hoặc nhập tay bên dưới
-          </p>
-        )}
-        {parseMapsLink.isSuccess && parseMapsLink.data.lat !== null && (
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
-            ✅ Đã điền — kiểm tra lại trước khi lưu
-          </p>
-        )}
+      <Field label="Link Google Maps">
+        <input
+          value={v.googleMapsUrl}
+          onChange={(e) => set("googleMapsUrl", e.target.value)}
+          placeholder="vd: https://www.google.com/maps/place/...@10.87,106.81,17z"
+          className={inputCls}
+        />
+        <p className="mt-1 text-xs text-zinc-400">
+          Toạ độ (tự tính khi lưu):{" "}
+          {initial.lat && initial.lng ? `${initial.lat}, ${initial.lng}` : "chưa có"}
+        </p>
       </Field>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field label="Vĩ độ (lat)">
-          <input value={v.lat} onChange={(e) => set("lat", e.target.value)} placeholder="vd: 22.3364" className={inputCls} />
-        </Field>
-        <Field label="Kinh độ (lng)">
-          <input value={v.lng} onChange={(e) => set("lng", e.target.value)} placeholder="vd: 103.8438" className={inputCls} />
-        </Field>
         <Field label="Địa chỉ mới (sau sáp nhập)">
           <input value={v.addressNew} onChange={(e) => set("addressNew", e.target.value)} className={inputCls} />
         </Field>
@@ -354,14 +324,19 @@ export function DestinationMetadataForm({
         </Field>
       </div>
 
-      <Button
-        variant="primary"
-        loading={save.isPending}
-        disabled={!v.name.trim() || !v.slug.trim()}
-        onClick={() => save.mutate()}
-      >
-        {save.isPending ? "Đang lưu..." : isNew ? "Tạo điểm đến" : "Lưu thay đổi"}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="primary"
+          loading={save.isPending}
+          disabled={!v.name.trim() || !v.slug.trim()}
+          onClick={() => save.mutate()}
+        >
+          {save.isPending ? "Đang lưu..." : isNew ? "Tạo điểm đến" : "Lưu thay đổi"}
+        </Button>
+        {justSaved && !save.isPending && (
+          <span className="text-xs text-emerald-600 dark:text-emerald-400">✅ Đã lưu</span>
+        )}
+      </div>
     </div>
   );
 }

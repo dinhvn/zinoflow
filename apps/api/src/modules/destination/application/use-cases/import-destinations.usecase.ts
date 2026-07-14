@@ -6,6 +6,7 @@ import {
   type DestinationMirrorRepository,
 } from "../ports/destination-mirror.repository";
 import { slugifyVietnamese } from "../../../shared/text/vietnamese";
+import { ParseMapsLinkUseCase } from "./parse-maps-link.usecase";
 
 /**
  * Import danh sach diem den hang loat (UPSERT theo slug, KHONG bao gio wipe).
@@ -21,6 +22,7 @@ export class ImportDestinationsUseCase {
   constructor(
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly mirrorRepo: DestinationMirrorRepository,
+    private readonly parseMapsLink: ParseMapsLinkUseCase,
   ) {}
 
   async execute(rows: readonly DestinationImportRow[]): Promise<ImportDestinationsResult> {
@@ -37,7 +39,7 @@ export class ImportDestinationsUseCase {
         if (seenInBatch.has(slug)) throw new Error(`Slug "${slug}" bị trùng trong file import`);
         seenInBatch.add(slug);
 
-        const meta = toMeta(row);
+        const meta = await this.toMetaWithCoords(row);
         if (existing.has(slug)) {
           await this.mirrorRepo.updateMetadata(slug, meta);
           result.updated += 1;
@@ -69,25 +71,28 @@ export class ImportDestinationsUseCase {
     );
     return result;
   }
-}
 
-/** Dong import -> metadata input (optional/undefined -> null). */
-function toMeta(row: DestinationImportRow): DestinationMetadataInput {
-  return {
-    name: row.name.trim(),
-    kind: row.kind,
-    parentSlug: row.parentSlug ?? null,
-    provinceCode: row.provinceCode ?? null,
-    shortDescription: row.shortDescription ?? null,
-    thumbnail: row.thumbnail ?? null,
-    lat: row.lat ?? null,
-    lng: row.lng ?? null,
-    addressNew: row.addressNew ?? null,
-    addressOld: row.addressOld ?? null,
-    contactPhone: row.contactPhone ?? null,
-    contactWebsite: row.contactWebsite ?? null,
-    hotelGroupId: row.hotelGroupId ?? null,
-    isFeatured: row.isFeatured ?? false,
-    contentTier: row.contentTier ?? null,
-  };
+  /** Dong import -> metadata input (optional/undefined -> null) + tu parse lat/lng tu googleMapsUrl. */
+  private async toMetaWithCoords(row: DestinationImportRow): Promise<DestinationMetadataInput> {
+    const googleMapsUrl = row.googleMapsUrl?.trim() || null;
+    const coords = googleMapsUrl ? await this.parseMapsLink.execute(googleMapsUrl) : { lat: null, lng: null };
+    return {
+      name: row.name.trim(),
+      kind: row.kind,
+      parentSlug: row.parentSlug ?? null,
+      provinceCode: row.provinceCode ?? null,
+      shortDescription: row.shortDescription ?? null,
+      thumbnail: row.thumbnail ?? null,
+      googleMapsUrl,
+      lat: coords.lat,
+      lng: coords.lng,
+      addressNew: row.addressNew ?? null,
+      addressOld: row.addressOld ?? null,
+      contactPhone: row.contactPhone ?? null,
+      contactWebsite: row.contactWebsite ?? null,
+      hotelGroupId: row.hotelGroupId ?? null,
+      isFeatured: row.isFeatured ?? false,
+      contentTier: row.contentTier ?? null,
+    };
+  }
 }

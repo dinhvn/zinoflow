@@ -33,6 +33,8 @@ import { Pagination } from "@/shared/ui/pagination";
 import { Select } from "@/shared/ui/select";
 import { PageHeader } from "@/shared/ui/page-header";
 import { ImportDestinationsModal } from "@/features/dichoithoi/import-destinations-modal";
+import { ExportDestinationsModal } from "@/features/dichoithoi/export-destinations-modal";
+import { ImportDestinationFieldsModal } from "@/features/dichoithoi/import-destination-fields-modal";
 
 /** Khoi "Viec can lam" tren hub (destination-spec §7.2, Phase 23) — chi hien
  * khi co it nhat 1 canh bao (nguyen tac "khong hien muc chi de biet"). */
@@ -120,6 +122,8 @@ export default function DichoithoiPage() {
   const [syncResult, setSyncResult] = useState<SyncDestinationsResult | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importFieldsOpen, setImportFieldsOpen] = useState(false);
 
   const taxonomyQuery = useQuery({
     queryKey: ["dichoithoi-taxonomy"],
@@ -385,6 +389,20 @@ export default function DichoithoiPage() {
               className={buttonClasses({ variant: "secondary" })}
             >
               Nhập từ Sheet
+            </button>
+            <button
+              type="button"
+              onClick={() => setExportOpen(true)}
+              className={buttonClasses({ variant: "secondary" })}
+            >
+              Xuất CSV (sửa hàng loạt)
+            </button>
+            <button
+              type="button"
+              onClick={() => setImportFieldsOpen(true)}
+              className={buttonClasses({ variant: "secondary" })}
+            >
+              Nhập cập nhật hàng loạt
             </button>
             <a href="/dichoithoi/articles/new" className={buttonClasses({ variant: "secondary" })}>
               + Bài cẩm nang
@@ -662,6 +680,24 @@ export default function DichoithoiPage() {
       <ImportDestinationsModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
+        onImported={() => queryClient.invalidateQueries({ queryKey: ["dichoithoi-destinations"] })}
+      />
+
+      <ExportDestinationsModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        filter={{
+          q: search || undefined,
+          provinceCode: provinceCode || undefined,
+          kind: kind || undefined,
+          contentState: contentState || undefined,
+          production: production || undefined,
+        }}
+      />
+
+      <ImportDestinationFieldsModal
+        open={importFieldsOpen}
+        onClose={() => setImportFieldsOpen(false)}
         onImported={() => queryClient.invalidateQueries({ queryKey: ["dichoithoi-destinations"] })}
       />
     </div>

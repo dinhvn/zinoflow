@@ -19,8 +19,7 @@ const CSV_HEADERS = [
   "parentSlug",
   "shortDescription",
   "thumbnail",
-  "lat",
-  "lng",
+  "googleMapsUrl",
   "addressNew",
   "addressOld",
   "contactPhone",
@@ -50,10 +49,6 @@ function parseRefUrls(s: string | undefined): DestinationImportRow["referenceUrl
 }
 
 function rowFromObject(o: Record<string, string>): DestinationImportRow {
-  const num = (s: string | undefined) => {
-    const v = emptyToUndef(s);
-    return v === undefined ? undefined : Number(v);
-  };
   const bool = (s: string | undefined) => {
     const v = emptyToUndef(s)?.toLowerCase();
     return v === undefined ? undefined : v === "true" || v === "1" || v === "yes" || v === "có";
@@ -67,8 +62,7 @@ function rowFromObject(o: Record<string, string>): DestinationImportRow {
     parentSlug: emptyToUndef(o.parentSlug),
     shortDescription: emptyToUndef(o.shortDescription),
     thumbnail: emptyToUndef(o.thumbnail),
-    lat: num(o.lat),
-    lng: num(o.lng),
+    googleMapsUrl: emptyToUndef(o.googleMapsUrl),
     addressNew: emptyToUndef(o.addressNew),
     addressOld: emptyToUndef(o.addressOld),
     contactPhone: emptyToUndef(o.contactPhone),

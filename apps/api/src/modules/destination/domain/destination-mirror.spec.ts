@@ -20,6 +20,7 @@ function siteRow(overrides: Partial<SiteDestinationRow> = {}): SiteDestinationRo
     thumbnail: null,
     lat: null,
     lng: null,
+    googleMapsUrl: null,
     addressNew: null,
     addressOld: null,
     contactPhone: null,

@@ -23,6 +23,22 @@ function countWords(text: string): number {
 const MIN_SECTION_WORDS = 60;
 const MIN_INTRO_WORDS = 40;
 
+/** Mo ta muc dich tung khoi — hien duoi nhan de nguoi viet phan biet intro vs khoi "tong-quan". */
+const INTRO_HINT =
+  "Đoạn dẫn nhập ngắn ngay dưới tiêu đề (H1) — hook người đọc, tóm tắt nhanh trước khi vào các khối nội dung chi tiết bên dưới. KHÔNG lặp lại nội dung khối \"Tổng quan / giới thiệu\".";
+
+const DESTINATION_BLOCK_HINTS: Record<DestinationBlockKey, string> = {
+  "tong-quan": "Khối H2 đầu tiên, viết đầy đủ hơn phần mở bài — giới thiệu chi tiết: điểm đến là gì, đặc điểm nổi bật, vì sao đáng đến.",
+  "trai-nghiem": "Danh sách hoạt động/trải nghiệm cụ thể du khách có thể làm tại đây.",
+  "mua-nao": "Thời điểm/mùa nào trong năm nên đến, thời tiết từng mùa ảnh hưởng trải nghiệm ra sao.",
+  "lich-trinh": "Gợi ý lịch trình tham quan (thứ tự ghé, thời gian nên dành) — không phải lịch trình đa ngày (đã có field riêng ItineraryJson).",
+  "di-chuyen": "Cách di chuyển tới điểm đến: phương tiện, tuyến đường, thời gian di chuyển.",
+  "an-gi": "Danh sách món/đặc sản/quán ăn gắn với điểm đến.",
+  "meo-luu-y": "Khối cũ (đã thay bằng Lưu ý thực tế/PracticalNotesJson) — chỉ còn hiển thị đúng nhãn cho bài cũ, không dùng cho bài mới.",
+  "qua-mang-ve": "Danh sách đặc sản/quà lưu niệm gắn với điểm đến (khác Product \"Quà mang về\" ở khối Thương mại — đây là nội dung bài viết, không phải card sản phẩm bán).",
+  khac: "Khối tự do cho nội dung không khớp 7 khối cố định — chỉ còn ở bài cũ.",
+};
+
 type DestinationSection = DestinationArticle["sections"][number];
 type Faq = DestinationArticle["faq"][number];
 
@@ -88,9 +104,10 @@ export function DestinationArticleEditor({
         </label>
         <label className="block text-sm">
           <span className="mb-1 flex items-center justify-between font-medium text-zinc-700 dark:text-zinc-300">
-            Mở bài / Tổng quan ngắn
+            Mở bài (dẫn nhập)
             <WordCount current={countWords(article.intro)} min={MIN_INTRO_WORDS} />
           </span>
+          <p className="mb-1 text-xs text-zinc-500">{INTRO_HINT}</p>
           <Textarea
             value={article.intro}
             onChange={(e) => update({ intro: e.target.value })}
@@ -189,6 +206,7 @@ function SectionBlockEditor({
           )}
         </div>
       </div>
+      <p className="mb-2 text-xs text-zinc-500">{DESTINATION_BLOCK_HINTS[blockKey]}</p>
       <label className="mb-2 block text-xs text-zinc-500">
         Tiêu đề hiển thị (H2)
         <Input value={section.heading} onChange={(e) => onChange({ heading: e.target.value })} className="mt-1 w-full" />

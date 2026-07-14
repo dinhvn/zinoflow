@@ -86,6 +86,7 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       thumbnail: meta.thumbnail,
       lat: meta.lat?.toString() ?? null,
       lng: meta.lng?.toString() ?? null,
+      googleMapsUrl: meta.googleMapsUrl,
       addressNew: meta.addressNew,
       addressOld: meta.addressOld,
       contactPhone: meta.contactPhone,
@@ -97,6 +98,24 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
   }
 
   async list(query: ListDestinationsQuery): Promise<DestinationMirrorListResult> {
+    const filtered = await this.getFilteredSorted(query);
+    const total = filtered.length;
+    const start = (query.page - 1) * query.limit;
+    const items = filtered.slice(start, start + query.limit);
+    return { items, total };
+  }
+
+  /** Nhu list() nhung tra ve TOAN BO ket qua khop filter, khong cat trang (dung cho export CSV). */
+  async listAllMatching(
+    query: Omit<ListDestinationsQuery, "page" | "limit">,
+  ): Promise<DestinationMirrorEntity[]> {
+    return this.getFilteredSorted(query);
+  }
+
+  /** Loc (SQL + in-memory) + sort — dung chung cho list() (co phan trang) va listAllMatching(). */
+  private async getFilteredSorted(
+    query: Omit<ListDestinationsQuery, "page" | "limit">,
+  ): Promise<DestinationMirrorEntity[]> {
     const qb = this.repo
       .createQueryBuilder("d")
       .leftJoinAndMapOne(
@@ -176,11 +195,7 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       });
     }
 
-    const total = filtered.length;
-    const start = (query.page - 1) * query.limit;
-    const items = filtered.slice(start, start + query.limit);
-
-    return { items, total };
+    return filtered;
   }
 
   async upsertFromSite(
@@ -200,6 +215,7 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       thumbnail: row.thumbnail,
       lat: row.lat?.toString() ?? null,
       lng: row.lng?.toString() ?? null,
+      googleMapsUrl: row.googleMapsUrl,
       addressNew: row.addressNew,
       addressOld: row.addressOld,
       contactPhone: row.contactPhone,

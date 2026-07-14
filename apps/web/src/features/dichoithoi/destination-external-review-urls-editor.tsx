@@ -18,8 +18,9 @@ function toRows(items: readonly ExternalReviewUrlItem[]): Row[] {
 }
 
 /**
- * Sua link "Xem thêm trên" (Google Maps/TripAdvisor...) — nhap tay hoan toan,
+ * Sua link "Xem thêm trên" (TripAdvisor/Facebook...) — nhap tay hoan toan,
  * website render rel="nofollow" (destination-spec §2.2 khoi #10/#15, Phase 28.0).
+ * Google Maps rieng, xem googleMapsUrl trong destination-metadata-form.
  */
 export function DestinationExternalReviewUrlsEditor({
   slug,
@@ -63,7 +64,8 @@ export function DestinationExternalReviewUrlsEditor({
   return (
     <div className="space-y-3">
       <p className="text-xs text-zinc-500">
-        Link Google Maps/TripAdvisor... nhập tay — website gắn rel=&quot;nofollow&quot;.
+        Link TripAdvisor/Facebook... nhập tay — website gắn rel=&quot;nofollow&quot;. Riêng Google
+        Maps đã có ô nhập ở mục &quot;Thông tin điểm đến&quot; phía trên.
       </p>
       {error && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">

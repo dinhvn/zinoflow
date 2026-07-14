@@ -36,8 +36,10 @@ export interface DestinationMetadataInput {
   provinceCode: string | null;
   shortDescription: string | null;
   thumbnail: string | null;
+  /** Toa do — CACHE tu tinh tu googleMapsUrl, khong con nhap tay */
   lat: number | null;
   lng: number | null;
+  googleMapsUrl: string | null;
   addressNew: string | null;
   addressOld: string | null;
   contactPhone: string | null;
@@ -51,6 +53,10 @@ export interface DestinationMirrorRepository {
   findAll(): Promise<DestinationMirrorEntity[]>;
   findBySlug(slug: string): Promise<DestinationMirrorEntity | null>;
   list(query: ListDestinationsQuery): Promise<DestinationMirrorListResult>;
+  /** Nhu list() nhung tra ve TOAN BO ket qua khop filter, khong cat trang (export CSV) */
+  listAllMatching(
+    query: Omit<ListDestinationsQuery, "page" | "limit">,
+  ): Promise<DestinationMirrorEntity[]>;
   /** Tao diem den moi trong AI tool (siteId=null cho toi khi publish) */
   createLocal(slug: string, meta: DestinationMetadataInput): Promise<void>;
   /** Sua metadata (giu nguyen siteId/content/job/sync) */

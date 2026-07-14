@@ -106,6 +106,7 @@ export class GetDestinationDetailUseCase {
       thumbnail: entity.thumbnail,
       lat: entity.lat === null ? null : Number(entity.lat),
       lng: entity.lng === null ? null : Number(entity.lng),
+      googleMapsUrl: entity.googleMapsUrl,
       addressNew: entity.addressNew,
       addressOld: entity.addressOld,
       contactPhone: entity.contactPhone,

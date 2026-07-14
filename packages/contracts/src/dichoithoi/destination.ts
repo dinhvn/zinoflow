@@ -179,8 +179,11 @@ export const destinationMirrorSchema = z.object({
   thumbnail: z.string().nullable(),
   /** Full URL anh thumb (base + thumbnail) de UI hien truc tiep — null khi chua co */
   imageUrl: z.string().nullable(),
+  /** Toa do — CACHE tu tinh tu googleMapsUrl (khong con nhap tay), van dung that cho hotel auto-assign + related-builder */
   lat: z.number().nullable(),
   lng: z.number().nullable(),
+  /** Link Google Maps nhap tay 1 lan — nguon duy nhat cho lat/lng */
+  googleMapsUrl: z.string().nullable(),
   addressNew: z.string().nullable(),
   addressOld: z.string().nullable(),
   contactPhone: z.string().nullable(),
@@ -491,8 +494,8 @@ export const upsertDestinationRequestSchema = z.object({
   provinceCode: z.string().max(2).nullable().optional(),
   shortDescription: z.string().max(1000).nullable().optional(),
   thumbnail: z.string().max(256).nullable().optional(),
-  lat: z.number().min(-90).max(90).nullable().optional(),
-  lng: z.number().min(-180).max(180).nullable().optional(),
+  /** Link Google Maps nhap tay — server tu parse lat/lng tu day, khong nhan lat/lng truc tiep nua */
+  googleMapsUrl: z.string().max(500).nullable().optional(),
   addressNew: z.string().max(256).nullable().optional(),
   addressOld: z.string().max(256).nullable().optional(),
   contactPhone: z.string().max(32).nullable().optional(),
@@ -539,8 +542,7 @@ export const destinationImportRowSchema = z.object({
   provinceCode: z.string().max(2).nullable().optional(),
   shortDescription: z.string().max(1000).nullable().optional(),
   thumbnail: z.string().max(256).nullable().optional(),
-  lat: z.number().min(-90).max(90).nullable().optional(),
-  lng: z.number().min(-180).max(180).nullable().optional(),
+  googleMapsUrl: z.string().max(500).nullable().optional(),
   addressNew: z.string().max(256).nullable().optional(),
   addressOld: z.string().max(256).nullable().optional(),
   contactPhone: z.string().max(32).nullable().optional(),
@@ -566,6 +568,73 @@ export const importDestinationsResultSchema = z.object({
   errors: z.array(z.object({ row: z.number().int(), slug: z.string(), message: z.string() })),
 });
 export type ImportDestinationsResult = z.infer<typeof importDestinationsResultSchema>;
+
+/**
+ * Sua nhanh nhieu diem den cung luc qua export/import CSV (Google Sheet) — CHI
+ * field lien he/tham khao, khong dong field cau truc (kind/parentSlug/
+ * provinceCode/isFeatured/contentTier — doi sai co the gay tac dung phu tinh
+ * lai quan he cha-con/related). Khop theo slug, KHONG tao moi (khac import
+ * thuong o tren) — slug khong ton tai la loi.
+ */
+export const DESTINATION_BULK_EDIT_FIELD_KEYS = [
+  "googleMapsUrl",
+  "addressNew",
+  "addressOld",
+  "contactPhone",
+  "contactWebsite",
+  "hotelGroupId",
+  "shortDescription",
+] as const;
+export type DestinationBulkEditFieldKey = (typeof DESTINATION_BULK_EDIT_FIELD_KEYS)[number];
+
+export const DESTINATION_BULK_EDIT_FIELD_LABELS: Record<DestinationBulkEditFieldKey, string> = {
+  googleMapsUrl: "Link Google Maps",
+  addressNew: "Địa chỉ mới (sau sáp nhập)",
+  addressOld: "Địa chỉ cũ (trước sáp nhập)",
+  contactPhone: "Điện thoại liên hệ",
+  contactWebsite: "Website chính thức",
+  hotelGroupId: "Nhóm khách sạn (hotelGroupId)",
+  shortDescription: "Mô tả ngắn",
+};
+
+/** Query cho GET /destinations/export — filter giong list (tru sort/phan trang, luon xuat het). */
+export const exportDestinationsQuerySchema = z.object({
+  /** Comma-separated DestinationBulkEditFieldKey, vd "googleMapsUrl,contactPhone" */
+  fields: z.string().min(1),
+  q: z.string().optional(),
+  provinceCode: z.string().optional(),
+  kind: destinationKindSchema.optional(),
+  contentState: destinationContentStateSchema.optional(),
+  production: destinationProductionStateSchema.optional(),
+});
+export type ExportDestinationsQuery = z.infer<typeof exportDestinationsQuerySchema>;
+
+export const destinationBulkEditRowSchema = z.object({
+  slug: z.string().min(1).max(64),
+  googleMapsUrl: z.string().max(500).optional(),
+  addressNew: z.string().max(256).optional(),
+  addressOld: z.string().max(256).optional(),
+  contactPhone: z.string().max(32).optional(),
+  contactWebsite: z.string().max(256).optional(),
+  hotelGroupId: z.string().max(50).optional(),
+  shortDescription: z.string().max(1000).optional(),
+});
+export type DestinationBulkEditRow = z.infer<typeof destinationBulkEditRowSchema>;
+
+export const bulkUpdateDestinationFieldsRequestSchema = z.object({
+  items: z.array(destinationBulkEditRowSchema).min(1).max(1000),
+});
+export type BulkUpdateDestinationFieldsRequest = z.infer<
+  typeof bulkUpdateDestinationFieldsRequestSchema
+>;
+
+export const bulkUpdateDestinationFieldsResultSchema = z.object({
+  updated: z.number().int(),
+  errors: z.array(z.object({ row: z.number().int(), slug: z.string(), message: z.string() })),
+});
+export type BulkUpdateDestinationFieldsResult = z.infer<
+  typeof bulkUpdateDestinationFieldsResultSchema
+>;
 
 /** AI goi y metadata "mem" cho 1 diem den (spec §3.5: KHONG dung lat/lng/dia chi) */
 export const suggestDestinationMetaRequestSchema = z.object({
@@ -645,12 +714,11 @@ export const checkImageResponseSchema = z.object({
 });
 export type CheckImageResponse = z.infer<typeof checkImageResponseSchema>;
 
-/** Tach lat/lng tu link Google Maps dan vao (spec destination-spec §2.1.1) */
-export const parseMapsLinkRequestSchema = z.object({
-  url: z.string().min(1).max(2048),
-});
-export type ParseMapsLinkRequest = z.infer<typeof parseMapsLinkRequestSchema>;
-
+/**
+ * Tach lat/lng tu link Google Maps (spec destination-spec §2.1.1) — dung NOI BO
+ * boi UpsertDestinationUseCase/ImportDestinationsUseCase (server tu parse lai
+ * moi lan googleMapsUrl doi), khong con endpoint HTTP rieng cho FE goi truc tiep.
+ */
 export const parseMapsLinkResponseSchema = z.object({
   /** null khi khong parse duoc (link sai dinh dang/khong phai Google Maps) */
   lat: z.number().nullable(),

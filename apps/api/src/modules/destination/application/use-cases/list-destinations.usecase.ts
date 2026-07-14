@@ -84,6 +84,7 @@ export class ListDestinationsUseCase {
       imageUrl: this.imageChecker.buildUrl(e.thumbnail),
       lat: e.lat === null ? null : Number(e.lat),
       lng: e.lng === null ? null : Number(e.lng),
+      googleMapsUrl: e.googleMapsUrl,
       addressNew: e.addressNew,
       addressOld: e.addressOld,
       contactPhone: e.contactPhone,

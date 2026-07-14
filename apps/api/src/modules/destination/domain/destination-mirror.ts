@@ -23,6 +23,7 @@ export interface SiteDestinationRow {
   thumbnail: string | null;
   lat: number | null;
   lng: number | null;
+  googleMapsUrl: string | null;
   addressNew: string | null;
   addressOld: string | null;
   contactPhone: string | null;

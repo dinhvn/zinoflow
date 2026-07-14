@@ -74,7 +74,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     const result = await this.queryWithRetry<Record<string, unknown>>(`
       SELECT
         d.Id, d.Slug, d.Kind, d.Name, d.ShortDescription, d.Thumbnail,
-        d.Lat, d.Lng, d.AddressNew, d.AddressOld, d.ContactPhone, d.ContactWebsite,
+        d.Lat, d.Lng, d.GoogleMapsUrl, d.AddressNew, d.AddressOld, d.ContactPhone, d.ContactWebsite,
         d.HotelGroupId, d.IsFeatured, d.ContentTier, d.[Order], d.DistanceFromCenter,
         d.Status, d.ContentSource, d.UpdatedAt,
         p.Code AS ProvinceCode,
@@ -97,6 +97,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       thumbnail: (r.Thumbnail as string | null) ?? null,
       lat: r.Lat === null ? null : Number(r.Lat),
       lng: r.Lng === null ? null : Number(r.Lng),
+      googleMapsUrl: (r.GoogleMapsUrl as string | null) ?? null,
       addressNew: (r.AddressNew as string | null) ?? null,
       addressOld: (r.AddressOld as string | null) ?? null,
       contactPhone: (r.ContactPhone as string | null) ?? null,
@@ -316,11 +317,11 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         DECLARE @provinceId int = (SELECT Id FROM v2.Province WHERE Code = @provinceCode);
         INSERT INTO v2.Destination
           (Slug, Kind, ParentId, ProvinceId, Name, NameUnaccented, ShortDescription, Thumbnail,
-           Lat, Lng, AddressNew, AddressOld, ContactPhone, ContactWebsite,
+           Lat, Lng, GoogleMapsUrl, AddressNew, AddressOld, ContactPhone, ContactWebsite,
            HotelGroupId, IsFeatured, ContentTier, Status, ContentSource)
         VALUES
           (@slug, @kind, @parentId, @provinceId, @name, @nameUnaccented,
-           COALESCE(@shortDescription, N''), @thumbnail, @lat, @lng, @addressNew, @addressOld,
+           COALESCE(@shortDescription, N''), @thumbnail, @lat, @lng, @googleMapsUrl, @addressNew, @addressOld,
            @contactPhone, @contactWebsite, @hotelGroupId, @isFeatured, @contentTier, 1, 1);
         SELECT CAST(SCOPE_IDENTITY() AS int) AS SiteId;
       `);
@@ -344,7 +345,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
           Kind = @kind, ParentId = @parentId, ProvinceId = @provinceId,
           Name = @name, NameUnaccented = @nameUnaccented,
           ShortDescription = COALESCE(@shortDescription, N''), Thumbnail = @thumbnail,
-          Lat = @lat, Lng = @lng, AddressNew = @addressNew, AddressOld = @addressOld,
+          Lat = @lat, Lng = @lng, GoogleMapsUrl = @googleMapsUrl, AddressNew = @addressNew, AddressOld = @addressOld,
           ContactPhone = @contactPhone, ContactWebsite = @contactWebsite,
           HotelGroupId = @hotelGroupId, IsFeatured = @isFeatured, ContentTier = @contentTier,
           UpdatedAt = SYSUTCDATETIME()
@@ -391,6 +392,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     request.input("thumbnail", meta.thumbnail);
     request.input("lat", meta.lat);
     request.input("lng", meta.lng);
+    request.input("googleMapsUrl", meta.googleMapsUrl);
     request.input("addressNew", meta.addressNew);
     request.input("addressOld", meta.addressOld);
     request.input("contactPhone", meta.contactPhone);

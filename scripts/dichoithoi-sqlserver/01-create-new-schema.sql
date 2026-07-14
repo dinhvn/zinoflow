@@ -97,6 +97,12 @@ GO
 IF COL_LENGTH('v2.Destination', 'ContentTier') IS NULL
   ALTER TABLE v2.Destination ADD ContentTier varchar(16) NULL;
 GO
+-- Vay 07/2026: link Google Maps nhap tay 1 lan — nguon duy nhat cho Lat/Lng tu
+-- gio (UpsertDestinationUseCase tu parse lai moi lan cot nay doi), khong con
+-- nhap tay Lat/Lng truc tiep qua form. Idempotent cho install cu.
+IF COL_LENGTH('v2.Destination', 'GoogleMapsUrl') IS NULL
+  ALTER TABLE v2.Destination ADD GoogleMapsUrl nvarchar(500) NULL;
+GO
 
 /* ===== DestinationContent — bang lanh 1-1 (redesign §4.3) ===== */
 IF OBJECT_ID('v2.DestinationContent') IS NULL
