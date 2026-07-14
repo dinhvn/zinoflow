@@ -52,6 +52,8 @@ export class StubContentAiProvider implements ContentAiProvider {
         return isDestination
           ? this.buildDestinationFrame(request.vars)
           : this.buildFrame(request.vars);
+      case "restructure-paste":
+        return this.buildRestructurePaste(request.vars);
       default:
         throw new AiProviderError(`Stub provider: unknown operation "${request.operation}"`);
     }
@@ -137,6 +139,34 @@ export class StubContentAiProvider implements ContentAiProvider {
           `${topic} là điểm đến đáng chú ý trong khu vực, phù hợp cho cả chuyến đi ngắn lẫn lịch trình dài ngày.`,
         searchKeyword: `${topic}, du lịch ${topic}, kinh nghiệm ${topic}`.toLowerCase().slice(0, 250),
       },
+    };
+  }
+
+  /**
+   * "Tach" bai dan vao (restructure-paste, redesign luong viet bai §Phase 2) — stub KHONG
+   * doc rawText that (chi doc vars nhu moi operation khac), tra ve 2 khoi toi thieu de test
+   * tron pipeline (job manual -> PUT draft -> editor); phan con thieu duoc use case tu bu
+   * placeholder ro rang truoc khi validate, giong het hanh vi voi provider that.
+   */
+  private buildRestructurePaste(vars: Readonly<Record<string, unknown>>): unknown {
+    const topic = String(vars["topic"] ?? "điểm đến thử nghiệm");
+    return {
+      title: `${topic}: kinh nghiệm tham quan, giá vé, ăn gì 2026`,
+      intro:
+        `${topic} là điểm đến được nhiều du khách quan tâm. Stub provider tách 2 khối mẫu ` +
+        "từ bài dán vào để kiểm tra pipeline; provider thật sẽ tách đúng nội dung đã dán.",
+      sections: [
+        {
+          blockKey: "tong-quan",
+          heading: "Tổng quan",
+          content: `Stub: khối tổng quan được tách từ bài dán vào cho chủ đề ${topic}.`,
+        },
+        {
+          blockKey: "mua-nao",
+          heading: "Nên đi mùa nào",
+          content: "Stub: khối mùa nào được tách từ bài dán vào — provider thật sẽ tách đúng nội dung gốc.",
+        },
+      ],
     };
   }
 

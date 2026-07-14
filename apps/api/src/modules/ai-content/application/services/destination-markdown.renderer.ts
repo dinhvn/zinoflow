@@ -25,6 +25,14 @@ export function renderDestinationMarkdown(article: DestinationArticle): string {
   for (const section of article.sections) {
     lines.push(`## ${section.heading}`, "");
     lines.push(section.content, "");
+    // Khoi list (trai-nghiem/an-gi/qua-mang-ve) — "items" moi la du lieu chinh,
+    // "content" chi la cau dan ngan; phai hien de nguoi duyet thay dung thu se publish.
+    if (section.items?.length) {
+      for (const item of section.items) {
+        lines.push(`- **${item.ten}:** ${item.moTa}`);
+      }
+      lines.push("");
+    }
   }
 
   lines.push("## Câu hỏi thường gặp", "");

@@ -79,6 +79,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         d.Status, d.ContentSource, d.UpdatedAt,
         p.Code AS ProvinceCode,
         par.Slug AS ParentSlug,
+        c.TicketPrice,
         CONVERT(varchar(64), HASHBYTES('SHA2_256', CAST(c.ContentHtml AS nvarchar(max))), 2) AS ContentHash
       FROM v2.Destination d
       LEFT JOIN v2.Destination par ON par.Id = d.ParentId
@@ -109,6 +110,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       contentSource: r.ContentSource === null ? null : Number(r.ContentSource),
       contentHash: (r.ContentHash as string | null) ?? null,
       siteUpdatedAt: r.UpdatedAt ? new Date(r.UpdatedAt as string) : null,
+      ticketPrice: (r.TicketPrice as string | null) ?? null,
     }));
   }
 
@@ -178,6 +180,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       request.input("ticketLinksJson", input.ticketLinksJson);
       request.input("priceBreakdownJson", input.priceBreakdownJson);
       request.input("practicalNotesJson", input.practicalNotesJson);
+      request.input("galleryJson", input.galleryJson);
       request.input("metaTitle", input.metaTitle);
       request.input("metaDescription", input.metaDescription);
       targets.forEach((id, i) => request.input(`target${i}`, id));
@@ -199,17 +202,18 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
           Transport = @transport, Food = @food, HotelText = @hotel, Tip = @tip,
           FaqJson = @faqJson, TicketLinksJson = @ticketLinksJson,
           PriceBreakdownJson = @priceBreakdownJson, PracticalNotesJson = @practicalNotesJson,
+          GalleryJson = @galleryJson,
           MetaTitle = @metaTitle, MetaDescription = @metaDescription
         WHERE DestinationId = @siteId;
         IF @@ROWCOUNT = 0
           INSERT INTO v2.DestinationContent
             (DestinationId, ContentHtml, OpeningTime, TicketPrice, Transport, Food, HotelText,
-             Tip, FaqJson, TicketLinksJson, PriceBreakdownJson, PracticalNotesJson,
+             Tip, FaqJson, TicketLinksJson, PriceBreakdownJson, PracticalNotesJson, GalleryJson,
              MetaTitle, MetaDescription)
           VALUES
             (@siteId, @contentHtml, @openingTime, @ticketPrice, @transport, @food, @hotel,
              @tip, @faqJson, @ticketLinksJson, @priceBreakdownJson, @practicalNotesJson,
-             @metaTitle, @metaDescription);
+             @galleryJson, @metaTitle, @metaDescription);
 
         -- Quan he mentioned tu auto-link: thay toan bo dong auto cu cua nguon nay
         DELETE FROM v2.DestinationRelation
@@ -628,17 +632,6 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     });
   }
 
-  async updateItinerary(siteId: number, itineraryJson: string): Promise<void> {
-    await this.runWithRetry(async (pool) => {
-      const request = pool.request();
-      request.input("siteId", siteId);
-      request.input("itineraryJson", itineraryJson);
-      return request.query(
-        `UPDATE v2.DestinationContent SET ItineraryJson = @itineraryJson WHERE DestinationId = @siteId`,
-      );
-    });
-  }
-
   async updateEditorialReview(siteId: number, editorialReview: string | null): Promise<void> {
     await this.runWithRetry(async (pool) => {
       const request = pool.request();
@@ -657,6 +650,17 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       request.input("externalReviewUrlsJson", externalReviewUrlsJson);
       return request.query(
         `UPDATE v2.DestinationContent SET ExternalReviewUrlsJson = @externalReviewUrlsJson WHERE DestinationId = @siteId`,
+      );
+    });
+  }
+
+  async updateGallery(siteId: number, galleryJson: string): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("galleryJson", galleryJson);
+      return request.query(
+        `UPDATE v2.DestinationContent SET GalleryJson = @galleryJson WHERE DestinationId = @siteId`,
       );
     });
   }

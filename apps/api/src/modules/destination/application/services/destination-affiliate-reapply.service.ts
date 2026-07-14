@@ -4,15 +4,16 @@ import type { AffiliateReapplyTarget } from "../../../affiliate/application/port
 import { AffiliateReapplyRegistry } from "../../../affiliate/application/services/affiliate-reapply-registry.service";
 import { ResolveAffiliateLinkUseCase } from "../../../affiliate/application/use-cases/resolve-affiliate-link.usecase";
 import {
-  DESTINATION_MIRROR_REPOSITORY,
-  type DestinationMirrorRepository,
-} from "../ports/destination-mirror.repository";
-import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+  DESTINATION_TICKET_REPOSITORY,
+  type DestinationTicketRepository,
+} from "../ports/destination-ticket.repository";
+import { SyncDestinationTicketLinksService } from "./sync-destination-ticket-links.service";
 
 /**
- * Dang ky vao AffiliateReapplyRegistry (spec affiliate-link-conversion §4): khi
- * nguoi dung bam "Áp dụng lại" 1 rule, tinh lai affiliateUrl cho ticketLinks cua
- * MOI diem den (bo qua linkStatus='manual-override'), ghi mirror + site (neu published).
+ * Dang ky vao AffiliateReapplyRegistry: khi nguoi dung bam "Áp dụng lại", tinh
+ * lai affiliateUrl cho MOI dong destination_tickets (bo qua linkStatus='manual-
+ * override'), roi dong bo lai cache ticketLinks (mirror + site, neu published)
+ * cho tung diem den bi anh huong.
  */
 @Injectable()
 export class DestinationAffiliateReapplyService implements AffiliateReapplyTarget, OnModuleInit {
@@ -22,41 +23,43 @@ export class DestinationAffiliateReapplyService implements AffiliateReapplyTarge
   constructor(
     private readonly registry: AffiliateReapplyRegistry,
     private readonly resolveLink: ResolveAffiliateLinkUseCase,
-    @Inject(DESTINATION_MIRROR_REPOSITORY)
-    private readonly mirrorRepo: DestinationMirrorRepository,
-    @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
+    @Inject(DESTINATION_TICKET_REPOSITORY)
+    private readonly tickets: DestinationTicketRepository,
+    private readonly syncTicketLinks: SyncDestinationTicketLinksService,
   ) {}
 
   onModuleInit(): void {
     this.registry.register(this);
   }
 
-  async reapply(ruleId: string | null): Promise<{ updatedCount: number }> {
-    const all = await this.mirrorRepo.findAll();
+  async reapply(): Promise<{ updatedCount: number }> {
+    const all = await this.tickets.findAll();
+    const changedSlugs = new Set<string>();
     let updatedCount = 0;
-    for (const destination of all) {
-      if (destination.ticketLinks.length === 0) continue;
-      let changed = false;
-      const recomputed = await Promise.all(
-        destination.ticketLinks.map(async (link) => {
-          if (link.linkStatus === "manual-override") return link;
-          const resolved = await this.resolveLink.execute(link.sourceUrl, link.provider);
-          if (resolved.affiliateUrl === link.affiliateUrl && resolved.linkStatus === link.linkStatus) {
-            return link;
-          }
-          changed = true;
-          return { ...link, affiliateUrl: resolved.affiliateUrl, linkStatus: resolved.linkStatus };
-        }),
-      );
-      if (!changed) continue;
-      await this.mirrorRepo.setTicketLinks(destination.slug, recomputed);
-      if (destination.siteId !== null) {
-        await this.siteDb.updateTicketLinks(destination.siteId, JSON.stringify(recomputed));
+    for (const ticket of all) {
+      if (ticket.linkStatus === "manual-override") continue;
+      const resolved = await this.resolveLink.execute(ticket.sourceUrl, ticket.provider);
+      if (resolved.affiliateUrl === ticket.affiliateUrl && resolved.linkStatus === ticket.linkStatus) {
+        continue;
       }
+      await this.tickets.update(ticket.id, {
+        label: ticket.label,
+        provider: resolved.provider,
+        sourceUrl: ticket.sourceUrl,
+        affiliateUrl: resolved.affiliateUrl,
+        linkStatus: resolved.linkStatus,
+        price: ticket.price,
+        thumbnailUrl: ticket.thumbnailUrl,
+        order: ticket.order,
+      });
+      changedSlugs.add(ticket.destinationSlug);
       updatedCount++;
     }
+    for (const slug of changedSlugs) {
+      await this.syncTicketLinks.execute(slug);
+    }
     this.logger.log(
-      `Ap dung lai affiliate rule ${ruleId ?? "(toan bo)"}: ${updatedCount} diem den doi ticketLinks`,
+      `Ap dung lai affiliate rule: ${updatedCount} ve doi affiliateUrl (${changedSlugs.size} diem den)`,
     );
     return { updatedCount };
   }

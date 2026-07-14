@@ -13,6 +13,7 @@ import { UpdateDraftUseCase } from "./application/use-cases/update-draft.usecase
 import { ExportDraftHtmlUseCase } from "./application/use-cases/export-draft-html.usecase";
 import { GetAiUsageSummaryUseCase } from "./application/use-cases/get-ai-usage-summary.usecase";
 import { SuggestDestinationMetaUseCase } from "./application/use-cases/suggest-destination-meta.usecase";
+import { RestructurePastedContentUseCase } from "./application/use-cases/restructure-pasted-content.usecase";
 import { ListPromptTemplatesUseCase } from "./application/use-cases/list-prompt-templates.usecase";
 import { GetPromptTemplateUseCase } from "./application/use-cases/get-prompt-template.usecase";
 import { CreatePromptVersionUseCase } from "./application/use-cases/create-prompt-version.usecase";
@@ -77,6 +78,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     UpdateDraftUseCase,
     ExportDraftHtmlUseCase,
     SuggestDestinationMetaUseCase,
+    RestructurePastedContentUseCase,
     ListPromptTemplatesUseCase,
     GetPromptTemplateUseCase,
     CreatePromptVersionUseCase,
@@ -134,11 +136,15 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     CreateContentJobUseCase,
     CreateManualDraftUseCase,
     SuggestDestinationMetaUseCase,
+    RestructurePastedContentUseCase,
     GetAiUsageSummaryUseCase,
     CONTENT_JOB_REPOSITORY,
     CONTENT_DRAFT_REPOSITORY,
     AI_PROVIDER_REGISTRY,
     AI_USAGE_RECORDER,
+    // Pivot gop editor vao trang detail: GenerateDestinationBlockUseCase (module
+    // destination) tai dung PromptBuilder.buildSection() cho goi y AI tung block.
+    PromptBuilder,
   ],
 })
 export class AiContentModule {}

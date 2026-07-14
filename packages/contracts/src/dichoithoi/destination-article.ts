@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
-import { contentSectionSchema, faqItemSchema } from "../ai-content/article";
+import { contentSectionSchema, faqItemSchema, type DestinationBlockKey } from "../ai-content/article";
+import { qualityCheckSchema } from "../ai-content/quality";
 
 /**
  * Bai viet DIEM DEN du lich (articleType "guide-diem-den") —
@@ -67,6 +68,56 @@ export const destinationArticleSchema = destinationArticleFrameSchema.extend({
 });
 export type DestinationArticle = z.infer<typeof destinationArticleSchema>;
 
+/**
+ * Dung thu tu hien thi + soan thao 7 khoi noi dung co dinh cua bai diem den
+ * (khong tinh "khac") — dichoithoi-destination-spec.md §2.2. "trai-nghiem"
+ * (khach se lam gi/trai nghiem gi o day — hanh dong cu the, KHAC "diem tham
+ * quan" la danh sach dia diem) them 07/2026 sau khi doi chieu TripAdvisor: mo
+ * ta dai KHONG thay the duoc danh sach hanh dong cu the, ngan, de scan.
+ * "lich-trinh" (07/2026): TRUOC la field JSON rieng (ItineraryJson, co form
+ * nhap tay + poiSlug auto-link + tour-CTA theo duration_days) — chuyen ve
+ * prose thuong trong sections nhu moi khoi khac theo quyet dinh cua chu site
+ * (chap nhan mat 2 tinh nang tu dong do de doi 1 UX soan bai duy nhat).
+ * "meo-luu-y" BO KHOI list nay (07/2026, van con trong enum + label de tuong
+ * thich nguoc voi bai cu da gan blockKey nay) — phat hien tren live site dang
+ * trung 2 lan roi (cot Tip + feature PracticalNotesJson, 2 khoi <details>
+ * canh nhau o #meo trong Detail.cshtml), them section thu 3 chi lam nang hon.
+ * "Meo & luu y thuc te" gio CHI con qua PracticalNotesJson (nhom E).
+ */
+export const DESTINATION_SECTION_ORDER: readonly Exclude<DestinationBlockKey, "khac">[] = [
+  "tong-quan",
+  "trai-nghiem",
+  "mua-nao",
+  "lich-trinh",
+  "di-chuyen",
+  "an-gi",
+  "qua-mang-ve",
+];
+
+/** Nhan tieng Viet hien thi cho tung khoi — dung chung FE/BE/prompt AI. */
+export const DESTINATION_BLOCK_LABELS: Record<DestinationBlockKey, string> = {
+  "tong-quan": "Tổng quan / giới thiệu",
+  "trai-nghiem": "Trải nghiệm gì ở đây",
+  "mua-nao": "Nên đi mùa nào",
+  "lich-trinh": "Lịch trình gợi ý",
+  "di-chuyen": "Di chuyển",
+  "an-gi": "Ăn gì đặc trưng",
+  /** Giu lai de hien thi dung nhan cho bai CU da gan blockKey nay — KHONG con trong DESTINATION_SECTION_ORDER (07/2026, trung PracticalNotesJson). */
+  "meo-luu-y": "Mẹo & lưu ý thực tế (cũ)",
+  "qua-mang-ve": "Quà mang về",
+  khac: "Khác",
+};
+
+/** Khoi nao dung danh sach co cau truc (items) thay vi van xuoi thuan. */
+export const DESTINATION_LIST_BLOCK_KEYS: readonly DestinationBlockKey[] = [
+  "trai-nghiem",
+  "an-gi",
+  "qua-mang-ve",
+];
+
+/** So muc toi thieu cho danh sach co cau truc (an-gi/qua-mang-ve) — dung o gate + skeleton. */
+export const MIN_LIST_ITEMS = 3;
+
 /** Outline buoc 1 — khong co plannedProducts (diem den khong co product). */
 export const destinationOutlineSchema = z.object({
   title: z.string(),
@@ -74,3 +125,50 @@ export const destinationOutlineSchema = z.object({
   plannedFaqQuestions: z.array(z.string()).min(3),
 });
 export type DestinationOutline = z.infer<typeof destinationOutlineSchema>;
+
+/**
+ * Request "dan bai co san" (redesign luong viet bai §Phase 2): nguoi dung dan 1 doan
+ * text co san (tu AI khac hoac tu viet) de AI TACH LAI (khong viet moi) vao dung
+ * cau truc DestinationArticle. Response tra ve luon la DestinationArticle hop le.
+ */
+export const restructurePastedContentRequestSchema = z.object({
+  rawText: z.string().min(50, "Nội dung dán vào quá ngắn").max(20_000),
+  topic: z.string().min(1).max(128),
+  keywordSeed: z.array(z.string()).default([]),
+  aiProvider: z.string().optional(),
+  aiModel: z.string().optional(),
+});
+export type RestructurePastedContentRequest = z.infer<typeof restructurePastedContentRequestSchema>;
+
+/**
+ * Pivot gop editor vao trang detail — luu tay `draft_article` (redesign luong
+ * viet bai lan 2). Nhan RAW object, KHONG validate chat theo destinationArticleSchema
+ * o day (cho phep luu dat do, chua du 6 block/FAQ) — validate that chay o
+ * gate-check/preview/publish qua destinationArticleSchema.safeParse().
+ */
+export const updateDestinationDraftArticleRequestSchema = z.object({
+  draftArticle: z.record(z.string(), z.unknown()),
+});
+export type UpdateDestinationDraftArticleRequest = z.infer<
+  typeof updateDestinationDraftArticleRequestSchema
+>;
+
+/** Request tao goi y AI cho DUNG 1 block (khong tao ContentJob/ContentDraft). */
+export const generateDestinationBlockRequestSchema = z.object({
+  aiProvider: z.string().optional(),
+  aiModel: z.string().optional(),
+});
+export type GenerateDestinationBlockRequest = z.infer<typeof generateDestinationBlockRequestSchema>;
+
+/**
+ * Ket qua chay gate tren draft_article HIEN TAI cua 1 diem den, doc lap voi
+ * draftId/job (khac runQualityChecksResponseSchema — schema do gan voi 1 draft
+ * cu the trong luong ContentJob, khong dung duoc cho pivot nay).
+ */
+export const destinationDraftQualityChecksResponseSchema = z.object({
+  checks: z.array(qualityCheckSchema),
+  allPassed: z.boolean(),
+});
+export type DestinationDraftQualityChecksResponse = z.infer<
+  typeof destinationDraftQualityChecksResponseSchema
+>;

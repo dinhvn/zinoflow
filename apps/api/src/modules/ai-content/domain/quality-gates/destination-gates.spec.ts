@@ -195,3 +195,99 @@ describe("destination gates — Flagship tier (Phase 28.3)", () => {
     expect(result.details.join(" ")).toContain("văn hoá - lịch sử");
   });
 });
+
+describe("destination gates — blockKey 7 khoi co dinh (redesign luong viet bai)", () => {
+  /** Bai moi da gan blockKey cho 6/7 khoi co dinh (thieu "trai-nghiem"/"lich-trinh", khong bat buoc du het),
+   * "an-gi"/"qua-mang-ve" dang danh sach. */
+  function articleWithBlockKeys(): DestinationArticle {
+    const article = validArticle();
+    return {
+      ...article,
+      sections: [
+        { heading: "Tổng quan Vịnh Hạ Long", content: longContent("Vịnh Hạ Long"), blockKey: "tong-quan" },
+        { heading: "Nên đi mùa nào", content: longContent("Mùa thu"), blockKey: "mua-nao" },
+        { heading: "Di chuyển tới Hạ Long", content: longContent("Cao tốc"), blockKey: "di-chuyen" },
+        {
+          heading: "Ăn gì đặc trưng",
+          content: "Chả mực giã tay.\nSá sùng.\nSam biển.",
+          blockKey: "an-gi",
+          items: [
+            { ten: "Chả mực giã tay", moTa: "Đặc sản trứ danh, giã tay ngay tại chợ." },
+            { ten: "Sá sùng", moTa: "Hải sản quý, thường phơi khô làm quà." },
+            { ten: "Sam biển", moTa: "Chế biến nhiều món, mùa hè là ngon nhất." },
+          ],
+        },
+        { heading: "Mẹo & lưu ý", content: longContent("Mua vé"), blockKey: "meo-luu-y" },
+        {
+          heading: "Quà mang về",
+          content: "Chả mực.\nRượu nếp.\nNước mắm.",
+          blockKey: "qua-mang-ve",
+          items: [
+            { ten: "Chả mực Hạ Long", moTa: "Mua tại chợ hải sản, đóng gói hút chân không." },
+            { ten: "Rượu nếp cái hoa vàng", moTa: "Đặc sản vùng biển Quảng Ninh." },
+            { ten: "Nước mắm Cái Rồng", moTa: "Thương hiệu nước mắm truyền thống địa phương." },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("structure: pass khi bai flagship co blockKey mua-nao (khong can dong keyword heading)", () => {
+    const article = articleWithBlockKeys();
+    const result = evaluateDestinationStructureGate({
+      ...gateInput(article),
+      contentTier: "flagship",
+    });
+    expect(result.passed).toBe(true);
+  });
+
+  it("structure: fail khi bai flagship co blockKey nhung thieu mua-nao", () => {
+    const article = articleWithBlockKeys();
+    article.sections = article.sections.filter((s) => s.blockKey !== "mua-nao");
+    const result = evaluateDestinationStructureGate({
+      ...gateInput(article),
+      contentTier: "flagship",
+    });
+    expect(result.passed).toBe(false);
+    expect(result.details.join(" ")).toContain("mùa/thời điểm");
+  });
+
+  it("structure: bai co blockKey nhung khong flagship thi khong con bat buoc van hoa-lich su", () => {
+    const article = articleWithBlockKeys();
+    const result = evaluateDestinationStructureGate({
+      ...gateInput(article),
+      contentTier: "standard",
+    });
+    expect(result.passed).toBe(true);
+  });
+
+  it("structure: khoi an-gi voi items >= 3 muc thi pass du content ngan", () => {
+    const article = articleWithBlockKeys();
+    const result = evaluateDestinationStructureGate(gateInput(article));
+    expect(result.details.some((d) => d.includes("Ăn gì đặc trưng"))).toBe(false);
+  });
+
+  it("structure: khoi qua-mang-ve fail khi items duoi 3 muc", () => {
+    const article = articleWithBlockKeys();
+    const quaMangVe = article.sections.find((s) => s.blockKey === "qua-mang-ve");
+    quaMangVe!.items = quaMangVe!.items!.slice(0, 2);
+    const result = evaluateDestinationStructureGate(gateInput(article));
+    expect(result.passed).toBe(false);
+    expect(result.details.join(" ")).toContain("ít nhất 3 mục");
+  });
+
+  it("structure: khoi an-gi fail khi 1 muc chua co mo ta", () => {
+    const article = articleWithBlockKeys();
+    const anGi = article.sections.find((s) => s.blockKey === "an-gi");
+    anGi!.items![0] = { ten: anGi!.items![0]!.ten, moTa: "" };
+    const result = evaluateDestinationStructureGate(gateInput(article));
+    expect(result.passed).toBe(false);
+    expect(result.details.join(" ")).toContain("chưa có mô tả");
+  });
+
+  it("regression: bai cu khong co blockKey nao van cham theo keyword-matching nhu truoc", () => {
+    const article = validArticle(); // khong co blockKey
+    const result = evaluateDestinationStructureGate({ ...gateInput(article), contentTier: "standard" });
+    expect(result.passed).toBe(true);
+  });
+});

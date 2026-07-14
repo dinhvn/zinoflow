@@ -2,14 +2,21 @@
 
 import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { uploadDestinationImageResponseSchema } from "@zinoflow/contracts";
-import { apiUpload } from "@/shared/api-client";
+import {
+  checkImageResponseSchema,
+  updateThumbnailRequestSchema,
+  uploadDestinationImageResponseSchema,
+} from "@zinoflow/contracts";
+import { apiSend, apiUpload, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
 
 interface Props {
   slug: string;
   /** URL anh hien tai (thumb) de xem truoc; null neu chua co */
   imageUrl: string | null;
+  /** Duong dan tuong doi hien tai cua thumbnail (cot Thumbnail); null neu chua co */
+  thumbnailPath: string | null;
   /** Goi khi upload xong de trang refetch (imageUrl doi) */
   onUploaded: () => void;
 }
@@ -21,11 +28,14 @@ const MAX_MB = 15;
  * API tu convert 3 co WebP + FTP len hosting + ghi cot Thumbnail (spec §14.3).
  * Component chi lo chon file + hien trang thai; khong biet FTP/sharp.
  */
-export function DestinationImageUploader({ slug, imageUrl, onUploaded }: Props) {
+export function DestinationImageUploader({ slug, imageUrl, thumbnailPath, onUploaded }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [manualPath, setManualPath] = useState(thumbnailPath ?? "");
+  const [imageCheck, setImageCheck] = useState<{ exists: boolean } | null>(null);
+  const [manualSaved, setManualSaved] = useState(false);
 
   const upload = useMutation({
     mutationFn: (file: File) => {
@@ -38,6 +48,28 @@ export function DestinationImageUploader({ slug, imageUrl, onUploaded }: Props) 
       onUploaded();
     },
     onError: (e) => setError(e instanceof Error ? e.message : "Upload ảnh thất bại"),
+  });
+
+  const checkImage = useMutation({
+    mutationFn: async () =>
+      checkImageResponseSchema.parse(
+        await apiSend("POST", "/destinations/check-image", { path: manualPath.trim() }),
+      ),
+    onSuccess: (r) => setImageCheck({ exists: r.exists }),
+  });
+
+  const saveManualPath = useMutation({
+    mutationFn: () => {
+      const body = updateThumbnailRequestSchema.parse({ thumbnail: manualPath.trim() || null });
+      return apiSend("POST", `/destinations/${slug}/thumbnail`, body);
+    },
+    onSuccess: () => {
+      setError(null);
+      setManualSaved(true);
+      onUploaded();
+    },
+    onError: (e) =>
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Lưu đường dẫn thất bại"),
   });
 
   function handleFile(file: File | undefined) {
@@ -138,6 +170,51 @@ export function DestinationImageUploader({ slug, imageUrl, onUploaded }: Props) 
           Đã upload &amp; cập nhật ảnh đại diện.
         </p>
       )}
+
+      <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          Hoặc trỏ tới ảnh có sẵn trên hosting (đường dẫn tương đối)
+        </p>
+        <div className="mt-1.5 flex gap-2">
+          <Input
+            value={manualPath}
+            onChange={(e) => {
+              setManualPath(e.target.value);
+              setImageCheck(null);
+              setManualSaved(false);
+            }}
+            placeholder="vd: slug.webp hoặc diem-den/slug/slug-thumb.webp"
+            className="flex-1 text-sm"
+          />
+          <Button
+            size="sm"
+            loading={checkImage.isPending}
+            disabled={!manualPath.trim()}
+            onClick={() => manualPath.trim() && checkImage.mutate()}
+          >
+            Kiểm tra
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            loading={saveManualPath.isPending}
+            disabled={manualPath.trim() === (thumbnailPath ?? "")}
+            onClick={() => saveManualPath.mutate()}
+          >
+            Lưu
+          </Button>
+        </div>
+        {imageCheck && (
+          <p
+            className={`mt-1 text-xs ${imageCheck.exists ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}
+          >
+            {imageCheck.exists ? "✅ Ảnh tồn tại" : "⚠️ Chưa tìm thấy ảnh"}
+          </p>
+        )}
+        {manualSaved && (
+          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">Đã lưu đường dẫn.</p>
+        )}
+      </div>
     </div>
   );
 }

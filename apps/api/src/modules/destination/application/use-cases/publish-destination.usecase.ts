@@ -1,17 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import {
-  destinationArticleSchema,
-  type PublishDestinationResult,
-} from "@zinoflow/contracts";
+import { type PublishDestinationResult } from "@zinoflow/contracts";
 import { DomainRuleError } from "../../../shared/errors/app-error";
-import {
-  CONTENT_JOB_REPOSITORY,
-  type ContentJobRepository,
-} from "../../../ai-content/application/ports/content-job.repository";
-import {
-  CONTENT_DRAFT_REPOSITORY,
-  type ContentDraftRepository,
-} from "../../../ai-content/application/ports/content-draft.repository";
 import {
   DESTINATION_MIRROR_REPOSITORY,
   DESTINATION_RELATION_REPOSITORY,
@@ -26,16 +15,22 @@ import {
   renderDestinationBodyHtml,
 } from "../services/destination-publish-html.renderer";
 import { RecomputeRelatedService } from "../services/recompute-related.service";
+import { evaluateGatesForArticle } from "../../../ai-content/domain/quality-gates/gate-dispatcher";
+import { renderDestinationMarkdown } from "../../../ai-content/application/services/destination-markdown.renderer";
+import { parseDraftArticleOrThrow } from "../services/parse-draft-article";
+import { buildGalleryJson } from "../services/gallery-json.util";
 
 /**
- * Publish bai diem den DA DUYET xuong SQL Server dichoithoi (Phase C — spec §3.3, §3.4).
- * Day la gate thu cong thu 2 (Approve ≠ Publish — system overview §2.1):
- * 1. Job phai o trang thai Approved (gates da pass luc duyet).
+ * Publish draft_article HIEN TAI cua 1 diem den xuong SQL Server dichoithoi
+ * (Phase C — spec §3.3, §3.4; pivot gop editor vao trang detail bo qua buoc
+ * Approve rieng cho guide-diem-den):
+ * 1. draft_article phai ton tai + pass ca 4 gate (structure/seo/policy/data) —
+ *    gate chay NGAY TAI DAY, khong con o buoc Approve job rieng.
  * 2. Render than bai -> HTML sach -> auto-link toi diem published khac.
  * 3. UPSERT 1 transaction (KHONG wipe): Destination + DestinationContent + mentioned.
  * 4. Ghi quan he mentioned ben Postgres (nguon su that — spec §3.7).
  * 5. Tinh lai RelatedJson cho cac diem bi anh huong.
- * 6. Mirror: contentSource=1 + contentHash moi + clear activeContentJobId.
+ * 6. Mirror: contentSource=1 + contentHash moi + clear activeContentJobId (neu con).
  */
 @Injectable()
 export class PublishDestinationUseCase {
@@ -47,8 +42,6 @@ export class PublishDestinationUseCase {
     @Inject(DESTINATION_RELATION_REPOSITORY)
     private readonly relationRepo: DestinationRelationRepository,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
-    @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
-    @Inject(CONTENT_DRAFT_REPOSITORY) private readonly draftRepo: ContentDraftRepository,
     @Inject(CACHE_PURGE) private readonly cachePurge: CachePurgePort,
     private readonly recomputeRelated: RecomputeRelatedService,
   ) {}
@@ -62,25 +55,6 @@ export class PublishDestinationUseCase {
         "Bấm Đồng bộ từ website rồi thử lại",
       ]);
     }
-    const jobId = destination.activeContentJobId;
-    if (!jobId) {
-      throw new DomainRuleError(`Điểm đến "${destination.name}" không có bài đang chờ publish`, [
-        "Tạo bài AI và duyệt bài trước khi publish",
-      ]);
-    }
-
-    const job = await this.jobRepo.findById(jobId);
-    if (!job) throw new DomainRuleError(`Không tìm thấy job ${jobId}`);
-    const snapshot = job.toSnapshot();
-    if (snapshot.status !== "Approved") {
-      // Gate 2 (publish) chi mo sau gate 1 (approve) — system overview §2.1
-      throw new DomainRuleError(
-        `Bài đang ở trạng thái ${snapshot.status} — chỉ publish được bài đã duyệt (Approved)`,
-      );
-    }
-    if (snapshot.articleType !== "guide-diem-den") {
-      throw new DomainRuleError("Job này không phải bài điểm đến (guide-diem-den)");
-    }
 
     // Gate anh (spec §14.3): khong publish bai khong co thumbnail — card danh sach,
     // og:image, khoi lien quan deu can. Nguoi dung set o "Anh đại diện" roi thu lai.
@@ -90,9 +64,21 @@ export class PublishDestinationUseCase {
       ]);
     }
 
-    const draft = await this.draftRepo.findLatestByJobId(jobId);
-    if (!draft?.article) throw new DomainRuleError("Draft đã duyệt không có nội dung bài viết");
-    const article = destinationArticleSchema.parse(draft.article);
+    const article = parseDraftArticleOrThrow(destination.draftArticle, destination.name);
+    const draftMarkdown = renderDestinationMarkdown(article);
+    const { allPassed, checks } = evaluateGatesForArticle({
+      articleType: "guide-diem-den",
+      article,
+      draftMarkdown,
+      keywordSeed: [destination.name],
+      contentTier: destination.contentTier,
+    });
+    if (!allPassed) {
+      throw new DomainRuleError(
+        `Bài viết của "${destination.name}" chưa qua hết các gate kiểm tra`,
+        checks.filter((c) => !c.passed).flatMap((c) => c.details),
+      );
+    }
 
     // Diem MOI (chua co tren web): INSERT shell xuong SQL Server lay siteId truoc khi
     // ghi noi dung. Diem cu: dung siteId san co.
@@ -148,6 +134,7 @@ export class PublishDestinationUseCase {
       ticketLinksJson: JSON.stringify(destination.ticketLinks),
       priceBreakdownJson: JSON.stringify(destination.priceBreakdown),
       practicalNotesJson: JSON.stringify(destination.practicalNotes),
+      galleryJson: buildGalleryJson(destination.gallery),
       metaTitle: article.metadata.metaTitle,
       metaDescription: article.metadata.metaDescription,
       mentionedTargetSiteIds: addedLinks
@@ -177,7 +164,7 @@ export class PublishDestinationUseCase {
     );
     return {
       slug,
-      jobId,
+      jobId: destination.activeContentJobId,
       addedLinks,
       relatedRecomputed,
       durationMs: Date.now() - startedAt,

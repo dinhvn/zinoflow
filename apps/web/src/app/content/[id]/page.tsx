@@ -5,12 +5,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
 import {
   contentJobSchema,
+  destinationDetailSchema,
   draftArticleSchema,
   listAiProvidersResponseSchema,
   publishArticleResultSchema,
   publishDestinationResultSchema,
   refreshDynamicBlocksResultSchema,
   runQualityChecksResponseSchema,
+  type DestinationArticle,
   type PublishArticleResult,
   type PublishDestinationResult,
   type RefreshDynamicBlocksResult,
@@ -23,6 +25,7 @@ import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
 import { InsertDynamicBlockPanel } from "@/features/dichoithoi/insert-dynamic-block-panel";
 import { ArticleDestinationMapPanel } from "@/features/dichoithoi/article-destination-map-panel";
+import { DestinationArticleEditor } from "@/features/dichoithoi/destination-article-editor/destination-article-editor";
 
 /** Draft response tu GET /content/jobs/:id/draft (DraftRecord phia API). */
 const draftSchema = z.object({
@@ -74,6 +77,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const { id } = use(params);
   const queryClient = useQueryClient();
   const [editorText, setEditorText] = useState("");
+  const [articleDraft, setArticleDraft] = useState<DestinationArticle | null>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [actionError, setActionError] = useState<{ message: string; details: string[] } | null>(
@@ -99,6 +103,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   const job = jobQuery.data;
   const hasDraft = job && !["Created", "GeneratingOutline", "Failed"].includes(job.status);
+
+  // Gate thumbnail (redesign luong viet bai §Phase 4) — publish-destination.usecase.ts bat buoc
+  // co thumbnail, truoc day chi bao loi runtime; gio kiem tra + hien ro tren UI truoc khi cho bam.
+  const isDestinationApproved = job?.articleType === "guide-diem-den" && job.status === "Approved";
+  const destinationQuery = useQuery({
+    queryKey: ["destination-detail-thumbnail", job?.sourceRef],
+    queryFn: () => apiGet(`/destinations/${job!.sourceRef}`, destinationDetailSchema),
+    enabled: Boolean(isDestinationApproved),
+  });
+  const missingThumbnail = isDestinationApproved && !destinationQuery.data?.thumbnail;
   // Chi sua tham so + chay lai duoc khi job Failed hoac DraftReady (dong bo state machine BE)
   const canEditParams = job && ["Failed", "DraftReady"].includes(job.status);
 
@@ -135,11 +149,13 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 2,
   });
   const draft = draftQuery.data;
+  const isDestination = job?.articleType === "guide-diem-den";
 
   // Dong bo editor moi khi load draft/version moi (khong ghi de khi dang go)
   useEffect(() => {
     if (draft?.draftMarkdown != null) setEditorText(draft.draftMarkdown);
-  }, [draft?.id, draft?.draftMarkdown]);
+    if (draft?.article && "quickFacts" in draft.article) setArticleDraft(draft.article);
+  }, [draft?.id, draft?.draftMarkdown, draft?.article]);
 
   const htmlQuery = useQuery({
     queryKey: ["draft-html", draft?.id],
@@ -181,7 +197,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   }
 
   const saveDraft = useMutation({
-    mutationFn: () => apiSend("PUT", `/content/drafts/${draft!.id}`, { draftMarkdown: editorText }),
+    mutationFn: () =>
+      isDestination
+        ? apiSend("PUT", `/content/drafts/${draft!.id}`, { article: articleDraft })
+        : apiSend("PUT", `/content/drafts/${draft!.id}`, { draftMarkdown: editorText }),
     onSuccess: () => {
       setActionError(null);
       invalidateAll();
@@ -284,7 +303,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     onError: (error) => setActionError(toActionError(error)),
   });
 
-  const isDirty = draft?.draftMarkdown != null && editorText !== draft.draftMarkdown;
+  const isDirty = isDestination
+    ? articleDraft != null && JSON.stringify(articleDraft) !== JSON.stringify(draft?.article ?? null)
+    : draft?.draftMarkdown != null && editorText !== draft.draftMarkdown;
   const checks = checksQuery.data?.checks ?? [];
 
   /** Chen 1 token khoi dong vao vi tri con tro trong textarea (article-spec §9) */
@@ -482,15 +503,28 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 </>
               )}
               {job.status === "Approved" && job.articleType === "guide-diem-den" && (
-                <button
-                  onClick={() => publishDichoithoi.mutate()}
-                  disabled={publishDichoithoi.isPending}
-                  className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {publishDichoithoi.isPending
-                    ? "Đang đăng..."
-                    : "Đăng lên dichoithoi"}
-                </button>
+                <>
+                  <button
+                    onClick={() => publishDichoithoi.mutate()}
+                    disabled={publishDichoithoi.isPending || missingThumbnail}
+                    title={
+                      missingThumbnail
+                        ? "Chưa có ảnh đại diện — vào trang Điểm đến để thêm ảnh trước khi đăng"
+                        : undefined
+                    }
+                    className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {publishDichoithoi.isPending ? "Đang đăng..." : "Đăng lên dichoithoi"}
+                  </button>
+                  {missingThumbnail && (
+                    <a
+                      href={`/dichoithoi/${job.sourceRef}`}
+                      className="text-xs text-amber-600 hover:underline dark:text-amber-400"
+                    >
+                      ⚠️ Chưa có ảnh đại diện — vào trang Điểm đến để thêm ảnh
+                    </a>
+                  )}
+                </>
               )}
               {job.status === "Approved" && job.articleType === "cam-nang" && (
                 <Button
@@ -578,43 +612,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         </div>
       )}
 
-      {/* Quick facts — bai diem den: phan du lieu de sai nhat, can duyet tay ky
-          (dichoithoi-destination-spec §7.5). Khi publish se do vao cot rieng tren web. */}
-      {job?.articleType === "guide-diem-den" &&
-        draft?.article &&
-        "quickFacts" in draft.article && (
-          <div className="rounded-lg border-2 border-amber-300 p-4 dark:border-amber-700">
-            <h3 className="mb-2 font-medium text-amber-700 dark:text-amber-300">
-              ⚠️ Thông tin nhanh — kiểm tra tay trước khi duyệt (giá vé, giờ mở cửa dễ sai)
-            </h3>
-            <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm md:grid-cols-2">
-              {(
-                [
-                  ["Giờ mở cửa", draft.article.quickFacts.openingTime],
-                  ["Giá vé", draft.article.quickFacts.ticketPrice],
-                  ["Di chuyển", draft.article.quickFacts.transport],
-                  ["Ăn uống", draft.article.quickFacts.food],
-                  ["Lưu trú", draft.article.quickFacts.hotel],
-                  ["Mẹo & lưu ý", draft.article.quickFacts.tip],
-                ] as const
-              ).map(([label, value]) => (
-                <div key={label}>
-                  <dt className="font-medium text-zinc-500">{label}</dt>
-                  <dd>{value}</dd>
-                </div>
-              ))}
-              <div>
-                <dt className="font-medium text-zinc-500">Dòng cập nhật</dt>
-                <dd>{draft.article.updateNotice}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-zinc-500">Slug gợi ý</dt>
-                <dd className="font-mono">{draft.article.metadata.slugSuggestion}</dd>
-              </div>
-            </dl>
-          </div>
-        )}
-
       {/* Quality gates */}
       {hasDraft && draft && (
         <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
@@ -662,7 +659,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center justify-between border-b border-zinc-200 p-3 dark:border-zinc-800">
-              <h3 className="text-sm font-medium">Soạn thảo (Markdown)</h3>
+              <h3 className="text-sm font-medium">
+                {isDestination ? "Soạn thảo (từng khối)" : "Soạn thảo (Markdown)"}
+              </h3>
               <div className="flex items-center gap-2">
                 {job?.articleType === "cam-nang" && (
                   <InsertDynamicBlockPanel onInsert={insertBlockToken} />
@@ -676,13 +675,17 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 </button>
               </div>
             </div>
-            <textarea
-              ref={editorRef}
-              value={editorText}
-              onChange={(e) => setEditorText(e.target.value)}
-              spellCheck={false}
-              className="h-[600px] w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed focus:outline-none"
-            />
+            {isDestination && articleDraft ? (
+              <DestinationArticleEditor article={articleDraft} onChange={setArticleDraft} />
+            ) : (
+              <textarea
+                ref={editorRef}
+                value={editorText}
+                onChange={(e) => setEditorText(e.target.value)}
+                spellCheck={false}
+                className="h-[600px] w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed focus:outline-none"
+              />
+            )}
           </div>
 
           <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">

@@ -3,7 +3,7 @@ import type {
   AddressMappingsQuery,
   AffiliateLinkItem,
   ExternalReviewUrlItem,
-  ItineraryPlan,
+  GalleryItem,
   ListDestinationsQuery,
   PracticalNoteItem,
   PriceBreakdownItem,
@@ -79,8 +79,6 @@ export interface DestinationMirrorRepository {
   setPriceBreakdown(slug: string, priceBreakdown: readonly PriceBreakdownItem[]): Promise<void>;
   /** Cap nhat khoi luu y thuc te — sau khi nguoi dung duyet (content-seo-ux-plan §5.7) */
   setPracticalNotes(slug: string, practicalNotes: readonly PracticalNoteItem[]): Promise<void>;
-  /** Cap nhat lich trinh goi y — nhap tay hoan toan (Phase 28.0) */
-  setItinerary(slug: string, itinerary: readonly ItineraryPlan[]): Promise<void>;
   /** Cap nhat danh gia bien tap — sau khi nguoi dung duyet ban AI goi y (Phase 28.0) */
   setEditorialReview(slug: string, editorialReview: string | null): Promise<void>;
   /** Cap nhat link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */
@@ -88,6 +86,8 @@ export interface DestinationMirrorRepository {
     slug: string,
     externalReviewUrls: readonly ExternalReviewUrlItem[],
   ): Promise<void>;
+  /** Ghi de nguyen mang thu vien anh (them/xoa/sua/doi thu tu deu qua day) */
+  setGallery(slug: string, gallery: readonly GalleryItem[]): Promise<void>;
   /** Luu thong tin nguoi dung cung cap cho AI (ghi chu + URL nguon) — tai dung lan sau */
   saveAiInputs(
     slug: string,
@@ -99,6 +99,8 @@ export interface DestinationMirrorRepository {
    * sau khong bao edited-outside), clear activeContentJobId + hasLocalChanges.
    */
   markPublished(slug: string, contentHash: string): Promise<void>;
+  /** Luu ban nhap bai viet (raw, chua validate) — pivot gop editor vao trang detail. */
+  setDraftArticle(slug: string, draftArticle: Record<string, unknown>): Promise<void>;
   /** 34 tinh tu admin_provinces (seed dvhcvn) cho form/filter */
   listProvinces(): Promise<ProvinceOption[]>;
   /** Tra cuu dia chi cu->moi (admin_ward_mappings) — phan trang + loc */

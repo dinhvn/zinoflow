@@ -2,15 +2,17 @@ import { Column, Entity, Index, PrimaryColumn } from "typeorm";
 import type {
   AffiliateLinkItem,
   ExternalReviewUrlItem,
-  ItineraryPlan,
+  GalleryItem,
   PracticalNoteItem,
   PriceBreakdownItem,
 } from "@zinoflow/contracts";
 
 /**
  * Mirror metadata diem den dichoithoi (spec dichoithoi-destination-spec §3.2, §12.1).
- * Nguon su that NOI DUNG la content_drafts; bang nay chi phan chieu metadata
- * tu SQL Server de UI list/filter + auto-link + phat hien sua ngoai luong.
+ * Metadata phan chieu tu SQL Server de UI list/filter + auto-link + phat hien sua
+ * ngoai luong. NOI DUNG bai viet (draft_article) SONG NGAY TAI DAY tu pivot gop
+ * editor vao trang detail — khong con qua ContentJob/ContentDraft cho guide-diem-den
+ * (ContentJob van dung, nhung chi de AI SINH GOI Y, khong con la nguon luu tru chinh).
  */
 @Entity("dichoithoi_destinations")
 export class DestinationMirrorEntity {
@@ -68,6 +70,10 @@ export class DestinationMirrorEntity {
   @Column({ name: "ticket_links", type: "jsonb", default: () => "'[]'" })
   ticketLinks!: AffiliateLinkItem[];
 
+  /** Gia ve tai quay, van ban tu do — mirror 1 chieu tu SQL Server TicketPrice (Phase 4) */
+  @Column({ name: "ticket_price", type: "text", nullable: true })
+  ticketPrice!: string | null;
+
   /** Gia ve theo doi tuong, nhap tay hoan toan (content-seo-ux-plan §5.5a, Phase 12) */
   @Column({ name: "price_breakdown", type: "jsonb", default: () => "'[]'" })
   priceBreakdown!: PriceBreakdownItem[];
@@ -75,10 +81,6 @@ export class DestinationMirrorEntity {
   /** Luu y thuc te — AI goi y, nguoi dung duyet (content-seo-ux-plan §5.7, Phase 12) */
   @Column({ name: "practical_notes", type: "jsonb", default: () => "'[]'" })
   practicalNotes!: PracticalNoteItem[];
-
-  /** Lich trinh goi y (2N1D/3N2D...) — nhap tay hoan toan, chi Flagship (Phase 28.0) */
-  @Column({ type: "jsonb", default: () => "'[]'" })
-  itinerary!: ItineraryPlan[];
 
   /** Danh gia bien tap — text ngan, AI goi y + nguoi dung duyet (Phase 28.0) */
   @Column({ name: "editorial_review", type: "text", nullable: true })
@@ -143,4 +145,20 @@ export class DestinationMirrorEntity {
 
   @Column({ name: "synced_at", type: "timestamptz", nullable: true })
   syncedAt!: Date | null;
+
+  /**
+   * Ban nhap bai viet (tieu de/intro/7 block/FAQ/quickFacts/metadata) — pivot gop
+   * editor vao trang detail. Luu RAW, KHONG validate chat luc ghi (cho phep dang
+   * soan dat do) — validate that (destinationArticleSchema) chi chay o gate-check/
+   * preview/publish. null = chua co ban nhap nao.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- "any" bat buoc:
+  // _QueryDeepPartialEntity cua TypeORM recurse loi voi "unknown"/"Record<string, unknown>"
+  // cho cot jsonb object; day la workaround pho bien cho quirk nay.
+  @Column({ name: "draft_article", type: "jsonb", nullable: true })
+  draftArticle!: any;
+
+  /** Thu vien anh (khac thumbnail don) — {path, altText, caption, credit}[], thu tu = index mang. */
+  @Column({ type: "jsonb", default: () => "'[]'" })
+  gallery!: GalleryItem[];
 }

@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
-import { tourSchema, type Tour } from "@zinoflow/contracts";
+import { affiliatePartnerSchema, tourSchema, type Tour } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import { Select } from "@/shared/ui/select";
 import { Badge } from "@/shared/ui/badge";
+import { PageHeader } from "@/shared/ui/page-header";
 import { AffiliateUrlPreview } from "@/features/dichoithoi/affiliate-url-preview";
+import { ImportToursModal } from "@/features/dichoithoi/import-tours-modal";
 
 const EMPTY_FORM = {
   name: "",
@@ -31,11 +34,17 @@ export default function ToursPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const toursQuery = useQuery({
     queryKey: ["tours"],
     queryFn: () => apiGet("/tours", z.array(tourSchema)),
   });
+  const partnersQuery = useQuery({
+    queryKey: ["affiliate-partners"],
+    queryFn: () => apiGet("/affiliate/partners", z.array(affiliatePartnerSchema)),
+  });
+  const activePartners = (partnersQuery.data ?? []).filter((p) => p.isActive);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -88,18 +97,21 @@ export default function ToursPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold">Tour</h2>
-          <p className="text-sm text-zinc-500">
-            Khối gợi ý trên trang điểm đến — 1 tour có thể gán nhiều điểm đến, không có trang
-            riêng, không qua duyệt (tour-spec §2). Lưu sẽ publish thẳng lên website.
-          </p>
-        </div>
-        <a href="/dichoithoi/tour/nhap" className="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">
-          Nhập từ Sheet →
-        </a>
-      </div>
+      <PageHeader
+        title="Tour"
+        description="Khối gợi ý trên trang điểm đến — 1 tour có thể gán nhiều điểm đến, không có trang riêng, không qua duyệt (tour-spec §2). Lưu sẽ publish thẳng lên website."
+        actions={
+          <Button size="sm" className="whitespace-nowrap" onClick={() => setImportOpen(true)}>
+            Nhập từ Sheet
+          </Button>
+        }
+      />
+
+      <ImportToursModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => queryClient.invalidateQueries({ queryKey: ["tours"] })}
+      />
 
       {error && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
@@ -162,11 +174,17 @@ export default function ToursPage() {
             value={form.thumbnailUrl}
             onChange={(e) => setForm((f) => ({ ...f, thumbnailUrl: e.target.value }))}
           />
-          <Input
-            placeholder="provider (vd: klook, tripvision)"
+          <Select
             value={form.provider}
             onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))}
-          />
+          >
+            <option value="">— chọn đối tác * —</option>
+            {activePartners.map((p) => (
+              <option key={p.id} value={p.code}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
           <Input
             className="md:col-span-3"
             placeholder="Link gốc (sourceUrl) *"
@@ -181,7 +199,7 @@ export default function ToursPage() {
           <Button
             variant="primary"
             loading={save.isPending}
-            disabled={!form.name.trim() || !form.sourceUrl.trim()}
+            disabled={!form.name.trim() || !form.sourceUrl.trim() || !form.provider}
             onClick={() => save.mutate()}
           >
             {editingId ? "Lưu thay đổi" : "Tạo tour"}

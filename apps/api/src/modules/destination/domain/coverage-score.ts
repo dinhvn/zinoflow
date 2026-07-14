@@ -3,10 +3,12 @@ import type { CoverageChecklistItem } from "@zinoflow/contracts";
 /**
  * Content Coverage Score — destination-spec §2.2.2. Thuan TS, khong AI/DB —
  * chi tinh tu cac co da co san. Phase 28.6: tier dung ContentTier THAT (Phase
- * 25) thay proxy qua kind; 4 muc Flagship-only truoc day ghi "chua tinh duoc
- * do thieu ha tang" nay da co du: lich trinh (Phase 28.0), do phu bai cam
- * nang theo topic (ArticleDestinationMap, Phase 26), danh gia bien tap +
- * external review (Phase 28.0).
+ * 25) thay proxy qua kind; 3 muc Flagship-only truoc day ghi "chua tinh duoc
+ * do thieu ha tang" nay da co du: do phu bai cam nang theo topic
+ * (ArticleDestinationMap, Phase 26), danh gia bien tap + external review
+ * (Phase 28.0). "Lich trinh goi y" (07/2026) khong con la muc rieng — da
+ * chuyen thanh blockKey "lich-trinh" trong sections[], tinh chung vao
+ * "main-content" nhu moi khoi khac thay vi tach doi hoi 1 field JSON rieng.
  */
 export interface CoverageInput {
   kind: "province" | "cluster" | "poi";
@@ -22,9 +24,8 @@ export interface CoverageInput {
   hasPracticalNotes: boolean;
   hasTicketLinks: boolean;
   hasTag: boolean;
-  /** 4 muc sau CHI co y nghia voi tier "flagship" (Phase 28.6) */
+  /** 3 muc sau CHI co y nghia voi tier "flagship" (Phase 28.6) */
   hasFeaturedChild: boolean;
-  hasItinerary: boolean;
   hasArticleTopicCoverage: boolean;
   hasEditorialReview: boolean;
   hasExternalReviewUrl: boolean;
@@ -51,7 +52,6 @@ const BASE_ITEMS: Array<{ key: string; label: string; check: (i: CoverageInput) 
 
 const FLAGSHIP_EXTRA_ITEMS: Array<{ key: string; label: string; check: (i: CoverageInput) => boolean }> = [
   { key: "featured-child", label: "Có điểm tham quan con nổi bật", check: (i) => i.hasFeaturedChild },
-  { key: "itinerary", label: "Lịch trình gợi ý", check: (i) => i.hasItinerary },
   {
     key: "article-topic-coverage",
     label: "Có bài cẩm nang gắn theo topic",

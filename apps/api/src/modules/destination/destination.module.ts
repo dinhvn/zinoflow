@@ -4,6 +4,7 @@ import { AiContentModule } from "../ai-content/ai-content.module";
 import { AffiliateModule } from "../affiliate/affiliate.module";
 import { DestinationsController } from "./presentation/destinations.controller";
 import { DestinationTagsController } from "./presentation/destination-tags.controller";
+import { DestinationTicketsController } from "./presentation/destination-tickets.controller";
 import { ListDestinationsUseCase } from "./application/use-cases/list-destinations.usecase";
 import { SyncDestinationsUseCase } from "./application/use-cases/sync-destinations.usecase";
 import { GetDestinationTaxonomyUseCase } from "./application/use-cases/get-destination-taxonomy.usecase";
@@ -30,11 +31,15 @@ import { ParseMapsLinkUseCase } from "./application/use-cases/parse-maps-link.us
 import { SharedMediaModule } from "../shared/media/shared-media.module";
 import { SharedSheetImportModule } from "../shared/sheet-import/shared-sheet-import.module";
 import { UpdateThumbnailUseCase } from "./application/use-cases/update-thumbnail.usecase";
-import { UpdateTicketLinksUseCase } from "./application/use-cases/update-ticket-links.usecase";
+import { ManageDestinationTicketsUseCase } from "./application/use-cases/manage-destination-tickets.usecase";
+import { ImportDestinationTicketsUseCase } from "./application/use-cases/import-destination-tickets.usecase";
+import { SyncDestinationTicketLinksService } from "./application/services/sync-destination-ticket-links.service";
+import { DESTINATION_TICKET_REPOSITORY } from "./application/ports/destination-ticket.repository";
+import { TypeOrmDestinationTicketRepository } from "./infrastructure/repositories/typeorm-destination-ticket.repository";
+import { DestinationTicketEntity } from "./infrastructure/entities/destination-ticket.entity";
 import { UpdatePriceBreakdownUseCase } from "./application/use-cases/update-price-breakdown.usecase";
 import { UpdatePracticalNotesUseCase } from "./application/use-cases/update-practical-notes.usecase";
 import { SuggestPracticalNotesUseCase } from "./application/use-cases/suggest-practical-notes.usecase";
-import { UpdateItineraryUseCase } from "./application/use-cases/update-itinerary.usecase";
 import { UpdateEditorialReviewUseCase } from "./application/use-cases/update-editorial-review.usecase";
 import { SuggestEditorialReviewUseCase } from "./application/use-cases/suggest-editorial-review.usecase";
 import { UpdateExternalReviewUrlsUseCase } from "./application/use-cases/update-external-review-urls.usecase";
@@ -57,6 +62,12 @@ import { GenerateTagDescriptionUseCase } from "./application/use-cases/generate-
 import { UpdateTagDescriptionUseCase } from "./application/use-cases/update-tag-description.usecase";
 import { GetCoverageScoresUseCase } from "./application/use-cases/get-coverage-scores.usecase";
 import { GetDichoithoiDashboardAlertsUseCase } from "./application/use-cases/get-dichoithoi-dashboard-alerts.usecase";
+import { UpdateDestinationDraftArticleUseCase } from "./application/use-cases/update-destination-draft-article.usecase";
+import { GenerateDestinationBlockUseCase } from "./application/use-cases/generate-destination-block.usecase";
+import { RunDestinationDraftQualityChecksUseCase } from "./application/use-cases/run-destination-draft-quality-checks.usecase";
+import { PreviewDestinationPublishHtmlUseCase } from "./application/use-cases/preview-destination-publish-html.usecase";
+import { AddDestinationGalleryImageUseCase } from "./application/use-cases/add-destination-gallery-image.usecase";
+import { UpdateDestinationGalleryUseCase } from "./application/use-cases/update-destination-gallery.usecase";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
 import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
@@ -83,12 +94,13 @@ import {
     TypeOrmModule.forFeature([
       DestinationMirrorEntity,
       DestinationRelationEntity,
+      DestinationTicketEntity,
       AdminProvinceEntity,
       AdminWardEntity,
       AdminWardMappingEntity,
     ]),
   ],
-  controllers: [DestinationsController, DestinationTagsController],
+  controllers: [DestinationsController, DestinationTagsController, DestinationTicketsController],
   providers: [
     ListDestinationTagAssignmentsUseCase,
     SuggestTagAssignmentsUseCase,
@@ -106,11 +118,12 @@ import {
     RelinkAllUseCase,
     RelinkAllWorker,
     UpdateThumbnailUseCase,
-    UpdateTicketLinksUseCase,
+    ManageDestinationTicketsUseCase,
+    ImportDestinationTicketsUseCase,
+    SyncDestinationTicketLinksService,
     UpdatePriceBreakdownUseCase,
     UpdatePracticalNotesUseCase,
     SuggestPracticalNotesUseCase,
-    UpdateItineraryUseCase,
     UpdateEditorialReviewUseCase,
     SuggestEditorialReviewUseCase,
     UpdateExternalReviewUrlsUseCase,
@@ -125,6 +138,12 @@ import {
     ManageTaxonomyContentUseCase,
     ParseMapsLinkUseCase,
     RecomputeRelatedService,
+    UpdateDestinationDraftArticleUseCase,
+    GenerateDestinationBlockUseCase,
+    RunDestinationDraftQualityChecksUseCase,
+    PreviewDestinationPublishHtmlUseCase,
+    AddDestinationGalleryImageUseCase,
+    UpdateDestinationGalleryUseCase,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: CACHE_PURGE, useClass: HttpCachePurgeAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
@@ -133,6 +152,7 @@ import {
     { provide: IMAGE_DOWNLOADER, useClass: LocalFileImageDownloader },
     { provide: DESTINATION_MIRROR_REPOSITORY, useClass: TypeOrmDestinationMirrorRepository },
     { provide: DESTINATION_RELATION_REPOSITORY, useClass: TypeOrmDestinationRelationRepository },
+    { provide: DESTINATION_TICKET_REPOSITORY, useClass: TypeOrmDestinationTicketRepository },
   ],
   exports: [DICHOITHOI_SITE_DB, DESTINATION_MIRROR_REPOSITORY],
 })

@@ -10,9 +10,13 @@ import {
   cmsArticleSchema,
   cmsOutlineSchema,
   contentSectionSchema,
+  DESTINATION_BLOCK_LABELS,
+  DESTINATION_LIST_BLOCK_KEYS,
+  DESTINATION_SECTION_ORDER,
   destinationArticleFrameSchema,
   destinationArticleSchema,
   destinationOutlineSchema,
+  MIN_LIST_ITEMS,
   type Article,
   type ArticleCamNang,
   type ArticleType,
@@ -148,11 +152,19 @@ const destinationProfile: ArticleTypeProfile = {
         description: PLACEHOLDER_NOTE.repeat(4).slice(0, 250),
         searchKeyword: topic,
       },
-      sections: [
-        { heading: PLACEHOLDER_NOTE, content: PLACEHOLDER_NOTE.repeat(2) },
-        { heading: PLACEHOLDER_NOTE, content: PLACEHOLDER_NOTE.repeat(2) },
-        { heading: PLACEHOLDER_NOTE, content: PLACEHOLDER_NOTE.repeat(2) },
-      ],
+      sections: DESTINATION_SECTION_ORDER.map((blockKey) =>
+        DESTINATION_LIST_BLOCK_KEYS.includes(blockKey)
+          ? {
+              heading: DESTINATION_BLOCK_LABELS[blockKey],
+              content: PLACEHOLDER_NOTE.repeat(2),
+              blockKey,
+              items: Array.from({ length: MIN_LIST_ITEMS }, () => ({
+                ten: PLACEHOLDER_NOTE,
+                moTa: PLACEHOLDER_NOTE,
+              })),
+            }
+          : { heading: DESTINATION_BLOCK_LABELS[blockKey], content: PLACEHOLDER_NOTE.repeat(2), blockKey },
+      ),
     }),
 };
 

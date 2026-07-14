@@ -125,6 +125,38 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- **SEO ảnh cho gallery hero (đánh giá 07/2026, sau khi build xong tính năng
+  gallery ảnh — CMS quản lý nhiều ảnh + hero site thành carousel)**: đánh giá
+  theo checklist SEO-owner (`dichoithoi-seo-principles.md`) phát hiện 5 lỗ
+  hổng, đã CHỐT hướng sửa nhưng CHƯA code, làm sau theo mức ưu tiên:
+  1. **Alt text sẽ gần như luôn trùng nhau** — CMS mặc định `altText: null`
+     lúc upload (`destination-gallery-editor.tsx`), không ép nhập → mọi ảnh
+     kể cả hero đều rơi về fallback `"Hình ảnh về {tên}"` giống hệt nhau nếu
+     người dùng bỏ qua (khả năng cao vì không bắt buộc). Hướng sửa: chặn nút
+     "Lưu thư viện ảnh" nếu còn ảnh thiếu alt riêng, hoặc gợi ý placeholder
+     theo ngữ cảnh thay vì để trống.
+  2. **Structured data chỉ thấy đúng 1 ảnh dù gallery có tới 10** —
+     `Detail.cshtml` chỉ gắn `itemprop="image"` cho slide hero gốc (dòng
+     ~104), các slide trong `@foreach (var photo in heroGalleryPhotos)`
+     không có itemprop. `schema.org/TouristAttraction.image` cho phép mảng
+     nhiều URL. Sửa: thêm `itemprop="image"` cho từng `<img>` trong vòng lặp
+     (rẻ, không đổi kiến trúc).
+  3. **Caption/credit nhập ở CMS nhưng không hiển thị ở hero-carousel** — 2
+     field này chỉ render ở khu "Hình ảnh {tên}" cuộn ngang dưới hero (dùng
+     `figcaption`), hero-carousel bỏ qua hoàn toàn → nửa số ảnh (slide hero)
+     không tận dụng được text ngữ cảnh người dùng đã nhập.
+  4. **Tên file ảnh gallery không mang từ khoá** — `{slug}-{timestamp}.webp`
+     (vd. `da-lat-1752345678901.webp`), Google có tính (yếu nhưng có thật) tên
+     file mô tả nội dung. Sửa: slug hoá từ alt text lúc lưu.
+  5. **Ảnh gallery không có responsive `srcset`** — `AddDestinationGalleryImageUseCase`
+     dùng `toWebp()` 1 size cố định 1400w, phục vụ y hệt cho mobile lẫn
+     desktop, trong khi thumbnail đã có sẵn `toWebpVariants` (3 size). Page
+     speed là ranking factor trực tiếp.
+
+  #2 và #3 rẻ, không đổi kiến trúc — có thể làm ngay khi rảnh. #1/#4/#5 cần
+  bàn thêm UX/luồng nhập liệu trước khi code (đặc biệt #1 — ép nhập alt có
+  thể gây khó chịu nếu người dùng chỉ muốn upload nhanh nhiều ảnh).
+
 - **Gate "originality" (thứ 5) cho quality gates AI content** (`dichoithoi-
   seo-principles.md` §3.3/§3.4, phân tích 07/2026 — xác minh trực tiếp tài
   liệu Google `using-gen-ai-content`/`spam-policies`/`creating-helpful-

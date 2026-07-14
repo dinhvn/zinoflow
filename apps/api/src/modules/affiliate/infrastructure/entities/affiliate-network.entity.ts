@@ -1,17 +1,17 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import type { AffiliatePlaceholder } from "@zinoflow/contracts";
 
-/** Bang affiliate_link_rules (Postgres) — nguon su that duy nhat cho rule convert link */
-@Entity("affiliate_link_rules")
-export class AffiliateLinkRuleEntity {
+/** Bang affiliate_networks (Postgres) — 1 mang affiliate (vd Accesstrade), template dung chung cho moi doi tac cua no */
+@Entity("affiliate_networks")
+export class AffiliateNetworkEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
   @Column({ type: "varchar", length: 64, unique: true })
-  provider!: string;
+  code!: string;
 
-  @Column({ name: "match_domain", type: "varchar", length: 256, nullable: true })
-  matchDomain!: string | null;
+  @Column({ type: "varchar", length: 128 })
+  name!: string;
 
   @Column({ type: "varchar", length: 1024 })
   template!: string;

@@ -196,7 +196,8 @@ sửa được và lưu lại trước khi publish, không có đường tắt.
 | 1 | Tổng quan/giới thiệu | A | `Content` (intro) |
 | 2 | Vị trí + khoảng cách + chỉ đường | C (nhập) + D (hiện) | `Address`/`Lat`/`Lng`/`DistanceFromCenter` |
 | 3 | Giờ mở cửa & giá vé | C | `OpeningTime`/`TicketPrice`/`ticketLinks[]` |
-| 4 | Trải nghiệm/chơi gì | A | `Content` (sections) |
+| 4 | Trải nghiệm/chơi gì ✅ ĐÃ XONG (07/2026 — blockKey `trai-nghiem`, danh sách hành động cụ thể KHÁC "điểm tham quan"/vị trí, đối chiếu TripAdvisor: mô tả dài không thay được danh sách hành động ngắn) | A | `Content` (sections, dạng list `items[]`) |
+| 4b | Lịch trình gợi ý ✅ MỚI (07/2026 — blockKey `lich-trinh`; với POI là 1 điểm lẻ nên viết "nên dành bao lâu + kết hợp điểm nào gần đó", KHÁC bản Flagship là lịch trình nhiều ngày) | A | `Content` (section, prose) |
 | 5 | Ăn uống gần đó | A | `Food` |
 | 6 | Thời điểm đẹp (giờ/mùa) | A | `Content` (section) |
 | 7 | Di chuyển (chặng cuối từ trung tâm cụm) | A | `Transport` |
@@ -216,9 +217,10 @@ sửa được và lưu lại trước khi publish, không có đường tắt.
 | # | Khối | Nhóm | Map dữ liệu |
 |---|---|---|---|
 | 1 | Tổng quan/giới thiệu | A | `Content` (intro, viết theo §10.6.2 khối 1) |
+| 1b | Trải nghiệm gì ✅ ĐÃ XONG (07/2026 — blockKey `trai-nghiem`, hoạt động tiêu biểu CẢ VÙNG, danh sách hành động chứ không phải tên điểm con) | A | `Content` (section, dạng list `items[]`) |
 | 2 | Nên đi mùa nào | A | `Content` (section) |
-| 3 | Lịch trình gợi ý (2N1D/3N2D/4N3D) | **B** | JSON riêng: mảng ngày → {buổi, POI/slug, ghi chú} — form theo ngày, không JSON thô |
-| 3b | CTA tour khớp lịch trình + link bài cẩm nang | D | `DynamicBlocksJson["tours"]` + `ArticleDestinationMap` (topic=itinerary) |
+| 3 | Lịch trình gợi ý (2N1D/3N2D/4N3D) | A (ĐỔI 07/2026, xem ghi chú dưới bảng) | `Content` (section, blockKey `lich-trinh`, prose — KHÔNG còn JSON riêng) |
+| 3b | Link bài cẩm nang lịch trình | D | `ArticleDestinationMap` (topic=itinerary) |
 | 4 | Di chuyển — cách tới nơi + trong khu vực | A | `Content` (section) |
 | 4b | Card vé máy bay/xe khách | D | `DynamicBlocksJson["transports"]` |
 | 5 | Điểm tham quan (2 lớp: nổi bật + theo khu vực) | **D hoàn toàn** — không AI viết gì | `ChildrenJson`+`IsFeatured`+`Order`+`DistanceFromCenter` |
@@ -247,6 +249,40 @@ không áp dụng (vd điểm miễn phí không có giá vé) phải ghi rõ th
 — structure gate kiểm tra (§6). Khối #8 (câu chuyện văn hoá - lịch sử) đã vào
 prompt pack + structure gate thật (Phase 12, `CULTURAL_STORY_HEADING_KEYWORDS`
 ở `destination-gates.ts`).
+
+**"Lịch trình gợi ý" đổi từ nhóm B sang nhóm A (07/2026)**: trước đây là JSON
+có cấu trúc riêng (`ItineraryJson` — form nhập tay theo ngày/buổi, `poiSlug`
+tự động gắn link nội bộ, CTA "tour N ngày phù hợp" tự khớp theo `duration_days`
+đếm từ số ngày). Theo quyết định của chủ site, đổi thành prose thường trong
+`sections[]` (blockKey `lich-trinh`) như mọi khối khác — đổi lấy 1 UX soạn bài
+duy nhất (AI viết + editor tự do sửa), chấp nhận **mất 2 tính năng tự động**:
+link POI không còn đảm bảo đúng (chỉ còn auto-link theo tên khớp chữ), và CTA
+tour không còn tự khớp theo số ngày. Cột `ItineraryJson` trên SQL Server
+(schema do dichoithoi sở hữu) không bị xoá — chỉ ngừng đọc/ghi từ 07/2026, dữ
+liệu cũ trên đó coi là rác. Xem `apps/api/src/migrations/1782070000000-DestinationDropItinerary.ts`
+(xoá cột mirror Postgres — khác SQL Server) và `DiChoiThoi.Web/Views/Destination/Detail.cshtml`
+(gỡ khối render cũ, giữ lại riêng link "Xem lịch trình chi tiết" tới bài cẩm
+nang `topic=itinerary` — đây là cơ chế khác, không phụ thuộc `ItineraryJson`).
+
+**"Mẹo & lưu ý thực tế" BỎ khỏi `sections[]` (07/2026, còn 7 khối)**: từng có
+blockKey `meo-luu-y` (prose, do AI viết trong outline) — phát hiện khi rà lại
+kiến trúc rằng chủ đề này ĐÃ có 2 nguồn khác chạy song song và **đã hiện trùng
+thật trên live site** (`Detail.cshtml` §`#meo` render 2 khối `<details>` cạnh
+nhau: `Tip` (quickFacts, AI viết) và `PracticalNotesJson` (nhóm E, AI gợi ý +
+duyệt tay)). Thêm blockKey thứ 3 chỉ làm nặng hơn, không giải quyết gốc rễ.
+Bỏ khối này, giữ nguyên `Tip`/`PracticalNotesJson` như cũ. Khối `meo-luu-y`
+VẪN còn trong enum `DestinationBlockKey` + `DESTINATION_BLOCK_LABELS` (nhãn
+đổi thành "Mẹo & lưu ý thực tế (cũ)") để bài cũ đã gán blockKey này vẫn hiển
+thị đúng — chỉ không còn nằm trong `DESTINATION_SECTION_ORDER` nên AI/editor
+không tạo mới nữa.
+
+**Còn tồn đọng (CHƯA xử lý, ghi nhận để làm sau)**: "Di chuyển" và "Ăn gì đặc
+trưng" có cùng kiểu trùng y hệt — `quickFacts.transport`/`quickFacts.food`
+(cột `Transport`/`Food`) render thành khối riêng trên web (`#di-chuyen`,
+`#an-uong`), ĐỘC LẬP với section cùng tên trong `sections[]` (`di-chuyen`,
+`an-gi`) — 2 lần AI viết cho cùng 1 câu hỏi, không đối chiếu nhau. Mức độ nhẹ
+hơn "mẹo & lưu ý" (chỉ 2 nguồn, không phải 3) nên tạm giữ nguyên, ưu tiên xử
+lý sau nếu cần.
 
 ### 2.2.1 Ghi chú/tư liệu tham khảo — bổ sung chi tiết đặc trưng cho từng khối
 (CHỐT 07/2026, giải quyết vấn đề "nội dung AI viết đạt gate nhưng chung chung")

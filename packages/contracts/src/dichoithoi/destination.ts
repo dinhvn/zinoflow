@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { affiliateLinkItemSchema } from "./affiliate";
+import { affiliateLinkItemSchema, affiliateLinkStatusSchema } from "./affiliate";
 
 /**
  * Contracts cho khu Dichoithoi (M4) — mirror diem den + sync.
@@ -65,37 +65,105 @@ export const practicalNoteItemSchema = z.object({
 });
 export type PracticalNoteItem = z.infer<typeof practicalNoteItemSchema>;
 
-/**
- * 1 mục trong 1 ngày lịch trình (vd "Sáng — Hồ Xuân Hương") — nhóm B, form
- * theo ngày (Phase 28.0, content-seo-ux-plan §10.6.2 khối 3). `poiSlug` tuỳ
- * chọn để link nội bộ tới đúng điểm tham quan con.
- */
-export const itineraryItemSchema = z.object({
-  period: z.string().min(1).max(20),
-  poiSlug: z.string().max(64).nullable(),
-  note: z.string().min(1).max(300),
-});
-export type ItineraryItem = z.infer<typeof itineraryItemSchema>;
-
-export const itineraryDaySchema = z.object({
-  dayLabel: z.string().min(1).max(20),
-  items: z.array(itineraryItemSchema).min(1).max(6),
-});
-export type ItineraryDay = z.infer<typeof itineraryDaySchema>;
-
-/** 1 mẫu lịch trình (vd "2N1D") — chỉ có ý nghĩa với kind IN (province, cluster) */
-export const itineraryPlanSchema = z.object({
-  label: z.string().min(1).max(20),
-  days: z.array(itineraryDaySchema).min(1).max(5),
-});
-export type ItineraryPlan = z.infer<typeof itineraryPlanSchema>;
-
 /** Link Google Maps/TripAdvisor... nhập tay, website render rel="nofollow" */
 export const externalReviewUrlItemSchema = z.object({
   label: z.string().min(1).max(64),
   url: z.url().max(1024),
 });
 export type ExternalReviewUrlItem = z.infer<typeof externalReviewUrlItemSchema>;
+
+/**
+ * 1 anh trong thu vien anh (khac thumbnail don) — website da doc san qua
+ * `extras.Gallery` (DiChoiThoi.Web), field PascalCase khi ghi GalleryJson phai
+ * khop dung model C# `GalleryItemModel` (Path/AltText/Caption/Credit).
+ */
+export const galleryItemSchema = z.object({
+  path: z.string().min(1).max(512),
+  altText: z.string().max(200).nullable(),
+  caption: z.string().max(300).nullable(),
+  credit: z.string().max(200).nullable(),
+});
+export type GalleryItem = z.infer<typeof galleryItemSchema>;
+
+/** Ghi de nguyen mang thu vien anh — sua alt/caption/credit, doi thu tu, xoa anh */
+export const updateDestinationGalleryRequestSchema = z.object({
+  gallery: z.array(galleryItemSchema).max(30),
+});
+export type UpdateDestinationGalleryRequest = z.infer<typeof updateDestinationGalleryRequestSchema>;
+
+/**
+ * 1 dong "vé tham quan" — bang rieng destination_tickets (thay ticketLinks[] nhung
+ * trong Destination), quan ly giong Hotel/Tour (moi dong = 1 nguon ban ve, gan
+ * DUNG 1 diem den — khac Hotel/Tour co the gan nhieu diem qua map table). Doc:
+ * dichoithoi-ticket-analysis.md §11.5.
+ */
+export const destinationTicketSchema = z.object({
+  id: z.string().uuid(),
+  destinationSlug: z.string().min(1).max(64),
+  label: z.string().max(128).nullable(),
+  provider: z.string().min(1).max(64),
+  sourceUrl: z.url().max(1024),
+  affiliateUrl: z.string().max(1024),
+  linkStatus: affiliateLinkStatusSchema,
+  price: z.number().nonnegative().nullable(),
+  /** Cung field Hotel/Tour da co — chi luu tru + nhap, hien thi tren web quyet dinh sau (tuy thiet ke) */
+  thumbnailUrl: z.string().max(512).nullable(),
+  order: z.number().int(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type DestinationTicket = z.infer<typeof destinationTicketSchema>;
+
+/** 1 dong ve kem thong tin diem den — cho trang /dichoithoi/ve (danh sach toan bo) */
+export const destinationTicketWithDestinationSchema = destinationTicketSchema.extend({
+  destinationName: z.string(),
+  provinceName: z.string().nullable(),
+});
+export type DestinationTicketWithDestination = z.infer<typeof destinationTicketWithDestinationSchema>;
+
+/**
+ * Tao/sua 1 dong ve — chi nhap provider/label/sourceUrl/price/thumbnailUrl,
+ * affiliateUrl/linkStatus server tu tinh qua AffiliateLinkResolver luc luu
+ * (giong ticketLinks cu). provider phai khop 1 affiliate_partners.code dang active.
+ */
+export const createDestinationTicketRequestSchema = z.object({
+  provider: z.string().min(1).max(64),
+  label: z.string().max(128).nullable().optional(),
+  sourceUrl: z.url().max(1024),
+  price: z.number().nonnegative().nullable().optional(),
+  thumbnailUrl: z.string().max(512).nullable().optional(),
+});
+export type CreateDestinationTicketRequest = z.infer<typeof createDestinationTicketRequestSchema>;
+
+/**
+ * 1 dong nhap hang loat ve tu Google Sheet — khop theo destinationSlug + sourceUrl
+ * (da co thi cap nhat, chua co thi tao moi). destinationSlug BAT BUOC khop dung
+ * 1 diem den da co trong mirror — khong tu tao diem den moi tu import nay.
+ */
+export const destinationTicketImportRowSchema = z.object({
+  destinationSlug: z.string().min(1).max(64),
+  provider: z.string().min(1).max(64),
+  label: z.string().max(128).nullable().optional(),
+  sourceUrl: z.url().max(1024),
+  price: z.number().nonnegative().nullable().optional(),
+  thumbnailUrl: z.string().max(512).nullable().optional(),
+});
+export type DestinationTicketImportRow = z.infer<typeof destinationTicketImportRowSchema>;
+
+export const importDestinationTicketsRequestSchema = z.object({
+  items: z.array(destinationTicketImportRowSchema).min(1).max(1000),
+});
+export type ImportDestinationTicketsRequest = z.infer<typeof importDestinationTicketsRequestSchema>;
+
+export const importDestinationTicketsResultSchema = z.object({
+  created: z.number().int(),
+  updated: z.number().int(),
+  errors: z.array(z.object({ row: z.number().int(), destinationSlug: z.string(), message: z.string() })),
+});
+export type ImportDestinationTicketsResult = z.infer<typeof importDestinationTicketsResultSchema>;
+
+export const updateDestinationTicketRequestSchema = createDestinationTicketRequestSchema.partial();
+export type UpdateDestinationTicketRequest = z.infer<typeof updateDestinationTicketRequestSchema>;
 
 /** 1 dong mirror diem den (Postgres) tra ve cho UI */
 export const destinationMirrorSchema = z.object({
@@ -117,18 +185,25 @@ export const destinationMirrorSchema = z.object({
   addressOld: z.string().nullable(),
   contactPhone: z.string().nullable(),
   contactWebsite: z.string().nullable(),
-  /** Nhieu link mua ve (Klook, TripVision...) — thay BookingUrl 1 link cu (redesign §4.2/§4.3) */
+  /**
+   * Nhieu link mua ve (Klook, TripVision...) — CACHE tinh san tu bang
+   * destination_tickets (§11.5), KHONG con sua truc tiep truong nay (sua qua
+   * API /destinations/:slug/tickets). Giu de website doc TicketLinksJson nhanh,
+   * khong join truc tiep luc render (redesign §4.2/§4.3).
+   */
   ticketLinks: z.array(affiliateLinkItemSchema),
+  /** Gia ve tai quay, van ban tu do — mirror 1 chieu tu SQL Server TicketPrice (Phase 4, sua tai CMS bai viet) */
+  ticketPrice: z.string().nullable(),
   /** Gia ve theo doi tuong, nhap tay hoan toan (content-seo-ux-plan §5.5a) */
   priceBreakdown: z.array(priceBreakdownItemSchema),
   /** Luu y thuc te — AI goi y, nguoi dung duyet (content-seo-ux-plan §5.7) */
   practicalNotes: z.array(practicalNoteItemSchema),
-  /** Lich trinh goi y (2N1D/3N2D...) — nhap tay hoan toan, chi Flagship (Phase 28.0) */
-  itinerary: z.array(itineraryPlanSchema),
   /** Danh gia bien tap — text ngan, AI goi y + nguoi dung duyet (Phase 28.0) */
   editorialReview: z.string().nullable(),
   /** Link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */
   externalReviewUrls: z.array(externalReviewUrlItemSchema),
+  /** Thu vien anh (khac thumbnail don) — website render thanh dai cuon o hero + duoi hero */
+  gallery: z.array(galleryItemSchema),
   hotelGroupId: z.string().nullable(),
   isFeatured: z.boolean(),
   /** Chi y nghia voi kind IN (province, cluster) — null = chua gan (mac dinh nhu Standard) */
@@ -211,6 +286,8 @@ export const listDestinationsQuerySchema = z.object({
   kind: destinationKindSchema.optional(),
   contentState: destinationContentStateSchema.optional(),
   production: destinationProductionStateSchema.optional(),
+  /** true = chỉ điểm có giá vé thật (không "miễn phí") hoặc đã có link mua — trang /ve (doc §11.3) */
+  hasTicketOpportunity: z.coerce.boolean().optional(),
   sortBy: destinationSortBySchema.default("name"),
   sortDir: z.enum(["asc", "desc"]).default("asc"),
   page: z.coerce.number().int().min(1).default(1),
@@ -282,7 +359,8 @@ export type AddedLink = z.infer<typeof addedLinkSchema>;
 /** Ket qua publish 1 bai diem den xuong SQL Server (Phase C) */
 export const publishDestinationResultSchema = z.object({
   slug: z.string(),
-  jobId: z.string(),
+  /** Job AI dang gan (neu con) — pivot gop editor: publish khong con bat buoc co job */
+  jobId: z.string().nullable(),
   /** Link noi bo engine auto-link da chen vao than bai */
   addedLinks: z.array(addedLinkSchema),
   /** So diem den duoc tinh lai khoi lien quan (RelatedJson) sau publish */
@@ -290,6 +368,18 @@ export const publishDestinationResultSchema = z.object({
   durationMs: z.number().int(),
 });
 export type PublishDestinationResult = z.infer<typeof publishDestinationResultSchema>;
+
+/**
+ * Xem truoc HTML se ghi vao v2.DestinationContent luc Publish (dry-run, khong ghi DB) —
+ * chay dung renderDestinationBodyHtml + autoLinkContent nhung KHONG UPSERT SQL Server.
+ */
+export const previewDestinationPublishHtmlResponseSchema = z.object({
+  html: z.string(),
+  addedLinks: z.array(addedLinkSchema),
+});
+export type PreviewDestinationPublishHtmlResponse = z.infer<
+  typeof previewDestinationPublishHtmlResponseSchema
+>;
 
 /** Request re-link toan bo (spec §12.2) — dryRun = xem truoc, khong ghi */
 export const relinkAllRequestSchema = z.object({
@@ -356,8 +446,17 @@ export type DestinationSiteContent = z.infer<typeof destinationSiteContentSchema
 export const destinationDetailSchema = destinationMirrorSchema.extend({
   /** Full URL anh (base + thumbnail) — null khi chua cau hinh base hoac chua co anh */
   imageUrl: z.string().nullable(),
+  /** Full URL tung anh trong `gallery`, cung thu tu — de FE hien preview khong can tu ghep base */
+  galleryImageUrls: z.array(z.string().nullable()),
   /** Trang thai job ai-content dang chay (neu co) — de hien link dung cho */
   activeJobStatus: z.string().nullable(),
+  /**
+   * Ban nhap bai viet (tieu de/intro/6 block/FAQ/quickFacts/metadata) — pivot
+   * gop editor vao trang detail. Raw object CHUA chac hop le du du lieu (dang
+   * soan dat do) — FE tu parse theo DestinationArticle; validate that chi chay
+   * o gate-check/preview/publish. null = chua co ban nhap nao.
+   */
+  draftArticle: z.record(z.string(), z.unknown()).nullable(),
   /** Noi dung hien tai tren web — null khi chua co bai hoac chua ket noi SQL Server */
   content: destinationSiteContentSchema.nullable(),
   /** Thong tin nguoi dung da luu cho AI (tu dien lai form viet bai) */
@@ -495,26 +594,6 @@ export const updateThumbnailRequestSchema = z.object({
 });
 export type UpdateThumbnailRequest = z.infer<typeof updateThumbnailRequestSchema>;
 
-/**
- * Cap nhat danh sach link mua ve cho 1 diem den (affiliate-link-conversion-spec §5).
- * Nguoi dung chi nhap provider/label/sourceUrl — affiliateUrl/linkStatus server
- * tu tinh qua AffiliateLinkResolver luc luu (khong nhan tu client).
- */
-export const updateTicketLinksRequestSchema = z.object({
-  ticketLinks: z
-    .array(
-      z.object({
-        provider: z.string().min(1).max(64),
-        label: z.string().max(128).nullable().optional(),
-        sourceUrl: z.url().max(1024),
-        /** Gia tham khao rieng nha cung cap nay — tuy chon (content-seo-ux-plan §5.5b) */
-        price: z.number().nonnegative().nullable().optional(),
-      }),
-    )
-    .max(10),
-});
-export type UpdateTicketLinksRequest = z.infer<typeof updateTicketLinksRequestSchema>;
-
 /** Cap nhat gia ve theo doi tuong — nhap tay hoan toan (content-seo-ux-plan §5.5a) */
 export const updatePriceBreakdownRequestSchema = z.object({
   priceBreakdown: z.array(priceBreakdownItemSchema).max(10),
@@ -532,12 +611,6 @@ export const suggestPracticalNotesResponseSchema = z.object({
   suggestions: z.array(practicalNoteItemSchema),
 });
 export type SuggestPracticalNotesResponse = z.infer<typeof suggestPracticalNotesResponseSchema>;
-
-/** Cap nhat lich trinh goi y — nhap tay hoan toan (Phase 28.0) */
-export const updateItineraryRequestSchema = z.object({
-  itinerary: z.array(itineraryPlanSchema).max(4),
-});
-export type UpdateItineraryRequest = z.infer<typeof updateItineraryRequestSchema>;
 
 /** Cap nhat danh gia bien tap — sau khi nguoi dung duyet/sua ban AI goi y (Phase 28.0) */
 export const updateEditorialReviewRequestSchema = z.object({

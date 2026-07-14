@@ -9,7 +9,9 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
 import { Badge } from "@/shared/ui/badge";
+import { PageHeader } from "@/shared/ui/page-header";
 import { AffiliateUrlPreview } from "@/features/dichoithoi/affiliate-url-preview";
+import { ImportProductsModal } from "@/features/dichoithoi/import-products-modal";
 
 const EMPTY_FORM = {
   name: "",
@@ -29,6 +31,7 @@ export default function ProductsPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const productsQuery = useQuery({
     queryKey: ["products"],
@@ -76,19 +79,27 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold">Sản phẩm</h2>
-          <p className="text-sm text-zinc-500">
+      <PageHeader
+        title="Sản phẩm"
+        description={
+          <>
             Affiliate dùng chung, chèn vào bài viết qua tag — KHÔNG gắn theo điểm đến/tỉnh
             (product-spec §1). Chèn bằng <code>[[block:products tag=...]]</code> hoặc{" "}
             <code>[[block:product id=...]]</code> trong bài cẩm nang.
-          </p>
-        </div>
-        <a href="/dichoithoi/san-pham/nhap" className="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">
-          Nhập từ Sheet →
-        </a>
-      </div>
+          </>
+        }
+        actions={
+          <Button size="sm" className="whitespace-nowrap" onClick={() => setImportOpen(true)}>
+            Nhập từ Sheet
+          </Button>
+        }
+      />
+
+      <ImportProductsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => queryClient.invalidateQueries({ queryKey: ["products"] })}
+      />
 
       {error && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">

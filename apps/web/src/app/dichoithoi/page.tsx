@@ -31,6 +31,8 @@ import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
 import { Pagination } from "@/shared/ui/pagination";
 import { Select } from "@/shared/ui/select";
+import { PageHeader } from "@/shared/ui/page-header";
+import { ImportDestinationsModal } from "@/features/dichoithoi/import-destinations-modal";
 
 /** Khoi "Viec can lam" tren hub (destination-spec §7.2, Phase 23) — chi hien
  * khi co it nhat 1 canh bao (nguyen tac "khong hien muc chi de biet"). */
@@ -117,6 +119,7 @@ export default function DichoithoiPage() {
   const [pageSize, setPageSize] = useState(50);
   const [syncResult, setSyncResult] = useState<SyncDestinationsResult | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const taxonomyQuery = useQuery({
     queryKey: ["dichoithoi-taxonomy"],
@@ -368,32 +371,34 @@ export default function DichoithoiPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Điểm đến — dichoithoi.com</h2>
-          <p className="text-sm text-zinc-500">
-            Quản lý bài viết điểm đến. Dữ liệu đồng bộ từ database website (schema v2).
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <a href="/dichoithoi/new" className={buttonClasses({ variant: "secondary" })}>
-            + Thêm điểm đến
-          </a>
-          <a href="/dichoithoi/import" className={buttonClasses({ variant: "secondary" })}>
-            Nhập từ file
-          </a>
-          <a href="/dichoithoi/articles/new" className={buttonClasses({ variant: "secondary" })}>
-            + Bài cẩm nang
-          </a>
-          <Button
-            variant="primary"
-            loading={syncMutation.isPending}
-            onClick={() => syncMutation.mutate()}
-          >
-            {syncMutation.isPending ? "Đang đồng bộ..." : "Đồng bộ từ website"}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Điểm đến — dichoithoi.com"
+        description="Quản lý bài viết điểm đến. Dữ liệu đồng bộ từ database website (schema v2)."
+        actions={
+          <>
+            <a href="/dichoithoi/new" className={buttonClasses({ variant: "secondary" })}>
+              + Thêm điểm đến
+            </a>
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className={buttonClasses({ variant: "secondary" })}
+            >
+              Nhập từ Sheet
+            </button>
+            <a href="/dichoithoi/articles/new" className={buttonClasses({ variant: "secondary" })}>
+              + Bài cẩm nang
+            </a>
+            <Button
+              variant="primary"
+              loading={syncMutation.isPending}
+              onClick={() => syncMutation.mutate()}
+            >
+              {syncMutation.isPending ? "Đang đồng bộ..." : "Đồng bộ từ website"}
+            </Button>
+          </>
+        }
+      />
 
       <DashboardAlertsCard />
 
@@ -653,6 +658,12 @@ export default function DichoithoiPage() {
           }}
         />
       )}
+
+      <ImportDestinationsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => queryClient.invalidateQueries({ queryKey: ["dichoithoi-destinations"] })}
+      />
     </div>
   );
 }

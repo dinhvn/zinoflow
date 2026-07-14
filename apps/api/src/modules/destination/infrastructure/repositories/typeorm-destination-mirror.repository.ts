@@ -5,7 +5,7 @@ import type {
   AddressMappingsQuery,
   AffiliateLinkItem,
   ExternalReviewUrlItem,
-  ItineraryPlan,
+  GalleryItem,
   ListDestinationsQuery,
   PracticalNoteItem,
   PriceBreakdownItem,
@@ -24,6 +24,8 @@ import {
   compareDestinationsForSort,
   deriveContentState,
   deriveProductionState,
+  hasRealTicketPrice,
+  isPendingTicketOpportunity,
 } from "../../domain/destination-mirror";
 import {
   CONTENT_JOB_REPOSITORY,
@@ -152,6 +154,11 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     if (query.production) {
       filtered = filtered.filter((e) => e.productionState === query.production);
     }
+    if (query.hasTicketOpportunity) {
+      filtered = filtered.filter(
+        (e) => hasRealTicketPrice(e.ticketPrice) || e.ticketLinks.length > 0,
+      );
+    }
 
     // Sort server-side tren TOAN BO du lieu da loc, truoc khi cat trang (spec sort).
     // Cast: entity.kind khai bao string nhung gia tri thuc luon thuoc union kind.
@@ -160,6 +167,14 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       b: (typeof filtered)[number],
     ) => number;
     filtered.sort(comparator);
+    if (query.hasTicketOpportunity) {
+      // Uu tien nhom "co gia nhung chua co link mua online" — co hoi hoa hong bo lo (doc §11.3)
+      filtered.sort((a, b) => {
+        const aPending = isPendingTicketOpportunity(a.ticketPrice, a.ticketLinks.length);
+        const bPending = isPendingTicketOpportunity(b.ticketPrice, b.ticketLinks.length);
+        return aPending === bPending ? 0 : aPending ? -1 : 1;
+      });
+    }
 
     const total = filtered.length;
     const start = (query.page - 1) * query.limit;
@@ -197,6 +212,7 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       siteStatus: row.siteStatus,
       contentSource: row.contentSource,
       contentHash: row.contentHash,
+      ticketPrice: row.ticketPrice,
       syncFlags: flags,
       hasLocalChanges: false,
       siteUpdatedAt: row.siteUpdatedAt,
@@ -274,10 +290,6 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     await this.repo.update({ slug }, { practicalNotes: [...practicalNotes] });
   }
 
-  async setItinerary(slug: string, itinerary: readonly ItineraryPlan[]): Promise<void> {
-    await this.repo.update({ slug }, { itinerary: [...itinerary] });
-  }
-
   async setEditorialReview(slug: string, editorialReview: string | null): Promise<void> {
     await this.repo.update({ slug }, { editorialReview });
   }
@@ -287,6 +299,10 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     externalReviewUrls: readonly ExternalReviewUrlItem[],
   ): Promise<void> {
     await this.repo.update({ slug }, { externalReviewUrls: [...externalReviewUrls] });
+  }
+
+  async setGallery(slug: string, gallery: readonly GalleryItem[]): Promise<void> {
+    await this.repo.update({ slug }, { gallery: [...gallery] });
   }
 
   async saveAiInputs(
@@ -308,6 +324,10 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
         syncFlags: [],
       },
     );
+  }
+
+  async setDraftArticle(slug: string, draftArticle: Record<string, unknown>): Promise<void> {
+    await this.repo.update({ slug }, { draftArticle: draftArticle as DestinationMirrorEntity["draftArticle"] });
   }
 
   async listProvinces(): Promise<ProvinceOption[]> {

@@ -38,6 +38,8 @@ export interface SiteDestinationRow {
   contentSource: number | null;
   contentHash: string | null;
   siteUpdatedAt: Date | null;
+  /** Gia ve tai quay, van ban tu do — mirror 1 chieu tu TicketPrice (Phase 4) */
+  ticketPrice: string | null;
 }
 
 /** Trang thai mirror toi thieu de ra quyet dinh sync */
@@ -126,6 +128,25 @@ export function deriveProductionState(
  */
 export function isNewImagePath(thumbnail: string | null): boolean {
   return thumbnail !== null && thumbnail.includes("/");
+}
+
+/** "Miễn phí" phổ biến trong TicketPrice text (spec ticket-analysis §2) */
+const FREE_TICKET_PRICE_RE = /miễn phí|mien phi|free/i;
+
+/** Co gia ve THAT (khac "Miễn phí"/rong) — dung cho filter/uu tien trang /ve (doc §11.3) */
+export function hasRealTicketPrice(ticketPrice: string | null): boolean {
+  return ticketPrice !== null && ticketPrice.trim() !== "" && !FREE_TICKET_PRICE_RE.test(ticketPrice);
+}
+
+/**
+ * "Co gia nhung chua co link mua online" — nhom uu tien tren trang /ve vi dang
+ * bo lo hoa hong (doc §11.3). false neu diem mien phi/chua ro gia, hoac da co link.
+ */
+export function isPendingTicketOpportunity(
+  ticketPrice: string | null,
+  ticketLinksCount: number,
+): boolean {
+  return hasRealTicketPrice(ticketPrice) && ticketLinksCount === 0;
 }
 
 /** Du lieu toi thieu de sort 1 dong tren man danh sach */

@@ -14,30 +14,32 @@ import {
   checkImageRequestSchema,
   createDestinationJobRequestSchema,
   fetchSheetRequestSchema,
+  updateDestinationDraftArticleRequestSchema,
+  generateDestinationBlockRequestSchema,
+  destinationBlockKeySchema,
   importDestinationsRequestSchema,
   listDestinationsQuerySchema,
   parseMapsLinkRequestSchema,
   saveAiInputsRequestSchema,
   relinkAllRequestSchema,
   renameDestinationSlugRequestSchema,
+  restructurePastedContentRequestSchema,
   suggestDestinationMetaRequestSchema,
   updateThumbnailRequestSchema,
-  updateTicketLinksRequestSchema,
   updatePriceBreakdownRequestSchema,
   updatePracticalNotesRequestSchema,
-  updateItineraryRequestSchema,
   updateEditorialReviewRequestSchema,
   updateExternalReviewUrlsRequestSchema,
+  updateDestinationGalleryRequestSchema,
+  type GalleryItem,
+  type UpdateDestinationGalleryRequest,
   upsertDestinationRequestSchema,
   type AddressMappingProvinces,
   type AddressMappingsQuery,
   type AddressMappingsResponse,
-  type AffiliateLinkItem,
   type PriceBreakdownItem,
   type PracticalNoteItem,
   type SuggestPracticalNotesResponse,
-  type ItineraryPlan,
-  type UpdateItineraryRequest,
   type UpdateEditorialReviewRequest,
   type SuggestEditorialReviewResponse,
   type ExternalReviewUrlItem,
@@ -64,13 +66,14 @@ import {
   type RenameDestinationSlugResponse,
   type SaveAiInputsRequest,
   type SuggestDestinationMetaRequest,
+  type DestinationArticle,
   type DestinationMetaSuggestion,
+  type RestructurePastedContentRequest,
   type SyncDestinationsResult,
   migrateDestinationImagesRequestSchema,
   type MigrateDestinationImagesReport,
   type MigrateDestinationImagesRequest,
   type UpdateThumbnailRequest,
-  type UpdateTicketLinksRequest,
   type UpdatePriceBreakdownRequest,
   type UpdatePracticalNotesRequest,
   type UploadDestinationImageResponse,
@@ -80,6 +83,12 @@ import {
   type UpdateTaxonomyDescriptionRequest,
   type ListCoverageScoresResponse,
   type DichoithoiDashboardAlertsResponse,
+  type UpdateDestinationDraftArticleRequest,
+  type GenerateDestinationBlockRequest,
+  type DestinationBlockKey,
+  type ContentSection,
+  type DestinationDraftQualityChecksResponse,
+  type PreviewDestinationPublishHtmlResponse,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { ValidationError } from "../../shared/errors/app-error";
@@ -90,11 +99,9 @@ import { CreateDestinationJobUseCase } from "../application/use-cases/create-des
 import { PublishDestinationUseCase } from "../application/use-cases/publish-destination.usecase";
 import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
 import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnail.usecase";
-import { UpdateTicketLinksUseCase } from "../application/use-cases/update-ticket-links.usecase";
 import { UpdatePriceBreakdownUseCase } from "../application/use-cases/update-price-breakdown.usecase";
 import { UpdatePracticalNotesUseCase } from "../application/use-cases/update-practical-notes.usecase";
 import { SuggestPracticalNotesUseCase } from "../application/use-cases/suggest-practical-notes.usecase";
-import { UpdateItineraryUseCase } from "../application/use-cases/update-itinerary.usecase";
 import { UpdateEditorialReviewUseCase } from "../application/use-cases/update-editorial-review.usecase";
 import { SuggestEditorialReviewUseCase } from "../application/use-cases/suggest-editorial-review.usecase";
 import { UpdateExternalReviewUrlsUseCase } from "../application/use-cases/update-external-review-urls.usecase";
@@ -110,6 +117,13 @@ import { ManageTaxonomyContentUseCase } from "../application/use-cases/manage-ta
 import { GetCoverageScoresUseCase } from "../application/use-cases/get-coverage-scores.usecase";
 import { GetDichoithoiDashboardAlertsUseCase } from "../application/use-cases/get-dichoithoi-dashboard-alerts.usecase";
 import { SuggestDestinationMetaUseCase } from "../../ai-content/application/use-cases/suggest-destination-meta.usecase";
+import { RestructurePastedContentUseCase } from "../../ai-content/application/use-cases/restructure-pasted-content.usecase";
+import { UpdateDestinationDraftArticleUseCase } from "../application/use-cases/update-destination-draft-article.usecase";
+import { GenerateDestinationBlockUseCase } from "../application/use-cases/generate-destination-block.usecase";
+import { RunDestinationDraftQualityChecksUseCase } from "../application/use-cases/run-destination-draft-quality-checks.usecase";
+import { PreviewDestinationPublishHtmlUseCase } from "../application/use-cases/preview-destination-publish-html.usecase";
+import { AddDestinationGalleryImageUseCase } from "../application/use-cases/add-destination-gallery-image.usecase";
+import { UpdateDestinationGalleryUseCase } from "../application/use-cases/update-destination-gallery.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
@@ -137,11 +151,9 @@ export class DestinationsController {
     private readonly publishDestination: PublishDestinationUseCase,
     private readonly relinkAll: RelinkAllUseCase,
     private readonly updateThumbnail: UpdateThumbnailUseCase,
-    private readonly updateTicketLinks: UpdateTicketLinksUseCase,
     private readonly updatePriceBreakdown: UpdatePriceBreakdownUseCase,
     private readonly updatePracticalNotes: UpdatePracticalNotesUseCase,
     private readonly suggestPracticalNotes: SuggestPracticalNotesUseCase,
-    private readonly updateItinerary: UpdateItineraryUseCase,
     private readonly updateEditorialReview: UpdateEditorialReviewUseCase,
     private readonly suggestEditorialReview: SuggestEditorialReviewUseCase,
     private readonly updateExternalReviewUrls: UpdateExternalReviewUrlsUseCase,
@@ -156,6 +168,13 @@ export class DestinationsController {
     private readonly getCoverageScores: GetCoverageScoresUseCase,
     private readonly getDashboardAlerts: GetDichoithoiDashboardAlertsUseCase,
     private readonly suggestMeta: SuggestDestinationMetaUseCase,
+    private readonly restructurePastedContent: RestructurePastedContentUseCase,
+    private readonly updateDraftArticle: UpdateDestinationDraftArticleUseCase,
+    private readonly generateBlock: GenerateDestinationBlockUseCase,
+    private readonly runDraftQualityChecks: RunDestinationDraftQualityChecksUseCase,
+    private readonly previewPublishHtml: PreviewDestinationPublishHtmlUseCase,
+    private readonly addGalleryImageUseCase: AddDestinationGalleryImageUseCase,
+    private readonly updateGalleryUseCase: UpdateDestinationGalleryUseCase,
     private readonly parseMapsLink: ParseMapsLinkUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
@@ -192,6 +211,19 @@ export class DestinationsController {
     request: SuggestDestinationMetaRequest,
   ): Promise<DestinationMetaSuggestion> {
     return this.suggestMeta.execute(request);
+  }
+
+  /**
+   * AI tach bai viet CO SAN (dan tu ChatGPT/Gemini khac hoac tu viet) vao dung cau truc
+   * DestinationArticle — redesign luong viet bai §Phase 2. Khong tu tao job/draft, FE tu
+   * goi POST jobs/manual roi PUT drafts/:id voi article tra ve o day.
+   */
+  @Post("restructure-paste")
+  restructurePaste(
+    @Body(new ZodValidationPipe(restructurePastedContentRequestSchema))
+    request: RestructurePastedContentRequest,
+  ): Promise<DestinationArticle> {
+    return this.restructurePastedContent.execute(request);
   }
 
   /** Tai Google Sheet (cong khai) ve CSV — client parse + xem truoc roi import */
@@ -380,15 +412,6 @@ export class DestinationsController {
     return { ok: true };
   }
 
-  /** Cap nhat danh sach link mua ve (affiliate-link-conversion-spec §5) */
-  @Post(":slug/ticket-links")
-  setTicketLinks(
-    @Param("slug") slug: string,
-    @Body(new ZodValidationPipe(updateTicketLinksRequestSchema)) request: UpdateTicketLinksRequest,
-  ): Promise<AffiliateLinkItem[]> {
-    return this.updateTicketLinks.execute(slug, request);
-  }
-
   /** Cap nhat gia ve theo doi tuong — nhap tay hoan toan (content-seo-ux-plan §5.5a) */
   @Post(":slug/price-breakdown")
   setPriceBreakdown(
@@ -415,15 +438,6 @@ export class DestinationsController {
     request: UpdatePracticalNotesRequest,
   ): Promise<PracticalNoteItem[]> {
     return this.updatePracticalNotes.execute(slug, request);
-  }
-
-  /** Cap nhat lich trinh goi y — nhap tay hoan toan (content-seo-ux-plan §10.6.2, Phase 28.0) */
-  @Post(":slug/itinerary")
-  setItinerary(
-    @Param("slug") slug: string,
-    @Body(new ZodValidationPipe(updateItineraryRequestSchema)) request: UpdateItineraryRequest,
-  ): Promise<ItineraryPlan[]> {
-    return this.updateItinerary.execute(slug, request);
   }
 
   /** Goi y ban nhap "Danh gia bien tap" (Phase 28.0) — CHUA luu */
@@ -473,7 +487,73 @@ export class DestinationsController {
     return this.uploadImage.execute(slug, file.buffer);
   }
 
-  /** Publish bai DA DUYET cua 1 diem den xuong SQL Server (gate thu cong thu 2) */
+  /** Them 1 anh vao thu vien anh (khac anh dai dien) — multipart "file", gioi han 15MB. */
+  @Post(":slug/gallery/images")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_IMAGE_BYTES } }))
+  addGalleryImage(
+    @Param("slug") slug: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ): Promise<GalleryItem[]> {
+    if (!file) {
+      throw new ValidationError("Thiếu file ảnh (field 'file')");
+    }
+    if (!file.mimetype.startsWith("image/")) {
+      throw new ValidationError(`File không phải ảnh (${file.mimetype})`);
+    }
+    return this.addGalleryImageUseCase.execute(slug, file.buffer);
+  }
+
+  /** Ghi de nguyen mang thu vien anh — sua alt/caption/credit, doi thu tu, xoa anh */
+  @Post(":slug/gallery")
+  updateGallery(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updateDestinationGalleryRequestSchema))
+    request: UpdateDestinationGalleryRequest,
+  ): Promise<GalleryItem[]> {
+    return this.updateGalleryUseCase.execute(slug, request);
+  }
+
+  /**
+   * Luu tay ban nhap bai viet (tieu de/intro/7 block/FAQ/quickFacts/metadata) — pivot
+   * gop editor vao trang detail. Ghi thang, khong qua job/duyet (redesign luong viet bai lan 2).
+   */
+  @Patch(":slug/draft-article")
+  setDraftArticle(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updateDestinationDraftArticleRequestSchema))
+    request: UpdateDestinationDraftArticleRequest,
+  ): Promise<Record<string, unknown>> {
+    return this.updateDraftArticle.execute(slug, request.draftArticle);
+  }
+
+  /** AI tao goi y cho DUNG 1 block — khong tao ContentJob/ContentDraft (redesign luong viet bai lan 2). */
+  @Post(":slug/blocks/:blockKey/suggest")
+  suggestBlock(
+    @Param("slug") slug: string,
+    @Param("blockKey", new ZodValidationPipe(destinationBlockKeySchema)) blockKey: DestinationBlockKey,
+    @Body(new ZodValidationPipe(generateDestinationBlockRequestSchema))
+    request: GenerateDestinationBlockRequest,
+  ): Promise<ContentSection> {
+    return this.generateBlock.execute(slug, blockKey, request);
+  }
+
+  /** Chay 4 gate tren draft_article HIEN TAI, doc lap voi draftId/job (redesign luong viet bai lan 2). */
+  @Post(":slug/draft-article/quality-checks")
+  runDraftQualityChecksForSlug(
+    @Param("slug") slug: string,
+  ): Promise<DestinationDraftQualityChecksResponse> {
+    return this.runDraftQualityChecks.execute(slug);
+  }
+
+  /** Xem truoc HTML se ghi luc Publish (dry-run, khong ghi DB) — redesign luong viet bai lan 2. */
+  @Post(":slug/draft-article/preview-publish-html")
+  previewPublishHtmlForSlug(
+    @Param("slug") slug: string,
+  ): Promise<PreviewDestinationPublishHtmlResponse> {
+    return this.previewPublishHtml.execute(slug);
+  }
+
+  /** Publish draft_article HIEN TAI cua 1 diem den xuong SQL Server (gate chay ngay tai day) */
   @Post(":slug/publish")
   publish(@Param("slug") slug: string): Promise<PublishDestinationResult> {
     return this.publishDestination.execute(slug);

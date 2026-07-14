@@ -1,10 +1,16 @@
 import type { AffiliateLinkStatus, AffiliatePlaceholder } from "@zinoflow/contracts";
 
-/** 1 quy tac chuyen doi (khop domain -> template) — mirror affiliateLinkRuleSchema */
-export interface AffiliateLinkRule {
-  readonly id: string;
-  readonly provider: string;
+/** 1 doi tac affiliate (vd klook/vexere/booking) — mirror affiliatePartnerSchema */
+export interface AffiliatePartnerRule {
+  readonly code: string;
   readonly matchDomain: string | null;
+  readonly networkId: string | null;
+  readonly isActive: boolean;
+}
+
+/** 1 mang affiliate (vd Accesstrade) — template DUNG CHUNG cho moi doi tac cua no */
+export interface AffiliateNetworkRule {
+  readonly id: string;
   readonly template: string;
   readonly placeholder: AffiliatePlaceholder;
   readonly isActive: boolean;
@@ -25,44 +31,52 @@ function extractDomain(sourceUrl: string): string | null {
   }
 }
 
-function findRule(
+function findPartner(
   sourceUrl: string,
-  rules: readonly AffiliateLinkRule[],
+  partners: readonly AffiliatePartnerRule[],
   explicitProvider: string | null,
-): AffiliateLinkRule | null {
-  const active = rules.filter((r) => r.isActive);
+): AffiliatePartnerRule | null {
+  const active = partners.filter((p) => p.isActive);
   if (explicitProvider) {
-    return active.find((r) => r.provider === explicitProvider) ?? null;
+    return active.find((p) => p.code === explicitProvider) ?? null;
   }
   const domain = extractDomain(sourceUrl);
   if (!domain) return null;
-  return (
-    active.find((r) => r.matchDomain && domain.endsWith(r.matchDomain.toLowerCase())) ?? null
-  );
+  return active.find((p) => p.matchDomain && domain.endsWith(p.matchDomain.toLowerCase())) ?? null;
 }
 
-function applyTemplate(rule: AffiliateLinkRule, sourceUrl: string): string {
-  const value = rule.placeholder === "{url_enc}" ? encodeURIComponent(sourceUrl) : sourceUrl;
-  return rule.template.split(rule.placeholder).join(value);
+function applyTemplate(network: AffiliateNetworkRule, sourceUrl: string): string {
+  const value = network.placeholder === "{url_enc}" ? encodeURIComponent(sourceUrl) : sourceUrl;
+  return network.template.split(network.placeholder).join(value);
 }
 
 /**
- * Thuat toan convert sourceUrl -> affiliateUrl (spec §3). Khong bao gio bia du lieu:
- * khong khop rule nao -> giu nguyen sourceUrl, danh dau 'no-rule' de nguoi dung biet
- * can them rule, KHONG am tham thieu hoa hong.
+ * Thuat toan convert v2 (doc phan tich affiliate-provider-management §3): tim doi
+ * tac (provider) -> tim MANG cua doi tac do -> ap template cua MANG (khong phai
+ * cua tung doi tac — cac mang thuc te nhu Accesstrade dung 1 template deep-link
+ * chung cho moi merchant). Khong khop duoc doi tac/mang/mang tat -> giu nguyen
+ * sourceUrl, danh dau 'no-rule' — khong bao gio bia du lieu, khong am tham thieu
+ * hoa hong.
  */
 export function resolveAffiliateLink(
   sourceUrl: string,
-  rules: readonly AffiliateLinkRule[],
+  partners: readonly AffiliatePartnerRule[],
+  networks: readonly AffiliateNetworkRule[],
   explicitProvider: string | null = null,
 ): ResolvedAffiliateLink {
-  const rule = findRule(sourceUrl, rules, explicitProvider);
-  if (!rule) {
+  const partner = findPartner(sourceUrl, partners, explicitProvider);
+  if (!partner) {
     return { provider: explicitProvider ?? "other", affiliateUrl: sourceUrl, linkStatus: "no-rule" };
   }
+  const network = partner.networkId
+    ? networks.find((n) => n.id === partner.networkId && n.isActive) ?? null
+    : null;
+  if (!network) {
+    return { provider: partner.code, affiliateUrl: sourceUrl, linkStatus: "no-rule" };
+  }
   return {
-    provider: rule.provider,
-    affiliateUrl: applyTemplate(rule, sourceUrl),
+    provider: partner.code,
+    affiliateUrl: applyTemplate(network, sourceUrl),
     linkStatus: "converted",
   };
 }

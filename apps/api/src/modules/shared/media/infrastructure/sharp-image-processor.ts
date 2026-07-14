@@ -27,4 +27,12 @@ export class SharpImageProcessor implements ImageProcessor {
     ]);
     return { hero, medium, thumb };
   }
+
+  async toWebp(source: Buffer, width: number): Promise<Buffer> {
+    return sharp(source)
+      .rotate()
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+  }
 }

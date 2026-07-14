@@ -17,10 +17,18 @@ export type AffiliatePlaceholder = z.infer<typeof affiliatePlaceholderSchema>;
 export const affiliateLinkStatusSchema = z.enum(["converted", "no-rule", "manual-override"]);
 export type AffiliateLinkStatus = z.infer<typeof affiliateLinkStatusSchema>;
 
-export const affiliateLinkRuleSchema = z.object({
+/**
+ * Mo hinh 2 tang (thay affiliate_link_rules cu — 1 provider = 1 template):
+ * affiliate_networks = MANG affiliate thuc te (vd Accesstrade) so huu 1 template
+ * dung chung cho MOI doi tac trong mang do; affiliate_partners = doi tac cu the
+ * (klook/vexere/booking...), moi doi tac gan vao 1 mang (hoac null = chua gan/
+ * affiliate truc tiep). Convert: provider -> tim partner -> tim network cua no ->
+ * ap template cua NETWORK (khong phai cua partner) — xem giai thich §3 doc phan tich.
+ */
+export const affiliateNetworkSchema = z.object({
   id: z.string().uuid(),
-  provider: z.string().min(1).max(64),
-  matchDomain: z.string().max(256).nullable(),
+  code: z.string().min(1).max(64),
+  name: z.string().min(1).max(128),
   template: z.string().min(1).max(1024),
   placeholder: affiliatePlaceholderSchema,
   isActive: z.boolean(),
@@ -28,20 +36,80 @@ export const affiliateLinkRuleSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
 });
-export type AffiliateLinkRule = z.infer<typeof affiliateLinkRuleSchema>;
+export type AffiliateNetwork = z.infer<typeof affiliateNetworkSchema>;
 
-export const createAffiliateLinkRuleRequestSchema = z.object({
-  provider: z.string().min(1).max(64),
-  matchDomain: z.string().max(256).nullable().optional(),
+export const createAffiliateNetworkRequestSchema = z.object({
+  code: z.string().min(1).max(64),
+  name: z.string().min(1).max(128),
   template: z.string().min(1).max(1024),
   placeholder: affiliatePlaceholderSchema.default("{url_enc}"),
   isActive: z.boolean().default(true),
   notes: z.string().nullable().optional(),
 });
-export type CreateAffiliateLinkRuleRequest = z.infer<typeof createAffiliateLinkRuleRequestSchema>;
+export type CreateAffiliateNetworkRequest = z.infer<typeof createAffiliateNetworkRequestSchema>;
 
-export const updateAffiliateLinkRuleRequestSchema = createAffiliateLinkRuleRequestSchema.partial();
-export type UpdateAffiliateLinkRuleRequest = z.infer<typeof updateAffiliateLinkRuleRequestSchema>;
+export const updateAffiliateNetworkRequestSchema = createAffiliateNetworkRequestSchema.partial();
+export type UpdateAffiliateNetworkRequest = z.infer<typeof updateAffiliateNetworkRequestSchema>;
+
+/** 1 doi tac affiliate cu the (klook/vexere/booking...) — provider trong ticketLinks[]/Hotel/Tour phai khop `code` */
+export const affiliatePartnerSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string().min(1).max(64),
+  name: z.string().min(1).max(128),
+  homepageUrl: z.string().max(512).nullable(),
+  description: z.string().nullable(),
+  /** null = chua gan mang (affiliate truc tiep hoac chua cau hinh) */
+  networkId: z.string().uuid().nullable(),
+  /** Chi dung goi y UX khi nhap sourceUrl — KHONG dung de convert (spec §3) */
+  matchDomain: z.string().max(256).nullable(),
+  isActive: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type AffiliatePartner = z.infer<typeof affiliatePartnerSchema>;
+
+export const createAffiliatePartnerRequestSchema = z.object({
+  code: z.string().min(1).max(64),
+  name: z.string().min(1).max(128),
+  homepageUrl: z.string().max(512).nullable().optional(),
+  description: z.string().nullable().optional(),
+  networkId: z.string().uuid().nullable().optional(),
+  matchDomain: z.string().max(256).nullable().optional(),
+  isActive: z.boolean().default(true),
+});
+export type CreateAffiliatePartnerRequest = z.infer<typeof createAffiliatePartnerRequestSchema>;
+
+export const updateAffiliatePartnerRequestSchema = createAffiliatePartnerRequestSchema.partial();
+export type UpdateAffiliatePartnerRequest = z.infer<typeof updateAffiliatePartnerRequestSchema>;
+
+/**
+ * 1 dong tu Google Sheet cong khai (import hang loat doi tac — doc §4). Cot
+ * "loai affiliate" trong Sheet CHINH LA `affiliate_networks.code` — khop
+ * CHINH XAC (khong fuzzy theo ten), khong khop duoc thi GIU nguyen networkId
+ * dang co (khong tu xoa gan tay). Luu thang, khong preview — upsert theo `code`.
+ */
+export const affiliatePartnerImportRowSchema = z.object({
+  code: z.string().min(1).max(64),
+  name: z.string().min(1).max(128),
+  homepageUrl: z.string().max(512).nullable().optional(),
+  description: z.string().nullable().optional(),
+  /** Khop chinh xac affiliate_networks.code — null/khong khop = giu nguyen gan cu */
+  networkCode: z.string().max(64).nullable().optional(),
+  isActive: z.boolean().default(true),
+});
+export type AffiliatePartnerImportRow = z.infer<typeof affiliatePartnerImportRowSchema>;
+
+export const importAffiliatePartnersRequestSchema = z.object({
+  items: z.array(affiliatePartnerImportRowSchema).min(1).max(1000),
+});
+export type ImportAffiliatePartnersRequest = z.infer<typeof importAffiliatePartnersRequestSchema>;
+
+export const importAffiliatePartnersResultSchema = z.object({
+  inserted: z.number().int(),
+  updated: z.number().int(),
+  skipped: z.array(z.object({ code: z.string(), reason: z.string() })),
+});
+export type ImportAffiliatePartnersResult = z.infer<typeof importAffiliatePartnersResultSchema>;
 
 /**
  * Hinh dang CHUNG cho 1 link kiem tien o bat ky noi nao dung co che nay

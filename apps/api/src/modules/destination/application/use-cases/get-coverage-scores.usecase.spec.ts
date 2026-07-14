@@ -23,7 +23,6 @@ function fakeMirror(overrides: Partial<DestinationMirrorEntity> = {}): Destinati
     ticketLinks: [],
     priceBreakdown: [],
     practicalNotes: [],
-    itinerary: [],
     editorialReview: null,
     externalReviewUrls: [],
     hotelGroupId: null,
@@ -97,7 +96,7 @@ describe("GetCoverageScoresUseCase (destination-spec §2.2.2)", () => {
     expect(vung?.items.find((it) => it.key === "featured-child")?.done).toBe(true);
   });
 
-  it("cluster ContentTier=null (chua gan) -> tier standard, KHONG co 5 muc rieng Flagship", async () => {
+  it("cluster ContentTier=null (chua gan) -> tier standard, KHONG co 4 muc rieng Flagship", async () => {
     const mirrors = [fakeMirror({ slug: "vung-chua-gan", siteId: 1, kind: "cluster", name: "Vùng" })];
     const mirrorRepo = { findAll: async () => mirrors } as unknown as DestinationMirrorRepository;
     const siteDb = {
@@ -111,10 +110,10 @@ describe("GetCoverageScoresUseCase (destination-spec §2.2.2)", () => {
 
     const item = result.items.find((i) => i.destinationSlug === "vung-chua-gan");
     expect(item?.tier).toBe("standard");
-    expect(item?.items.some((it) => it.key === "itinerary")).toBe(false);
+    expect(item?.items.some((it) => it.key === "article-topic-coverage")).toBe(false);
   });
 
-  it("flagship co lich trinh + bai cam nang + danh gia bien tap + external review -> tinh done ca 4 muc moi", async () => {
+  it("flagship co bai cam nang + danh gia bien tap + external review -> tinh done ca 3 muc moi", async () => {
     const mirrors = [
       fakeMirror({
         slug: "da-lat",
@@ -122,7 +121,6 @@ describe("GetCoverageScoresUseCase (destination-spec §2.2.2)", () => {
         kind: "cluster",
         name: "Đà Lạt",
         contentTier: "flagship",
-        itinerary: [{ label: "2N1D", days: [{ dayLabel: "Ngày 1", items: [{ period: "Sáng", poiSlug: null, note: "x" }] }] }],
         editorialReview: "Nhận định biên tập",
         externalReviewUrls: [{ label: "Google Maps", url: "https://maps.google.com/?q=x" }],
       }),
@@ -138,7 +136,6 @@ describe("GetCoverageScoresUseCase (destination-spec §2.2.2)", () => {
     const result = await usecase.execute();
 
     const item = result.items.find((i) => i.destinationSlug === "da-lat");
-    expect(item?.items.find((it) => it.key === "itinerary")?.done).toBe(true);
     expect(item?.items.find((it) => it.key === "article-topic-coverage")?.done).toBe(true);
     expect(item?.items.find((it) => it.key === "editorial-review")?.done).toBe(true);
     expect(item?.items.find((it) => it.key === "external-review-url")?.done).toBe(true);

@@ -1,13 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod/v4";
 import {
+  contentJobSchema,
   createDestinationJobResponseSchema,
+  // NOTE: createContentJobResponseSchema (job manual) khong con dung — Viet tay gio la
+  // go thang vao editor phia duoi, khong con tao ContentJob rieng.
+  destinationArticleSchema,
   destinationDetailSchema,
+  destinationDraftQualityChecksResponseSchema,
+  previewDestinationPublishHtmlResponseSchema,
   listAiProvidersResponseSchema,
   publishDestinationResultSchema,
   renameDestinationSlugResponseSchema,
+  DESTINATION_BLOCK_LABELS,
+  DESTINATION_LIST_BLOCK_KEYS,
+  DESTINATION_SECTION_ORDER,
+  type ContentSection,
+  type DestinationArticle,
+  type DestinationBlockKey,
   type DestinationContentState,
   type DestinationDetail,
   type DestinationKind,
@@ -18,11 +32,12 @@ import {
   DestinationMetadataForm,
   type DestinationMetaValues,
 } from "@/features/dichoithoi/destination-metadata-form";
+import { DestinationPasteContentModal } from "@/features/dichoithoi/destination-paste-content-modal";
+import { DestinationArticleEditor } from "@/features/dichoithoi/destination-article-editor/destination-article-editor";
 import { DestinationImageUploader } from "@/features/dichoithoi/destination-image-uploader";
-import { DestinationTicketLinksEditor } from "@/features/dichoithoi/destination-ticket-links-editor";
+import { DestinationGalleryEditor } from "@/features/dichoithoi/destination-gallery-editor";
 import { DestinationPriceBreakdownEditor } from "@/features/dichoithoi/destination-price-breakdown-editor";
 import { DestinationPracticalNotesEditor } from "@/features/dichoithoi/destination-practical-notes-editor";
-import { DestinationItineraryEditor } from "@/features/dichoithoi/destination-itinerary-editor";
 import { DestinationEditorialReviewEditor } from "@/features/dichoithoi/destination-editorial-review-editor";
 import { DestinationExternalReviewUrlsEditor } from "@/features/dichoithoi/destination-external-review-urls-editor";
 import { DestinationHotelPanel } from "@/features/dichoithoi/destination-hotel-panel";
@@ -30,6 +45,94 @@ import { DestinationTourPanel } from "@/features/dichoithoi/destination-tour-pan
 import { Button, buttonClasses } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
+
+/** Draft response tu GET /content/jobs/:id/draft — chi can article de lay goi y AI toan bai. */
+const jobDraftSchema = z.object({
+  article: destinationArticleSchema.nullable().catch(null),
+});
+
+/** Skeleton rong cho diem den chua co draft_article nao — nguoi dung go thang vao day. */
+function emptyDraftArticle(name: string): DestinationArticle {
+  return {
+    title: name,
+    intro: "",
+    quickFacts: { openingTime: "", ticketPrice: "", transport: "", food: "", hotel: "", tip: "" },
+    faq: [],
+    updateNotice: "",
+    metadata: {
+      name,
+      slugSuggestion: "",
+      metaTitle: "",
+      metaDescription: "",
+      description: "",
+      searchKeyword: "",
+    },
+    sections: DESTINATION_SECTION_ORDER.map((blockKey) => ({
+      heading: DESTINATION_BLOCK_LABELS[blockKey],
+      content: "",
+      blockKey,
+      items: DESTINATION_LIST_BLOCK_KEYS.includes(blockKey) ? [] : undefined,
+    })),
+  };
+}
+
+/**
+ * draft_article luu RAW o BE (co the dang soan dat do — thieu field, section rong).
+ * Merge vao khung skeleton day du de editor KHONG crash khi doc field undefined
+ * (vd countWords(article.intro) khi intro chua ton tai).
+ */
+function normalizeDraftArticle(raw: unknown, name: string): DestinationArticle {
+  const empty = emptyDraftArticle(name);
+  if (!raw || typeof raw !== "object") return empty;
+  const r = raw as Partial<DestinationArticle>;
+
+  const rawSections: unknown[] = Array.isArray(r.sections) ? (r.sections as unknown[]) : [];
+  const isRecord = (s: unknown): s is Record<string, unknown> =>
+    Boolean(s) && typeof s === "object";
+  // Bai cu (truoc pivot blockKey) khong gan blockKey cho section nao — neu match
+  // theo blockKey thi TOAN BO noi dung that se "bien mat" khoi editor (hien 6 o
+  // rong) du van con nguyen o BE, rat de bi ghi de mat khi bam Luu. Fallback:
+  // khong section nao co blockKey -> gan theo THU TU vi tri (index) thay vi bo trong.
+  const hasAnyBlockKey = rawSections.some((s) => isRecord(s) && typeof s.blockKey === "string");
+  const sections = DESTINATION_SECTION_ORDER.map((blockKey, index) => {
+    const existing = hasAnyBlockKey
+      ? rawSections.find((s): s is Record<string, unknown> => isRecord(s) && s.blockKey === blockKey)
+      : (rawSections[index] as Record<string, unknown> | undefined);
+    const fallback = empty.sections.find((s) => s.blockKey === blockKey)!;
+    if (!existing || !isRecord(existing)) return fallback;
+    return {
+      heading: typeof existing.heading === "string" ? existing.heading : fallback.heading,
+      content: typeof existing.content === "string" ? existing.content : "",
+      blockKey,
+      items: DESTINATION_LIST_BLOCK_KEYS.includes(blockKey)
+        ? Array.isArray(existing.items)
+          ? (existing.items as DestinationArticle["sections"][number]["items"])
+          : []
+        : undefined,
+    };
+  });
+
+  return {
+    title: typeof r.title === "string" ? r.title : empty.title,
+    intro: typeof r.intro === "string" ? r.intro : empty.intro,
+    quickFacts: {
+      ...empty.quickFacts,
+      ...(r.quickFacts && typeof r.quickFacts === "object" ? r.quickFacts : {}),
+    },
+    faq: Array.isArray(r.faq)
+      ? r.faq.map((f) => ({
+          question: typeof f?.question === "string" ? f.question : "",
+          answer: typeof f?.answer === "string" ? f.answer : "",
+        }))
+      : empty.faq,
+    updateNotice: typeof r.updateNotice === "string" ? r.updateNotice : empty.updateNotice,
+    metadata: {
+      ...empty.metadata,
+      ...(r.metadata && typeof r.metadata === "object" ? r.metadata : {}),
+    },
+    sections,
+  };
+}
 
 const KIND_LABELS: Record<DestinationKind, string> = {
   province: "Tỉnh/Thành",
@@ -54,6 +157,22 @@ const CONTENT_STATE_STYLES: Record<DestinationContentState, string> = {
 };
 
 const SITE_BASE_URL = "https://dichoithoi.com";
+
+const GATE_LABELS: Record<string, string> = {
+  structure: "Cấu trúc bài viết",
+  seo: "SEO",
+  policy: "Chính sách nội dung",
+  data: "Dữ liệu thực tế",
+};
+
+/** Trang co 16 khoi — gom thanh 5 nhom + menu nhay nhanh de khong phai cuon mo mit. */
+const QUICK_NAV = [
+  { id: "content", label: "📝 Nội dung & xuất bản" },
+  { id: "basic-info", label: "ℹ️ Thông tin cơ bản" },
+  { id: "commerce", label: "💰 Thương mại & bổ trợ" },
+  { id: "recommendations", label: "🔗 Gợi ý liên quan" },
+  { id: "relations", label: "🧭 Quan hệ & đồng bộ" },
+] as const;
 
 function formatDistance(meters: number | null): string {
   if (meters === null) return "";
@@ -160,6 +279,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     onError: (e) => setActionError(toActionError(e)),
   });
 
+  // Tao job AI (pivot gop editor): KHONG con dieu huong sang /content/{jobId} —
+  // poll trang thai ngay tai day, goi y tra ve hien inline trong tung block.
   const createJob = useMutation({
     mutationFn: async () => {
       const body = aiInputsBody();
@@ -173,13 +294,147 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         }),
       );
     },
-    onSuccess: (r) => {
-      window.location.href = `/content/${r.jobId}`;
+    onSuccess: () => {
+      setActionError(null);
+      setLoadedSuggestionsForJob(null);
+      invalidate();
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+  const [pasteModalOpen, setPasteModalOpen] = useState(false);
+
+  // --- Ban nhap bai viet (draft_article) — pivot gop editor vao trang detail ---
+  const [draftArticle, setDraftArticle] = useState<DestinationArticle | null>(null);
+  const [savedDraftJson, setSavedDraftJson] = useState<string | null>(null);
+  useEffect(() => {
+    if (!d) return;
+    const initial = normalizeDraftArticle(d.draftArticle, d.name);
+    setDraftArticle(initial);
+    setSavedDraftJson(JSON.stringify(initial));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d?.slug]);
+  const isDraftDirty = draftArticle !== null && JSON.stringify(draftArticle) !== savedDraftJson;
+
+  const saveDraftArticle = useMutation({
+    mutationFn: async (article: DestinationArticle) => {
+      await apiSend("PATCH", `/destinations/${slug}/draft-article`, { draftArticle: article });
+      return article;
+    },
+    onSuccess: (article) => {
+      setActionError(null);
+      setSavedDraftJson(JSON.stringify(article));
+      void qualityQuery.refetch();
     },
     onError: (e) => setActionError(toActionError(e)),
   });
 
-  // --- Publish (gate tay thu 2) ---
+  // --- Goi y AI theo tung block (pivot: AI ho tro doc lap, khong tu ghi de) ---
+  const [suggestions, setSuggestions] = useState<Partial<Record<DestinationBlockKey, ContentSection>>>({});
+  const [suggestLoading, setSuggestLoading] = useState<Set<DestinationBlockKey>>(new Set());
+
+  async function requestBlockSuggestion(blockKey: DestinationBlockKey) {
+    setSuggestLoading((prev) => new Set(prev).add(blockKey));
+    try {
+      const section = await apiSend("POST", `/destinations/${slug}/blocks/${blockKey}/suggest`, {
+        aiProvider: selectedProvider?.key,
+        aiModel: selectedModel?.id,
+      });
+      setSuggestions((prev) => ({ ...prev, [blockKey]: section as ContentSection }));
+      setActionError(null);
+    } catch (e) {
+      setActionError(toActionError(e));
+    } finally {
+      setSuggestLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(blockKey);
+        return next;
+      });
+    }
+  }
+
+  // Duyet 1 goi y: merge vao draftArticle CUC BO roi luu ngay (khong tu dong ghi de khi chua duyet)
+  function approveBlockSuggestion(blockKey: DestinationBlockKey) {
+    const suggestion = suggestions[blockKey];
+    if (!draftArticle || !suggestion) return;
+    const nextSections = draftArticle.sections.map((s) =>
+      s.blockKey === blockKey ? { ...s, ...suggestion, blockKey } : s,
+    );
+    const next = { ...draftArticle, sections: nextSections };
+    setDraftArticle(next);
+    setSuggestions((prev) => {
+      const rest = { ...prev };
+      delete rest[blockKey];
+      return rest;
+    });
+    saveDraftArticle.mutate(next);
+  }
+
+  function dismissBlockSuggestion(blockKey: DestinationBlockKey) {
+    setSuggestions((prev) => {
+      const rest = { ...prev };
+      delete rest[blockKey];
+      return rest;
+    });
+  }
+
+  // --- Theo doi job AI toan bai (neu dang chay) de lay goi y cho ca 6 block ---
+  const jobId = d?.activeContentJobId ?? null;
+  const jobStatusQuery = useQuery({
+    queryKey: ["destination-content-job-status", jobId],
+    queryFn: () => apiGet(`/content/jobs/${jobId}`, contentJobSchema),
+    enabled: Boolean(jobId),
+    refetchInterval: (q) =>
+      q.state.data && ["Created", "GeneratingOutline"].includes(q.state.data.status) ? 3000 : false,
+  });
+  const jobStatus = jobStatusQuery.data?.status ?? null;
+  const [loadedSuggestionsForJob, setLoadedSuggestionsForJob] = useState<string | null>(null);
+  useEffect(() => {
+    if (!jobId || !jobStatus) return;
+    if (jobStatus === "Created" || jobStatus === "GeneratingOutline" || jobStatus === "Failed") return;
+    if (loadedSuggestionsForJob === jobId) return;
+    setLoadedSuggestionsForJob(jobId);
+    void (async () => {
+      try {
+        const draft = await apiGet(`/content/jobs/${jobId}/draft`, jobDraftSchema);
+        if (!draft.article) return;
+        const next: Partial<Record<DestinationBlockKey, ContentSection>> = {};
+        for (const s of draft.article.sections) {
+          if (s.blockKey && (DESTINATION_SECTION_ORDER as readonly string[]).includes(s.blockKey)) {
+            next[s.blockKey as DestinationBlockKey] = s;
+          }
+        }
+        setSuggestions((prev) => ({ ...prev, ...next }));
+      } catch {
+        // Job co the chua co draft (vd Failed truoc do) — bo qua, khong chan UI
+      }
+    })();
+  }, [jobId, jobStatus, loadedSuggestionsForJob]);
+
+  // --- Gate check doc lap tren draft_article hien tai (pivot — thay Approve rieng) ---
+  const qualityQuery = useQuery({
+    queryKey: ["destination-draft-quality", slug],
+    queryFn: () =>
+      apiSend("POST", `/destinations/${slug}/draft-article/quality-checks`, {}).then((r) =>
+        destinationDraftQualityChecksResponseSchema.parse(r),
+      ),
+    enabled: Boolean(d),
+  });
+
+  // --- Xem truoc HTML se dang (dry-run, khong ghi DB) ---
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const previewPublish = useMutation({
+    mutationFn: async () =>
+      previewDestinationPublishHtmlResponseSchema.parse(
+        await apiSend("POST", `/destinations/${slug}/draft-article/preview-publish-html`, {}),
+      ),
+    onSuccess: () => {
+      setActionError(null);
+      setPreviewOpen(true);
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+
+  // --- Publish (chay gate ngay tai buoc nay, khong con Approve rieng) ---
   const publish = useMutation({
     mutationFn: async () =>
       publishDestinationResultSchema.parse(
@@ -224,7 +479,10 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     );
   }
 
-  const canPublish = d.activeJobStatus === "Approved";
+  const missingThumbnail = !d.thumbnail?.trim();
+  const qualityChecks = qualityQuery.data?.checks ?? [];
+  const gatePassed = qualityQuery.data?.allPassed ?? false;
+  const canPublish = !missingThumbnail && gatePassed && !isDraftDirty;
 
   return (
     <div className="max-w-5xl space-y-5">
@@ -259,24 +517,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {d.activeContentJobId && (
-            <a
-              href={`/content/${d.activeContentJobId}`}
-              className="rounded bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300"
-            >
-              Xem bài đang soạn
-            </a>
-          )}
-          {canPublish && (
-            <Button
-              size="sm"
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              loading={publish.isPending}
-              onClick={() => publish.mutate()}
-            >
-              {publish.isPending ? "Đang đăng..." : "Đăng lên dichoithoi"}
-            </Button>
-          )}
           <a
             href={`${SITE_BASE_URL}/diem-den/${d.slug}`}
             target="_blank"
@@ -288,7 +528,32 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         </div>
       </div>
 
-      <DestinationImageUploader slug={d.slug} imageUrl={d.imageUrl} onUploaded={invalidate} />
+      {/* Menu nhanh — trang rat dai (16 khoi), nhay thang toi nhom can sua */}
+      <nav className="sticky top-0 z-10 -mx-1 flex flex-wrap gap-1.5 rounded-lg border border-zinc-200 bg-white/95 p-2 text-xs backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+        {QUICK_NAV.map((item) => (
+          <a
+            key={item.id}
+            href={`#${item.id}`}
+            className="rounded px-2 py-1 font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
+
+      <DestinationImageUploader
+        slug={d.slug}
+        imageUrl={d.imageUrl}
+        thumbnailPath={d.thumbnail}
+        onUploaded={invalidate}
+      />
+
+      <DestinationGalleryEditor
+        slug={d.slug}
+        gallery={d.gallery}
+        imageUrls={d.galleryImageUrls}
+        onSaved={invalidate}
+      />
 
       {actionError && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
@@ -313,20 +578,26 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       )}
 
       {/* Cung cap thong tin cho AI viet bai (spec §7.4 / §3.5-3.6) */}
+      <SectionHeader id="content" title="Nội dung & xuất bản" />
+
       <Group title="✍️ Viết bài bằng AI">
         {d.activeContentJobId ? (
           <div className="text-sm text-zinc-600 dark:text-zinc-400">
-            <p>
-              Đang có 1 bài {d.activeJobStatus ? `(${d.activeJobStatus})` : ""} cho điểm này.{" "}
-              <a
-                href={`/content/${d.activeContentJobId}`}
-                className="font-medium text-blue-600 hover:underline dark:text-blue-400"
-              >
-                Mở bài để xem / duyệt →
-              </a>
+            <p className="flex items-center gap-2">
+              {(jobStatus === "Created" || jobStatus === "GeneratingOutline") && (
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-violet-300 border-t-violet-600" />
+              )}
+              🤖 AI đang xử lý bài cho điểm này — trạng thái:{" "}
+              <span className="font-medium">{jobStatus ?? d.activeJobStatus ?? "..."}</span>
             </p>
+            {jobStatus && !["Created", "GeneratingOutline"].includes(jobStatus) && (
+              <p className="mt-1 text-emerald-700 dark:text-emerald-400">
+                ✅ Đã có gợi ý AI cho các khối nội dung — mở từng khối bên dưới ở mục &quot;Nội dung
+                bài viết&quot; để xem, Duyệt hoặc Bỏ qua.
+              </p>
+            )}
             <p className="mt-1 text-xs text-zinc-500">
-              Muốn viết lại với thông tin mới? Hãy hoàn tất (hoặc từ chối) bài hiện tại trước.
+              Muốn tạo lại với thông tin mới? Chờ bài hiện tại hoàn tất trước.
             </p>
           </div>
         ) : (
@@ -462,69 +733,193 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                 </span>
               )}
             </div>
+
+            <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+              <span className="text-xs text-zinc-500">
+                Đã có sẵn nội dung viết ở nơi khác (ChatGPT/Gemini...)?
+              </span>
+              <Button variant="secondary" onClick={() => setPasteModalOpen(true)}>
+                📋 Dán bài có sẵn
+              </Button>
+            </div>
           </div>
         )}
       </Group>
 
-      {/* Noi dung bai viet hien tai tren web (spec §7.3 tab Noi dung) */}
-      <Group title="Nội dung bài viết (đang hiển thị trên web)">
-        {d.content ? (
-          <div className="space-y-3">
-            {(d.content.openingTime ||
-              d.content.ticketPrice ||
-              d.content.transport ||
-              d.content.food ||
-              d.content.hotel ||
-              d.content.tip) && (
-              <dl className="grid grid-cols-1 gap-x-6 gap-y-2 rounded border border-zinc-200 p-3 text-sm md:grid-cols-2 dark:border-zinc-800">
-                {(
-                  [
-                    ["Giờ mở cửa", d.content.openingTime],
-                    ["Giá vé", d.content.ticketPrice],
-                    ["Di chuyển", d.content.transport],
-                    ["Ăn uống", d.content.food],
-                    ["Lưu trú", d.content.hotel],
-                    ["Mẹo & lưu ý", d.content.tip],
-                  ] as const
-                )
-                  .filter(([, v]) => v)
-                  .map(([label, value]) => (
-                    <div key={label}>
-                      <dt className="font-medium text-zinc-500">{label}</dt>
-                      <dd>{value}</dd>
-                    </div>
+      {pasteModalOpen && (
+        <DestinationPasteContentModal
+          name={d.name}
+          onClose={() => setPasteModalOpen(false)}
+          onApplied={(article) => {
+            setDraftArticle(article);
+            setActionError(null);
+          }}
+        />
+      )}
+
+      {/* Noi dung bai viet — sua truc tiep tai day (pivot gop editor vao trang detail) */}
+      <Group title="Nội dung bài viết">
+        {draftArticle && (
+          <DestinationArticleEditor
+            article={draftArticle}
+            onChange={setDraftArticle}
+            suggestions={suggestions}
+            suggestLoading={suggestLoading}
+            onRequestSuggestion={requestBlockSuggestion}
+            onApproveSuggestion={approveBlockSuggestion}
+            onDismissSuggestion={dismissBlockSuggestion}
+          />
+        )}
+        <div className="mt-3 flex items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <Button
+            variant="primary"
+            loading={saveDraftArticle.isPending}
+            disabled={!isDraftDirty}
+            onClick={() => draftArticle && saveDraftArticle.mutate(draftArticle)}
+          >
+            {saveDraftArticle.isPending ? "Đang lưu..." : "Lưu bản nháp"}
+          </Button>
+          {!isDraftDirty && !saveDraftArticle.isPending && (
+            <span className="text-xs text-zinc-400">Đã lưu</span>
+          )}
+        </div>
+      </Group>
+
+      {/* Trang thai xuat ban — gate chay tai day thay vi buoc Duyet rieng (pivot) */}
+      <Group title="Trạng thái xuất bản">
+        <div className="space-y-1 text-sm">
+          {qualityQuery.isFetching ? (
+            <p className="text-zinc-400">Đang kiểm tra...</p>
+          ) : qualityQuery.isError ? (
+            <div className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+              <p className="font-medium">
+                {qualityQuery.error instanceof ApiError
+                  ? qualityQuery.error.message
+                  : "Chưa kiểm tra được — nội dung chưa đủ để phân tích"}
+              </p>
+              {qualityQuery.error instanceof ApiError && qualityQuery.error.details.length > 0 && (
+                <ul className="mt-1 list-inside list-disc">
+                  {qualityQuery.error.details.map((detail, i) => (
+                    <li key={i}>{detail}</li>
                   ))}
-              </dl>
+                </ul>
+              )}
+            </div>
+          ) : qualityChecks.length === 0 ? (
+            <p className="text-zinc-400">Chưa chạy kiểm tra.</p>
+          ) : (
+            qualityChecks.map((check) => (
+              <div key={check.gateName} className="flex items-start justify-between gap-3">
+                <span>{GATE_LABELS[check.gateName] ?? check.gateName}</span>
+                {check.passed ? (
+                  <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                    Đạt
+                  </span>
+                ) : (
+                  <span
+                    className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
+                    title={check.details.join("; ")}
+                  >
+                    Chưa đạt ({check.details.length})
+                  </span>
+                )}
+              </div>
+            ))
+          )}
+          {qualityChecks.some((c) => !c.passed) && (
+            <ul className="mt-2 list-inside list-disc rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+              {qualityChecks
+                .filter((c) => !c.passed)
+                .flatMap((c) => c.details)
+                .map((detail, i) => (
+                  <li key={i}>{detail}</li>
+                ))}
+            </ul>
+          )}
+        </div>
+
+        {missingThumbnail && (
+          <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+            ⚠️ Chưa có <strong>ảnh đại diện</strong> — bắt buộc phải có ảnh mới đăng lên web được.
+            Thêm ảnh ở mục &quot;Ảnh đại diện&quot; phía trên.
+          </div>
+        )}
+        {isDraftDirty && (
+          <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
+            Có thay đổi chưa lưu — bấm &quot;Lưu bản nháp&quot; trước khi kiểm tra/đăng.
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button size="sm" loading={qualityQuery.isFetching} onClick={() => qualityQuery.refetch()}>
+            Chạy kiểm tra
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={previewPublish.isPending}
+            onClick={() => previewPublish.mutate()}
+          >
+            👁️ Xem trước bản sẽ đăng
+          </Button>
+          <Button
+            size="sm"
+            className="bg-blue-600 text-white hover:bg-blue-700"
+            loading={publish.isPending}
+            disabled={!canPublish}
+            title={
+              isDraftDirty
+                ? "Lưu bản nháp trước khi đăng"
+                : missingThumbnail
+                  ? "Chưa có ảnh đại diện"
+                  : !gatePassed
+                    ? "Chưa qua hết các gate kiểm tra ở trên"
+                    : undefined
+            }
+            onClick={() => publish.mutate()}
+          >
+            {publish.isPending ? "Đang đăng..." : "Đăng lên dichoithoi"}
+          </Button>
+        </div>
+
+        {publish.data && (
+          <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+            ✅ Đã đăng lên dichoithoi ({(publish.data.durationMs / 1000).toFixed(1)}s) — cập nhật khối
+            liên quan cho {publish.data.relatedRecomputed} điểm.
+            {publish.data.addedLinks.length > 0 &&
+              ` Link nội bộ: ${publish.data.addedLinks.map((l) => l.targetName).join(", ")}.`}
+          </div>
+        )}
+      </Group>
+
+      {previewOpen && previewPublish.data && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">👁️ Xem trước bản sẽ đăng</h3>
+              <Button size="sm" variant="ghost" onClick={() => setPreviewOpen(false)}>
+                Đóng
+              </Button>
+            </div>
+            {previewPublish.data.addedLinks.length > 0 && (
+              <p className="mb-3 rounded border border-violet-200 bg-violet-50 p-2 text-xs text-violet-700 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300">
+                Link nội bộ sẽ được tự động chèn:{" "}
+                {previewPublish.data.addedLinks.map((l) => l.targetName).join(", ")}
+              </p>
             )}
             <div
               className="prose prose-zinc dark:prose-invert max-w-none text-sm
                 [&_a]:text-blue-600 [&_a]:underline [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold
                 [&_h3]:mt-3 [&_h3]:font-semibold [&_img]:rounded [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
-              // Noi dung tu DB website (bai AI da publish hoac bai viet tay) — preview admin
-              dangerouslySetInnerHTML={{ __html: d.content.contentHtml }}
+              dangerouslySetInnerHTML={{ __html: previewPublish.data.html }}
             />
           </div>
-        ) : d.contentState === "dang-soan" && d.activeContentJobId ? (
-          <p className="text-sm text-zinc-500">
-            Bài đang soạn/duyệt, chưa publish.{" "}
-            <a
-              href={`/content/${d.activeContentJobId}`}
-              className="text-blue-600 hover:underline dark:text-blue-400"
-            >
-              Xem bản nháp →
-            </a>
-          </p>
-        ) : (
-          <p className="text-sm text-zinc-500">
-            Chưa có nội dung trên web.{" "}
-            {d.siteId === null
-              ? "Điểm này chưa tồn tại trên website."
-              : "Tạo bài AI để thêm nội dung."}
-          </p>
-        )}
-      </Group>
+        </div>
+      )}
 
       {/* Thong tin diem den — form sua truc tiep (spec §7.3 tab Thong tin) */}
+      <SectionHeader id="basic-info" title="Thông tin cơ bản" />
+
       <Group title="Thông tin điểm đến">
         <p className="mb-3 text-xs text-zinc-500">
           {d.siteId === null
@@ -604,13 +999,49 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         )}
       </Group>
 
-      {/* Link mua ve (affiliate-link-conversion-spec §5) */}
+      {/* Link mua ve (affiliate-link-conversion-spec §5) — sua tap trung o
+          /dichoithoi/ve (07/2026, thay the editor nhung ngay tai day). */}
+      <SectionHeader id="commerce" title="Thương mại & nội dung bổ trợ" />
+
       <Group title="Link mua vé">
-        <DestinationTicketLinksEditor
-          slug={d.slug}
-          ticketLinks={d.ticketLinks}
-          onSaved={() => invalidate()}
-        />
+        {d.ticketLinks.length > 0 ? (
+          <div className="space-y-2">
+            <ul className="space-y-1 text-sm">
+              {d.ticketLinks.map((link, i) => (
+                <li key={i} className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{link.label || link.provider}</span>
+                  {link.price != null && (
+                    <span className="text-xs text-zinc-500">{link.price.toLocaleString("vi-VN")}đ</span>
+                  )}
+                  <a
+                    href={link.affiliateUrl}
+                    target="_blank"
+                    rel="noopener noreferrer sponsored"
+                    className="max-w-xs truncate text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    {link.affiliateUrl}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <Link
+              href={`/dichoithoi/ve?q=${encodeURIComponent(d.name)}`}
+              className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+            >
+              Quản lý vé cho {d.name} →
+            </Link>
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-500">
+            Chưa có link mua vé nào — thêm link để bắt đầu nhận hoa hồng khi khách mua online.{" "}
+            <Link
+              href={`/dichoithoi/ve?q=${encodeURIComponent(d.name)}`}
+              className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+            >
+              Thêm link vé cho {d.name} →
+            </Link>
+          </p>
+        )}
       </Group>
 
       {/* Gia ve theo doi tuong (content-seo-ux-plan §5.5a, Phase 12) */}
@@ -618,6 +1049,7 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         <DestinationPriceBreakdownEditor
           slug={d.slug}
           priceBreakdown={d.priceBreakdown}
+          ticketPriceText={d.content?.ticketPrice ?? d.ticketPrice}
           onSaved={() => invalidate()}
         />
       </Group>
@@ -627,15 +1059,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         <DestinationPracticalNotesEditor
           slug={d.slug}
           practicalNotes={d.practicalNotes}
-          onSaved={() => invalidate()}
-        />
-      </Group>
-
-      {/* Lich trinh goi y (content-seo-ux-plan §10.6.2 khoi 3, Phase 28.0 — chi Flagship) */}
-      <Group title="Lịch trình gợi ý">
-        <DestinationItineraryEditor
-          slug={d.slug}
-          itinerary={d.itinerary}
           onSaved={() => invalidate()}
         />
       </Group>
@@ -659,6 +1082,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       </Group>
 
       {/* Khach san goi y (hotel-spec §6) */}
+      <SectionHeader id="recommendations" title="Gợi ý liên quan" />
+
       <Group title="Khách sạn gợi ý">
         <DestinationHotelPanel slug={d.slug} />
       </Group>
@@ -669,6 +1094,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       </Group>
 
       {/* Quan he (spec §7.3 tab 3) */}
+      <SectionHeader id="relations" title="Quan hệ & đồng bộ" />
+
       <Group title="Quan hệ">
         <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
           <RefList title={`Trực thuộc (${d.children.length})`} refs={d.children} />
@@ -704,6 +1131,18 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
+/** Tieu de nhom (5 nhom gom 16 khoi) — khac Group: khong phai the, chi phan cach + anchor. */
+function SectionHeader({ id, title }: { id: string; title: string }) {
+  return (
+    <h2
+      id={id}
+      className="scroll-mt-14 border-b border-zinc-300 pb-1.5 pt-2 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+    >
+      {title}
+    </h2>
+  );
+}
+
 function Field({
   label,
   mono,
@@ -729,6 +1168,8 @@ function RefLink({ r }: { r: RelatedDestinationRef }) {
   );
 }
 
+const REF_LIST_PREVIEW_COUNT = 8;
+
 function RefList({
   title,
   refs,
@@ -738,22 +1179,46 @@ function RefList({
   refs: RelatedDestinationRef[];
   showDistance?: boolean;
 }) {
+  // Diem lon (vd Đà Lạt) co the truc thuoc 40-50+ con — liet ke het lam trang
+  // qua dai, kho quet mat. Mac dinh chi hien vai dong dau, bam moi xem het.
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? refs : refs.slice(0, REF_LIST_PREVIEW_COUNT);
+  const hiddenCount = refs.length - visible.length;
+
   return (
     <div>
       <p className="mb-1 font-medium">{title}</p>
       {refs.length === 0 ? (
         <p className="text-zinc-400">—</p>
       ) : (
-        <ul className="space-y-1">
-          {refs.map((r) => (
-            <li key={r.slug}>
-              <RefLink r={r} />
-              {showDistance && r.distanceMeters !== null && (
-                <span className="text-zinc-400"> · cách {formatDistance(r.distanceMeters)}</span>
-              )}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="space-y-1">
+            {visible.map((r) => (
+              <li key={r.slug}>
+                <RefLink r={r} />
+                {showDistance && r.distanceMeters !== null && (
+                  <span className="text-zinc-400"> · cách {formatDistance(r.distanceMeters)}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          {hiddenCount > 0 && (
+            <button
+              onClick={() => setExpanded(true)}
+              className="mt-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+            >
+              + Xem thêm {hiddenCount}
+            </button>
+          )}
+          {expanded && refs.length > REF_LIST_PREVIEW_COUNT && (
+            <button
+              onClick={() => setExpanded(false)}
+              className="mt-1 text-xs text-zinc-500 hover:underline"
+            >
+              Thu gọn
+            </button>
+          )}
+        </>
       )}
     </div>
   );

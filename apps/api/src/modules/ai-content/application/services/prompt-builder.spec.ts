@@ -69,13 +69,14 @@ describe("PromptBuilder phan giai key theo ContentTier (Phase 28.3)", () => {
     const b = new PromptBuilder(repoWithKey(null));
     const req = await b.buildOutline({ ...destinationCtx, contentTier: "flagship" });
     expect(req.prompt).toContain("mùa");
-    expect(req.prompt).not.toContain("Câu chuyện/ý nghĩa văn hoá");
+    expect(req.prompt).toContain("ĐÚNG 7 mục H2 theo THỨ TỰ CỐ ĐỊNH");
   });
 
-  it("contentTier=standard/null -> giu nguyen prompt guide-diem-den binh thuong", async () => {
+  it("contentTier=standard/null -> dung khung 7 khoi co dinh (redesign luong viet bai)", async () => {
     const b = new PromptBuilder(repoWithKey(null));
     const req = await b.buildOutline({ ...destinationCtx, contentTier: "standard" });
-    expect(req.prompt).toContain("Câu chuyện/ý nghĩa văn hoá");
+    expect(req.prompt).toContain("ĐÚNG 7 mục H2 theo THỨ TỰ CỐ ĐỊNH");
+    expect(req.prompt).toContain("Quà mang về");
   });
 
   it("contentTier=flagship uu tien override DB rieng cho site truoc default chung", async () => {

@@ -10,5 +10,7 @@ export { ErrorBox } from "./error-box";
 export { Slider } from "./slider";
 export { Checkbox } from "./checkbox";
 export { Drawer } from "./drawer";
+export { Modal } from "./modal";
 export { Combobox, type ComboboxOption } from "./combobox";
 export { Card, ActionRow } from "./card";
+export { PageHeader } from "./page-header";

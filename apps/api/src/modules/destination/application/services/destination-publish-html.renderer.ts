@@ -18,6 +18,15 @@ export async function renderDestinationBodyHtml(article: DestinationArticle): Pr
   for (const section of article.sections) {
     lines.push(`## ${section.heading}`, "");
     lines.push(section.content, "");
+    // Khoi list (trai-nghiem/an-gi/qua-mang-ve): "items" la du lieu hien thi
+    // that su, "content" chi la cau dan ngan — thieu doan nay thi bai publish
+    // mat toan bo danh sach du gate/UI da validate/hien thi day du.
+    if (section.items?.length) {
+      for (const item of section.items) {
+        lines.push(`- **${item.ten}:** ${item.moTa}`);
+      }
+      lines.push("");
+    }
   }
 
   const rawHtml = await marked.parse(lines.join("\n"), { async: true });

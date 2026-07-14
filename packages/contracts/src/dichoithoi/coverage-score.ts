@@ -7,11 +7,12 @@ import { z } from "zod/v4";
  * Phase 28.6 (07/2026): tier dùng `ContentTier` THẬT (Phase 25) thay vì suy
  * từ `kind` — poi = tier "poi"; province/cluster với `ContentTier="flagship"`
  * = tier "flagship"; province/cluster với "standard"/null = tier "standard"
- * (checklist rút gọn giống POI, không có 5 mục riêng Flagship). 4 mục
- * Flagship-only trước đây ghi "chưa tính được" nay đã có đủ hạ tầng: lịch
- * trình (`ItineraryJson`, Phase 28.0), độ phủ bài cẩm nang theo topic
- * (`ArticleDestinationMap`, Phase 26), đánh giá biên tập + external review
- * link (Phase 28.0).
+ * (checklist rút gọn giống POI, không có mục riêng Flagship). 3 mục
+ * Flagship-only trước đây ghi "chưa tính được" nay đã có đủ hạ tầng: độ phủ
+ * bài cẩm nang theo topic (`ArticleDestinationMap`, Phase 26), đánh giá biên
+ * tập + external review link (Phase 28.0). "Lịch trình gợi ý" (07/2026) không
+ * còn là mục coverage riêng — đã chuyển thành blockKey "lich-trinh" trong
+ * sections[], tính chung vào "main-content".
  */
 export const coverageChecklistItemSchema = z.object({
   key: z.string(),

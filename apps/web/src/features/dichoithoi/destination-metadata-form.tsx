@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  checkImageResponseSchema,
   destinationMetaSuggestionSchema,
   destinationTaxonomySchema,
   parseMapsLinkResponseSchema,
@@ -110,7 +109,6 @@ export function DestinationMetadataForm({
   onSaved: (slug: string) => void;
 }) {
   const [v, setV] = useState<DestinationMetaValues>(initial);
-  const [imageCheck, setImageCheck] = useState<{ exists: boolean } | null>(null);
   const [mapsLink, setMapsLink] = useState("");
   const [error, setError] = useState<{ message: string; details: string[] } | null>(null);
   // Khi tao moi: tu sinh slug tu ten cho toi khi nguoi dung tu sua slug
@@ -124,14 +122,6 @@ export function DestinationMetadataForm({
 
   const set = <K extends keyof DestinationMetaValues>(k: K, val: DestinationMetaValues[K]) =>
     setV((prev) => ({ ...prev, [k]: val }));
-
-  const checkImage = useMutation({
-    mutationFn: async () =>
-      checkImageResponseSchema.parse(
-        await apiSend("POST", "/destinations/check-image", { path: v.thumbnail.trim() }),
-      ),
-    onSuccess: (r) => setImageCheck({ exists: r.exists }),
-  });
 
   // AI goi y mo ta + phan loai (mem) — KHONG dung lat/lng/dia chi (spec §3.5)
   const suggest = useMutation({
@@ -309,35 +299,6 @@ export function DestinationMetadataForm({
           rows={2}
           className={inputCls}
         />
-      </Field>
-
-      <Field label="Ảnh đại diện (đường dẫn tương đối)">
-        <div className="flex gap-2">
-          <input
-            value={v.thumbnail}
-            onChange={(e) => {
-              set("thumbnail", e.target.value);
-              setImageCheck(null);
-            }}
-            placeholder="vd: slug.webp hoặc diem-den/slug/slug-thumb.webp"
-            className={inputCls}
-          />
-          <Button
-            className="whitespace-nowrap"
-            loading={checkImage.isPending}
-            disabled={!v.thumbnail.trim()}
-            onClick={() => v.thumbnail.trim() && checkImage.mutate()}
-          >
-            Kiểm tra
-          </Button>
-        </div>
-        {imageCheck && (
-          <p
-            className={`mt-1 text-xs ${imageCheck.exists ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}
-          >
-            {imageCheck.exists ? "✅ Ảnh tồn tại" : "⚠️ Chưa tìm thấy ảnh"}
-          </p>
-        )}
       </Field>
 
       <Field label="Dán link Google Maps (tự động điền toạ độ bên dưới)">

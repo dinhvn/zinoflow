@@ -20,4 +20,9 @@ export interface ImageProcessor {
    * Khong phong to anh nho hon kich thuoc dich (withoutEnlargement).
    */
   toWebpVariants(source: Buffer): Promise<WebpVariants>;
+  /**
+   * Convert 1 anh nguon thanh DUNG 1 co WebP theo chieu rong tuy chon — dung cho
+   * anh thu vien (gallery) chi can 1 kich thuoc, khac toWebpVariants (luon 3 co).
+   */
+  toWebp(source: Buffer, width: number): Promise<Buffer>;
 }

@@ -1,5 +1,5 @@
-import type { DestinationArticle, QualityCheck } from "@zinoflow/contracts";
-import { DESTINATION_FIELD_LIMITS } from "@zinoflow/contracts";
+import type { ContentSection, DestinationArticle, QualityCheck } from "@zinoflow/contracts";
+import { DESTINATION_FIELD_LIMITS, DESTINATION_LIST_BLOCK_KEYS, MIN_LIST_ITEMS } from "@zinoflow/contracts";
 import { containsNormalized, countWords } from "./text-matching";
 
 /**
@@ -78,6 +78,11 @@ export function evaluateDestinationStructureGate(input: DestinationGateInput): Q
     details.push(`Bài điểm đến cần ít nhất 3 section (hiện có ${article.sections.length})`);
   }
   for (const section of article.sections) {
+    if (isListBlockSection(section)) {
+      const listError = evaluateListSection(section);
+      if (listError) details.push(listError);
+      continue;
+    }
     const words = countWords(section.content);
     if (words < MIN_SECTION_WORDS) {
       details.push(
@@ -90,7 +95,8 @@ export function evaluateDestinationStructureGate(input: DestinationGateInput): Q
   }
 
   const totalWords =
-    countWords(article.intro) + article.sections.reduce((sum, s) => sum + countWords(s.content), 0);
+    countWords(article.intro) +
+    article.sections.reduce((sum, s) => sum + countWords(s.content) + countWords(itemsToText(s)), 0);
   if (totalWords < MIN_TOTAL_WORDS) {
     details.push(`Bài quá ngắn: ${totalWords} từ (tối thiểu ${MIN_TOTAL_WORDS} từ toàn bài)`);
   }
@@ -99,16 +105,22 @@ export function evaluateDestinationStructureGate(input: DestinationGateInput): Q
     details.push(`FAQ cần ít nhất 3 câu hỏi (hiện có ${article.faq.length})`);
   }
 
+  // Uu tien check theo blockKey co dinh (7 khoi chuan) khi bai da gan blockKey;
+  // bai cu chua co blockKey nao thi fallback ve keyword-matching heading nhu truoc.
+  const hasAnyBlockKey = article.sections.some((section) => Boolean(section.blockKey));
+
   if (input.contentTier === "flagship") {
-    const hasSeasonSection = article.sections.some((section) =>
-      SEASON_HEADING_KEYWORDS.some((kw) => containsNormalized(section.heading, kw)),
-    );
+    const hasSeasonSection = hasAnyBlockKey
+      ? article.sections.some((section) => section.blockKey === "mua-nao")
+      : article.sections.some((section) =>
+          SEASON_HEADING_KEYWORDS.some((kw) => containsNormalized(section.heading, kw)),
+        );
     if (!hasSeasonSection) {
       details.push(
         'Thiếu section "mùa/thời điểm đẹp nhất để đi" (bắt buộc với bài điểm đến Flagship)',
       );
     }
-  } else {
+  } else if (!hasAnyBlockKey) {
     const hasCulturalStorySection = article.sections.some((section) =>
       CULTURAL_STORY_HEADING_KEYWORDS.some((kw) => containsNormalized(section.heading, kw)),
     );
@@ -118,8 +130,38 @@ export function evaluateDestinationStructureGate(input: DestinationGateInput): Q
       );
     }
   }
+  // Bai da co blockKey nhung khong phai flagship: khong con bat buoc rieng
+  // "van hoa-lich su" vi khung 6 khoi co dinh da bao phu du (tong-quan/mua-nao/...).
 
   return { gateName: "structure", passed: details.length === 0, details };
+}
+
+/** Section co thuoc khoi dang danh sach co cau truc (an-gi/qua-mang-ve) va co gan items khong. */
+function isListBlockSection(section: ContentSection): boolean {
+  return Boolean(section.blockKey && DESTINATION_LIST_BLOCK_KEYS.includes(section.blockKey) && section.items);
+}
+
+/**
+ * Kiem tra rieng cho khoi dang danh sach co cau truc (an-gi/qua-mang-ve):
+ * tieu chi dat la >= MIN_LIST_ITEMS muc, moi muc co mo ta — KHONG dem tu content
+ * (content chi la 1 cau dan ngan, khong phai nguon noi dung chinh cua khoi nay).
+ */
+function evaluateListSection(section: ContentSection): string | null {
+  if (!section.items) return null;
+
+  if (section.items.length < MIN_LIST_ITEMS) {
+    return `Section "${section.heading}" cần ít nhất ${MIN_LIST_ITEMS} mục (hiện có ${section.items.length})`;
+  }
+  const emptyItem = section.items.find((item) => item.moTa.trim().length === 0);
+  if (emptyItem) {
+    return `Mục "${emptyItem.ten}" trong section "${section.heading}" chưa có mô tả`;
+  }
+  return null;
+}
+
+/** Gop text cua items thanh 1 chuoi de dem tu (dung cho tong do dai toan bai). */
+function itemsToText(section: ContentSection): string {
+  return section.items?.map((item) => `${item.ten} ${item.moTa}`).join(" ") ?? "";
 }
 
 /** SEO gate (§6.2): keyword trong H1 + mo bai, meta day du, slug hop le. */

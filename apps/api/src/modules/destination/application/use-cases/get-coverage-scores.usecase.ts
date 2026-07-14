@@ -53,7 +53,6 @@ export class GetCoverageScoresUseCase {
           hasTicketLinks: content?.hasTicketLinks ?? false,
           hasTag: taggedSlugs.has(m.slug),
           hasFeaturedChild: featuredChildBySlug.has(m.slug),
-          hasItinerary: m.itinerary.length > 0,
           hasArticleTopicCoverage: articleCoveredSlugSet.has(m.slug),
           hasEditorialReview: Boolean(m.editorialReview?.trim()),
           hasExternalReviewUrl: m.externalReviewUrls.length > 0,

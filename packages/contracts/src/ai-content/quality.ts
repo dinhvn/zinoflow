@@ -31,8 +31,16 @@ export const reviewDraftRequestSchema = z.object({
 });
 export type ReviewDraftRequest = z.infer<typeof reviewDraftRequestSchema>;
 
-/** Sua noi dung draft tu editor — tao version moi, KHONG ghi de version cu. */
-export const updateDraftRequestSchema = z.object({
-  draftMarkdown: z.string().min(50, "Nội dung bài viết quá ngắn"),
-});
+/**
+ * Sua noi dung draft tu editor — tao version moi, KHONG ghi de version cu.
+ * Union 2 nhanh (redesign luong viet bai §Phase 2):
+ * - draftMarkdown: hanh vi CU — dung cho cam-nang/affiliate/km-* (textarea markdown tho).
+ * - article: hanh vi MOI — dung cho guide-diem-den (editor field-based); server validate
+ *   bang schema cua articleType tuong ung roi tu render lai draftMarkdown, tranh lech
+ *   du lieu giua article JSON (nguon publish that) va markdown (chi de preview).
+ */
+export const updateDraftRequestSchema = z.union([
+  z.object({ draftMarkdown: z.string().min(50, "Nội dung bài viết quá ngắn") }),
+  z.object({ article: z.record(z.string(), z.unknown()) }),
+]);
 export type UpdateDraftRequest = z.infer<typeof updateDraftRequestSchema>;

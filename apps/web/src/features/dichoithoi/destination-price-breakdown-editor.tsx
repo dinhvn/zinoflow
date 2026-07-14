@@ -7,6 +7,7 @@ import { priceBreakdownItemSchema, type PriceBreakdownItem } from "@zinoflow/con
 import { apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import { parseTicketPriceText } from "./parse-ticket-price-text";
 
 interface Row {
   audience: string;
@@ -30,10 +31,13 @@ function toRows(items: readonly PriceBreakdownItem[]): Row[] {
 export function DestinationPriceBreakdownEditor({
   slug,
   priceBreakdown,
+  ticketPriceText,
   onSaved,
 }: {
   slug: string;
   priceBreakdown: PriceBreakdownItem[];
+  /** TicketPrice van ban tu do tren web — nguon cho nut "Tách giá vé từ text" (doc §11.2) */
+  ticketPriceText?: string | null;
   onSaved: () => void;
 }) {
   const [rows, setRows] = useState<Row[]>(toRows(priceBreakdown));
@@ -76,6 +80,26 @@ export function DestinationPriceBreakdownEditor({
         Giá cố định chính thức do điểm đến quy định (niêm yết tại cổng) — nhập tay, KHÔNG suy diễn
         theo tỷ lệ. Để trống hoàn toàn nếu chưa có dữ liệu.
       </p>
+      {ticketPriceText && (
+        <div className="flex flex-wrap items-center gap-2 rounded border border-dashed border-zinc-300 p-2 text-xs dark:border-zinc-700">
+          <span className="text-zinc-500">Giá tại quầy (văn bản trên bài): “{ticketPriceText}”</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="px-2 py-1 text-xs"
+            onClick={() => {
+              const parsed = parseTicketPriceText(ticketPriceText);
+              if (parsed.length === 0) return;
+              setRows((prev) => [
+                ...prev,
+                ...parsed.map((p) => ({ audience: p.audience, price: String(p.price), note: p.note ?? "" })),
+              ]);
+            }}
+          >
+            Tách giá vé từ text →
+          </Button>
+        </div>
+      )}
       {error && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
           <p className="font-medium">{error.message}</p>

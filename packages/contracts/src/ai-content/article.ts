@@ -24,10 +24,41 @@ export const quickAnswerBlockSchema = z.object({
   bullets: z.array(z.string()).min(3).max(5),
 });
 
+/**
+ * Nhan khoi noi dung co dinh cho bai DIEM DEN (8 khoi chuan SEO) — dichoithoi-destination-spec.md.
+ * Optional/nullable de khong pha cac articleType khac (affiliate/cam-nang) va bai cu chua co truong nay.
+ * "lich-trinh" (07/2026): truoc la JSON co cau truc rieng (ItineraryJson, poiSlug + tour-CTA
+ * theo duration_days) — chuyen ve prose thuong nhu cac khoi khac theo quyet dinh cua chu site,
+ * chap nhan mat link POI dam bao + CTA tour tu dong de doi lay 1 UX soan bai duy nhat.
+ */
+export const destinationBlockKeySchema = z.enum([
+  "tong-quan",
+  "trai-nghiem",
+  "mua-nao",
+  "lich-trinh",
+  "di-chuyen",
+  "an-gi",
+  "meo-luu-y",
+  "qua-mang-ve",
+  "khac",
+]);
+export type DestinationBlockKey = z.infer<typeof destinationBlockKeySchema>;
+
+/** 1 muc trong danh sach co cau truc (dung cho khoi "an gi"/"qua mang ve"). */
+export const structuredListItemSchema = z.object({
+  ten: z.string().min(1),
+  moTa: z.string().min(1),
+});
+export type StructuredListItem = z.infer<typeof structuredListItemSchema>;
+
 /** Block 4 — Main content sections (H2/H3). */
 export const contentSectionSchema = z.object({
   heading: z.string(),
   content: z.string().min(50),
+  /** Chi dung cho bai diem den — danh dau section thuoc khoi co dinh nao trong 7 khoi chuan. */
+  blockKey: destinationBlockKeySchema.nullable().optional(),
+  /** Chi dung cho khoi "trai-nghiem"/"an-gi"/"qua-mang-ve" — danh sach co cau truc thay vi van xuoi thuan. */
+  items: z.array(structuredListItemSchema).optional(),
 });
 export type ContentSection = z.infer<typeof contentSectionSchema>;
 

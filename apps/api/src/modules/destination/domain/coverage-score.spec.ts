@@ -14,7 +14,6 @@ const FULL: CoverageInput = {
   hasTicketLinks: true,
   hasTag: true,
   hasFeaturedChild: false,
-  hasItinerary: false,
   hasArticleTopicCoverage: false,
   hasEditorialReview: false,
   hasExternalReviewUrl: false,
@@ -25,7 +24,6 @@ const FULL_FLAGSHIP: CoverageInput = {
   kind: "cluster",
   contentTier: "flagship",
   hasFeaturedChild: true,
-  hasItinerary: true,
   hasArticleTopicCoverage: true,
   hasEditorialReview: true,
   hasExternalReviewUrl: true,
@@ -46,10 +44,10 @@ describe("computeCoverageScore (destination-spec §2.2.2)", () => {
     expect(result.items.find((i) => i.key === "tag")?.done).toBe(false);
   });
 
-  it("cluster/province voi ContentTier=flagship co them 5 muc rieng (15 muc)", () => {
+  it("cluster/province voi ContentTier=flagship co them 4 muc rieng (14 muc)", () => {
     const result = computeCoverageScore(FULL_FLAGSHIP);
     expect(result.tier).toBe("flagship");
-    expect(result.items).toHaveLength(15);
+    expect(result.items).toHaveLength(14);
     expect(result.scorePercent).toBe(100);
   });
 
@@ -63,10 +61,10 @@ describe("computeCoverageScore (destination-spec §2.2.2)", () => {
     expect(nullTier.items).toHaveLength(10);
   });
 
-  it("flagship thieu 1 trong 5 muc rieng -> khong dat 100%", () => {
-    const result = computeCoverageScore({ ...FULL_FLAGSHIP, hasItinerary: false });
+  it("flagship thieu 1 trong 4 muc rieng -> khong dat 100%", () => {
+    const result = computeCoverageScore({ ...FULL_FLAGSHIP, hasEditorialReview: false });
     expect(result.scorePercent).toBeLessThan(100);
-    expect(result.items.find((i) => i.key === "itinerary")?.done).toBe(false);
+    expect(result.items.find((i) => i.key === "editorial-review")?.done).toBe(false);
   });
 
   it("khong co muc nao -> 0%", () => {
@@ -84,7 +82,6 @@ describe("computeCoverageScore (destination-spec §2.2.2)", () => {
       hasTicketLinks: false,
       hasTag: false,
       hasFeaturedChild: false,
-      hasItinerary: false,
       hasArticleTopicCoverage: false,
       hasEditorialReview: false,
       hasExternalReviewUrl: false,

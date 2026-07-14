@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import type { UpdateDraftRequest } from "@zinoflow/contracts";
+import type { ArticleType, UpdateDraftRequest } from "@zinoflow/contracts";
 import {
   CONTENT_DRAFT_REPOSITORY,
   type ContentDraftRepository,
@@ -11,14 +11,18 @@ import {
   type ContentJobRepository,
 } from "../ports/content-job.repository";
 import { DomainRuleError } from "../../../shared/errors/app-error";
+import { getArticleTypeProfile } from "../services/article-type-profiles";
 
 /**
  * Use case: sua noi dung draft tu editor — LUON tao version moi (spec §5),
  * khong ghi de version cu (de doi chieu lich su + review records).
  * Sua bai da Approved -> job tu dong quay ve InReview (bat buoc duyet lai).
  *
- * Luu y M3: editor sua draftMarkdown (ban publish); article JSON giu nguyen tu
- * ban AI sinh — gates van cham tren JSON + markdown moi nhat.
+ * Union 2 nhanh (redesign luong viet bai §Phase 2):
+ * - `draftMarkdown`: hanh vi CU (cam-nang/affiliate/km-*) — ghi markdown, giu nguyen article JSON.
+ * - `article`: hanh vi MOI (guide-diem-den, editor field-based) — validate article bang
+ *   schema cua articleType, roi TU RENDER LAI draftMarkdown tu article do (khong nhan
+ *   markdown tay) — tranh lech du lieu giua article (nguon publish that) va markdown (preview).
  */
 @Injectable()
 export class UpdateDraftUseCase {
@@ -42,15 +46,23 @@ export class UpdateDraftUseCase {
     // Luon base tren version moi nhat de khong mat noi dung da sua truoc do
     const latest = (await this.drafts.findLatestByJobId(draft.jobId)) ?? draft;
 
+    const { article, draftMarkdown, title } =
+      "article" in request
+        ? this.applyStructuredArticle(job.toSnapshot().articleType, request.article)
+        : {
+            article: latest.article,
+            draftMarkdown: request.draftMarkdown,
+            title: extractH1(request.draftMarkdown) ?? latest.title,
+          };
+
     const newDraft: DraftRecord = {
       id: randomUUID(),
       jobId: latest.jobId,
       version: latest.version + 1,
-      // Neu nguoi dung doi H1 trong markdown thi cap nhat title theo
-      title: extractH1(request.draftMarkdown) ?? latest.title,
+      title,
       outline: latest.outline,
-      article: latest.article,
-      draftMarkdown: request.draftMarkdown,
+      article,
+      draftMarkdown,
       createdAt: new Date(),
     };
     await this.drafts.save(newDraft);
@@ -63,6 +75,25 @@ export class UpdateDraftUseCase {
     }
 
     return newDraft;
+  }
+
+  /**
+   * Validate article theo dung schema cua articleType (assemble = frame + sections,
+   * nguon su that cuoi cung §19.3), roi render lai markdown tu article da validate —
+   * dam bao article JSON (publish) va draftMarkdown (preview) luon dong bo.
+   */
+  private applyStructuredArticle(
+    articleType: ArticleType,
+    rawArticle: Record<string, unknown>,
+  ): { article: DraftRecord["article"]; draftMarkdown: string; title: string } {
+    const profile = getArticleTypeProfile(articleType);
+    const { sections, ...frame } = rawArticle as { sections?: unknown[] } & Record<string, unknown>;
+    const article = profile.assemble(frame, (sections ?? []) as Parameters<typeof profile.assemble>[1]);
+    return {
+      article,
+      draftMarkdown: profile.renderMarkdown(article),
+      title: profile.extractTitle(article),
+    };
   }
 }
 

@@ -33,6 +33,7 @@ function siteRow(overrides: Partial<SiteDestinationRow> = {}): SiteDestinationRo
     contentSource: 0,
     contentHash: "hash-a",
     siteUpdatedAt: null,
+    ticketPrice: null,
     ...overrides,
   };
 }
