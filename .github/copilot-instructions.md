@@ -117,6 +117,23 @@ UI components in `apps/web` — ALWAYS reuse shared components, compose smallest
   If you catch inline UI that a primitive covers, refactor it to the primitive.
 - No shadcn/headless or extra UI deps — primitives are plain Tailwind on native elements.
 
+Giải thích tính năng ngay tại chỗ dùng (MANDATORY — user yêu cầu 15/07/2026,
+áp dụng cho MỌI trang/tính năng CMS trong `apps/web`, không chỉ trang mới):
+- Mỗi trang/panel tính năng trong CMS PHẢI có phần giải thích rõ: tính năng
+  này làm gì, dùng khi nào, thao tác ra sao — hiển thị NGAY TRÊN trang đó,
+  không dựa vào tài liệu ngoài (`docs/`) — người dùng phải tự đọc hiểu được
+  mỗi lần quay lại dùng, không cần hỏi lại hay tìm doc riêng.
+- Dùng chung 1 component (tạo mới trong `shared/ui/` nếu chưa có, vd
+  `FeatureIntro`/`HelpBanner`) đặt đầu trang/panel — mặc định LUÔN hiện tóm
+  tắt ngắn (không giấu sau tooltip/icon phải hover mới thấy), có thể thu
+  gọn phần chi tiết dài bằng `<details>` nếu cần, nhưng câu tóm tắt mục
+  đích chính không được ẩn.
+- Trang MỚI: bắt buộc có ngay từ khi tạo, không để "làm sau".
+- Trang ĐÃ CÓ (retrofit): không tự ý sửa hàng loạt khi không được yêu cầu —
+  ghi vào `docs/dichoithoi/dichoithoi-backlog.md` làm việc tồn đọng, bổ
+  sung dần khi đụng lại từng trang, hoặc khi người dùng yêu cầu làm hàng
+  loạt.
+
 Error handling:
 - Use the standard error envelope (`errorCode`, `message`, `details[]`, `traceId`) — spec §12.
 - Typed error classes per group: ValidationError, DomainRuleError, AiProviderError,

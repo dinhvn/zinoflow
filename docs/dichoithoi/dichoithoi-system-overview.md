@@ -51,6 +51,23 @@ lại tracking trạng thái.
     nâng cấp gợi ý "Điểm đến liên quan" theo nhiều tiêu chí (thêm cùng loại
     hình, tách nhãn hiển thị, nối ArticleDestinationMap, JSON-LD) — đọc trước
     khi đụng vào `related-builder.ts`/khối liên quan trên trang detail.
+12c. `dichoithoi-article-workflow-plan.md` — plan CHƯA build (15/07/2026):
+    field tag cho Article (dùng chung `V2DestinationTag`), preview resolve
+    đầy đủ auto-link+khối động, audit SEO Article (thumbnail/JSON-LD/
+    breadcrumb) — đọc trước khi đụng vào `ArticleController`/
+    `ArticleBlockCompiler`/`PublishArticleUseCase`.
+12d. `dichoithoi-content-image-library-plan.md` — plan CHƯA build
+    (15/07/2026): thư viện ảnh nội dung độc lập + token `[[block:image
+    id=...]]` chèn ảnh vào Article/Destination — đọc trước khi đụng vào
+    `ArticleBlockCompiler`/`block-token.ts`.
+12e. `dichoithoi-auto-image-search-plan.md` — plan CHƯA build (15/07/2026):
+    tự động tìm/tải ảnh minh hoạ qua API có giấy phép (Pexels), luôn ở
+    trạng thái chờ duyệt — phụ thuộc 12d Mức A xong trước. Có kèm Claude
+    Code skill `dichoithoi-find-content-images`.
+12f. `dichoithoi-reference-summary-plan.md` — plan CHƯA build (15/07/2026):
+    Claude đọc + tóm tắt website tham khảo (đã có cơ chế fetch thô sẵn),
+    lưu vào cột mới để `buildSourceContext()` ưu tiên dùng thay vì fetch
+    lại. Có kèm Claude Code skill `dichoithoi-summarize-references`.
 13. `dichoithoi-system-design.md` — **đọc file này nếu chỉ có thời gian đọc 1
     file**: tổng hợp toàn bộ spec thành 1 bức tranh kỹ thuật đầy đủ (bảng dữ
     liệu 2 database, sơ đồ luồng, API surface, nguyên tắc xuyên suốt).

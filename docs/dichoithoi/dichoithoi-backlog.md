@@ -130,6 +130,35 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   compile `[[block:...]]`) — khác Article — nên chèn ảnh token cho cả
   Destination (Mức B) là việc LỚN hơn nhiều (phải mang cả cơ chế token
   sang Destination lần đầu), để riêng đánh giá sau, không gộp chung đợt.
+- **Tự động tìm ảnh minh hoạ cho nội dung (15/07/2026, CHƯA BUILD)** — plan
+  ở `dichoithoi-auto-image-search-plan.md`, phụ thuộc cứng vào Mức A của
+  plan thư viện ảnh ở trên (cần bảng `content_images` tồn tại trước). 2
+  nguyên tắc bắt buộc: (1) CHỈ tìm ảnh qua API ảnh miễn phí có giấy phép rõ
+  ràng (Pexels mặc định) — không search web mở, tránh rủi ro bản quyền vì
+  site có kiếm tiền; (2) CHỈ tự tìm cho nhu cầu ảnh minh hoạ CHUNG, KHÔNG
+  tự tìm ảnh cho 1 địa điểm cụ thể có tên riêng (ảnh stock không đúng thật
+  sự địa điểm đó, gây hiểu lầm). Ảnh tìm được luôn ở trạng thái `pending`,
+  chờ người dùng duyệt mới dùng được — không tự publish. Có kèm 1 Claude
+  Code skill (`dichoithoi-find-content-images`) để chạy thủ công qua chat
+  trước khi UI nút bấm trong app được build.
+- **Giải thích tính năng ngay tại chỗ dùng — RETROFIT CÒN NỢ (15/07/2026)**
+  — quy tắc mới bắt buộc cho MỌI trang CMS (ghi trong
+  `.github/copilot-instructions.md`, mục "Giải thích tính năng ngay tại chỗ
+  dùng"): mỗi trang/panel phải có phần giải thích công dụng + cách dùng
+  hiện ngay trên trang, không dựa doc ngoài. Áp dụng NGAY cho trang mới.
+  Trang ĐÃ CÓ trong `apps/web` (destination detail form, export/import
+  modal, trang bản đồ/Kanban dự kiến ở các plan khác, v.v.) CHƯA được bổ
+  sung — làm dần khi đụng lại từng trang, hoặc khi người dùng yêu cầu làm
+  hàng loạt, không tự ý sửa hết 1 lượt.
+- **Claude tóm tắt sẵn website tham khảo cho AI viết bài (15/07/2026, CHƯA
+  BUILD)** — plan ở `dichoithoi-reference-summary-plan.md`. Cơ chế "website
+  tham khảo" đã tồn tại thật (fetch trực tiếp mỗi lần generate, cắt 8.000
+  ký tự, không cache/tóm tắt) — plan này thêm cột `ai_reference_summary`
+  để Claude (chạy qua VS Code, không phải trong app) đọc kỹ + tóm tắt trước,
+  `buildSourceContext()` ưu tiên dùng tóm tắt thay vì fetch lại URL. 2 phần
+  tách biệt: Phần A (code thật: cột mới + sửa use-case + ghi chú trong UI)
+  và Phần B (Claude Code skill `dichoithoi-summarize-references`, đã tạo,
+  chạy độc lập được nhưng chưa có tác dụng thực tế cho tới khi Phần A xong).
 - ✅ **DDL lệch — ĐÃ SỬA (07/2026, Phase 21.5)**: xoá cột chết `BookingUrl`
   khỏi `v2.Destination` (SQL Server + entity `V2Destination.cs` — đã xác nhận
   0 nơi đọc/ghi trước khi xoá) + thêm cột `ContactFacebook varchar(256)` còn
