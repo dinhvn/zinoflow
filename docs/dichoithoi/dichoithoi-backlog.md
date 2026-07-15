@@ -115,7 +115,21 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   thuần đọc, an toàn tái dùng) — hiện chỉ resolve lúc Publish, khác nguyên
   tắc preview đã áp dụng cho Destination. Ngoài ra phát hiện `Tag`/
   `TagController` (API `/api/tags`) là code chết, 0 nơi gọi — ứng viên dọn
-  dẹp sau này giống đợt xoá module Blog, chưa xử lý.
+  dẹp sau này giống đợt xoá module Blog, chưa xử lý. (3) Audit SEO Article
+  (mục 4 trong plan): `Thumbnail` hardcode `null` lúc publish là lỗ hổng
+  gốc kéo theo `og:image`/JSON-LD `image` luôn rỗng; JSON-LD `Article`
+  thiếu `author`/`publisher` (dưới mức tối thiểu Google yêu cầu rich
+  result); breadcrumb thiếu hoàn toàn trên Article (khác mọi controller
+  khác); ảnh thân bài thiếu `width`/`height` (rủi ro CLS, bị sanitize-html
+  xoá dù nguồn có sẵn).
+- **Thư viện ảnh nội dung + token chèn ảnh (15/07/2026, CHƯA BUILD)** — plan
+  ở `dichoithoi-content-image-library-plan.md`. Mức A (chỉ Article, dùng
+  lại engine `[[block:...]]` có sẵn) là bước làm trước. Phát hiện quan
+  trọng: **Destination hiện HOÀN TOÀN CHƯA có bước resolve token nào**
+  (`publish-destination.usecase.ts` chỉ markdown→HTML + auto-link, không
+  compile `[[block:...]]`) — khác Article — nên chèn ảnh token cho cả
+  Destination (Mức B) là việc LỚN hơn nhiều (phải mang cả cơ chế token
+  sang Destination lần đầu), để riêng đánh giá sau, không gộp chung đợt.
 - ✅ **DDL lệch — ĐÃ SỬA (07/2026, Phase 21.5)**: xoá cột chết `BookingUrl`
   khỏi `v2.Destination` (SQL Server + entity `V2Destination.cs` — đã xác nhận
   0 nơi đọc/ghi trước khi xoá) + thêm cột `ContactFacebook varchar(256)` còn
