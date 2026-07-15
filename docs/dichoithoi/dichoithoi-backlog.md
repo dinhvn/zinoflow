@@ -96,6 +96,15 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   kỹ thuật, ghi nhận để biết khi cần mở rộng (thêm vùng mới phải sửa code).
 - **DestinationTag** — chưa có UI tạo/sửa chính cái tag (chỉ có UI gán tag
   cho điểm đến) — tag mới phải seed thẳng SQL.
+- **Nâng cấp liên kết "Điểm đến liên quan" theo nhiều tiêu chí (15/07/2026,
+  CHƯA BUILD)** — plan đầy đủ (thuật toán chấm điểm, mô hình khoảng cách
+  2 tầng, trang bản đồ tổng quan, trang rà soát taxonomy) ở
+  `dichoithoi-destination-relations-plan.md` (4 giai đoạn A→B→C→D, có
+  Definition of Done từng giai đoạn). **Giai đoạn B (chuẩn hoá taxonomy) là
+  điều kiện chặn cứng** — không được bật tiêu chí "cùng loại hình" trong
+  thuật toán khi taxonomy còn dữ liệu sai đã biết (vd. Vịnh Hạ Long gán
+  nhầm "Di tích lịch sử"). Khi được hỏi "việc cần làm tiếp" cho dichoithoi,
+  luôn kiểm tra plan này có đang là việc ưu tiên không.
 - ✅ **DDL lệch — ĐÃ SỬA (07/2026, Phase 21.5)**: xoá cột chết `BookingUrl`
   khỏi `v2.Destination` (SQL Server + entity `V2Destination.cs` — đã xác nhận
   0 nơi đọc/ghi trước khi xoá) + thêm cột `ContactFacebook varchar(256)` còn
