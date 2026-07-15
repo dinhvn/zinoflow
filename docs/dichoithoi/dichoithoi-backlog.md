@@ -105,6 +105,17 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   thuật toán khi taxonomy còn dữ liệu sai đã biết (vd. Vịnh Hạ Long gán
   nhầm "Di tích lịch sử"). Khi được hỏi "việc cần làm tiếp" cho dichoithoi,
   luôn kiểm tra plan này có đang là việc ưu tiên không.
+- **Nâng cấp quy trình bài viết Article/Cẩm nang (15/07/2026, CHƯA BUILD)**
+  — plan ở `dichoithoi-article-workflow-plan.md`: (1) thêm field tag thật
+  cho bài viết, dùng CHUNG vocabulary `V2DestinationTag` với Destination
+  (đã chốt hướng, chưa build) — kèm mở rộng trang `/chu-de/{slug}` hiện cả
+  bài viết lẫn điểm đến, và fix phát hiện phụ: trang này hiện KHÔNG được
+  link từ đâu trên site (orphaned); (2) tách auto-link + chèn khối
+  sản phẩm ra 1 use-case Preview riêng (2 service liên quan đã xác nhận
+  thuần đọc, an toàn tái dùng) — hiện chỉ resolve lúc Publish, khác nguyên
+  tắc preview đã áp dụng cho Destination. Ngoài ra phát hiện `Tag`/
+  `TagController` (API `/api/tags`) là code chết, 0 nơi gọi — ứng viên dọn
+  dẹp sau này giống đợt xoá module Blog, chưa xử lý.
 - ✅ **DDL lệch — ĐÃ SỬA (07/2026, Phase 21.5)**: xoá cột chết `BookingUrl`
   khỏi `v2.Destination` (SQL Server + entity `V2Destination.cs` — đã xác nhận
   0 nơi đọc/ghi trước khi xoá) + thêm cột `ContactFacebook varchar(256)` còn
