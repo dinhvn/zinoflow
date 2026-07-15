@@ -47,6 +47,10 @@ lại tracking trạng thái.
     xem lại spec trước khi có đợt code tiếp theo).
 12. `dichoithoi-backlog.md` — **nguồn sự thật duy nhất** cho quyết định cần
     chốt + việc còn mở + rủi ro vận hành từ tất cả tài liệu trên.
+12b. `dichoithoi-destination-relations-plan.md` — plan CHƯA build (15/07/2026):
+    nâng cấp gợi ý "Điểm đến liên quan" theo nhiều tiêu chí (thêm cùng loại
+    hình, tách nhãn hiển thị, nối ArticleDestinationMap, JSON-LD) — đọc trước
+    khi đụng vào `related-builder.ts`/khối liên quan trên trang detail.
 13. `dichoithoi-system-design.md` — **đọc file này nếu chỉ có thời gian đọc 1
     file**: tổng hợp toàn bộ spec thành 1 bức tranh kỹ thuật đầy đủ (bảng dữ
     liệu 2 database, sơ đồ luồng, API surface, nguyên tắc xuyên suốt).
