@@ -130,20 +130,42 @@ export default function DiaChiPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.items.map((m) => (
-                  <tr
-                    key={m.id}
-                    className="border-t border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
-                  >
-                    <td className="px-3 py-2">{m.oldWardName ?? "—"}</td>
-                    <td className="px-3 py-2 text-zinc-500">{m.oldDistrictName ?? "—"}</td>
-                    <td className="px-3 py-2 text-zinc-500">{m.oldProvinceName ?? "—"}</td>
-                    <td className="border-l border-zinc-200 px-3 py-2 font-medium dark:border-zinc-800">
-                      {m.newWardName ?? "—"}
-                    </td>
-                    <td className="px-3 py-2">{m.newProvinceName ?? "—"}</td>
-                  </tr>
-                ))}
+                {data.items.map((m) => {
+                  // Dia chi cu/moi trung ten (khong doi qua sap nhap) — gop lai 1 dong
+                  // thay vi lap lai y het nhau o ca 2 cot, tranh gay nham "co thay doi".
+                  const unchanged =
+                    m.oldWardName === m.newWardName && m.oldProvinceName === m.newProvinceName;
+
+                  if (unchanged) {
+                    return (
+                      <tr
+                        key={m.id}
+                        className="border-t border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                      >
+                        <td className="px-3 py-2" colSpan={5}>
+                          {m.newWardName ?? "—"}
+                          {m.newProvinceName ? `, ${m.newProvinceName}` : ""}
+                          <span className="ml-2 text-xs text-zinc-400">(không đổi)</span>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return (
+                    <tr
+                      key={m.id}
+                      className="border-t border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                    >
+                      <td className="px-3 py-2">{m.oldWardName ?? "—"}</td>
+                      <td className="px-3 py-2 text-zinc-500">{m.oldDistrictName ?? "—"}</td>
+                      <td className="px-3 py-2 text-zinc-500">{m.oldProvinceName ?? "—"}</td>
+                      <td className="border-l border-zinc-200 px-3 py-2 font-medium dark:border-zinc-800">
+                        {m.newWardName ?? "—"}
+                      </td>
+                      <td className="px-3 py-2">{m.newProvinceName ?? "—"}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
