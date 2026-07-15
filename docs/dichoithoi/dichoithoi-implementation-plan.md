@@ -418,8 +418,17 @@ nào được zinoflow gọi tự động cả — đây là phần mới hoàn 
      + bật Page Rule/Cache Rule "Cache Everything" cho `/diem-den/*`, `/tinh/*`,
      `/loai/*`, rồi điền `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ZONE_ID` vào `.env`
      production — chưa làm, cần tài khoản thật của bạn.
-  2. Kiểm tra gói SmarterASP Advance có Task Scheduler/Cron trong control panel
-     không (warm-up app pool sau recycle) — vẫn CHƯA xác nhận được từ xa.
+  2. ~~Kiểm tra gói SmarterASP Advance có Task Scheduler/Cron~~ — **ĐỔI HƯỚNG
+     15/07/2026**: gói Advance KHÔNG có Task Scheduler/Cron trong control panel
+     (đã xác nhận). Người dùng quyết định dùng **Azure Function (Timer
+     trigger)** thay thế để warm-up app pool — Function gọi HTTP GET định kỳ
+     (đề xuất mỗi 15-20 phút, dưới ngưỡng recycle mặc định IIS) tới trang chủ
+     `https://dichoithoi.com/` (chưa có endpoint health-check riêng, dùng
+     trang chủ vì luôn tồn tại, tải nhẹ nhờ `IMemoryCache` đã cache top
+     destination/hotel/article). Vẫn là việc CẦN BẠN tự làm (cần Azure
+     subscription + tạo Function App) — AI tool chưa tạo hộ được vì cần tài
+     khoản Azure thật, nhưng khác SmarterASP control panel (không cần kiểm
+     tra gì phía hosting nữa, hướng đã chốt).
 - **DoD đã xác nhận**: `dotnet build` sạch; publish 1 điểm đến qua zinoflow (dev,
   `DICHOITHOI_SITE_BASE_URL=http://localhost:5176`) gọi đúng
   `/api/remove-cache/destination:{slug}`, các slug khác không bị đụng tới (tag
