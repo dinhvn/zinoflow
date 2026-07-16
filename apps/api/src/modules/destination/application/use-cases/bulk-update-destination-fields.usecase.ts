@@ -1,5 +1,10 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import type { BulkUpdateDestinationFieldsResult, DestinationBulkEditRow } from "@zinoflow/contracts";
+import {
+  DESTINATION_BULK_EDIT_REVIEW_LABELS,
+  type BulkUpdateDestinationFieldsResult,
+  type DestinationBulkEditRow,
+  type ExternalReviewUrlItem,
+} from "@zinoflow/contracts";
 import {
   DESTINATION_MIRROR_REPOSITORY,
   type DestinationMetadataInput,
@@ -11,7 +16,7 @@ import { ParseMapsLinkUseCase } from "./parse-maps-link.usecase";
 
 /**
  * Sua nhanh nhieu diem den cung luc (export CSV -> sua tay tren Google Sheet ->
- * nhap lai) — CHI 7 field lien he/tham khao (DESTINATION_BULK_EDIT_FIELD_KEYS),
+ * nhap lai) — CHI cac field trong DESTINATION_BULK_EDIT_FIELD_KEYS,
  * khop theo slug DA TON TAI (khong tao moi, khac ImportDestinationsUseCase).
  * O CSV RONG = khong doi field do (giu nguyen gia tri cu) — o CO GIA TRI luon
  * GHI DE, ke ca khac voi gia tri dang co (quyet dinh cua chu site).
@@ -71,6 +76,25 @@ export class BulkUpdateDestinationFieldsUseCase {
 
         await this.mirrorRepo.updateMetadata(row.slug, meta);
 
+        const providedMetaTitle = nonEmpty(row.metaTitle);
+        if (providedMetaTitle !== undefined) {
+          await this.mirrorRepo.setMetaTitle(row.slug, providedMetaTitle);
+          if (existing.siteId !== null) {
+            await this.siteDb.updateMetaTitle(existing.siteId, providedMetaTitle);
+          }
+        }
+
+        const reviewUrls = mergeReviewUrls(existing.externalReviewUrls, {
+          facebookUrl: nonEmpty(row.facebookUrl),
+          tripadvisorUrl: nonEmpty(row.tripadvisorUrl),
+        });
+        if (reviewUrls) {
+          await this.mirrorRepo.setExternalReviewUrls(row.slug, reviewUrls);
+          if (existing.siteId !== null) {
+            await this.siteDb.updateExternalReviewUrls(existing.siteId, JSON.stringify(reviewUrls));
+          }
+        }
+
         if (existing.siteId !== null) {
           await this.siteDb.updateMetadata(existing.siteId, {
             slug: row.slug,
@@ -116,4 +140,35 @@ function nonEmpty(s: string | undefined): string | null | undefined {
   if (s === undefined) return undefined;
   const trimmed = s.trim();
   return trimmed === "" ? undefined : trimmed;
+}
+
+/**
+ * facebookUrl/tripadvisorUrl khong phai cot rieng trong DB — khop (khong phan
+ * biet hoa/thuong) voi entry co nhan tuong ung trong externalReviewUrls, ghi
+ * de url neu tim thay hoac them moi neu chua co; GIU NGUYEN cac nhan khac
+ * nguoi dung da tu nhap qua man sua tung diem. Tra ve null neu ca 2 deu rong
+ * (khong co gi de doi).
+ */
+function mergeReviewUrls(
+  existing: readonly ExternalReviewUrlItem[],
+  updates: { facebookUrl: string | null | undefined; tripadvisorUrl: string | null | undefined },
+): ExternalReviewUrlItem[] | null {
+  const entries = [
+    { key: "facebookUrl" as const, url: updates.facebookUrl },
+    { key: "tripadvisorUrl" as const, url: updates.tripadvisorUrl },
+  ].filter((e) => e.url !== undefined);
+  if (entries.length === 0) return null;
+
+  const items = existing.map((i) => ({ ...i }));
+  for (const { key, url } of entries) {
+    const label = DESTINATION_BULK_EDIT_REVIEW_LABELS[key];
+    const idx = items.findIndex((i) => i.label.trim().toLowerCase() === label.toLowerCase());
+    if (!url) {
+      if (idx >= 0) items.splice(idx, 1);
+      continue;
+    }
+    if (idx >= 0) items[idx] = { label: items[idx]!.label, url };
+    else items.push({ label, url });
+  }
+  return items;
 }

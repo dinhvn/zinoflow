@@ -63,6 +63,20 @@ số lần token `[[block:image` xuất hiện.
 
 ### 2.2 Bước tìm + tải + upload (auto, nhưng luôn ở trạng thái CHỜ DUYỆT)
 
+**Quyết định 16/07/2026 — bản đầu giữ đơn giản, KHÔNG dùng AI ở bước này**:
+sinh từ khoá bằng cách tách thuần từ tiêu đề/chủ đề bài viết (string, không
+gọi model) — chấp nhận đánh đổi từ khoá có thể chưa chuẩn (vd lệch không khí
+Việt Nam) để đổi lấy chi phí = 0 và không thêm phụ thuộc AI provider ở bước
+quét. Người dùng lọc lại bằng mắt ở màn duyệt (§2.3) — đây là lưới an toàn
+cuối, không cần bước AI chọn lọc tự động ngay từ đầu.
+
+*Có thể nâng cấp sau* (không phải việc của phiên bản đầu — chỉ ghi lại để
+không quên): dùng `claude-haiku-4-5` qua `IContentAIProvider` sẵn có để (a)
+sinh từ khoá tốt hơn, và/hoặc (b) tự chọn ảnh phù hợp nhất trong 3-5 ứng
+viên API trả về thay vì để người dùng tự lọc toàn bộ — chi phí cực nhỏ (dưới
+$0.001/bài, ước tính vài đô cho hàng nghìn bài) nên KHÔNG phải rào cản kỹ
+thuật/chi phí nếu sau này muốn làm — chỉ hoãn vì ưu tiên đơn giản trước.
+
 1. Sinh từ khoá tìm kiếm từ tiêu đề/chủ đề bài viết (vd bài "5 món ăn Đà
    Lạt" → từ khoá "món ăn Việt Nam", "ẩm thực Đà Lạt" — từ khoá CHUNG, không
    dùng tên riêng địa điểm cụ thể, đúng §1.2).

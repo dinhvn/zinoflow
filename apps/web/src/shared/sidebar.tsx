@@ -33,6 +33,7 @@ const DICHOITHOI_ITEMS: NavItem[] = [
     label: "Điểm đến",
     icon: IconMapPin,
     exclude: [
+      "/dichoithoi/articles",
       "/dichoithoi/dia-chi",
       "/dichoithoi/quy-trinh",
       "/dichoithoi/danh-muc",
@@ -40,6 +41,7 @@ const DICHOITHOI_ITEMS: NavItem[] = [
       "/dichoithoi/do-phu",
     ],
   },
+  { href: "/dichoithoi/articles", label: "Article", icon: IconDoc },
   { href: "/dichoithoi/dia-chi", label: "Tra cứu địa chỉ", icon: IconSearch },
   { href: "/dichoithoi/danh-muc", label: "Nội dung danh mục", icon: IconDoc },
   { href: "/dichoithoi/chu-de", label: "Chủ đề", icon: IconTag },

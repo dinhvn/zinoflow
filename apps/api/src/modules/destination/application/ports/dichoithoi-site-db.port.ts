@@ -53,6 +53,8 @@ export interface SiteContentRow {
 /** Du lieu publish 1 bai diem den (Phase C) — ghi trong 1 transaction, KHONG wipe */
 export interface PublishDestinationInput {
   siteId: number;
+  /** H1 bai viet (article.title) — dai/chi tiet hon Destination.Name, KHONG trung metaTitle (spec §8.1) */
+  title: string;
   /** Duong dan thumbnail tuong doi — giu nguyen gia tri mirror khi publish (§14.3) */
   thumbnail: string | null;
   shortDescription: string;
@@ -213,6 +215,12 @@ export interface DichoithoiSiteDb {
   updatePracticalNotes(siteId: number, practicalNotesJson: string): Promise<void>;
   /** Ghi de EditorialReview — AI goi y + nguoi dung duyet (Phase 28.0) */
   updateEditorialReview(siteId: number, editorialReview: string | null): Promise<void>;
+  /**
+   * Ghi thang MetaTitle (DestinationContent) qua bulk-edit CSV, upsert vi diem
+   * chua publish co the chua co dong content. Luu y: publish lai bai AI se ghi
+   * de gia tri nay bang metadata.metaTitle cua draft (xem PublishDestinationUseCase).
+   */
+  updateMetaTitle(siteId: number, metaTitle: string | null): Promise<void>;
   /** Ghi de ExternalReviewUrlsJson — nhap tay (Phase 28.0) */
   updateExternalReviewUrls(siteId: number, externalReviewUrlsJson: string): Promise<void>;
   /** Ghi de GalleryJson — them/xoa/sua/doi thu tu anh thu vien */

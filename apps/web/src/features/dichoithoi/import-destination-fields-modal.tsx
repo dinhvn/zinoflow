@@ -6,13 +6,18 @@ import {
   fetchSheetResponseSchema,
   bulkUpdateDestinationFieldsResultSchema,
   DESTINATION_BULK_EDIT_FIELD_KEYS,
+  DESTINATION_BULK_EDIT_FIELD_LABELS,
   type DestinationBulkEditRow,
+  type DestinationBulkEditFieldKey,
 } from "@zinoflow/contracts";
 import { apiSend, ApiError } from "@/shared/api-client";
 import { Button, Input, Modal } from "@/shared/ui";
 import { parseRowsFromText, emptyToUndef } from "./sheet-import-csv";
 
-/** Dong CSV (Record<string,string>) -> row bulk-edit — chi giu dung 7 cot cho phep, o rong = khong doi. */
+const DEFAULT_SHEET_URL =
+  "https://docs.google.com/spreadsheets/d/1dj2Zwb496l6rTJykOpMYLyP8syD13Bv4MFrIi9fgIpo/edit?gid=229521716#gid=229521716";
+
+/** Dong CSV (Record<string,string>) -> row bulk-edit — chi giu cac cot cho phep, o rong = khong doi. */
 function rowFromObject(o: Record<string, string>): DestinationBulkEditRow {
   const row: DestinationBulkEditRow = { slug: (o.slug ?? "").trim() };
   for (const key of DESTINATION_BULK_EDIT_FIELD_KEYS) {
@@ -36,8 +41,10 @@ export function ImportDestinationFieldsModal({
   onClose: () => void;
   onImported: () => void;
 }) {
-  const [sheetUrl, setSheetUrl] = useState("");
+  const [sheetUrl, setSheetUrl] = useState(DEFAULT_SHEET_URL);
   const [preview, setPreview] = useState<DestinationBulkEditRow[] | null>(null);
+  const [previewNames, setPreviewNames] = useState<string[]>([]);
+  const [previewFields, setPreviewFields] = useState<DestinationBulkEditFieldKey[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
 
   const fetchSheet = useMutation({
@@ -48,14 +55,22 @@ export function ImportDestinationFieldsModal({
     onSuccess: (r) => {
       updateMutation.reset();
       try {
-        const rows = parseRowsFromText(r.csv).map(rowFromObject);
+        const raw = parseRowsFromText(r.csv);
+        const sheetHeaders = new Set(raw.length ? Object.keys(raw[0]!) : []);
+        const rows = raw.map(rowFromObject);
         const bad = rows.findIndex((x) => !x.slug);
         if (bad >= 0) throw new Error(`Dòng ${bad + 1}: thiếu slug`);
         if (rows.length === 0) throw new Error("Không có dòng nào");
         setParseError(null);
         setPreview(rows);
+        // "name" chi de hien thi cho de nhan biet dong — khong nam trong
+        // DESTINATION_BULK_EDIT_FIELD_KEYS nen khong bao gio duoc dung de cap nhat.
+        setPreviewNames(raw.map((o) => o.name ?? ""));
+        setPreviewFields(DESTINATION_BULK_EDIT_FIELD_KEYS.filter((key) => sheetHeaders.has(key)));
       } catch (e) {
         setPreview(null);
+        setPreviewNames([]);
+        setPreviewFields([]);
         setParseError(e instanceof Error ? e.message : String(e));
       }
     },
@@ -73,6 +88,8 @@ export function ImportDestinationFieldsModal({
 
   function handleClose() {
     setPreview(null);
+    setPreviewNames([]);
+    setPreviewFields([]);
     setParseError(null);
     fetchSheet.reset();
     updateMutation.reset();
@@ -105,27 +122,58 @@ export function ImportDestinationFieldsModal({
           </Button>
         </div>
         <p className="text-xs text-zinc-500">
-          Cột hỗ trợ: slug, {DESTINATION_BULK_EDIT_FIELD_KEYS.join(", ")}
+          Cột hỗ trợ: slug, name (chỉ tham khảo, không cập nhật),{" "}
+          {DESTINATION_BULK_EDIT_FIELD_KEYS.join(", ")}
         </p>
         {parseError && <p className="text-sm text-red-600 dark:text-red-400">⚠️ {parseError}</p>}
 
         {preview && !updateMutation.data && (
           <div className="space-y-2">
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Đọc được <strong>{preview.length}</strong> dòng. Xem trước 5 dòng đầu:
+              Đọc được <strong>{preview.length}</strong> dòng. Kiểm tra kỹ trước khi xác nhận —
+              dữ liệu <strong>chưa</strong> được ghi vào hệ thống ở bước này.
             </p>
-            <ul className="list-inside list-disc text-xs text-zinc-600 dark:text-zinc-400">
-              {preview.slice(0, 5).map((r, i) => (
-                <li key={i}>{r.slug}</li>
-              ))}
-            </ul>
+            <div className="max-h-72 overflow-auto rounded border border-zinc-200 dark:border-zinc-800">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 bg-zinc-100 dark:bg-zinc-900">
+                  <tr>
+                    <th className="px-2 py-1">Slug</th>
+                    {previewNames.some((n) => n) && (
+                      <th className="px-2 py-1 whitespace-nowrap">Tên (tham khảo)</th>
+                    )}
+                    {previewFields.map((key) => (
+                      <th key={key} className="px-2 py-1 whitespace-nowrap">
+                        {DESTINATION_BULK_EDIT_FIELD_LABELS[key]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.map((r, i) => (
+                    <tr key={i} className="border-t border-zinc-200 dark:border-zinc-800">
+                      <td className="px-2 py-1">{r.slug}</td>
+                      {previewNames.some((n) => n) && (
+                        <td className="max-w-[16rem] truncate px-2 py-1 text-zinc-500">
+                          {previewNames[i] ?? ""}
+                        </td>
+                      )}
+                      {previewFields.map((key) => (
+                        <td key={key} className="max-w-[16rem] truncate px-2 py-1 text-zinc-500">
+                          {r[key] ?? ""}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <Button
               variant="primary"
               size="sm"
               loading={updateMutation.isPending}
               onClick={() => updateMutation.mutate(preview)}
             >
-              Cập nhật {preview.length} điểm
+              Xác nhận cập nhật {preview.length} điểm
             </Button>
           </div>
         )}

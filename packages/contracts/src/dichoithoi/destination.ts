@@ -1,5 +1,7 @@
 import { z } from "zod/v4";
 import { affiliateLinkItemSchema, affiliateLinkStatusSchema } from "./affiliate";
+import { DESTINATION_FIELD_LIMITS } from "./destination-article";
+import { destinationOpeningHoursSchema } from "./destination-ai-extraction";
 
 /**
  * Contracts cho khu Dichoithoi (M4) — mirror diem den + sync.
@@ -203,6 +205,11 @@ export const destinationMirrorSchema = z.object({
   practicalNotes: z.array(practicalNoteItemSchema),
   /** Danh gia bien tap — text ngan, AI goi y + nguoi dung duyet (Phase 28.0) */
   editorialReview: z.string().nullable(),
+  /**
+   * Meta title thu cong (sua qua bulk-edit CSV) — KHAC voi draftArticle.metadata.metaTitle
+   * (AI soan, hien trong editor bai viet). Ghi thang len site, se bi ghi de neu publish lai bai.
+   */
+  metaTitle: z.string().nullable(),
   /** Link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */
   externalReviewUrls: z.array(externalReviewUrlItemSchema),
   /** Thu vien anh (khac thumbnail don) — website render thanh dai cuon o hero + duoi hero */
@@ -465,6 +472,11 @@ export const destinationDetailSchema = destinationMirrorSchema.extend({
   /** Thong tin nguoi dung da luu cho AI (tu dien lai form viet bai) */
   aiNotes: z.string().nullable(),
   aiReferenceUrls: z.array(referenceUrlSchema),
+  /** Gio mo cua chuan hoa — chi ghi qua buoc "Chap nhan" trich xuat AI (§2.2) */
+  openingHours: destinationOpeningHoursSchema.nullable(),
+  /** Tom tat nguon tham khao — dung thay fetch tung URL khi tao job (§2.2) */
+  aiReferenceSummary: z.string().nullable(),
+  aiReferenceSummaryUpdatedAt: z.string().nullable(),
   /** Cay: cha truc tiep + con truc tiep */
   parent: relatedDestinationRefSchema.nullable(),
   children: z.array(relatedDestinationRefSchema),
@@ -584,6 +596,9 @@ export const DESTINATION_BULK_EDIT_FIELD_KEYS = [
   "contactWebsite",
   "hotelGroupId",
   "shortDescription",
+  "metaTitle",
+  "facebookUrl",
+  "tripadvisorUrl",
 ] as const;
 export type DestinationBulkEditFieldKey = (typeof DESTINATION_BULK_EDIT_FIELD_KEYS)[number];
 
@@ -595,6 +610,15 @@ export const DESTINATION_BULK_EDIT_FIELD_LABELS: Record<DestinationBulkEditField
   contactWebsite: "Website chính thức",
   hotelGroupId: "Nhóm khách sạn (hotelGroupId)",
   shortDescription: "Mô tả ngắn",
+  metaTitle: "Meta Title (thẻ <title> SEO)",
+  facebookUrl: "Link Facebook",
+  tripadvisorUrl: "Link TripAdvisor",
+};
+
+/** Nhan co dinh dung de khop/ghi entry trong externalReviewUrls khi bulk-edit facebookUrl/tripadvisorUrl. */
+export const DESTINATION_BULK_EDIT_REVIEW_LABELS: Record<"facebookUrl" | "tripadvisorUrl", string> = {
+  facebookUrl: "Facebook",
+  tripadvisorUrl: "TripAdvisor",
 };
 
 /** Query cho GET /destinations/export — filter giong list (tru sort/phan trang, luon xuat het). */
@@ -618,6 +642,9 @@ export const destinationBulkEditRowSchema = z.object({
   contactWebsite: z.string().max(256).optional(),
   hotelGroupId: z.string().max(50).optional(),
   shortDescription: z.string().max(1000).optional(),
+  metaTitle: z.string().max(DESTINATION_FIELD_LIMITS.metaTitle).optional(),
+  facebookUrl: z.string().max(1024).optional(),
+  tripadvisorUrl: z.string().max(1024).optional(),
 });
 export type DestinationBulkEditRow = z.infer<typeof destinationBulkEditRowSchema>;
 
@@ -691,6 +718,16 @@ export type UpdateEditorialReviewRequest = z.infer<typeof updateEditorialReviewR
 export const suggestEditorialReviewResponseSchema = z.object({
   suggestion: z.string(),
 });
+
+/**
+ * Cap nhat metaTitle thu cong tu trang chi tiet (them ben canh duong bulk-edit
+ * CSV) — cung 2 buoc ghi voi BulkUpdateDestinationFieldsUseCase (mirror +
+ * DestinationContent), KHONG dong cham draftArticle.metadata.metaTitle cua AI.
+ */
+export const updateMetaTitleRequestSchema = z.object({
+  metaTitle: z.string().max(DESTINATION_FIELD_LIMITS.metaTitle).nullable(),
+});
+export type UpdateMetaTitleRequest = z.infer<typeof updateMetaTitleRequestSchema>;
 export type SuggestEditorialReviewResponse = z.infer<typeof suggestEditorialReviewResponseSchema>;
 
 /** Cap nhat link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */

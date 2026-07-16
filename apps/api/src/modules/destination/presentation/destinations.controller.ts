@@ -32,6 +32,7 @@ import {
   updatePriceBreakdownRequestSchema,
   updatePracticalNotesRequestSchema,
   updateEditorialReviewRequestSchema,
+  updateMetaTitleRequestSchema,
   updateExternalReviewUrlsRequestSchema,
   updateDestinationGalleryRequestSchema,
   type GalleryItem,
@@ -44,6 +45,7 @@ import {
   type PracticalNoteItem,
   type SuggestPracticalNotesResponse,
   type UpdateEditorialReviewRequest,
+  type UpdateMetaTitleRequest,
   type SuggestEditorialReviewResponse,
   type ExternalReviewUrlItem,
   type UpdateExternalReviewUrlsRequest,
@@ -94,6 +96,10 @@ import {
   type ContentSection,
   type DestinationDraftQualityChecksResponse,
   type PreviewDestinationPublishHtmlResponse,
+  acceptDestinationAiExtractionFieldsRequestSchema,
+  type AcceptDestinationAiExtractionFieldsRequest,
+  type DestinationAiExtraction,
+  type GetDestinationAiExtractionResponse,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { ValidationError } from "../../shared/errors/app-error";
@@ -108,6 +114,7 @@ import { UpdatePriceBreakdownUseCase } from "../application/use-cases/update-pri
 import { UpdatePracticalNotesUseCase } from "../application/use-cases/update-practical-notes.usecase";
 import { SuggestPracticalNotesUseCase } from "../application/use-cases/suggest-practical-notes.usecase";
 import { UpdateEditorialReviewUseCase } from "../application/use-cases/update-editorial-review.usecase";
+import { UpdateMetaTitleUseCase } from "../application/use-cases/update-meta-title.usecase";
 import { SuggestEditorialReviewUseCase } from "../application/use-cases/suggest-editorial-review.usecase";
 import { UpdateExternalReviewUrlsUseCase } from "../application/use-cases/update-external-review-urls.usecase";
 import { UploadDestinationImageUseCase } from "../application/use-cases/upload-destination-image.usecase";
@@ -130,6 +137,8 @@ import { RunDestinationDraftQualityChecksUseCase } from "../application/use-case
 import { PreviewDestinationPublishHtmlUseCase } from "../application/use-cases/preview-destination-publish-html.usecase";
 import { AddDestinationGalleryImageUseCase } from "../application/use-cases/add-destination-gallery-image.usecase";
 import { UpdateDestinationGalleryUseCase } from "../application/use-cases/update-destination-gallery.usecase";
+import { GetDestinationAiExtractionUseCase } from "../application/use-cases/get-destination-ai-extraction.usecase";
+import { AcceptDestinationAiExtractionFieldsUseCase } from "../application/use-cases/accept-destination-ai-extraction-fields.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
@@ -161,6 +170,7 @@ export class DestinationsController {
     private readonly updatePracticalNotes: UpdatePracticalNotesUseCase,
     private readonly suggestPracticalNotes: SuggestPracticalNotesUseCase,
     private readonly updateEditorialReview: UpdateEditorialReviewUseCase,
+    private readonly updateMetaTitle: UpdateMetaTitleUseCase,
     private readonly suggestEditorialReview: SuggestEditorialReviewUseCase,
     private readonly updateExternalReviewUrls: UpdateExternalReviewUrlsUseCase,
     private readonly uploadImage: UploadDestinationImageUseCase,
@@ -183,6 +193,8 @@ export class DestinationsController {
     private readonly previewPublishHtml: PreviewDestinationPublishHtmlUseCase,
     private readonly addGalleryImageUseCase: AddDestinationGalleryImageUseCase,
     private readonly updateGalleryUseCase: UpdateDestinationGalleryUseCase,
+    private readonly getAiExtraction: GetDestinationAiExtractionUseCase,
+    private readonly acceptAiExtractionFields: AcceptDestinationAiExtractionFieldsUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
     @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
@@ -388,6 +400,25 @@ export class DestinationsController {
   }
 
   /**
+   * Doc dong staging trich xuat AI (skill dichoithoi-extract-destination-info ghi vao) —
+   * null khi chua tung chay skill cho diem nay (dichoithoi-destination-ai-extraction-plan §2.1).
+   */
+  @Get(":slug/ai-extraction")
+  getAiExtractionForSlug(@Param("slug") slug: string): Promise<GetDestinationAiExtractionResponse> {
+    return this.getAiExtraction.execute(slug);
+  }
+
+  /** Chap nhan cac truong da tick trong bang so sanh trich xuat AI (§2.3) */
+  @Post(":slug/ai-extraction/accept")
+  acceptAiExtraction(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(acceptDestinationAiExtractionFieldsRequestSchema))
+    request: AcceptDestinationAiExtractionFieldsRequest,
+  ): Promise<DestinationAiExtraction> {
+    return this.acceptAiExtractionFields.execute(slug, request.acceptedIndexes);
+  }
+
+  /**
    * Re-link toan bo — XEM TRUOC (spec §12.2). DAT TRUOC :slug/publish de Nest
    * khong nuot "relink" thanh slug. LUON chay dong bo o che do doc-only (khong
    * ghi) — tra bao cao chi tiet ngay de admin xem truoc khi bam "Ap dung".
@@ -494,6 +525,16 @@ export class DestinationsController {
     request: UpdateEditorialReviewRequest,
   ): Promise<string | null> {
     return this.updateEditorialReview.execute(slug, request);
+  }
+
+  /** Luu metaTitle thu cong tu trang chi tiet (them cach cho bulk-edit CSV) */
+  @Post(":slug/meta-title")
+  setMetaTitle(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updateMetaTitleRequestSchema))
+    request: UpdateMetaTitleRequest,
+  ): Promise<string | null> {
+    return this.updateMetaTitle.execute(slug, request);
   }
 
   /** Cap nhat link "Xem them tren" Google Maps/TripAdvisor... (Phase 28.0) */

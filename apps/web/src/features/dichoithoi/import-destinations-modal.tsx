@@ -162,23 +162,38 @@ export function ImportDestinationsModal({
         {preview && !importMutation.data && (
           <div className="space-y-2">
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Đọc được <strong>{preview.length}</strong> dòng. Xem trước 5 dòng đầu:
+              Đọc được <strong>{preview.length}</strong> dòng. Kiểm tra kỹ trước khi xác nhận —
+              dữ liệu <strong>chưa</strong> được ghi vào hệ thống ở bước này.
             </p>
-            <ul className="list-inside list-disc text-xs text-zinc-600 dark:text-zinc-400">
-              {preview.slice(0, 5).map((r, i) => (
-                <li key={i}>
-                  {r.name} {r.slug ? `(${r.slug})` : "(slug tự sinh)"} · {r.provinceCode ?? "không tỉnh"} ·{" "}
-                  {r.kind}
-                </li>
-              ))}
-            </ul>
+            <div className="max-h-72 overflow-auto rounded border border-zinc-200 dark:border-zinc-800">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 bg-zinc-100 dark:bg-zinc-900">
+                  <tr>
+                    <th className="px-2 py-1">Tên</th>
+                    <th className="px-2 py-1">Slug</th>
+                    <th className="px-2 py-1">Tỉnh</th>
+                    <th className="px-2 py-1">Loại</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.map((r, i) => (
+                    <tr key={i} className="border-t border-zinc-200 dark:border-zinc-800">
+                      <td className="px-2 py-1">{r.name}</td>
+                      <td className="px-2 py-1 text-zinc-500">{r.slug || "(tự sinh)"}</td>
+                      <td className="px-2 py-1 text-zinc-500">{r.provinceCode ?? "—"}</td>
+                      <td className="px-2 py-1 text-zinc-500">{r.kind}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <Button
               variant="primary"
               size="sm"
               loading={importMutation.isPending}
               onClick={() => importMutation.mutate(preview)}
             >
-              Nhập {preview.length} điểm
+              Xác nhận nhập {preview.length} điểm
             </Button>
           </div>
         )}

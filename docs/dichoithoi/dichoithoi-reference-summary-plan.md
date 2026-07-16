@@ -1,3 +1,11 @@
+> **ĐÃ GỘP (16/07/2026)** vào
+> `docs/dichoithoi/dichoithoi-destination-ai-extraction-plan.md` — ý tưởng
+> tóm tắt tham khảo giờ chỉ là 1 field (`aiReferenceSummary`) trong tính
+> năng trích xuất nhiều field (tên/địa chỉ/SĐT/giờ mở cửa/tóm tắt...) từ
+> Google Maps + web tham khảo, có bảng duyệt cũ/mới trong CMS. Đọc file mới
+> đó thay vì làm theo plan này. Giữ file này lại để tham khảo lịch sử phân
+> tích ban đầu (hiện trạng audit 15/07/2026 vẫn đúng, không đổi).
+
 # Dichoithoi — Claude tóm tắt sẵn website tham khảo cho AI viết bài (chưa build)
 
 Ghi lại 15/07/2026, từ ý tưởng người dùng: trước khi AI viết bài điểm đến,

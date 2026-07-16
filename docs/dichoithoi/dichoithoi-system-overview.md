@@ -64,10 +64,14 @@ lại tracking trạng thái.
     tự động tìm/tải ảnh minh hoạ qua API có giấy phép (Pexels), luôn ở
     trạng thái chờ duyệt — phụ thuộc 12d Mức A xong trước. Có kèm Claude
     Code skill `dichoithoi-find-content-images`.
-12f. `dichoithoi-reference-summary-plan.md` — plan CHƯA build (15/07/2026):
-    Claude đọc + tóm tắt website tham khảo (đã có cơ chế fetch thô sẵn),
-    lưu vào cột mới để `buildSourceContext()` ưu tiên dùng thay vì fetch
-    lại. Có kèm Claude Code skill `dichoithoi-summarize-references`.
+12f. `dichoithoi-destination-ai-extraction-plan.md` — plan CHƯA build
+    (16/07/2026, đã GỘP + thay thế `dichoithoi-reference-summary-plan.md`):
+    Claude đọc Google Maps + website tham khảo, trích xuất tên/địa chỉ/SĐT/
+    website/giờ mở cửa/mô tả ngắn/link đánh giá ngoài/tóm tắt cho AI viết
+    bài, lưu vào bảng staging riêng; CMS hiện bảng so sánh cũ/mới để duyệt
+    theo field (tick chọn + Chấp nhận). Nguyên tắc: không dùng kiến thức
+    nền cho dữ liệu cứng, nguồn mâu thuẫn ghi rõ cả 2. Có kèm Claude Code
+    skill `dichoithoi-extract-destination-info`.
 13. `dichoithoi-system-design.md` — **đọc file này nếu chỉ có thời gian đọc 1
     file**: tổng hợp toàn bộ spec thành 1 bức tranh kỹ thuật đầy đủ (bảng dữ
     liệu 2 database, sơ đồ luồng, API surface, nguyên tắc xuyên suốt).

@@ -404,9 +404,6 @@ export default function DichoithoiPage() {
             >
               Nhập cập nhật hàng loạt
             </button>
-            <a href="/dichoithoi/articles/new" className={buttonClasses({ variant: "secondary" })}>
-              + Bài cẩm nang
-            </a>
             <Button
               variant="primary"
               loading={syncMutation.isPending}

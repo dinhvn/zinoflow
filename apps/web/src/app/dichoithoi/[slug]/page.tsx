@@ -39,7 +39,9 @@ import { DestinationGalleryEditor } from "@/features/dichoithoi/destination-gall
 import { DestinationPriceBreakdownEditor } from "@/features/dichoithoi/destination-price-breakdown-editor";
 import { DestinationPracticalNotesEditor } from "@/features/dichoithoi/destination-practical-notes-editor";
 import { DestinationEditorialReviewEditor } from "@/features/dichoithoi/destination-editorial-review-editor";
+import { DestinationMetaTitleEditor } from "@/features/dichoithoi/destination-meta-title-editor";
 import { DestinationExternalReviewUrlsEditor } from "@/features/dichoithoi/destination-external-review-urls-editor";
+import { DestinationAiExtractionPanel } from "@/features/dichoithoi/destination-ai-extraction-panel";
 import { DestinationHotelPanel } from "@/features/dichoithoi/destination-hotel-panel";
 import { DestinationTourPanel } from "@/features/dichoithoi/destination-tour-panel";
 import { Button, buttonClasses } from "@/shared/ui/button";
@@ -157,6 +159,8 @@ const CONTENT_STATE_STYLES: Record<DestinationContentState, string> = {
 };
 
 const SITE_BASE_URL = "https://dichoithoi.com";
+/** DiChoiThoi.Web chay local qua `dotnet run` (profile http/https) — Properties/launchSettings.json */
+const LOCAL_SITE_BASE_URL = "http://localhost:5176";
 
 const GATE_LABELS: Record<string, string> = {
   structure: "Cấu trúc bài viết",
@@ -547,12 +551,20 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         </div>
         <div className="flex flex-wrap gap-2">
           <a
+            href={`${LOCAL_SITE_BASE_URL}/diem-den/${d.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            Xem local ↗
+          </a>
+          <a
             href={`${SITE_BASE_URL}/diem-den/${d.slug}`}
             target="_blank"
             rel="noreferrer"
             className={buttonClasses({ variant: "secondary", size: "sm" })}
           >
-            Mở web ↗
+            Xem production ↗
           </a>
         </div>
       </div>
@@ -1105,6 +1117,15 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         />
       </Group>
 
+      {/* Meta title thu cong — them cach cho bulk-edit CSV */}
+      <Group title="Meta Title (thẻ <title> SEO)">
+        <DestinationMetaTitleEditor
+          slug={d.slug}
+          metaTitle={d.metaTitle}
+          onSaved={() => invalidate()}
+        />
+      </Group>
+
       {/* Link "Xem them tren" (destination-spec §2.2 khoi #10/#15, Phase 28.0) */}
       <Group title="Xem thêm trên (TripAdvisor/Facebook...)">
         <DestinationExternalReviewUrlsEditor
@@ -1112,6 +1133,11 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           externalReviewUrls={d.externalReviewUrls}
           onSaved={() => invalidate()}
         />
+      </Group>
+
+      {/* Trich xuat AI tu Google Maps + web tham khao (dichoithoi-destination-ai-extraction-plan §2.3) */}
+      <Group title="Trích xuất AI (Google Maps + web tham khảo)">
+        <DestinationAiExtractionPanel slug={d.slug} onAccepted={() => invalidate()} />
       </Group>
 
       {/* Khach san goi y (hotel-spec §6) */}

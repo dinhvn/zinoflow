@@ -121,6 +121,7 @@ export class PublishDestinationUseCase {
     );
     const { contentHash } = await this.siteDb.publishDestination({
       siteId,
+      title: article.title,
       thumbnail: destination.thumbnail,
       shortDescription: article.metadata.description,
       searchKeyword: article.metadata.searchKeyword ?? null,

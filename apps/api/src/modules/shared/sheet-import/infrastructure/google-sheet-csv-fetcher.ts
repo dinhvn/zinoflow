@@ -5,9 +5,11 @@ import type { SheetCsvFetcher } from "../ports/sheet-csv-fetcher.port";
 const FETCH_TIMEOUT_MS = 15_000;
 
 /**
- * Tai Google Sheet ve CSV qua endpoint gviz (khong can API key) — hoat dong khi
- * sheet duoc chia se "Bat ky ai co duong lien ket: Nguoi xem". Server fetch thay
- * client de tranh CORS. Chi chap nhan host docs.google.com (chong SSRF).
+ * Tai Google Sheet ve CSV qua endpoint export chinh thuc (khong can API key) —
+ * hoat dong khi sheet duoc chia se "Bat ky ai co duong lien ket: Nguoi xem".
+ * Server fetch thay client de tranh CORS. Chi chap nhan host docs.google.com
+ * (chong SSRF). Da tung dung endpoint gviz/tq nhung no gop sai du lieu header
+ * khi sheet co nhieu dong dong bang (freeze rows) — export?format=csv on dinh hon.
  */
 @Injectable()
 export class GoogleSheetCsvFetcher implements SheetCsvFetcher {
@@ -65,6 +67,6 @@ export class GoogleSheetCsvFetcher implements SheetCsvFetcher {
       /[?&#]gid=(\d+)/.exec(parsed.hash + parsed.search)?.[1] ??
       /[?&]gid=(\d+)/.exec(rawUrl)?.[1] ??
       "0";
-    return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`;
+    return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
   }
 }

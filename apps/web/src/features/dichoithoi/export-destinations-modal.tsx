@@ -61,8 +61,9 @@ export function ExportDestinationsModal({
       <div className="space-y-4">
         <p className="text-sm text-zinc-500">
           Xuất <strong>đúng bộ lọc đang xem</strong> trên trang danh sách (không giới hạn phân
-          trang). File CSV dùng <code>slug</code> làm khoá — dán vào Google Sheet, sửa xong dán lại
-          link để nhập lại (nút &quot;Nhập từ Sheet&quot;).
+          trang). File CSV dùng <code>slug</code> làm khoá, luôn kèm cột <code>name</code> để dễ
+          nhận biết dòng (chỉ tham khảo — sửa cột này trên sheet sẽ không được cập nhật lại) — dán
+          vào Google Sheet, sửa xong dán lại link để nhập lại (nút &quot;Nhập từ Sheet&quot;).
         </p>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

@@ -2,6 +2,7 @@ import type {
   AddressMapping,
   AddressMappingsQuery,
   AffiliateLinkItem,
+  DestinationOpeningHours,
   ExternalReviewUrlItem,
   GalleryItem,
   ListDestinationsQuery,
@@ -87,6 +88,7 @@ export interface DestinationMirrorRepository {
   setPracticalNotes(slug: string, practicalNotes: readonly PracticalNoteItem[]): Promise<void>;
   /** Cap nhat danh gia bien tap — sau khi nguoi dung duyet ban AI goi y (Phase 28.0) */
   setEditorialReview(slug: string, editorialReview: string | null): Promise<void>;
+  setMetaTitle(slug: string, metaTitle: string | null): Promise<void>;
   /** Cap nhat link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */
   setExternalReviewUrls(
     slug: string,
@@ -107,6 +109,10 @@ export interface DestinationMirrorRepository {
   markPublished(slug: string, contentHash: string): Promise<void>;
   /** Luu ban nhap bai viet (raw, chua validate) — pivot gop editor vao trang detail. */
   setDraftArticle(slug: string, draftArticle: Record<string, unknown>): Promise<void>;
+  /** Ghi de gio mo cua chuan hoa (dichoithoi-destination-ai-extraction-plan §2.2) */
+  setOpeningHours(slug: string, openingHours: DestinationOpeningHours | null): Promise<void>;
+  /** Ghi de tom tat nguon tham khao + cap nhat thoi diem (dichoithoi-destination-ai-extraction-plan §2.2) */
+  setAiReferenceSummary(slug: string, summary: string | null): Promise<void>;
   /** 34 tinh tu admin_provinces (seed dvhcvn) cho form/filter */
   listProvinces(): Promise<ProvinceOption[]>;
   /** Tra cuu dia chi cu->moi (admin_ward_mappings) — phan trang + loc */

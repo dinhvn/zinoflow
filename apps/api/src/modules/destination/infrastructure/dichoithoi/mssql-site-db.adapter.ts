@@ -167,6 +167,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     const rows = await this.runWithRetry<Array<{ ContentHash: string }>>(async (pool) => {
       const request = pool.request();
       request.input("siteId", input.siteId);
+      request.input("title", input.title);
       request.input("thumbnail", input.thumbnail);
       request.input("shortDescription", input.shortDescription);
       request.input("searchKeyword", input.searchKeyword);
@@ -203,18 +204,18 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
           Transport = @transport, Food = @food, HotelText = @hotel, Tip = @tip,
           FaqJson = @faqJson, TicketLinksJson = @ticketLinksJson,
           PriceBreakdownJson = @priceBreakdownJson, PracticalNotesJson = @practicalNotesJson,
-          GalleryJson = @galleryJson,
+          GalleryJson = @galleryJson, Title = @title,
           MetaTitle = @metaTitle, MetaDescription = @metaDescription
         WHERE DestinationId = @siteId;
         IF @@ROWCOUNT = 0
           INSERT INTO v2.DestinationContent
             (DestinationId, ContentHtml, OpeningTime, TicketPrice, Transport, Food, HotelText,
              Tip, FaqJson, TicketLinksJson, PriceBreakdownJson, PracticalNotesJson, GalleryJson,
-             MetaTitle, MetaDescription)
+             Title, MetaTitle, MetaDescription)
           VALUES
             (@siteId, @contentHtml, @openingTime, @ticketPrice, @transport, @food, @hotel,
              @tip, @faqJson, @ticketLinksJson, @priceBreakdownJson, @practicalNotesJson,
-             @galleryJson, @metaTitle, @metaDescription);
+             @galleryJson, @title, @metaTitle, @metaDescription);
 
         -- Quan he mentioned tu auto-link: thay toan bo dong auto cu cua nguon nay
         DELETE FROM v2.DestinationRelation
@@ -642,6 +643,20 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       return request.query(
         `UPDATE v2.DestinationContent SET EditorialReview = @editorialReview WHERE DestinationId = @siteId`,
       );
+    });
+  }
+
+  async updateMetaTitle(siteId: number, metaTitle: string | null): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("metaTitle", metaTitle);
+      return request.query(`
+        UPDATE v2.DestinationContent SET MetaTitle = @metaTitle WHERE DestinationId = @siteId;
+        IF @@ROWCOUNT = 0
+          INSERT INTO v2.DestinationContent (DestinationId, ContentHtml, MetaTitle)
+          VALUES (@siteId, N'', @metaTitle);
+      `);
     });
   }
 

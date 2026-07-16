@@ -138,7 +138,10 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   site có kiếm tiền; (2) CHỈ tự tìm cho nhu cầu ảnh minh hoạ CHUNG, KHÔNG
   tự tìm ảnh cho 1 địa điểm cụ thể có tên riêng (ảnh stock không đúng thật
   sự địa điểm đó, gây hiểu lầm). Ảnh tìm được luôn ở trạng thái `pending`,
-  chờ người dùng duyệt mới dùng được — không tự publish. Có kèm 1 Claude
+  chờ người dùng duyệt mới dùng được — không tự publish.
+  (16/07/2026: bước sinh từ khoá bản đầu giữ đơn giản — tách thuần từ tiêu
+  đề, KHÔNG dùng AI — nâng cấp AI Haiku chọn/sinh từ khoá tốt hơn là việc
+  hoãn lại, không phải rào cản chi phí.) Có kèm 1 Claude
   Code skill (`dichoithoi-find-content-images`) để chạy thủ công qua chat
   trước khi UI nút bấm trong app được build.
 - **Giải thích tính năng ngay tại chỗ dùng — RETROFIT CÒN NỢ (15/07/2026)**
@@ -150,15 +153,21 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   modal, trang bản đồ/Kanban dự kiến ở các plan khác, v.v.) CHƯA được bổ
   sung — làm dần khi đụng lại từng trang, hoặc khi người dùng yêu cầu làm
   hàng loạt, không tự ý sửa hết 1 lượt.
-- **Claude tóm tắt sẵn website tham khảo cho AI viết bài (15/07/2026, CHƯA
-  BUILD)** — plan ở `dichoithoi-reference-summary-plan.md`. Cơ chế "website
-  tham khảo" đã tồn tại thật (fetch trực tiếp mỗi lần generate, cắt 8.000
-  ký tự, không cache/tóm tắt) — plan này thêm cột `ai_reference_summary`
-  để Claude (chạy qua VS Code, không phải trong app) đọc kỹ + tóm tắt trước,
-  `buildSourceContext()` ưu tiên dùng tóm tắt thay vì fetch lại URL. 2 phần
-  tách biệt: Phần A (code thật: cột mới + sửa use-case + ghi chú trong UI)
-  và Phần B (Claude Code skill `dichoithoi-summarize-references`, đã tạo,
-  chạy độc lập được nhưng chưa có tác dụng thực tế cho tới khi Phần A xong).
+- **Claude trích xuất thông tin điểm đến từ Google Maps + web tham khảo,
+  người dùng duyệt (16/07/2026, CHƯA BUILD)** — plan ở
+  `dichoithoi-destination-ai-extraction-plan.md` (đã GỘP + thay thế plan
+  tóm tắt tham khảo cũ `dichoithoi-reference-summary-plan.md`). Người dùng
+  chỉ cung cấp tên điểm đến + link Google Maps + web tham khảo (dùng đúng
+  field `aiReferenceUrls` có sẵn) — Claude (qua VS Code, skill
+  `dichoithoi-extract-destination-info`) đọc, trích xuất tên/địa chỉ/SĐT/
+  website/giờ mở cửa/mô tả ngắn/link đánh giá ngoài/tóm tắt cho AI viết bài,
+  lưu vào bảng staging riêng `dichoithoi_destination_ai_extractions`; CMS
+  hiện bảng so sánh cũ/mới, tick chọn field muốn áp dụng rồi "Chấp nhận".
+  Nguyên tắc bắt buộc: KHÔNG dùng kiến thức nền của Claude cho dữ liệu CỨNG
+  (SĐT/giờ/địa chỉ/link ngoài) — chỉ điền nếu tìm thấy trong nguồn, nguồn
+  mâu thuẫn thì ghi rõ cả 2 không tự chọn. Giờ mở cửa lưu dạng JSON có cấu
+  trúc (không phải HTML) để sau này build được JSON-LD `openingHoursSpecification`
+  chuẩn SEO (phase riêng, cross-repo, chưa làm).
 - ✅ **DDL lệch — ĐÃ SỬA (07/2026, Phase 21.5)**: xoá cột chết `BookingUrl`
   khỏi `v2.Destination` (SQL Server + entity `V2Destination.cs` — đã xác nhận
   0 nơi đọc/ghi trước khi xoá) + thêm cột `ContactFacebook varchar(256)` còn

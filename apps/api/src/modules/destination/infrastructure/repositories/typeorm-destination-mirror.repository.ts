@@ -4,6 +4,7 @@ import { Repository } from "typeorm";
 import type {
   AddressMappingsQuery,
   AffiliateLinkItem,
+  DestinationOpeningHours,
   ExternalReviewUrlItem,
   GalleryItem,
   ListDestinationsQuery,
@@ -310,6 +311,10 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     await this.repo.update({ slug }, { editorialReview });
   }
 
+  async setMetaTitle(slug: string, metaTitle: string | null): Promise<void> {
+    await this.repo.update({ slug }, { metaTitle });
+  }
+
   async setExternalReviewUrls(
     slug: string,
     externalReviewUrls: readonly ExternalReviewUrlItem[],
@@ -344,6 +349,17 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
 
   async setDraftArticle(slug: string, draftArticle: Record<string, unknown>): Promise<void> {
     await this.repo.update({ slug }, { draftArticle: draftArticle as DestinationMirrorEntity["draftArticle"] });
+  }
+
+  async setOpeningHours(slug: string, openingHours: DestinationOpeningHours | null): Promise<void> {
+    await this.repo.update({ slug }, { openingHours });
+  }
+
+  async setAiReferenceSummary(slug: string, summary: string | null): Promise<void> {
+    await this.repo.update(
+      { slug },
+      { aiReferenceSummary: summary, aiReferenceSummaryUpdatedAt: summary ? new Date() : null },
+    );
   }
 
   async listProvinces(): Promise<ProvinceOption[]> {

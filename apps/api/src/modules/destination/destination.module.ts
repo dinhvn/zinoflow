@@ -41,6 +41,7 @@ import { UpdatePriceBreakdownUseCase } from "./application/use-cases/update-pric
 import { UpdatePracticalNotesUseCase } from "./application/use-cases/update-practical-notes.usecase";
 import { SuggestPracticalNotesUseCase } from "./application/use-cases/suggest-practical-notes.usecase";
 import { UpdateEditorialReviewUseCase } from "./application/use-cases/update-editorial-review.usecase";
+import { UpdateMetaTitleUseCase } from "./application/use-cases/update-meta-title.usecase";
 import { SuggestEditorialReviewUseCase } from "./application/use-cases/suggest-editorial-review.usecase";
 import { UpdateExternalReviewUrlsUseCase } from "./application/use-cases/update-external-review-urls.usecase";
 import { DestinationAffiliateReapplyService } from "./application/services/destination-affiliate-reapply.service";
@@ -70,6 +71,11 @@ import { RunDestinationDraftQualityChecksUseCase } from "./application/use-cases
 import { PreviewDestinationPublishHtmlUseCase } from "./application/use-cases/preview-destination-publish-html.usecase";
 import { AddDestinationGalleryImageUseCase } from "./application/use-cases/add-destination-gallery-image.usecase";
 import { UpdateDestinationGalleryUseCase } from "./application/use-cases/update-destination-gallery.usecase";
+import { GetDestinationAiExtractionUseCase } from "./application/use-cases/get-destination-ai-extraction.usecase";
+import { AcceptDestinationAiExtractionFieldsUseCase } from "./application/use-cases/accept-destination-ai-extraction-fields.usecase";
+import { DESTINATION_AI_EXTRACTION_REPOSITORY } from "./application/ports/destination-ai-extraction.repository";
+import { TypeOrmDestinationAiExtractionRepository } from "./infrastructure/repositories/typeorm-destination-ai-extraction.repository";
+import { DestinationAiExtractionEntity } from "./infrastructure/entities/destination-ai-extraction.entity";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
 import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
@@ -100,6 +106,7 @@ import {
       AdminProvinceEntity,
       AdminWardEntity,
       AdminWardMappingEntity,
+      DestinationAiExtractionEntity,
     ]),
   ],
   controllers: [DestinationsController, DestinationTagsController, DestinationTicketsController],
@@ -127,6 +134,7 @@ import {
     UpdatePracticalNotesUseCase,
     SuggestPracticalNotesUseCase,
     UpdateEditorialReviewUseCase,
+    UpdateMetaTitleUseCase,
     SuggestEditorialReviewUseCase,
     UpdateExternalReviewUrlsUseCase,
     DestinationAffiliateReapplyService,
@@ -148,6 +156,8 @@ import {
     PreviewDestinationPublishHtmlUseCase,
     AddDestinationGalleryImageUseCase,
     UpdateDestinationGalleryUseCase,
+    GetDestinationAiExtractionUseCase,
+    AcceptDestinationAiExtractionFieldsUseCase,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: CACHE_PURGE, useClass: HttpCachePurgeAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
@@ -157,6 +167,10 @@ import {
     { provide: DESTINATION_MIRROR_REPOSITORY, useClass: TypeOrmDestinationMirrorRepository },
     { provide: DESTINATION_RELATION_REPOSITORY, useClass: TypeOrmDestinationRelationRepository },
     { provide: DESTINATION_TICKET_REPOSITORY, useClass: TypeOrmDestinationTicketRepository },
+    {
+      provide: DESTINATION_AI_EXTRACTION_REPOSITORY,
+      useClass: TypeOrmDestinationAiExtractionRepository,
+    },
   ],
   exports: [DICHOITHOI_SITE_DB, DESTINATION_MIRROR_REPOSITORY],
 })

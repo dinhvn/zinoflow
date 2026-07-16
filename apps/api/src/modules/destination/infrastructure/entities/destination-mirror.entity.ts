@@ -94,6 +94,15 @@ export class DestinationMirrorEntity {
   @Column({ name: "editorial_review", type: "text", nullable: true })
   editorialReview!: string | null;
 
+  /**
+   * Meta title thu cong (the <title> SEO) — sua qua bulk-edit CSV, GHI THANG vao
+   * v2.DestinationContent.MetaTitle, KHONG qua draft_article/publish. Luu y: neu
+   * publish lai bai AI cho diem nay, MetaTitle se bi ghi de boi metadata.metaTitle
+   * cua draft (xem PublishDestinationUseCase) — can sua lai draft neu muon giu.
+   */
+  @Column({ name: "meta_title", type: "varchar", length: 150, nullable: true })
+  metaTitle!: string | null;
+
   /** Link TripAdvisor/Facebook/... nhap tay (Phase 28.0) — Google Maps rieng, xem google_maps_url */
   @Column({ name: "external_review_urls", type: "jsonb", default: () => "'[]'" })
   externalReviewUrls!: ExternalReviewUrlItem[];
@@ -169,4 +178,25 @@ export class DestinationMirrorEntity {
   /** Thu vien anh (khac thumbnail don) — {path, altText, caption, credit}[], thu tu = index mang. */
   @Column({ type: "jsonb", default: () => "'[]'" })
   gallery!: GalleryItem[];
+
+  /**
+   * Gio mo cua chuan hoa (dichoithoi-destination-ai-extraction-plan §2.2) — note = hien
+   * thi nhanh, periods = chuan hoa cho JSON-LD sau nay (Giai doan 4, cross-repo). Chi
+   * ghi qua buoc "Chap nhan" trich xuat AI, khong bi extraction job ghi truc tiep.
+   */
+  @Column({ name: "opening_hours", type: "jsonb", nullable: true })
+  openingHours!: {
+    note: string;
+    periods: Array<{ days: string[]; opens: string; closes: string }>;
+  } | null;
+
+  /**
+   * Tom tat tong hop tu nguon tham khao (AI trich xuat, nguoi dung duyet) — dung THAY
+   * cho viec fetch tung URL moi lan tao job (buildSourceContext), spec §2.2.
+   */
+  @Column({ name: "ai_reference_summary", type: "text", nullable: true })
+  aiReferenceSummary!: string | null;
+
+  @Column({ name: "ai_reference_summary_updated_at", type: "timestamptz", nullable: true })
+  aiReferenceSummaryUpdatedAt!: Date | null;
 }

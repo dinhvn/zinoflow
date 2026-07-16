@@ -94,6 +94,7 @@ export class ListDestinationsUseCase {
       priceBreakdown: e.priceBreakdown,
       practicalNotes: e.practicalNotes,
       editorialReview: e.editorialReview,
+      metaTitle: e.metaTitle,
       externalReviewUrls: e.externalReviewUrls,
       gallery: e.gallery,
       hotelGroupId: e.hotelGroupId,

@@ -171,21 +171,28 @@ export class CreateDestinationJobUseCase {
       parts.push(request.userNotes.trim());
     }
 
-    // Nguon tham khao theo truong (spec §3.6): fetch text + ghi ro URL de AI chu
-    // thich nguon. 1 nguon loi khong lam chet job — ghi chu de nguoi duyet biet.
-    for (const ref of request.referenceUrls ?? []) {
-      try {
-        const text = await this.referenceFetcher.fetchText(ref.url);
-        parts.push("", `## Nguồn tham khảo cho "${ref.label}" (${ref.url})`);
-        parts.push(text || "(trang không có nội dung text)");
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        this.logger.warn(`Bo qua nguon tham khao ${ref.url}: ${message}`);
-        parts.push(
-          "",
-          `## Nguồn tham khảo cho "${ref.label}" (${ref.url})`,
-          "(không tải được trang — dữ liệu trường này cần kiểm tra tay)",
-        );
+    if (destination.aiReferenceSummary) {
+      // Da co tom tat tu skill trich xuat AI (dichoithoi-destination-ai-extraction-plan
+      // §2.2) — dung truc tiep, KHONG fetch lai tung URL (tiet kiem, tranh trung lap).
+      parts.push("", "## Tóm tắt nguồn tham khảo (đã trích xuất, đã duyệt)");
+      parts.push(destination.aiReferenceSummary);
+    } else {
+      // Chua co tom tat san: fetch text tung URL + ghi ro nguon de AI chu thich (spec
+      // §3.6). 1 nguon loi khong lam chet job — ghi chu de nguoi duyet biet.
+      for (const ref of request.referenceUrls ?? []) {
+        try {
+          const text = await this.referenceFetcher.fetchText(ref.url);
+          parts.push("", `## Nguồn tham khảo cho "${ref.label}" (${ref.url})`);
+          parts.push(text || "(trang không có nội dung text)");
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          this.logger.warn(`Bo qua nguon tham khao ${ref.url}: ${message}`);
+          parts.push(
+            "",
+            `## Nguồn tham khảo cho "${ref.label}" (${ref.url})`,
+            "(không tải được trang — dữ liệu trường này cần kiểm tra tay)",
+          );
+        }
       }
     }
 
