@@ -76,6 +76,10 @@ import { AcceptDestinationAiExtractionFieldsUseCase } from "./application/use-ca
 import { DESTINATION_AI_EXTRACTION_REPOSITORY } from "./application/ports/destination-ai-extraction.repository";
 import { TypeOrmDestinationAiExtractionRepository } from "./infrastructure/repositories/typeorm-destination-ai-extraction.repository";
 import { DestinationAiExtractionEntity } from "./infrastructure/entities/destination-ai-extraction.entity";
+import { RecomputeClusterDistancesUseCase } from "./application/use-cases/recompute-cluster-distances.usecase";
+import { CLUSTER_DISTANCE_REPOSITORY } from "./application/ports/cluster-distance.repository";
+import { TypeOrmClusterDistanceRepository } from "./infrastructure/repositories/typeorm-cluster-distance.repository";
+import { ClusterDistanceEntity } from "./infrastructure/entities/cluster-distance.entity";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
 import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
@@ -107,6 +111,7 @@ import {
       AdminWardEntity,
       AdminWardMappingEntity,
       DestinationAiExtractionEntity,
+      ClusterDistanceEntity,
     ]),
   ],
   controllers: [DestinationsController, DestinationTagsController, DestinationTicketsController],
@@ -158,6 +163,7 @@ import {
     UpdateDestinationGalleryUseCase,
     GetDestinationAiExtractionUseCase,
     AcceptDestinationAiExtractionFieldsUseCase,
+    RecomputeClusterDistancesUseCase,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: CACHE_PURGE, useClass: HttpCachePurgeAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
@@ -171,6 +177,7 @@ import {
       provide: DESTINATION_AI_EXTRACTION_REPOSITORY,
       useClass: TypeOrmDestinationAiExtractionRepository,
     },
+    { provide: CLUSTER_DISTANCE_REPOSITORY, useClass: TypeOrmClusterDistanceRepository },
   ],
   exports: [DICHOITHOI_SITE_DB, DESTINATION_MIRROR_REPOSITORY],
 })

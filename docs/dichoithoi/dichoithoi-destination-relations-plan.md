@@ -530,8 +530,22 @@ qua vì các giai đoạn sau đều cần ít nhất 1 trong số này:
   sạch, jest 364/364 pass, đã chạy migration thật trên LocalDB `dichoithoi_dev`
   + Postgres dev, Playwright xác nhận nhóm "Nổi bật" trang Đà Lạt vẫn hiện
   đúng 2 điểm (Hồ Xuân Hương, Thung lũng tình yêu) sau khi đổi ngưỡng.
-- **A2. Bảng `dichoithoi_cluster_distances` + job tính** (§1.2) — độc lập,
-  chỉ cần toạ độ trung tâm cụm/tỉnh đã có sẵn.
+- ✅ **A2. Bảng `dichoithoi_cluster_distances` + job tính — ĐÃ XONG (16/07/2026)**
+  (§1.2) — độc lập, chỉ cần toạ độ trung tâm cụm/tỉnh đã có sẵn. Bảng mới
+  (`cluster_a_slug, cluster_b_slug, distance_meters`, PK ghép + CHECK
+  `cluster_a_slug < cluster_b_slug` để không lưu trùng 2 chiều — migration
+  `1782170000000-DichoithoiClusterDistances.ts`), `RecomputeClusterDistancesUseCase`
+  quét toàn bộ node `kind IN (province,cluster)` có lat/lng, tính haversine
+  từng cặp, ghi đè toàn bảng (`replaceAll`). Endpoint
+  `POST /destinations/recompute-cluster-distances` + nút "Tính lại khoảng
+  cách cụm/tỉnh" trong khối "Công cụ" (`apps/web/src/app/dichoithoi/page.tsx`),
+  cùng hàng với "Tính lại khối liên quan" — 2 nút TÁCH RIÊNG theo đúng thiết
+  kế §5.5 (khác mục đích, không gộp). Verify: `tsc --noEmit` (api+web) sạch,
+  jest 366/366 pass (2 test mới: chỉ tính node province/cluster có lat/lng,
+  bỏ qua poi/node thiếu toạ độ; trường hợp 0 node hợp lệ không lỗi), chạy
+  thật trên Postgres dev — 24 node → 276 cặp (đúng C(24,2)), xác nhận qua
+  API (`curl`) và qua nút CMS (Playwright: "✅ Khoảng cách cụm/tỉnh: 24 node,
+  ghi 276 cặp").
 - ✅ **A3. Nối `ArticleDestinationMap` vào khối liên quan — ĐÃ XONG (16/07/2026)**
   (mục 3) — độc lập hoàn toàn với mọi phần còn lại của plan này. Thêm field
   `DestinationExtrasModel.RelatedArticles` (distinct theo bài viết, topic bất

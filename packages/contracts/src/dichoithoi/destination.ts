@@ -427,6 +427,18 @@ export const recomputeRelatedReportSchema = z.object({
 });
 export type RecomputeRelatedReport = z.infer<typeof recomputeRelatedReportSchema>;
 
+/** Bao cao tinh lai bang dichoithoi_cluster_distances (relations-plan §1.2, Giai doan A2) */
+export const recomputeClusterDistancesReportSchema = z.object({
+  /** So node cap tinh/cum (kind IN province,cluster) co lat/lng dung de tinh */
+  nodes: z.number().int(),
+  /** So cap khoang cach da ghi (toi da C(nodes,2)) */
+  pairs: z.number().int(),
+  durationMs: z.number().int(),
+});
+export type RecomputeClusterDistancesReport = z.infer<
+  typeof recomputeClusterDistancesReportSchema
+>;
+
 /** 1 diem den lien quan toi diem dang xem (cho trang chi tiet §7.3 tab Quan he) */
 export const relatedDestinationRefSchema = z.object({
   slug: z.string(),

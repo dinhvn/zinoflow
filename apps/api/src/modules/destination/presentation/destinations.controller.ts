@@ -67,6 +67,7 @@ import {
   type ListDestinationsResponse,
   type PublishDestinationResult,
   type RecomputeRelatedReport,
+  type RecomputeClusterDistancesReport,
   type RelinkAllRequest,
   type RelinkAllReport,
   type RenameDestinationSlugRequest,
@@ -141,6 +142,7 @@ import { GetDestinationAiExtractionUseCase } from "../application/use-cases/get-
 import { AcceptDestinationAiExtractionFieldsUseCase } from "../application/use-cases/accept-destination-ai-extraction-fields.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
+import { RecomputeClusterDistancesUseCase } from "../application/use-cases/recompute-cluster-distances.usecase";
 import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
 import {
   SHEET_CSV_FETCHER,
@@ -196,6 +198,7 @@ export class DestinationsController {
     private readonly getAiExtraction: GetDestinationAiExtractionUseCase,
     private readonly acceptAiExtractionFields: AcceptDestinationAiExtractionFieldsUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
+    private readonly recomputeClusterDistancesUseCase: RecomputeClusterDistancesUseCase,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
     @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
     @Inject(JOB_QUEUE) private readonly jobQueue: JobQueue,
@@ -449,6 +452,12 @@ export class DestinationsController {
     const startedAt = Date.now();
     const result = await this.recomputeRelated.recomputeAll();
     return { ...result, durationMs: Date.now() - startedAt };
+  }
+
+  /** Tinh lai khoang cach cum/tinh (relations-plan §1.2, Giai doan A2) */
+  @Post("recompute-cluster-distances")
+  recomputeClusterDistances(): Promise<RecomputeClusterDistancesReport> {
+    return this.recomputeClusterDistancesUseCase.execute();
   }
 
   /**

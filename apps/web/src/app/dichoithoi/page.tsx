@@ -8,6 +8,7 @@ import {
   listDestinationsResponseSchema,
   migrateDestinationImagesReportSchema,
   recomputeRelatedReportSchema,
+  recomputeClusterDistancesReportSchema,
   refreshAllDynamicBlocksReportSchema,
   relinkAllReportSchema,
   syncDestinationsResultSchema,
@@ -18,6 +19,7 @@ import {
   type DestinationProductionState,
   type DestinationSortBy,
   type RecomputeRelatedReport,
+  type RecomputeClusterDistancesReport,
   type RefreshAllDynamicBlocksReport,
   type RelinkAllReport,
   type SyncDestinationsResult,
@@ -179,6 +181,8 @@ export default function DichoithoiPage() {
   const [relinkReport, setRelinkReport] = useState<RelinkAllReport | null>(null);
   const [relinkApplyQueued, setRelinkApplyQueued] = useState(false);
   const [relatedReport, setRelatedReport] = useState<RecomputeRelatedReport | null>(null);
+  const [clusterDistancesReport, setClusterDistancesReport] =
+    useState<RecomputeClusterDistancesReport | null>(null);
   const relinkMutation = useMutation({
     mutationFn: async () =>
       relinkAllReportSchema.parse(await apiSend("POST", "/destinations/relink", { dryRun: true })),
@@ -209,6 +213,18 @@ export default function DichoithoiPage() {
     },
     onError: (err) =>
       setSyncError(err instanceof Error ? err.message : "Tính lại khối liên quan thất bại"),
+  });
+  const recomputeClusterDistancesMutation = useMutation({
+    mutationFn: async () =>
+      recomputeClusterDistancesReportSchema.parse(
+        await apiSend("POST", "/destinations/recompute-cluster-distances", {}),
+      ),
+    onSuccess: (report) => {
+      setClusterDistancesReport(report);
+      setSyncError(null);
+    },
+    onError: (err) =>
+      setSyncError(err instanceof Error ? err.message : "Tính lại khoảng cách cụm/tỉnh thất bại"),
   });
 
   const [refreshBlocksReport, setRefreshBlocksReport] = useState<RefreshAllDynamicBlocksReport | null>(
@@ -466,6 +482,15 @@ export default function DichoithoiPage() {
           </Button>
           <Button
             size="sm"
+            loading={recomputeClusterDistancesMutation.isPending}
+            onClick={() => recomputeClusterDistancesMutation.mutate()}
+          >
+            {recomputeClusterDistancesMutation.isPending
+              ? "Đang tính..."
+              : "Tính lại khoảng cách cụm/tỉnh"}
+          </Button>
+          <Button
+            size="sm"
             loading={refreshAllBlocksMutation.isPending}
             onClick={() => refreshAllBlocksMutation.mutate()}
           >
@@ -529,6 +554,13 @@ export default function DichoithoiPage() {
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             ✅ Khối liên quan: quét {relatedReport.scanned} bài, cập nhật {relatedReport.updated}{" "}
             bài ({(relatedReport.durationMs / 1000).toFixed(1)}s).
+          </p>
+        )}
+        {clusterDistancesReport && (
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            ✅ Khoảng cách cụm/tỉnh: {clusterDistancesReport.nodes} node, ghi{" "}
+            {clusterDistancesReport.pairs} cặp (
+            {(clusterDistancesReport.durationMs / 1000).toFixed(1)}s).
           </p>
         )}
         {refreshBlocksReport && (
