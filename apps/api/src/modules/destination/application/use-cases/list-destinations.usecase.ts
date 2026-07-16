@@ -98,7 +98,7 @@ export class ListDestinationsUseCase {
       externalReviewUrls: e.externalReviewUrls,
       gallery: e.gallery,
       hotelGroupId: e.hotelGroupId,
-      isFeatured: e.isFeatured,
+      priority: e.priority,
       contentTier: e.contentTier,
       siteStatus: e.siteStatus,
       // contentState + productionState do repository.list() suy san (co status job)

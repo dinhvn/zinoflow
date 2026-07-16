@@ -101,7 +101,7 @@ export interface SiteDestinationMeta {
   contactPhone: string | null;
   contactWebsite: string | null;
   hotelGroupId: string | null;
-  isFeatured: boolean;
+  priority: number;
   /** flagship | standard | null — chi y nghia voi kind IN (province, cluster), Phase 25 */
   contentTier: "flagship" | "standard" | null;
 }

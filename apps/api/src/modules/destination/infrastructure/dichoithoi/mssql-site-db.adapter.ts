@@ -38,7 +38,7 @@ const TAXONOMY_TABLE_BY_TARGET: Record<"group" | "type" | "province", string> = 
 };
 
 const SORT_COLUMN: Record<DestinationCardFilter["sort"], string> = {
-  featured: "d.IsFeatured DESC, d.[Order] ASC",
+  featured: "d.Priority ASC, d.[Order] ASC",
   newest: "d.CreatedAt DESC",
   order: "d.[Order] ASC",
 };
@@ -75,7 +75,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       SELECT
         d.Id, d.Slug, d.Kind, d.Name, d.ShortDescription, d.Thumbnail,
         d.Lat, d.Lng, d.GoogleMapsUrl, d.AddressNew, d.AddressOld, d.ContactPhone, d.ContactWebsite,
-        d.HotelGroupId, d.IsFeatured, d.ContentTier, d.[Order], d.DistanceFromCenter,
+        d.HotelGroupId, d.Priority, d.ContentTier, d.[Order], d.DistanceFromCenter,
         d.Status, d.ContentSource, d.UpdatedAt,
         p.Code AS ProvinceCode,
         par.Slug AS ParentSlug,
@@ -103,7 +103,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       contactPhone: (r.ContactPhone as string | null) ?? null,
       contactWebsite: (r.ContactWebsite as string | null) ?? null,
       hotelGroupId: (r.HotelGroupId as string | null) ?? null,
-      isFeatured: Boolean(r.IsFeatured),
+      priority: Number(r.Priority),
       contentTier: (r.ContentTier as "flagship" | "standard" | null) ?? null,
       order: Number(r.Order ?? 0),
       distanceFromCenter: r.DistanceFromCenter === null ? null : Number(r.DistanceFromCenter),
@@ -319,11 +319,11 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         INSERT INTO v2.Destination
           (Slug, Kind, ParentId, ProvinceId, Name, NameUnaccented, ShortDescription, Thumbnail,
            Lat, Lng, GoogleMapsUrl, AddressNew, AddressOld, ContactPhone, ContactWebsite,
-           HotelGroupId, IsFeatured, ContentTier, Status, ContentSource)
+           HotelGroupId, Priority, ContentTier, Status, ContentSource)
         VALUES
           (@slug, @kind, @parentId, @provinceId, @name, @nameUnaccented,
            COALESCE(@shortDescription, N''), @thumbnail, @lat, @lng, @googleMapsUrl, @addressNew, @addressOld,
-           @contactPhone, @contactWebsite, @hotelGroupId, @isFeatured, @contentTier, 1, 1);
+           @contactPhone, @contactWebsite, @hotelGroupId, @priority, @contentTier, 1, 1);
         SELECT CAST(SCOPE_IDENTITY() AS int) AS SiteId;
       `);
       return result.recordset;
@@ -348,7 +348,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
           ShortDescription = COALESCE(@shortDescription, N''), Thumbnail = @thumbnail,
           Lat = @lat, Lng = @lng, GoogleMapsUrl = @googleMapsUrl, AddressNew = @addressNew, AddressOld = @addressOld,
           ContactPhone = @contactPhone, ContactWebsite = @contactWebsite,
-          HotelGroupId = @hotelGroupId, IsFeatured = @isFeatured, ContentTier = @contentTier,
+          HotelGroupId = @hotelGroupId, Priority = @priority, ContentTier = @contentTier,
           UpdatedAt = SYSUTCDATETIME()
         WHERE Id = @siteId;
       `);
@@ -399,7 +399,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     request.input("contactPhone", meta.contactPhone);
     request.input("contactWebsite", meta.contactWebsite);
     request.input("hotelGroupId", meta.hotelGroupId);
-    request.input("isFeatured", meta.isFeatured);
+    request.input("priority", meta.priority);
     request.input("contentTier", meta.contentTier);
     return request;
   }

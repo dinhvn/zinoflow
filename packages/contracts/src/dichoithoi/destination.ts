@@ -215,7 +215,9 @@ export const destinationMirrorSchema = z.object({
   /** Thu vien anh (khac thumbnail don) — website render thanh dai cuon o hero + duoi hero */
   gallery: z.array(galleryItemSchema),
   hotelGroupId: z.string().nullable(),
-  isFeatured: z.boolean(),
+  /** Do uu tien tay boi admin, 1-5 (1=cao nhat, mac dinh 3) — thay IsFeatured cu
+   * (dichoithoi-destination-relations-plan.md §1.1, gop voi y tuong "do uu tien" moi). */
+  priority: z.number().int().min(1).max(5),
   /** Chi y nghia voi kind IN (province, cluster) — null = chua gan (mac dinh nhu Standard) */
   contentTier: destinationContentTierSchema.nullable(),
   /** 0 draft, 1 published, 2 hidden — theo cot Status SQL Server */
@@ -513,7 +515,7 @@ export const upsertDestinationRequestSchema = z.object({
   contactPhone: z.string().max(32).nullable().optional(),
   contactWebsite: z.string().max(256).nullable().optional(),
   hotelGroupId: z.string().max(50).nullable().optional(),
-  isFeatured: z.boolean().optional(),
+  priority: z.number().int().min(1).max(5).optional(),
   contentTier: destinationContentTierSchema.nullable().optional(),
 });
 export type UpsertDestinationRequest = z.infer<typeof upsertDestinationRequestSchema>;
@@ -560,7 +562,7 @@ export const destinationImportRowSchema = z.object({
   contactPhone: z.string().max(32).nullable().optional(),
   contactWebsite: z.string().max(256).nullable().optional(),
   hotelGroupId: z.string().max(50).nullable().optional(),
-  isFeatured: z.boolean().optional(),
+  priority: z.number().int().min(1).max(5).optional(),
   contentTier: destinationContentTierSchema.nullable().optional(),
   aiNotes: z.string().max(10_000).nullable().optional(),
   referenceUrls: z.array(referenceUrlSchema).max(5).optional(),
@@ -584,7 +586,7 @@ export type ImportDestinationsResult = z.infer<typeof importDestinationsResultSc
 /**
  * Sua nhanh nhieu diem den cung luc qua export/import CSV (Google Sheet) — CHI
  * field lien he/tham khao, khong dong field cau truc (kind/parentSlug/
- * provinceCode/isFeatured/contentTier — doi sai co the gay tac dung phu tinh
+ * provinceCode/priority/contentTier — doi sai co the gay tac dung phu tinh
  * lai quan he cha-con/related). Khop theo slug, KHONG tao moi (khac import
  * thuong o tren) — slug khong ton tai la loi.
  */

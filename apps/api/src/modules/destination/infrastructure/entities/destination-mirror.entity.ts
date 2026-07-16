@@ -110,8 +110,9 @@ export class DestinationMirrorEntity {
   @Column({ name: "hotel_group_id", type: "varchar", length: 50, nullable: true })
   hotelGroupId!: string | null;
 
-  @Column({ name: "is_featured", type: "boolean", default: false })
-  isFeatured!: boolean;
+  /** Do uu tien tay boi admin, 1-5 (1=cao nhat), thay is_featured cu (relations-plan §1.1) */
+  @Column({ type: "smallint", default: 3 })
+  priority!: number;
 
   /** flagship | standard | null — chi y nghia voi kind IN (province, cluster), Phase 25 */
   @Column({ name: "content_tier", type: "varchar", length: 16, nullable: true })

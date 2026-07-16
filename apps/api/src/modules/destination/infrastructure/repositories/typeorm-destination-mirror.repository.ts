@@ -93,7 +93,7 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       contactPhone: meta.contactPhone,
       contactWebsite: meta.contactWebsite,
       hotelGroupId: meta.hotelGroupId,
-      isFeatured: meta.isFeatured,
+      priority: meta.priority,
       contentTier: meta.contentTier,
     };
   }
@@ -222,7 +222,7 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       contactPhone: row.contactPhone,
       contactWebsite: row.contactWebsite,
       hotelGroupId: row.hotelGroupId,
-      isFeatured: row.isFeatured,
+      priority: row.priority,
       contentTier: row.contentTier,
       order: row.order,
       distanceFromCenter: row.distanceFromCenter?.toString() ?? null,

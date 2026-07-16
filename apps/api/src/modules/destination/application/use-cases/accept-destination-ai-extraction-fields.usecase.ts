@@ -65,7 +65,7 @@ export class AcceptDestinationAiExtractionFieldsUseCase {
       contactPhone: destination.contactPhone,
       contactWebsite: destination.contactWebsite,
       hotelGroupId: destination.hotelGroupId,
-      isFeatured: destination.isFeatured,
+      priority: destination.priority,
       contentTier: destination.contentTier,
     };
     let metaChanged = false;
@@ -172,7 +172,7 @@ export class AcceptDestinationAiExtractionFieldsUseCase {
           contactPhone: meta.contactPhone,
           contactWebsite: meta.contactWebsite,
           hotelGroupId: meta.hotelGroupId,
-          isFeatured: meta.isFeatured,
+          priority: meta.priority,
           contentTier: meta.contentTier,
         });
       }

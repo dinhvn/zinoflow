@@ -58,7 +58,7 @@ BEGIN
     ContactWebsite  varchar(256)  NULL,
     ContactFacebook varchar(256)  NULL,          -- link Fanpage chinh chu (them 07/2026, database-redesign §4.2)
     HotelGroupId    nvarchar(50)  NULL,
-    IsFeatured      bit NOT NULL DEFAULT 0,
+    Priority        tinyint NOT NULL DEFAULT 3,   -- 1-5, 1=cao nhat, thay IsFeatured cu (relations-plan §1.1)
     ContentTier     varchar(16)   NULL,           -- flagship|standard, chi Kind IN (1,2) (content-seo-ux-plan §10.6.1)
     [Order]         int NOT NULL DEFAULT 0,
     Status          tinyint NOT NULL DEFAULT 1, -- 0 draft, 1 published, 2 hidden
@@ -78,8 +78,8 @@ BEGIN
     INCLUDE (Slug, Name, ShortDescription, Thumbnail, PrimaryTypeId, [Order]);
   CREATE INDEX IX_v2Destination_Parent ON v2.Destination(ParentId, Status)
     INCLUDE (Slug, Name, ShortDescription, Thumbnail, [Order]);
-  CREATE INDEX IX_v2Destination_Featured ON v2.Destination(IsFeatured, [Order])
-    WHERE IsFeatured = 1;
+  CREATE INDEX IX_v2Destination_Priority ON v2.Destination(Priority, [Order])
+    WHERE Priority <= 2;
 END
 GO
 -- Phase 21.5 (07/2026, audit sau commit cbd15c9), idempotent cho install cu
@@ -102,6 +102,36 @@ GO
 -- nhap tay Lat/Lng truc tiep qua form. Idempotent cho install cu.
 IF COL_LENGTH('v2.Destination', 'GoogleMapsUrl') IS NULL
   ALTER TABLE v2.Destination ADD GoogleMapsUrl nvarchar(500) NULL;
+GO
+-- Gop IsFeatured (bool) thanh Priority (tinyint 1-5, 1=cao nhat, mac dinh 3) —
+-- dichoithoi-destination-relations-plan.md §1.1 (Giai doan A1). Backfill:
+-- IsFeatured=1 -> Priority=1, IsFeatured=0 -> Priority=3. Idempotent cho
+-- install cu da co IsFeatured tu truoc. Tach GO truoc/sau ALTER ADD vi SQL
+-- Server khong cho tham chieu cot moi them cung batch (deferred name resolution).
+IF COL_LENGTH('v2.Destination', 'IsFeatured') IS NOT NULL AND COL_LENGTH('v2.Destination', 'Priority') IS NULL
+  ALTER TABLE v2.Destination ADD Priority tinyint NOT NULL DEFAULT 3;
+GO
+IF COL_LENGTH('v2.Destination', 'IsFeatured') IS NOT NULL
+BEGIN
+  UPDATE v2.Destination SET Priority = 1 WHERE IsFeatured = 1;
+  IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_v2Destination_Featured')
+    DROP INDEX IX_v2Destination_Featured ON v2.Destination;
+  -- Phai xoa DEFAULT CONSTRAINT truoc — ten constraint tu sinh (khong doan
+  -- truoc duoc), tra qua sys.default_constraints roi DROP dong bang dynamic SQL.
+  DECLARE @dfIsFeatured nvarchar(256) = (
+    SELECT dc.name
+    FROM sys.default_constraints dc
+    JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id
+    WHERE dc.parent_object_id = OBJECT_ID('v2.Destination') AND c.name = 'IsFeatured'
+  );
+  IF @dfIsFeatured IS NOT NULL
+    EXEC('ALTER TABLE v2.Destination DROP CONSTRAINT ' + @dfIsFeatured);
+  ALTER TABLE v2.Destination DROP COLUMN IsFeatured;
+END
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_v2Destination_Priority')
+  CREATE INDEX IX_v2Destination_Priority ON v2.Destination(Priority, [Order])
+    WHERE Priority <= 2;
 GO
 
 /* ===== DestinationContent — bang lanh 1-1 (redesign §4.3) ===== */

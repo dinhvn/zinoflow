@@ -31,8 +31,10 @@ export class GetCoverageScoresUseCase {
     const taggedSlugs = new Set(
       tagAssignments.filter((a) => a.tagSlugs.length > 0).map((a) => a.destinationSlug),
     );
+    // priority <= 2 = "noi bat" (thay isFeatured cu — relations-plan §1.1, dong bo nguong
+    // voi Destination/Detail.cshtml ben dichoithoi).
     const featuredChildBySlug = new Set(
-      published.filter((m) => m.isFeatured && m.parentSlug).map((m) => m.parentSlug as string),
+      published.filter((m) => m.priority <= 2 && m.parentSlug).map((m) => m.parentSlug as string),
     );
     const articleCoveredSlugSet = new Set(articleCoveredSlugs);
 

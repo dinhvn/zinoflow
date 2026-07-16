@@ -120,7 +120,7 @@ export class GetDestinationDetailUseCase {
       externalReviewUrls: entity.externalReviewUrls,
       gallery: entity.gallery,
       hotelGroupId: entity.hotelGroupId,
-      isFeatured: entity.isFeatured,
+      priority: entity.priority,
       contentTier: entity.contentTier,
       siteStatus: entity.siteStatus,
       contentState: deriveContentState({
@@ -207,7 +207,7 @@ function toCandidate(d: DestinationMirrorEntity): RelatedCandidate {
     lat: d.lat === null ? null : Number(d.lat),
     lng: d.lng === null ? null : Number(d.lng),
     siteStatus: d.siteStatus,
-    isFeatured: d.isFeatured,
+    priority: d.priority,
     order: d.order,
     distanceFromCenter: d.distanceFromCenter === null ? null : Number(d.distanceFromCenter),
   };

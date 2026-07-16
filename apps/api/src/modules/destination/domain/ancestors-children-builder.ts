@@ -20,8 +20,9 @@ export interface ChildRef {
   name: string;
   thumbnail: string | null;
   kind: RelatedCandidate["kind"];
-  /** Phase 28.2 — 2 lop Diem tham quan trang Flagship (content-seo-ux-plan §10.6.2 khoi 5) */
-  isFeatured: boolean;
+  /** Do uu tien tay 1-5, 1=cao nhat — 2 lop Diem tham quan trang Flagship, lop 1 = priority <= 2
+   * (content-seo-ux-plan §10.6.2 khoi 5, thay IsFeatured cu — relations-plan §1.1) */
+  priority: number;
   order: number;
   distanceFromCenter: number | null;
 }
@@ -66,7 +67,7 @@ export function buildChildren(
       name: c.name,
       thumbnail: c.thumbnail,
       kind: c.kind,
-      isFeatured: c.isFeatured,
+      priority: c.priority,
       order: c.order,
       distanceFromCenter: c.distanceFromCenter,
     }))

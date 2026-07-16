@@ -202,7 +202,7 @@ function detailToFormValues(d: DestinationDetail): DestinationMetaValues {
     contactPhone: d.contactPhone ?? "",
     contactWebsite: d.contactWebsite ?? "",
     hotelGroupId: d.hotelGroupId ?? "",
-    isFeatured: d.isFeatured,
+    priority: d.priority,
     contentTier: d.contentTier ?? "",
   };
 }

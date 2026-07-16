@@ -26,7 +26,7 @@ function fakeMirror(overrides: Partial<DestinationMirrorEntity> = {}): Destinati
     editorialReview: null,
     externalReviewUrls: [],
     hotelGroupId: null,
-    isFeatured: false,
+    priority: 3,
     contentTier: null,
     siteStatus: 1,
     contentSource: 1,
@@ -79,7 +79,7 @@ describe("GetCoverageScoresUseCase (destination-spec §2.2.2)", () => {
   it("cluster ContentTier=flagship, co con IsFeatured -> tinh hasFeaturedChild true", async () => {
     const mirrors = [
       fakeMirror({ slug: "vung", siteId: 1, kind: "cluster", name: "Vùng", contentTier: "flagship" }),
-      fakeMirror({ slug: "con-noi-bat", siteId: 2, parentSlug: "vung", isFeatured: true, name: "Con" }),
+      fakeMirror({ slug: "con-noi-bat", siteId: 2, parentSlug: "vung", priority: 1, name: "Con" }),
     ];
     const mirrorRepo = { findAll: async () => mirrors } as unknown as DestinationMirrorRepository;
     const siteDb = {

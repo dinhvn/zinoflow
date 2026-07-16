@@ -46,7 +46,7 @@ export interface DestinationMetadataInput {
   contactPhone: string | null;
   contactWebsite: string | null;
   hotelGroupId: string | null;
-  isFeatured: boolean;
+  priority: number;
   contentTier: "flagship" | "standard" | null;
 }
 

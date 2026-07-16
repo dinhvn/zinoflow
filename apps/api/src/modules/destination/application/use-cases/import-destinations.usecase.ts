@@ -91,7 +91,7 @@ export class ImportDestinationsUseCase {
       contactPhone: row.contactPhone ?? null,
       contactWebsite: row.contactWebsite ?? null,
       hotelGroupId: row.hotelGroupId ?? null,
-      isFeatured: row.isFeatured ?? false,
+      priority: row.priority ?? 3,
       contentTier: row.contentTier ?? null,
     };
   }

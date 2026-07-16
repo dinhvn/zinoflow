@@ -49,7 +49,8 @@ export interface DestinationMetaValues {
   contactPhone: string;
   contactWebsite: string;
   hotelGroupId: string;
-  isFeatured: boolean;
+  /** Do uu tien tay 1-5, 1=cao nhat, mac dinh 3 — thay isFeatured cu (relations-plan §1.1) */
+  priority: number;
   /** "" = chua gan (mac dinh nhu Standard) — chi y nghia voi kind province/cluster */
   contentTier: "" | "flagship" | "standard";
 }
@@ -70,7 +71,7 @@ export const EMPTY_META: DestinationMetaValues = {
   contactPhone: "",
   contactWebsite: "",
   hotelGroupId: "",
-  isFeatured: false,
+  priority: 3,
   contentTier: "",
 };
 
@@ -90,7 +91,7 @@ function toRequest(v: DestinationMetaValues): UpsertDestinationRequest {
     contactPhone: str(v.contactPhone),
     contactWebsite: str(v.contactWebsite),
     hotelGroupId: str(v.hotelGroupId),
-    isFeatured: v.isFeatured,
+    priority: v.priority,
     contentTier: v.contentTier === "" ? null : v.contentTier,
   };
 }
@@ -238,15 +239,18 @@ export function DestinationMetadataForm({
             className={`${inputCls} font-mono`}
           />
         </Field>
-        <Field label="Nổi bật">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={v.isFeatured}
-              onChange={(e) => set("isFeatured", e.target.checked)}
-            />
-            Hiển thị ở khu nổi bật
-          </label>
+        <Field label="Độ ưu tiên (1 = cao nhất, 5 = thấp nhất) — điểm ưu tiên 1-2 hiện ở khu nổi bật">
+          <Select
+            value={String(v.priority)}
+            onChange={(e) => set("priority", Number(e.target.value))}
+            className={inputCls}
+          >
+            {[1, 2, 3, 4, 5].map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </Select>
         </Field>
         {(v.kind === "province" || v.kind === "cluster") && (
           <Field label="Độ ưu tiên nội dung">

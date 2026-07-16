@@ -70,7 +70,7 @@ export class BulkUpdateDestinationFieldsUseCase {
           contactPhone: nonEmpty(row.contactPhone) ?? existing.contactPhone,
           contactWebsite: nonEmpty(row.contactWebsite) ?? existing.contactWebsite,
           hotelGroupId: nonEmpty(row.hotelGroupId) ?? existing.hotelGroupId,
-          isFeatured: existing.isFeatured,
+          priority: existing.priority,
           contentTier: existing.contentTier,
         };
 
@@ -113,7 +113,7 @@ export class BulkUpdateDestinationFieldsUseCase {
             contactPhone: meta.contactPhone,
             contactWebsite: meta.contactWebsite,
             hotelGroupId: meta.hotelGroupId,
-            isFeatured: meta.isFeatured,
+            priority: meta.priority,
             contentTier: meta.contentTier,
           });
         }

@@ -25,7 +25,7 @@ const CSV_HEADERS = [
   "contactPhone",
   "contactWebsite",
   "hotelGroupId",
-  "isFeatured",
+  "priority",
   "aiNotes",
   "referenceUrls",
 ] as const;
@@ -49,9 +49,11 @@ function parseRefUrls(s: string | undefined): DestinationImportRow["referenceUrl
 }
 
 function rowFromObject(o: Record<string, string>): DestinationImportRow {
-  const bool = (s: string | undefined) => {
-    const v = emptyToUndef(s)?.toLowerCase();
-    return v === undefined ? undefined : v === "true" || v === "1" || v === "yes" || v === "có";
+  // Do uu tien 1-5 (1=cao nhat) — thay isFeatured cu (relations-plan §1.1). Gia tri
+  // ngoai khoang hoac khong hop le -> undefined, server tu mac dinh 3.
+  const priority = (s: string | undefined) => {
+    const n = Number(emptyToUndef(s));
+    return Number.isInteger(n) && n >= 1 && n <= 5 ? n : undefined;
   };
   const kindRaw = emptyToUndef(o.kind);
   return {
@@ -68,7 +70,7 @@ function rowFromObject(o: Record<string, string>): DestinationImportRow {
     contactPhone: emptyToUndef(o.contactPhone),
     contactWebsite: emptyToUndef(o.contactWebsite),
     hotelGroupId: emptyToUndef(o.hotelGroupId),
-    isFeatured: bool(o.isFeatured),
+    priority: priority(o.priority),
     aiNotes: emptyToUndef(o.aiNotes),
     referenceUrls: parseRefUrls(o.referenceUrls),
   };

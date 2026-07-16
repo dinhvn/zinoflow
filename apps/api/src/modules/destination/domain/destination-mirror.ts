@@ -29,7 +29,7 @@ export interface SiteDestinationRow {
   contactPhone: string | null;
   contactWebsite: string | null;
   hotelGroupId: string | null;
-  isFeatured: boolean;
+  priority: number;
   contentTier: "flagship" | "standard" | null;
   /** Thu tu hien thi thu cong (Phase 28.2) */
   order: number;

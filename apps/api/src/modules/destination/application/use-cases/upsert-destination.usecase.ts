@@ -72,7 +72,7 @@ export class UpsertDestinationUseCase {
         contactPhone: meta.contactPhone,
         contactWebsite: meta.contactWebsite,
         hotelGroupId: meta.hotelGroupId,
-        isFeatured: meta.isFeatured,
+        priority: meta.priority,
         contentTier: meta.contentTier,
       });
     }
@@ -115,7 +115,7 @@ export class UpsertDestinationUseCase {
       contactPhone: request.contactPhone ?? null,
       contactWebsite: request.contactWebsite ?? null,
       hotelGroupId: request.hotelGroupId ?? null,
-      isFeatured: request.isFeatured ?? false,
+      priority: request.priority ?? 3,
       contentTier: request.contentTier ?? null,
     };
   }

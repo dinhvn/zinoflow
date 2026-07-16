@@ -101,7 +101,7 @@ export class PublishDestinationUseCase {
         contactPhone: destination.contactPhone,
         contactWebsite: destination.contactWebsite,
         hotelGroupId: destination.hotelGroupId,
-        isFeatured: destination.isFeatured,
+        priority: destination.priority,
         contentTier: destination.contentTier,
       });
       siteId = created.siteId;

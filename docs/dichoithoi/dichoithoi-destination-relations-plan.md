@@ -516,11 +516,34 @@ Không có phụ thuộc chéo giữa các việc dưới đây — có thể l�
 tự nào trong giai đoạn này, kể cả song song nếu muốn, nhưng KHÔNG được bỏ
 qua vì các giai đoạn sau đều cần ít nhất 1 trong số này:
 
-- **A1. Migration `Priority` thay `IsFeatured`** (§1.1) — độc lập hoàn toàn.
+- ✅ **A1. Migration `Priority` thay `IsFeatured` — ĐÃ XONG (16/07/2026)** (§1.1)
+  — độc lập hoàn toàn. Đã đổi toàn bộ 2 repo: Postgres mirror (`priority
+  smallint default 3`, migration `1782160000000-DestinationPriority.ts`),
+  SQL Server (`v2.Destination.Priority tinyint`, script
+  `scripts/dichoithoi-sqlserver/01-create-new-schema.sql` idempotent cho
+  install cũ), contracts (`priority: z.number().int().min(1).max(5)`), toàn
+  bộ domain/port/use-case/CMS form liên quan (form đổi checkbox "Nổi bật"
+  thành `Select` 1-5), ngưỡng "nổi bật" bên dichoithoi đổi từ `IsFeatured`
+  sang `Priority <= 2` (`DestinationTaxonomyRepository.cs`, `Detail.cshtml`,
+  `get-coverage-scores.usecase.ts`). Backfill: `IsFeatured=true → Priority=1`,
+  `false → Priority=3`. Verify: `dotnet build` sạch, `tsc --noEmit` (api+web)
+  sạch, jest 364/364 pass, đã chạy migration thật trên LocalDB `dichoithoi_dev`
+  + Postgres dev, Playwright xác nhận nhóm "Nổi bật" trang Đà Lạt vẫn hiện
+  đúng 2 điểm (Hồ Xuân Hương, Thung lũng tình yêu) sau khi đổi ngưỡng.
 - **A2. Bảng `dichoithoi_cluster_distances` + job tính** (§1.2) — độc lập,
   chỉ cần toạ độ trung tâm cụm/tỉnh đã có sẵn.
-- **A3. Nối `ArticleDestinationMap` vào khối liên quan** (mục 3) — độc lập
-  hoàn toàn với mọi phần còn lại của plan này.
+- ✅ **A3. Nối `ArticleDestinationMap` vào khối liên quan — ĐÃ XONG (16/07/2026)**
+  (mục 3) — độc lập hoàn toàn với mọi phần còn lại của plan này. Thêm field
+  `DestinationExtrasModel.RelatedArticles` (distinct theo bài viết, topic bất
+  kỳ — khác 4 field theo-topic có sẵn `ItineraryArticles`/`FoodArticles`/...),
+  populate trong `DestinationExtrasRepository.GetExtrasBySlugAsync` từ đúng
+  query `articleLinksByTopic` đã có sẵn (không thêm query mới). View
+  `Destination/Detail.cshtml` thêm khối riêng "Có trong bài cẩm nang:
+  {tên bài} →" ngay sau chuỗi if/elseif "Điểm đến liên quan" (độc lập, không
+  tính vào 8 mục `RelatedItems`). Verify: `dotnet build` sạch; test thật qua
+  Playwright — chèn tạm 1 dòng `v2.Article`+`v2.ArticleDestinationMap` cho
+  `da-lat`, xác nhận link hiện đúng vị trí (sau "Điểm đến liên quan", trước
+  "Ăn gì ở"), trỏ đúng `/cam-nang/{slug}`, đã xoá dữ liệu test sau khi verify.
 - **A4. Trang bản đồ tổng quan — PHẦN NỀN** (§5.1-5.2, §5.5 phần "click
   marker xem panel", KHÔNG gồm lớp quan hệ §5.3-5.7): hiện toàn bộ điểm đến
   trên bản đồ thật, bộ lọc, popup — chưa cần vẽ đường quan hệ, chưa cần

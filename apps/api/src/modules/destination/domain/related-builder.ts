@@ -21,8 +21,9 @@ export interface RelatedCandidate {
   lng: number | null;
   /** Status ben site — chi diem published (1) duoc vao khoi lien quan */
   siteStatus: number | null;
-  /** Nam trong khu "noi bat" (v2.Destination.IsFeatured) — Phase 28.2, lop 1 Diem tham quan */
-  isFeatured: boolean;
+  /** Do uu tien tay 1-5, 1=cao nhat (v2.Destination.Priority) — thay IsFeatured cu
+   * (relations-plan §1.1). Lop 1 "Diem tham quan" Flagship = priority <= 2 (Phase 28.2). */
+  priority: number;
   /** Thu tu hien thi thu cong (v2.Destination.Order) — Phase 28.2 */
   order: number;
   /** Khoang cach toi trung tam cum/tinh cha, don vi MET (v2.Destination.DistanceFromCenter) — Phase 28.2 */
