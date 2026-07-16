@@ -153,21 +153,24 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   modal, trang bản đồ/Kanban dự kiến ở các plan khác, v.v.) CHƯA được bổ
   sung — làm dần khi đụng lại từng trang, hoặc khi người dùng yêu cầu làm
   hàng loạt, không tự ý sửa hết 1 lượt.
-- **Claude trích xuất thông tin điểm đến từ Google Maps + web tham khảo,
-  người dùng duyệt (16/07/2026, CHƯA BUILD)** — plan ở
+- ✅ **Claude trích xuất thông tin điểm đến từ Google Maps + web tham khảo,
+  người dùng duyệt — ĐÃ XONG Giai đoạn 1-3 (16/07/2026)** — plan ở
   `dichoithoi-destination-ai-extraction-plan.md` (đã GỘP + thay thế plan
   tóm tắt tham khảo cũ `dichoithoi-reference-summary-plan.md`). Người dùng
   chỉ cung cấp tên điểm đến + link Google Maps + web tham khảo (dùng đúng
   field `aiReferenceUrls` có sẵn) — Claude (qua VS Code, skill
-  `dichoithoi-extract-destination-info`) đọc, trích xuất tên/địa chỉ/SĐT/
-  website/giờ mở cửa/mô tả ngắn/link đánh giá ngoài/tóm tắt cho AI viết bài,
-  lưu vào bảng staging riêng `dichoithoi_destination_ai_extractions`; CMS
-  hiện bảng so sánh cũ/mới, tick chọn field muốn áp dụng rồi "Chấp nhận".
-  Nguyên tắc bắt buộc: KHÔNG dùng kiến thức nền của Claude cho dữ liệu CỨNG
-  (SĐT/giờ/địa chỉ/link ngoài) — chỉ điền nếu tìm thấy trong nguồn, nguồn
-  mâu thuẫn thì ghi rõ cả 2 không tự chọn. Giờ mở cửa lưu dạng JSON có cấu
-  trúc (không phải HTML) để sau này build được JSON-LD `openingHoursSpecification`
-  chuẩn SEO (phase riêng, cross-repo, chưa làm).
+  `dichoithoi-extract-destination-info`) đọc, trích xuất 11 field (tên/địa
+  chỉ/SĐT/website/giờ mở cửa/mô tả ngắn/meta title/link đánh giá ngoài/tóm
+  tắt cho AI viết bài/giá vé theo đối tượng/đánh giá biên tập), lưu vào
+  bảng staging riêng `dichoithoi_destination_ai_extractions`; CMS hiện bảng
+  so sánh cũ/mới trong popup, tick chọn field muốn áp dụng rồi "Chấp nhận".
+  Đã test end-to-end bằng dữ liệu thật ("dalat-fairytale-land", Google Maps +
+  Klook qua Playwright, web khác qua WebFetch), người dùng đã tự kiểm tra và
+  xác nhận OK. Quy tắc mâu thuẫn nguồn đã ĐỔI so với thiết kế ban đầu: Claude
+  tự chọn 1 giá trị hợp lý nhất (không liệt kê cả 2), lý do chuyển vào `note`.
+  Giờ mở cửa lưu dạng JSON có cấu trúc (không phải HTML) để sau này build
+  được JSON-LD `openingHoursSpecification` chuẩn SEO — **Giai đoạn 4, cross-
+  repo, CHƯA làm, không phải ưu tiên hiện tại**.
 - ✅ **DDL lệch — ĐÃ SỬA (07/2026, Phase 21.5)**: xoá cột chết `BookingUrl`
   khỏi `v2.Destination` (SQL Server + entity `V2Destination.cs` — đã xác nhận
   0 nơi đọc/ghi trước khi xoá) + thêm cột `ContactFacebook varchar(256)` còn
