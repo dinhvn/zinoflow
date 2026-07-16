@@ -788,6 +788,32 @@ export const destinationTaxonomySchema = z.object({
 export type DestinationTaxonomy = z.infer<typeof destinationTaxonomySchema>;
 
 /**
+ * 1 diem den tren trang ban do tong quan CMS (relations-plan §5.1-5.2, Giai doan A4) —
+ * DTO nhe, chi cac field can cho marker/popup, KHONG phai destinationMirrorSchema day du.
+ * Chua co field "loai hinh" (primaryType) — taxonomy chua duoc mirror hoa sang Postgres,
+ * se them khi Giai doan C1 xong (§1.4 muc 1).
+ */
+export const destinationMapItemSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  kind: destinationKindSchema,
+  lat: z.number().nullable(),
+  lng: z.number().nullable(),
+  imageUrl: z.string().nullable(),
+  siteId: z.number().int().nullable(),
+  siteStatus: z.number().int().min(0).max(2).nullable(),
+  contentTier: destinationContentTierSchema.nullable(),
+  provinceCode: z.string().nullable(),
+  provinceName: z.string().nullable(),
+});
+export type DestinationMapItem = z.infer<typeof destinationMapItemSchema>;
+
+export const getDestinationsMapResponseSchema = z.object({
+  items: z.array(destinationMapItemSchema),
+});
+export type GetDestinationsMapResponse = z.infer<typeof getDestinationsMapResponseSchema>;
+
+/**
  * Noi dung mo ta rieng cho trang danh muc /loai, /loai/{group}, /loai/{group}/{type},
  * /tinh/{slug} (Phase 18.2, content-seo-ux-plan §10.3) — tranh thin content, KHONG
  * phai taxonomy form/filter (khac destinationTaxonomySchema o tren).

@@ -39,8 +39,10 @@ const DICHOITHOI_ITEMS: NavItem[] = [
       "/dichoithoi/danh-muc",
       "/dichoithoi/chu-de",
       "/dichoithoi/do-phu",
+      "/dichoithoi/ban-do",
     ],
   },
+  { href: "/dichoithoi/ban-do", label: "Bản đồ tổng quan", icon: IconMap },
   { href: "/dichoithoi/articles", label: "Article", icon: IconDoc },
   { href: "/dichoithoi/dia-chi", label: "Tra cứu địa chỉ", icon: IconSearch },
   { href: "/dichoithoi/danh-muc", label: "Nội dung danh mục", icon: IconDoc },
@@ -188,6 +190,15 @@ function IconMapPin(props: SVGProps<SVGSVGElement>) {
     <IconBase {...props}>
       <path d="M20 10c0 5-8 11-8 11s-8-6-8-11a8 8 0 1116 0z" />
       <circle cx="12" cy="10" r="2.75" />
+    </IconBase>
+  );
+}
+
+function IconMap(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" />
+      <path d="M9 4v14M15 6v14" />
     </IconBase>
   );
 }

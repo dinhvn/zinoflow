@@ -558,11 +558,27 @@ qua vì các giai đoạn sau đều cần ít nhất 1 trong số này:
   Playwright — chèn tạm 1 dòng `v2.Article`+`v2.ArticleDestinationMap` cho
   `da-lat`, xác nhận link hiện đúng vị trí (sau "Điểm đến liên quan", trước
   "Ăn gì ở"), trỏ đúng `/cam-nang/{slug}`, đã xoá dữ liệu test sau khi verify.
-- **A4. Trang bản đồ tổng quan — PHẦN NỀN** (§5.1-5.2, §5.5 phần "click
-  marker xem panel", KHÔNG gồm lớp quan hệ §5.3-5.7): hiện toàn bộ điểm đến
-  trên bản đồ thật, bộ lọc, popup — chưa cần vẽ đường quan hệ, chưa cần
-  thuật toán chấm điểm. Độc lập, có thể dùng ngay làm công cụ QA dữ liệu dù
-  các giai đoạn sau chưa xong.
+- ✅ **A4. Trang bản đồ tổng quan — PHẦN NỀN — ĐÃ XONG (16/07/2026)** (§5.1-5.2,
+  §5.5 phần "click marker xem panel", KHÔNG gồm lớp quan hệ §5.3-5.7). Route
+  `/dichoithoi/ban-do` (sidebar mục "Bản đồ tổng quan"), Leaflet + react-leaflet
+  + leaflet.markercluster + OpenStreetMap tiles (không API key) — ngoại lệ hợp
+  lệ với nguyên tắc "không thư viện ngoài" vì đây là trang CMS nội bộ, không
+  phải website công khai. Endpoint nhẹ `GET /destinations/map` (không phân
+  trang, trả đủ 274 điểm — field `imageUrl` build qua `ImageChecker.buildUrl()`
+  giống pattern list/detail sẵn có, KHÔNG trả `thumbnail` thô vì đó chỉ là
+  đường dẫn tương đối, gây lỗi 404 ảnh nếu dùng thẳng — phát hiện + sửa lúc
+  test thật). Chấm to/nhỏ theo `kind` (tỉnh/cụm to hơn poi), màu cam/xanh theo
+  `contentTier` (1 chiều màu chính đúng thiết kế), mờ đi nếu chưa publish.
+  Click chấm → popup (DOM API, không `innerHTML`, vì tên điểm đến là dữ liệu
+  người dùng nhập) hiện tên/ảnh/trạng thái/tỉnh + link "Sửa" (trang admin) +
+  "Xem trên web" (chỉ hiện khi `siteId≠null` và đã publish). Lọc tỉnh/trạng
+  thái/content tier (client-side, không đổi dữ liệu) — **CHƯA có lọc "loại
+  hình"** như §5.2 liệt kê vì taxonomy chưa mirror hoá sang Postgres (đợi
+  Giai đoạn C1, phụ thuộc Giai đoạn B xong trước — xem §1.4 mục 1). Verify:
+  `tsc --noEmit` (api+web) sạch; Playwright trên dữ liệu thật — 274/274 điểm
+  hiện đúng (4 cụm marker ban đầu, tổng 26+103+49+93=271 điểm có toạ độ hợp
+  lệ), click marker hiện đúng popup (test case "Vườn quốc gia Bạch Mã"), lọc
+  tỉnh "An Giang" → còn đúng 31/274, 0 lỗi console sau khi sửa `imageUrl`.
 
 **DoD giai đoạn A**: build .NET + zinoflow pass; Playwright xác nhận trang
 bản đồ hiện đúng toàn bộ điểm đến thật (không phải dữ liệu giả); `Priority`

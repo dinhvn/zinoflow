@@ -55,6 +55,7 @@ import {
   type CreateDestinationJobResponse,
   type DestinationDetail,
   type DestinationTaxonomy,
+  type GetDestinationsMapResponse,
   type FetchSheetRequest,
   type FetchSheetResponse,
   type ImportDestinationsRequest,
@@ -107,6 +108,7 @@ import { ValidationError } from "../../shared/errors/app-error";
 import { ListDestinationsUseCase } from "../application/use-cases/list-destinations.usecase";
 import { SyncDestinationsUseCase } from "../application/use-cases/sync-destinations.usecase";
 import { GetDestinationTaxonomyUseCase } from "../application/use-cases/get-destination-taxonomy.usecase";
+import { GetDestinationsMapUseCase } from "../application/use-cases/get-destinations-map.usecase";
 import { CreateDestinationJobUseCase } from "../application/use-cases/create-destination-job.usecase";
 import { PublishDestinationUseCase } from "../application/use-cases/publish-destination.usecase";
 import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
@@ -164,6 +166,7 @@ export class DestinationsController {
     private readonly listDestinations: ListDestinationsUseCase,
     private readonly syncDestinations: SyncDestinationsUseCase,
     private readonly getTaxonomy: GetDestinationTaxonomyUseCase,
+    private readonly getDestinationsMap: GetDestinationsMapUseCase,
     private readonly createJob: CreateDestinationJobUseCase,
     private readonly publishDestination: PublishDestinationUseCase,
     private readonly relinkAll: RelinkAllUseCase,
@@ -329,6 +332,12 @@ export class DestinationsController {
   @Get("taxonomy")
   taxonomy(): Promise<DestinationTaxonomy> {
     return this.getTaxonomy.execute();
+  }
+
+  /** DTO nhe cho trang ban do tong quan CMS (relations-plan §5.2, Giai doan A4) */
+  @Get("map")
+  getMap(): Promise<GetDestinationsMapResponse> {
+    return this.getDestinationsMap.execute();
   }
 
   /** Tra cuu dia chi cu->moi sau sap nhap (trang /dichoithoi/dia-chi). Truoc ":slug". */

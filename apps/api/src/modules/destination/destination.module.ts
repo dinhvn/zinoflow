@@ -77,6 +77,7 @@ import { DESTINATION_AI_EXTRACTION_REPOSITORY } from "./application/ports/destin
 import { TypeOrmDestinationAiExtractionRepository } from "./infrastructure/repositories/typeorm-destination-ai-extraction.repository";
 import { DestinationAiExtractionEntity } from "./infrastructure/entities/destination-ai-extraction.entity";
 import { RecomputeClusterDistancesUseCase } from "./application/use-cases/recompute-cluster-distances.usecase";
+import { GetDestinationsMapUseCase } from "./application/use-cases/get-destinations-map.usecase";
 import { CLUSTER_DISTANCE_REPOSITORY } from "./application/ports/cluster-distance.repository";
 import { TypeOrmClusterDistanceRepository } from "./infrastructure/repositories/typeorm-cluster-distance.repository";
 import { ClusterDistanceEntity } from "./infrastructure/entities/cluster-distance.entity";
@@ -164,6 +165,7 @@ import {
     GetDestinationAiExtractionUseCase,
     AcceptDestinationAiExtractionFieldsUseCase,
     RecomputeClusterDistancesUseCase,
+    GetDestinationsMapUseCase,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: CACHE_PURGE, useClass: HttpCachePurgeAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
