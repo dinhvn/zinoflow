@@ -1,10 +1,15 @@
 # Dichoithoi — Tự động tìm ảnh minh hoạ cho nội dung
 
-**ĐÃ BUILD 17/07/2026** — Giai đoạn 1-4 xong, xem ✅ cuối mỗi giai đoạn bên
-dưới. Còn thiếu 1 việc CHỈ người dùng làm được: đăng ký tài khoản Pexels +
-điền `PEXELS_API_KEY` thật vào `apps/api/.env` — code đã sẵn sàng nhận key,
-thiếu key thì tính năng luôn trả về "0 ảnh" một cách an toàn (không lỗi),
-đã verify pattern này bằng dữ liệu thật (xem Giai đoạn 3).
+**ĐÃ BUILD + VERIFY XONG HOÀN TOÀN 17/07/2026** — Giai đoạn 1-4, kể cả gọi
+API Pexels THẬT (người dùng đã tự đăng ký + điền `PEXELS_API_KEY` cùng
+ngày). Đã test full vòng đời trên dữ liệu thật: quét ra bài "Các con thác
+đẹp tại Đà Lạt" đang thiếu ảnh → chạy tìm → Pexels trả về 4 ảnh thật khớp
+chủ đề (kể cả 1 ảnh thác nước Việt Nam) → duyệt 1 ảnh (thác nước, đúng chủ
+đề nhất) → từ chối 3 ảnh còn lại → xác nhận Postgres đúng ở mọi bước (ảnh
+duyệt chuyển `active`, ảnh từ chối bị xoá + ghi 1 dòng
+`content_image_rejected_keywords`) → ảnh đã duyệt hiện đúng ở tab "Thư
+viện", dùng bình thường (Copy token/Xoá). Không còn việc gì tồn đọng cho
+plan này.
 
 Ghi lại 15/07/2026, từ ý tưởng người dùng: muốn có 1 nút trong zinoflow —
 bấm là hệ thống tự quét xem tag/bài viết nào chưa có ảnh, tự tìm ảnh phù
@@ -129,15 +134,13 @@ vào.
 **DoD**: gọi thử API Pexels qua script, xác nhận trả về ảnh + license info
 đúng định dạng mong đợi.
 
-✅ **Xong 17/07/2026 (thiếu key thật)** — `StockImageSearchPort` +
+✅ **Xong 17/07/2026, verify VỚI KEY THẬT** — `StockImageSearchPort` +
 `PexelsStockImageSearchAdapter` (`GET api.pexels.com/v1/search`, header
 `Authorization: <key>`). Thiếu `PEXELS_API_KEY` → adapter trả về `[]` +
 log warning, KHÔNG ném lỗi (đúng convention `IMAGE_UPLOADER` khi thiếu FTP
-config). Chưa gọi được API thật vì chưa có key — người dùng cần tự đăng ký
-tại pexels.com/api và điền vào `.env` để verify bước gọi API thật; toàn bộ
-pipeline phía sau (download → resize → upload → lưu pending) đã verify
-được bằng cách chèn thẳng 1 bản ghi `content_images` giả lập qua SQL (xem
-Giai đoạn 3-4), chỉ riêng bước gọi Pexels thật là chưa test được.
+config) — đã verify cả 2 nhánh: lúc đầu thiếu key (trả `[]` đúng), sau khi
+người dùng điền `PEXELS_API_KEY` thật đã gọi lại và nhận đúng 4 ảnh thật
+khớp chủ đề "thác đẹp Đà Lạt" (kèm URL nguồn + tên photographer thật).
 
 ### Giai đoạn 2 — Bổ sung `status` vào `content_images` (phụ thuộc plan thư viện ảnh Giai đoạn 1)
 
@@ -213,6 +216,17 @@ dev server + dev DB thật:
 - Đã dọn sạch toàn bộ dữ liệu test (`content_images`,
   `content_image_rejected_keywords`) sau khi verify.
 
+**Cập nhật 17/07/2026 — verify LẦN 2 với `PEXELS_API_KEY` thật (người dùng
+tự đăng ký + điền)**: gọi lại đúng luồng trên với API thật thay vì dữ liệu
+giả lập — quét ra bài "Các con thác đẹp tại Đà Lạt" → chạy tìm → Pexels trả
+về đúng 4 ảnh thật (kèm URL nguồn + tên photographer thật, 1 trong 4 ảnh là
+thác nước Việt Nam khớp chủ đề) → duyệt 1 ảnh (thác nước) → Postgres xác
+nhận `active`, ảnh hiện đúng ở tab "Thư viện" → từ chối 3 ảnh còn lại →
+Postgres xác nhận đã xoá + ghi đúng 1 dòng `content_image_rejected_keywords`
+(3 lần từ chối cùng 1 job dùng cùng 1 từ khoá nên chỉ có 1 dòng, đúng
+`ON CONFLICT DO NOTHING`). Không có lỗi console, file WebP tải+resize đúng
+trên đĩa. Đã dọn sạch dữ liệu + file test.
+
 ## Ghi chú quan trọng khi build
 
 KHÔNG bỏ qua §1.1/§1.2 dù muốn làm nhanh — đây là lý do plan này tách biệt
@@ -222,10 +236,4 @@ tuân thủ đúng trong code: `generateSearchKeyword()` chỉ nhận `topic` (c
 bài cẩm nang chung), KHÔNG có đường nào truyền tên địa điểm cụ thể vào —
 tính năng chỉ áp dụng cho Article, không đụng vào ảnh hero/gallery Destination.
 
-### Việc còn lại — chỉ người dùng làm được
-
-Đăng ký tài khoản Pexels miễn phí tại pexels.com/api, lấy API key, điền vào
-`apps/api/.env`: `PEXELS_API_KEY=...`. Sau khi điền, bấm "Tự động tìm ảnh
-còn thiếu" trên trang thư viện ảnh sẽ gọi Pexels thật — không cần sửa code.
-
-### Tổng thứ tự: 1 (thiếu key thật) → 2 (đã có sẵn từ Mức A) → 3 → 4 — code xong 17/07/2026
+### Tổng thứ tự: 1 → 2 → 3 → 4 — TOÀN BỘ ĐÃ XONG + VERIFY VỚI API THẬT (17/07/2026)
