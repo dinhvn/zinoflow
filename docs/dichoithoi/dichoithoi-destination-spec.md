@@ -428,6 +428,15 @@ giờ tự gán/tự publish im lặng:
    đi bộ, Nghỉ dưỡng) — **KHÔNG có loại nào thừa/trùng nghĩa rõ**, không cần
    gộp/tách nhóm. Phát hiện 2 vấn đề cụ thể, cả 2 xử lý được ngay không cần
    đổi cấu trúc:
+
+   **CẬP NHẬT 17/07/2026 (relations-plan §6.0b/§B1)**: "Check-in sống ảo" và
+   "Nghỉ dưỡng" đã bị RÚT khỏi `v2.DestinationType` — 2 tag này mô tả trải
+   nghiệm/mục đích cắt ngang, không phải loại nơi chốn cố định, nên chuyển
+   sang hệ thống `v2.DestinationTag`/trang `/chu-de` đã có sẵn. Taxonomy Type
+   hiện tại còn ĐÚNG 16 loại (Vui chơi-Trải nghiệm còn 4: Khu vui chơi-Giải
+   trí, Chợ-Phố đêm, Khu-Phố ẩm thực, Phố cổ-Phố đi bộ). Danh sách bên dưới
+   giữ nguyên để lưu lại bối cảnh audit gốc 07/2026, không sửa lại theo hiện
+   trạng mới.
    - **10 điểm (`kind=poi`) đang KHÔNG có Type nào** (chặn hiển thị đúng ở
      `/loai`): Cơ sở sản xuất rượu Sim, Đồi chè Tân Cương, Làng hoa Thái
      Phiên, Nhà thùng sản xuất nước mắm → gán `Làng nghề truyền thống`; Dalat

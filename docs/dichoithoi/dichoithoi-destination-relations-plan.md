@@ -443,6 +443,39 @@ cuối cùng, có tag nào khác còn cần tách nữa không, cách migrate d�
 gán) để lại phân tích kỹ khi thực sự bắt tay làm bước chuẩn hoá — đây mới
 chỉ là hướng đã chốt trên doc, chưa phải thiết kế chi tiết cuối cùng.**
 
+✅ **B1 ĐÃ XONG (17/07/2026)** — khi bắt tay làm, phát hiện đã có sẵn hệ
+thống `v2.DestinationTag`/`/chu-de` (destination-spec §2.4, đã build đầy đủ
+schema+API+UI CMS, 7 tag draft chưa gán dữ liệu) — đúng khái niệm "chủ đề cắt
+ngang" mà `experienceTags` định làm, KHÔNG cần field mới. Chọn hướng **di
+chuyển hẳn** (không chỉ đánh cờ giữ trong Type) — người dùng xác nhận 17/07:
+- Migration `phase-b-06-move-experience-types-to-tags.sql` (dichoithoi repo):
+  seed 2 tag `check-in-song-ao` (Status=1, publish ngay vì có 102 điểm đã
+  gán, tránh mất hiển thị công khai) và `nghi-duong` (Status=0, draft vì 0
+  điểm — dữ liệu thật xác nhận KHÔNG có điểm nào từng gán loại này), chuyển
+  102 dòng `DestinationTypeMap`→`DestinationTagMap`, xoá 2 dòng
+  `v2.DestinationType` (Id 14, 18) + map cũ. Còn lại đúng 16 loại-hình-place.
+- Redirect 301 `/loai/vui-choi-trai-nghiem/{check-in-song-ao,nghi-duong}` →
+  `/chu-de/{slug}` (`DestinationTypeController.cs`, whitelist tĩnh) — giữ giá
+  trị SEO URL cũ đã tích luỹ.
+- Thêm chip "Chủ đề" trên trang chi tiết điểm đến (khác chip "Types" đã có) —
+  `DestinationExtrasModel.Tags`, `DestinationExtrasRepository` query
+  `DestinationTagMap` lọc `Status=1`, `Detail.cshtml` render dưới chip Type.
+- Thêm `/chu-de/{slug}` (tag đã publish) vào `taxonomy-sitemap.xml`
+  (`GetAllPublishedTagsAsync` mới, `HomeController.CreateTaxonomySiteMapAsync`).
+- Soạn mô tả cho tag `check-in-song-ao` qua CMS `/dichoithoi/chu-de` (gõ tay,
+  không dùng "AI soạn" vì môi trường dev không có `ANTHROPIC_API_KEY` — dùng
+  stub provider không hỗ trợ operation này; nội dung tuân đúng quy tắc "không
+  bịa số liệu cứng" của chính prompt AI).
+- Verify thật (không chỉ build pass): `dotnet build` sạch; chạy migration
+  trên `dichoithoi_dev` (xác nhận 16 type còn lại, 102 map chuyển đúng, 0 map
+  cho nghi-duong); Playwright trên dev server thật — trang `/chu-de/check-in-song-ao`
+  hiện đúng mô tả + danh sách điểm đến; `/loai/vui-choi-trai-nghiem/check-in-song-ao`
+  redirect đúng sang `/chu-de/check-in-song-ao`; trang chi tiết "Hồ Xuân
+  Hương" hiện đúng chip "Check-in sống ảo" link `/chu-de/check-in-song-ao`
+  (dưới chip Type "Sông - Suối - Hồ - Thác"); `/loai/vui-choi-trai-nghiem`
+  chỉ còn liệt kê đúng 4 loại còn lại; `taxonomy-sitemap.xml` có
+  `/chu-de/check-in-song-ao`, không còn 2 URL Type cũ.
+
 ### 6.1 Bố cục — bảng Kanban theo cụm, cột = loại hình
 
 1. **Chọn 1 cụm/tỉnh** (dropdown/search, giống bộ lọc ở §5.2) — vd. chọn
@@ -591,9 +624,14 @@ cứng, không phải gợi ý (lý do: bật thuật toán ưu tiên tuyệt đ
 hình trên dữ liệu taxonomy còn sai sẽ khuếch đại lỗi thành gợi ý sai diện
 rộng, xem §6).
 
-1. **B1. Chuẩn hoá định nghĩa 18 loại** (§6.0b) — tách 2 tag trải nghiệm
-   (Check-in sống ảo, Nghỉ dưỡng) khỏi trục chính, chi tiết phân tích khi
-   bắt tay làm (đã chốt hướng, chưa chốt chi tiết).
+1. ✅ **B1. Chuẩn hoá định nghĩa 18→16 loại — ĐÃ XONG (17/07/2026)** (§6.0b) —
+   di chuyển "Check-in sống ảo"/"Nghỉ dưỡng" sang hệ thống `DestinationTag`
+   có sẵn (chi tiết đầy đủ ở §6.0b). 16 loại-hình-place chính thức còn lại:
+   Biển-Đảo, Núi-Cao nguyên, Sông-Suối-Hồ-Thác, Hang động, Rừng-Vườn quốc
+   gia, Đồng quê miền Tây (Thiên nhiên); Di tích lịch sử, Chùa-Đền-Miếu, Nhà
+   thờ, Làng nghề truyền thống, Bảo tàng, Công trình kiến trúc (Văn hoá-Lịch
+   sử); Khu vui chơi-Giải trí, Chợ-Phố đêm, Khu-Phố ẩm thực, Phố cổ-Phố đi bộ
+   (Vui chơi-Trải nghiệm — còn 4/6, đã bớt 2 tag trải nghiệm).
 2. **B2. Trang Kanban rà soát taxonomy** (§6.1-6.2, route
    `/dichoithoi/phan-loai`) — xây trước phần khung (chọn cụm, hiện cột,
    click sửa tay), CHƯA cần tích hợp AI đề xuất ở bước này — có thể dùng
