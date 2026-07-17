@@ -16,6 +16,8 @@ export class ListContentImagesUseCase {
 
   async execute(): Promise<ContentImage[]> {
     const records = await this.repo.findAll();
-    return records.map(toContentImage);
+    const jobIds = [...new Set(records.map((r) => r.relatedJobId).filter((id): id is string => id !== null))];
+    const titleByJobId = await this.repo.findArticleTitlesByJobIds(jobIds);
+    return records.map((r) => toContentImage(r, titleByJobId));
   }
 }

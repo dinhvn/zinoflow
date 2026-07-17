@@ -36,4 +36,21 @@ export class ContentImageEntity {
 
   @Column({ name: "uploaded_at", type: "timestamptz", default: () => "now()" })
   uploadedAt!: Date;
+
+  /** null = upload tay. "pexels" = tu dong tim (auto-image-search-plan §2.2) */
+  @Column({ type: "varchar", length: 16, nullable: true })
+  source!: string | null;
+
+  @Column({ name: "source_url", type: "varchar", length: 512, nullable: true })
+  sourceUrl!: string | null;
+
+  @Column({ type: "varchar", length: 256, nullable: true })
+  photographer!: string | null;
+
+  /** Job cam-nang da kich hoat tim anh nay — hien "bai viet lien quan" o man duyet */
+  @Column({ name: "related_job_id", type: "uuid", nullable: true })
+  relatedJobId!: string | null;
+
+  @Column({ name: "search_keyword", type: "varchar", length: 256, nullable: true })
+  searchKeyword!: string | null;
 }

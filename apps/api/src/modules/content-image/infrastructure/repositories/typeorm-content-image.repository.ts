@@ -20,6 +20,11 @@ function toRecord(e: ContentImageEntity, usageCount: number): ContentImageRecord
     status: e.status,
     usageCount,
     uploadedAt: e.uploadedAt,
+    source: e.source,
+    sourceUrl: e.sourceUrl,
+    photographer: e.photographer,
+    relatedJobId: e.relatedJobId,
+    searchKeyword: e.searchKeyword,
   };
 }
 
@@ -53,7 +58,20 @@ export class TypeOrmContentImageRepository implements IContentImageRepository {
   }
 
   async create(input: CreateContentImageInput): Promise<ContentImageRecord> {
-    const saved = await this.repo.save(this.repo.create({ ...input, status: "active" }));
+    const saved = await this.repo.save(
+      this.repo.create({
+        path: input.path,
+        altText: input.altText,
+        width: input.width,
+        height: input.height,
+        status: input.status ?? "active",
+        source: input.source ?? null,
+        sourceUrl: input.sourceUrl ?? null,
+        photographer: input.photographer ?? null,
+        relatedJobId: input.relatedJobId ?? null,
+        searchKeyword: input.searchKeyword ?? null,
+      }),
+    );
     return toRecord(saved, 0);
   }
 
@@ -74,5 +92,40 @@ export class TypeOrmContentImageRepository implements IContentImageRepository {
       [`%[[block:image id=${id}]]%`],
     );
     return Number(rows[0]?.count ?? 0);
+  }
+
+  async approve(id: string): Promise<ContentImageRecord> {
+    await this.repo.update({ id }, { status: "active" });
+    const updated = await this.findById(id);
+    if (!updated) throw new Error(`ContentImage id=${id} bien mat sau approve`);
+    return updated;
+  }
+
+  async addRejectedKeyword(jobId: string, keyword: string): Promise<void> {
+    await this.dataSource.query(
+      `INSERT INTO content_image_rejected_keywords (job_id, keyword) VALUES ($1, $2)
+       ON CONFLICT (job_id, keyword) DO NOTHING`,
+      [jobId, keyword],
+    );
+  }
+
+  async isKeywordRejected(jobId: string, keyword: string): Promise<boolean> {
+    const rows: unknown[] = await this.dataSource.query(
+      `SELECT 1 FROM content_image_rejected_keywords WHERE job_id = $1 AND keyword = $2`,
+      [jobId, keyword],
+    );
+    return rows.length > 0;
+  }
+
+  async findArticleTitlesByJobIds(jobIds: string[]): Promise<Map<string, string>> {
+    if (jobIds.length === 0) return new Map();
+    const rows: Array<{ job_id: string; title: string }> = await this.dataSource.query(
+      `SELECT DISTINCT ON (job_id) job_id, title
+       FROM content_drafts
+       WHERE job_id = ANY($1) AND title IS NOT NULL
+       ORDER BY job_id, version DESC`,
+      [jobIds],
+    );
+    return new Map(rows.map((r) => [r.job_id, r.title]));
   }
 }

@@ -281,6 +281,11 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
               status: "active",
               usageCount: 0,
               uploadedAt: new Date("2026-01-01"),
+              source: null,
+              sourceUrl: null,
+              photographer: null,
+              relatedJobId: null,
+              searchKeyword: null,
             }
           : null,
     });

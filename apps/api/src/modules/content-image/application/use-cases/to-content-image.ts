@@ -7,7 +7,10 @@ function resolveImageUrl(path: string): string {
   return base.replace(/\/+$/, "") + "/" + path.replace(/^\/+/, "");
 }
 
-export function toContentImage(record: ContentImageRecord): ContentImage {
+export function toContentImage(
+  record: ContentImageRecord,
+  articleTitleByJobId: Map<string, string> = new Map(),
+): ContentImage {
   return {
     id: record.id,
     imageUrl: resolveImageUrl(record.path),
@@ -18,5 +21,13 @@ export function toContentImage(record: ContentImageRecord): ContentImage {
     status: record.status,
     usageCount: record.usageCount,
     uploadedAt: record.uploadedAt.toISOString(),
+    source: record.source,
+    sourceUrl: record.sourceUrl,
+    photographer: record.photographer,
+    searchKeyword: record.searchKeyword,
+    relatedArticle:
+      record.relatedJobId && articleTitleByJobId.has(record.relatedJobId)
+        ? { jobId: record.relatedJobId, title: articleTitleByJobId.get(record.relatedJobId)! }
+        : null,
   };
 }

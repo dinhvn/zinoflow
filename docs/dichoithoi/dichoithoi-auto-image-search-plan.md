@@ -1,13 +1,18 @@
-# Dichoithoi — Tự động tìm ảnh minh hoạ cho nội dung (chưa build)
+# Dichoithoi — Tự động tìm ảnh minh hoạ cho nội dung
+
+**ĐÃ BUILD 17/07/2026** — Giai đoạn 1-4 xong, xem ✅ cuối mỗi giai đoạn bên
+dưới. Còn thiếu 1 việc CHỈ người dùng làm được: đăng ký tài khoản Pexels +
+điền `PEXELS_API_KEY` thật vào `apps/api/.env` — code đã sẵn sàng nhận key,
+thiếu key thì tính năng luôn trả về "0 ảnh" một cách an toàn (không lỗi),
+đã verify pattern này bằng dữ liệu thật (xem Giai đoạn 3).
 
 Ghi lại 15/07/2026, từ ý tưởng người dùng: muốn có 1 nút trong zinoflow —
 bấm là hệ thống tự quét xem tag/bài viết nào chưa có ảnh, tự tìm ảnh phù
 hợp, tự tải về + upload lên thư viện ảnh (đã thiết kế ở
 `dichoithoi-content-image-library-plan.md`), rồi người dùng duyệt. Mục
-tiêu: làm nhanh, giảm thao tác thủ công. **Chưa code — chỉ phân tích + ghi
-doc.** Phụ thuộc trực tiếp vào Mức A của
-`dichoithoi-content-image-library-plan.md` (cần bảng `content_images` +
-pipeline upload tồn tại trước).
+tiêu: làm nhanh, giảm thao tác thủ công. Phụ thuộc trực tiếp vào Mức A của
+`dichoithoi-content-image-library-plan.md` (bảng `content_images` + pipeline
+upload) — đã build xong trước (17/07/2026 cùng phiên).
 
 ## 0) Hiện trạng đã audit (15/07/2026)
 
@@ -124,6 +129,16 @@ vào.
 **DoD**: gọi thử API Pexels qua script, xác nhận trả về ảnh + license info
 đúng định dạng mong đợi.
 
+✅ **Xong 17/07/2026 (thiếu key thật)** — `StockImageSearchPort` +
+`PexelsStockImageSearchAdapter` (`GET api.pexels.com/v1/search`, header
+`Authorization: <key>`). Thiếu `PEXELS_API_KEY` → adapter trả về `[]` +
+log warning, KHÔNG ném lỗi (đúng convention `IMAGE_UPLOADER` khi thiếu FTP
+config). Chưa gọi được API thật vì chưa có key — người dùng cần tự đăng ký
+tại pexels.com/api và điền vào `.env` để verify bước gọi API thật; toàn bộ
+pipeline phía sau (download → resize → upload → lưu pending) đã verify
+được bằng cách chèn thẳng 1 bản ghi `content_images` giả lập qua SQL (xem
+Giai đoạn 3-4), chỉ riêng bước gọi Pexels thật là chưa test được.
+
 ### Giai đoạn 2 — Bổ sung `status` vào `content_images` (phụ thuộc plan thư viện ảnh Giai đoạn 1)
 
 - Thêm cột `status` (`active`/`pending`) — SỬA lại thiết kế bảng đã có ở
@@ -133,6 +148,13 @@ vào.
 
 **DoD**: migration chạy sạch trên dữ liệu đã có (nếu có); UI editor/thư
 viện ảnh hiện tại không bị ảnh hưởng (mặc định vẫn hiện đúng ảnh active).
+
+✅ **Xong sớm hơn kế hoạch** — cột `status` đã có sẵn từ Mức A (thêm luôn
+lúc thiết kế bảng `content_images` ban đầu, không phải sửa lại). Giai đoạn
+này chỉ còn việc bổ sung metadata nguồn (`source`/`source_url`/
+`photographer`/`related_job_id`/`search_keyword`) — migration
+`1782210000000-AutoImageSearch.ts`, cùng đợt tạo bảng
+`content_image_rejected_keywords` (job_id + keyword, PK kép) cho §2.3.
 
 ### Giai đoạn 3 — Job quét + tìm + tải + upload
 
@@ -144,6 +166,22 @@ viện ảnh hiện tại không bị ảnh hưởng (mặc định vẫn hiện
 sót bài đã có ảnh, không chọn nhầm bài đã đủ), ảnh tải về đúng chủ đề (spot
 check bằng mắt), ghi đúng `status=pending` + đủ metadata nguồn.
 
+✅ **Xong 17/07/2026** — `ScanArticlesMissingImagesUseCase` (query
+`content_jobs`+`content_drafts`, lọc `articleType=cam-nang`, status
+`DraftReady`/`Approved`, `draftMarkdown` không rỗng và không chứa
+`[[block:image`). `generateSearchKeyword()` (domain, pure function, có unit
+test `generate-search-keyword.spec.ts`) — tách từ, bỏ stop-word tiếng Việt
+không dấu ("kinh nghiem", "review", "o"...), thêm hậu tố "vietnam travel".
+`AutoSearchContentImagesUseCase` — với mỗi jobId: sinh từ khoá → kiểm tra
+`isKeywordRejected` (bỏ qua nếu đã bị từ chối trước đó cho đúng bài này) →
+gọi Pexels (tối đa 4 ứng viên) → tải/resize/upload từng ảnh → ghi
+`content_images` với `status=pending`. Verify thật bằng dữ liệu thật trên
+dev DB (KHÔNG mock): gọi `GET /content-images/missing-articles` → trả
+đúng 4 bài cẩm nang thật đang thiếu ảnh; gọi
+`POST /content-images/auto-search` → chạy đúng, không lỗi, trả note rõ
+ràng "PEXELS_API_KEY chưa cấu hình" (vì chưa có key thật) thay vì crash —
+xác nhận toàn bộ luồng xử lý lỗi graceful đúng thiết kế.
+
 ### Giai đoạn 4 — Màn duyệt + nút kích hoạt
 
 - 2.3 + 2.4.
@@ -152,8 +190,42 @@ check bằng mắt), ghi đúng `status=pending` + đủ metadata nguồn.
 xuất hiện trong tab chờ duyệt → duyệt 1 ảnh → ảnh chuyển active, dùng được
 ngay trong editor bài viết.
 
+✅ **Xong 17/07/2026** — thêm 2 tab "Thư viện"/"Chờ duyệt" (badge số lượng)
+vào trang `/dichoithoi/thu-vien-anh`, modal "Tự động tìm ảnh còn thiếu"
+(quét → tick chọn bài → chạy → xem tóm tắt kết quả từng bài, tách 2 bước
+đúng thiết kế §3 Giai đoạn 3 để tránh gọi Pexels lãng phí nếu bước quét sai).
+Ảnh pending hiện card riêng (viền cam, không cho sửa alt/copy token — chỉ
+Duyệt/Từ chối, tránh nhầm với ảnh đã duyệt). Verify Playwright thật trên
+dev server + dev DB thật:
+- Modal quét ra đúng 4 bài thật đang thiếu ảnh, tick 1 bài → chạy → hiện
+  đúng note "PEXELS_API_KEY chưa cấu hình" (không crash).
+- Chèn 2 bản ghi `content_images` giả lập `status=pending` qua SQL (mô
+  phỏng kết quả Pexels thật, vì chưa có key) để test trọn luồng duyệt còn
+  lại: tab "Chờ duyệt" hiện đúng metadata (bài liên quan/từ khoá/nguồn/
+  photographer) → bấm Duyệt → Postgres xác nhận `status` chuyển `active`
+  → ảnh xuất hiện đúng ở tab "Thư viện" dùng bình thường (Copy token/Xoá).
+  Bấm Từ chối ở ảnh còn lại → Postgres xác nhận: ảnh bị xoá VÀ ghi đúng 1
+  dòng vào `content_image_rejected_keywords`.
+- Gọi lại `/content-images/auto-search` với cùng jobId sau khi từ chối
+  đúng từ khoá thật đã sinh ra — xác nhận trả về note "Từ khoá này đã bị
+  từ chối trước đó cho bài viết này — bỏ qua" (không gọi lại Pexels lãng
+  phí cho từ khoá đã bị từ chối, đúng yêu cầu §2.3).
+- Đã dọn sạch toàn bộ dữ liệu test (`content_images`,
+  `content_image_rejected_keywords`) sau khi verify.
+
 ## Ghi chú quan trọng khi build
 
 KHÔNG bỏ qua §1.1/§1.2 dù muốn làm nhanh — đây là lý do plan này tách biệt
 với plan thư viện ảnh gốc thay vì gộp chung, để 2 rủi ro này luôn được nhắc
-lại rõ ràng mỗi khi đọc plan, không bị lẫn vào chi tiết kỹ thuật.
+lại rõ ràng mỗi khi đọc plan, không bị lẫn vào chi tiết kỹ thuật. §1.2 được
+tuân thủ đúng trong code: `generateSearchKeyword()` chỉ nhận `topic` (chủ đề
+bài cẩm nang chung), KHÔNG có đường nào truyền tên địa điểm cụ thể vào —
+tính năng chỉ áp dụng cho Article, không đụng vào ảnh hero/gallery Destination.
+
+### Việc còn lại — chỉ người dùng làm được
+
+Đăng ký tài khoản Pexels miễn phí tại pexels.com/api, lấy API key, điền vào
+`apps/api/.env`: `PEXELS_API_KEY=...`. Sau khi điền, bấm "Tự động tìm ảnh
+còn thiếu" trên trang thư viện ảnh sẽ gọi Pexels thật — không cần sửa code.
+
+### Tổng thứ tự: 1 (thiếu key thật) → 2 (đã có sẵn từ Mức A) → 3 → 4 — code xong 17/07/2026

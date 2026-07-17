@@ -3,36 +3,51 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  autoSearchContentImagesResponseSchema,
   listContentImagesResponseSchema,
+  scanArticlesMissingImagesResponseSchema,
+  type ArticleMissingImage,
+  type AutoSearchArticleResult,
   type ContentImage,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, apiUpload, ApiError } from "@/shared/api-client";
-import { Button, ErrorBox, FeatureIntro, Input, PageHeader, Textarea } from "@/shared/ui";
+import { Badge, Button, ErrorBox, FeatureIntro, Input, Modal, PageHeader, Textarea } from "@/shared/ui";
 
 const QUERY_KEY = ["content-images"];
 const MAX_MB = 15;
+type Tab = "active" | "pending";
 
 /**
- * Thư viện ảnh nội dung (dichoithoi-content-image-library-plan.md §3.3) — kho ảnh
- * MINH HOẠ CHUNG dùng để chèn vào bài viết cẩm nang qua token
- * `[[block:image id=...]]`, KHÁC HOÀN TOÀN ảnh hero/thumbnail/gallery của điểm
- * đến (2 kho tách biệt). Cách dùng: upload ảnh → sửa alt text (bắt buộc, dùng
- * cho SEO + accessibility) → bấm "Copy token" trên ảnh cần dùng → dán dòng đó
- * vào đúng chỗ trong markdown đang soạn (khối phải nằm RIÊNG 1 dòng, có tiêu đề
- * H2/H3 ngay phía trên). Ảnh đang được bài viết nào tham chiếu sẽ không xoá
- * được (tránh vỡ ảnh trong bài đã/đang soạn).
+ * Thư viện ảnh nội dung (dichoithoi-content-image-library-plan.md §3.3 +
+ * dichoithoi-auto-image-search-plan.md) — kho ảnh MINH HOẠ CHUNG dùng để chèn
+ * vào bài viết cẩm nang qua token `[[block:image id=...]]`, KHÁC HOÀN TOÀN
+ * ảnh hero/thumbnail/gallery của điểm đến (2 kho tách biệt). Cách dùng:
+ * upload ảnh (hoặc bấm "Tự động tìm ảnh còn thiếu" để hệ thống tự tìm qua
+ * Pexels cho các bài chưa có ảnh) → sửa alt text → bấm "Copy token" → dán vào
+ * markdown đang soạn (khối phải nằm riêng 1 dòng, có H2/H3 ngay phía trên).
+ * Ảnh tự động tìm luôn ở tab "Chờ duyệt" — phải Duyệt mới dùng được, tránh
+ * ảnh sai/không liên quan lọt ra bài viết mà không ai kiểm tra.
  */
 export default function ThuVienAnhPage() {
+  const [tab, setTab] = useState<Tab>("active");
+  const [autoSearchOpen, setAutoSearchOpen] = useState(false);
   const query = useQuery({
     queryKey: QUERY_KEY,
     queryFn: () => apiGet("/content-images", listContentImagesResponseSchema),
   });
+
+  const pendingCount = query.data?.images.filter((i) => i.status === "pending").length ?? 0;
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="Thư viện ảnh nội dung"
         description="Kho ảnh minh hoạ chung để chèn vào bài viết cẩm nang — không phải ảnh đại diện điểm đến."
+        actions={
+          <Button size="sm" variant="secondary" onClick={() => setAutoSearchOpen(true)}>
+            Tự động tìm ảnh còn thiếu
+          </Button>
+        }
       />
       <FeatureIntro
         summary="Upload ảnh minh hoạ chung (món ăn, cảnh sinh hoạt...) rồi copy token dán vào bài viết đang soạn để chèn ảnh."
@@ -45,19 +60,62 @@ export default function ThuVienAnhPage() {
               phía trên (giống các khối động khác).
             </li>
             <li>Ảnh đang được bài viết nào tham chiếu sẽ không xoá được — gỡ token khỏi bài trước.</li>
+            <li>
+              <span className="font-medium">Tự động tìm ảnh còn thiếu</span>: quét các bài cẩm nang
+              chưa có ảnh nào, tự tìm ảnh minh hoạ chung qua Pexels (ảnh có giấy phép thương mại,
+              không phải Google Images) — ảnh tìm được luôn nằm ở tab "Chờ duyệt", phải xem và Duyệt
+              tay mới dùng được trong bài, KHÔNG tự publish.
+            </li>
             <li>Kho này tách biệt hoàn toàn khỏi ảnh đại diện/gallery của điểm đến.</li>
           </ul>
         }
       />
 
+      <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
+        <TabButton active={tab === "active"} onClick={() => setTab("active")}>
+          Thư viện
+        </TabButton>
+        <TabButton active={tab === "pending"} onClick={() => setTab("pending")}>
+          Chờ duyệt {pendingCount > 0 && <Badge tone="amber">{pendingCount}</Badge>}
+        </TabButton>
+      </div>
+
       {query.isLoading && <p className="text-sm text-zinc-500">Đang tải...</p>}
       {query.isError && <ErrorBox error={query.error} fallback="Lỗi tải thư viện ảnh" />}
-      {query.data && <ImageLibrary images={query.data.images} />}
+      {query.data && (
+        <ImageLibrary images={query.data.images.filter((i) => i.status === tab)} tab={tab} />
+      )}
+
+      {autoSearchOpen && <AutoSearchModal onClose={() => setAutoSearchOpen(false)} />}
     </div>
   );
 }
 
-function ImageLibrary({ images }: { images: ContentImage[] }) {
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${
+        active
+          ? "border-indigo-600 text-indigo-700 dark:border-indigo-400 dark:text-indigo-300"
+          : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ImageLibrary({ images, tab }: { images: ContentImage[]; tab: Tab }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -100,36 +158,46 @@ function ImageLibrary({ images }: { images: ContentImage[] }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            handleFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-        <Button
-          size="sm"
-          variant="primary"
-          loading={upload.isPending}
-          onClick={() => inputRef.current?.click()}
-        >
-          {upload.isPending ? "Đang upload..." : "+ Thêm ảnh"}
-        </Button>
-        <span className="text-xs text-zinc-400">Tối đa {MAX_MB}MB/ảnh · chọn nhiều ảnh cùng lúc</span>
-      </div>
+      {tab === "active" && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              handleFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            size="sm"
+            variant="primary"
+            loading={upload.isPending}
+            onClick={() => inputRef.current?.click()}
+          >
+            {upload.isPending ? "Đang upload..." : "+ Thêm ảnh"}
+          </Button>
+          <span className="text-xs text-zinc-400">Tối đa {MAX_MB}MB/ảnh · chọn nhiều ảnh cùng lúc</span>
+        </div>
+      )}
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
 
-      {images.length === 0 && <p className="text-sm text-zinc-500">Chưa có ảnh nào trong thư viện.</p>}
+      {images.length === 0 && (
+        <p className="text-sm text-zinc-500">
+          {tab === "active" ? "Chưa có ảnh nào trong thư viện." : "Không có ảnh nào đang chờ duyệt."}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-        {images.map((image) => (
-          <ImageCard key={image.id} image={image} copied={copiedId === image.id} onCopyToken={copyToken} />
-        ))}
+        {images.map((image) =>
+          tab === "pending" ? (
+            <PendingImageCard key={image.id} image={image} />
+          ) : (
+            <ImageCard key={image.id} image={image} copied={copiedId === image.id} onCopyToken={copyToken} />
+          ),
+        )}
       </div>
     </div>
   );
@@ -213,5 +281,159 @@ function ImageCard({
       </div>
       {error && <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{error}</p>}
     </div>
+  );
+}
+
+/** Anh o tab "Cho duyet" — chi Duyet/Tu choi, khong cho sua alt/copy token
+ * (chua phai anh dung duoc, tranh nham voi anh da duyet — plan §2.2 muc 4) */
+function PendingImageCard({ image }: { image: ContentImage }) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+
+  const approve = useMutation({
+    mutationFn: () => apiSend("POST", `/content-images/${image.id}/approve`),
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : "Duyệt thất bại"),
+  });
+
+  const reject = useMutation({
+    mutationFn: () => apiSend("POST", `/content-images/${image.id}/reject`),
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : "Từ chối thất bại"),
+  });
+
+  return (
+    <div className="rounded border border-amber-200 bg-amber-50/40 p-2 dark:border-amber-900 dark:bg-amber-950/20">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={image.imageUrl} alt={image.altText} className="mb-2 h-24 w-full rounded object-cover" />
+      {image.relatedArticle && (
+        <p className="mb-1 line-clamp-1 text-[11px] text-zinc-500">
+          Cho bài: <span className="font-medium">{image.relatedArticle.title}</span>
+        </p>
+      )}
+      {image.searchKeyword && (
+        <p className="mb-1 line-clamp-1 text-[11px] text-zinc-400">Từ khoá: {image.searchKeyword}</p>
+      )}
+      {image.photographer && (
+        <p className="mb-1 line-clamp-1 text-[11px] text-zinc-400">
+          Nguồn: {image.source} — {image.photographer}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center gap-1">
+        <Button size="sm" variant="primary" loading={approve.isPending} onClick={() => approve.mutate()}>
+          Duyệt
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-red-600 dark:text-red-400"
+          loading={reject.isPending}
+          onClick={() => reject.mutate()}
+        >
+          Từ chối
+        </Button>
+      </div>
+      {error && <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{error}</p>}
+    </div>
+  );
+}
+
+/** Man "Tu dong tim anh con thieu" (plan §2.4) — buoc 1 quet, buoc 2 chon bai
+ * + chay tim, buoc 3 xem tom tat ket qua. Tach 2 buoc de tranh goi API Pexels
+ * lang phi neu buoc quet chon sai (plan §3 Giai doan 3). */
+function AutoSearchModal({ onClose }: { onClose: () => void }) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [results, setResults] = useState<AutoSearchArticleResult[] | null>(null);
+  const queryClient = useQueryClient();
+
+  const scan = useQuery({
+    queryKey: ["content-images", "missing-articles"],
+    queryFn: () => apiGet("/content-images/missing-articles", scanArticlesMissingImagesResponseSchema),
+  });
+
+  const run = useMutation({
+    mutationFn: async () => {
+      const raw = await apiSend("POST", "/content-images/auto-search", { jobIds: [...selected] });
+      return autoSearchContentImagesResponseSchema.parse(raw);
+    },
+    onSuccess: (data) => {
+      setResults(data.results);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+
+  function toggle(jobId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Tự động tìm ảnh còn thiếu">
+      <div className="space-y-3">
+        <p className="text-xs text-zinc-500">
+          Quét các bài cẩm nang đã có nội dung nhưng chưa chèn ảnh nào, tìm ảnh minh hoạ chung qua
+          Pexels, đưa vào tab "Chờ duyệt" — chưa dùng được trong bài ngay, phải duyệt tay từng ảnh.
+        </p>
+
+        {scan.isLoading && <p className="text-sm text-zinc-500">Đang quét...</p>}
+        {scan.isError && <ErrorBox error={scan.error} fallback="Lỗi quét bài viết" />}
+        {scan.data && scan.data.articles.length === 0 && (
+          <p className="text-sm text-zinc-500">Không có bài nào đang thiếu ảnh.</p>
+        )}
+        {scan.data && scan.data.articles.length > 0 && !results && (
+          <>
+            <div className="max-h-64 space-y-1 overflow-y-auto">
+              {scan.data.articles.map((article: ArticleMissingImage) => (
+                <label key={article.jobId} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(article.jobId)}
+                    onChange={() => toggle(article.jobId)}
+                  />
+                  <span className="line-clamp-1">{article.title}</span>
+                </label>
+              ))}
+            </div>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={selected.size === 0}
+              loading={run.isPending}
+              onClick={() => run.mutate()}
+            >
+              Chạy tìm ảnh ({selected.size} bài)
+            </Button>
+          </>
+        )}
+        {run.isError && <ErrorBox error={run.error} fallback="Lỗi chạy tìm ảnh" />}
+
+        {results && (
+          <div className="space-y-1.5">
+            {results.map((r) => (
+              <div key={r.jobId} className="rounded border border-zinc-200 p-2 text-xs dark:border-zinc-800">
+                <div className="font-medium">{r.title}</div>
+                <div className="text-zinc-500">Từ khoá: {r.keyword}</div>
+                <div className={r.stagedCount > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500"}>
+                  {r.stagedCount > 0 ? `Tìm được ${r.stagedCount} ảnh — xem ở tab "Chờ duyệt"` : r.note}
+                </div>
+              </div>
+            ))}
+            <Button size="sm" variant="secondary" onClick={onClose}>
+              Đóng
+            </Button>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
