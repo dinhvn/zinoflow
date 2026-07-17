@@ -96,15 +96,17 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   kỹ thuật, ghi nhận để biết khi cần mở rộng (thêm vùng mới phải sửa code).
 - **DestinationTag** — chưa có UI tạo/sửa chính cái tag (chỉ có UI gán tag
   cho điểm đến) — tag mới phải seed thẳng SQL.
-- **Nâng cấp liên kết "Điểm đến liên quan" theo nhiều tiêu chí (15/07/2026,
-  CHƯA BUILD)** — plan đầy đủ (thuật toán chấm điểm, mô hình khoảng cách
-  2 tầng, trang bản đồ tổng quan, trang rà soát taxonomy) ở
-  `dichoithoi-destination-relations-plan.md` (4 giai đoạn A→B→C→D, có
-  Definition of Done từng giai đoạn). **Giai đoạn B (chuẩn hoá taxonomy) là
-  điều kiện chặn cứng** — không được bật tiêu chí "cùng loại hình" trong
-  thuật toán khi taxonomy còn dữ liệu sai đã biết (vd. Vịnh Hạ Long gán
-  nhầm "Di tích lịch sử"). Khi được hỏi "việc cần làm tiếp" cho dichoithoi,
-  luôn kiểm tra plan này có đang là việc ưu tiên không.
+- ✅ **Nâng cấp liên kết "Điểm đến liên quan" theo nhiều tiêu chí — ĐÃ BUILD +
+  VERIFY XONG TOÀN BỘ 4 GIAI ĐOẠN A→B→C→D (17/07/2026)**. Thuật toán chấm
+  điểm (type-overlap > cluster/tỉnh > khoảng cách 2 tầng > ưu tiên biên
+  tập), taxonomy Type/Tag đã chuẩn hoá (Giai đoạn B là điều kiện chặn cứng
+  đã hoàn thành trước khi bật Giai đoạn C), trang bản đồ tổng quan
+  (`/dichoithoi/ban-do`, lớp quan hệ + nối tay/loại trừ), nhãn tiêu chí
+  hiển thị trên website + JSON-LD ItemList riêng cho khối liên quan. Chi
+  tiết đầy đủ + verify từng giai đoạn ở
+  `dichoithoi-destination-relations-plan.md`. Còn B4 (rà soát tay taxonomy
+  qua Kanban `/dichoithoi/phan-loai`) là việc vận hành dài hơi người dùng
+  tự làm dần, không chặn gì.
 - **Nâng cấp quy trình bài viết Article/Cẩm nang (15/07/2026, CHƯA BUILD)**
   — plan ở `dichoithoi-article-workflow-plan.md`: (1) thêm field tag thật
   cho bài viết, dùng CHUNG vocabulary `V2DestinationTag` với Destination
@@ -122,28 +124,24 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   result); breadcrumb thiếu hoàn toàn trên Article (khác mọi controller
   khác); ảnh thân bài thiếu `width`/`height` (rủi ro CLS, bị sanitize-html
   xoá dù nguồn có sẵn).
-- **Thư viện ảnh nội dung + token chèn ảnh (15/07/2026, CHƯA BUILD)** — plan
-  ở `dichoithoi-content-image-library-plan.md`. Mức A (chỉ Article, dùng
-  lại engine `[[block:...]]` có sẵn) là bước làm trước. Phát hiện quan
-  trọng: **Destination hiện HOÀN TOÀN CHƯA có bước resolve token nào**
-  (`publish-destination.usecase.ts` chỉ markdown→HTML + auto-link, không
-  compile `[[block:...]]`) — khác Article — nên chèn ảnh token cho cả
-  Destination (Mức B) là việc LỚN hơn nhiều (phải mang cả cơ chế token
-  sang Destination lần đầu), để riêng đánh giá sau, không gộp chung đợt.
-- **Tự động tìm ảnh minh hoạ cho nội dung (15/07/2026, CHƯA BUILD)** — plan
-  ở `dichoithoi-auto-image-search-plan.md`, phụ thuộc cứng vào Mức A của
-  plan thư viện ảnh ở trên (cần bảng `content_images` tồn tại trước). 2
-  nguyên tắc bắt buộc: (1) CHỈ tìm ảnh qua API ảnh miễn phí có giấy phép rõ
-  ràng (Pexels mặc định) — không search web mở, tránh rủi ro bản quyền vì
-  site có kiếm tiền; (2) CHỈ tự tìm cho nhu cầu ảnh minh hoạ CHUNG, KHÔNG
-  tự tìm ảnh cho 1 địa điểm cụ thể có tên riêng (ảnh stock không đúng thật
-  sự địa điểm đó, gây hiểu lầm). Ảnh tìm được luôn ở trạng thái `pending`,
-  chờ người dùng duyệt mới dùng được — không tự publish.
-  (16/07/2026: bước sinh từ khoá bản đầu giữ đơn giản — tách thuần từ tiêu
-  đề, KHÔNG dùng AI — nâng cấp AI Haiku chọn/sinh từ khoá tốt hơn là việc
-  hoãn lại, không phải rào cản chi phí.) Có kèm 1 Claude
-  Code skill (`dichoithoi-find-content-images`) để chạy thủ công qua chat
-  trước khi UI nút bấm trong app được build.
+- ✅ **Thư viện ảnh nội dung + token chèn ảnh — MỨC A ĐÃ BUILD + VERIFY XONG
+  (17/07/2026)** — `dichoithoi-content-image-library-plan.md`. Bảng
+  `content_images` (Postgres), token `[[block:image id=...]]` resolve
+  trong `ArticleBlockCompiler`, trang `/dichoithoi/thu-vien-anh` (upload/
+  sửa/xoá/copy token). Verify thật: publish 1 bài test lên site LocalDB,
+  ảnh hiện đúng. Mức B (mang token sang Destination) vẫn để riêng, chưa
+  cần — `publish-destination.usecase.ts` vẫn chưa compile `[[block:...]]`,
+  đánh giá lại khi có nhu cầu thật.
+- ✅ **Tự động tìm ảnh minh hoạ cho nội dung — ĐÃ BUILD + VERIFY XONG VỚI
+  PEXELS API THẬT (17/07/2026)** — `dichoithoi-auto-image-search-plan.md`.
+  Quét bài cẩm nang thiếu ảnh → sinh từ khoá thuần chuỗi (không AI) → gọi
+  Pexels thật → lưu `pending` → tab "Chờ duyệt" trong `/dichoithoi/
+  thu-vien-anh` (Duyệt/Từ chối, nhớ từ khoá bị từ chối). Đã verify full
+  vòng đời với `PEXELS_API_KEY` thật do người dùng cung cấp: Pexels trả
+  đúng ảnh khớp chủ đề, duyệt/từ chối cập nhật DB đúng. 2 nguyên tắc bắt
+  buộc (chỉ Pexels có giấy phép thương mại; chỉ tìm ảnh minh hoạ CHUNG,
+  không tự tìm ảnh cho 1 địa điểm cụ thể) đã áp dụng đúng trong code. Kèm
+  skill `dichoithoi-find-content-images` để chạy thủ công qua chat.
 - **Giải thích tính năng ngay tại chỗ dùng — RETROFIT CÒN NỢ (15/07/2026)**
   — quy tắc mới bắt buộc cho MỌI trang CMS (ghi trong
   `.github/copilot-instructions.md`, mục "Giải thích tính năng ngay tại chỗ
