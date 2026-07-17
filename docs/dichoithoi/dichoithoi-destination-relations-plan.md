@@ -708,14 +708,33 @@ trang Kanban (không còn ở trạng thái "chưa xem lại từ khi có AI đ�
 đích; danh sách 16 loại-hình-place chính thức đã chốt (không còn lẫn tag
 trải nghiệm).
 
+✅ **B4 — Người dùng xác nhận đã rà xong (17/07/2026)**: 228/247 điểm
+`kind=poi` đã có Type (số liệu thật `dichoithoi_dev` tại thời điểm xác
+nhận). 19 điểm còn ở cột "Chưa phân loại" — gồm cả trường hợp chủ đích
+không ép loại đã ghi nhận từ Bước 0 (Hà Tiên, Mũi Cà Mau — địa danh/mũi
+đất, không phải lỗi) lẫn 1 dòng `test-pivot-block` (dữ liệu test, không
+phải điểm đến thật). Coi Giai đoạn B đã đủ điều kiện mở khoá Giai đoạn C
+theo xác nhận trực tiếp của người dùng — không chặn cứng theo số 0 tuyệt
+đối như mô tả gốc.
+
 ### Giai đoạn C — Thuật toán chấm điểm + lớp quan hệ trên bản đồ (phụ thuộc A + B)
 
 Phụ thuộc: cần A1 (Priority) + A2 (cluster distances) xong, và **bắt buộc
 B xong hoàn toàn** (không phải đang dở).
 
-1. **C1. Mirror hoá tập loại hình đã chuẩn hoá** vào Postgres (§1.4 mục 1,
-   bản sửa many-to-many) — chỉ đồng bộ SAU khi giai đoạn B xong, tránh mirror
-   dữ liệu còn sai.
+1. ✅ **C1. Mirror hoá tập loại hình — ĐÃ XONG (17/07/2026)** (§1.4 mục 1, bản
+   many-to-many) — cột mới `types jsonb` trên `dichoithoi_destinations`
+   (migration `1782190000000-DestinationMirrorTypes.ts`), mảng rỗng cho
+   `province`/`cluster` (không gán Type) và cho `poi` chưa phân loại. Nguồn:
+   thêm subquery `STRING_AGG` trong `fetchAllDestinations()`
+   (`mssql-site-db.adapter.ts`) — gộp CHUNG 1 query, không cần round-trip
+   riêng. `SiteDestinationRow`/`upsertFromSite()` truyền thẳng qua, không đổi
+   logic quyết định sync (`decideSyncAction` vẫn so theo `contentHash` như
+   cũ — `types` luôn được ghi lại mỗi lần đồng bộ, kể cả dòng "unchanged").
+   Verify: `tsc --noEmit` sạch, jest 370/370 pass, chạy migration Postgres
+   dev thật, bấm "Đồng bộ từ website" thật → xác nhận qua psql
+   `doi-cu-dalat` có `types: ["khu-vui-choi"]`, `da-lat` (cluster) có
+   `types: []` đúng như thiết kế.
 2. **C2. Viết thuật toán chấm điểm** (§1.3, hàm mới thay `buildRelatedItems()`
    bước 3-5 cũ) + `related-builder.spec.ts` đầy đủ test case đã liệt kê ở
    §1.4.

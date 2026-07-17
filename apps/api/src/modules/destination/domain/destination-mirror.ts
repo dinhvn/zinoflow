@@ -41,6 +41,10 @@ export interface SiteDestinationRow {
   siteUpdatedAt: Date | null;
   /** Gia ve tai quay, van ban tu do — mirror 1 chieu tu TicketPrice (Phase 4) */
   ticketPrice: string | null;
+  /** Slug cac loai hinh da gan (v2.DestinationTypeMap, nhieu-nhieu) — chi co y nghia
+   * voi kind=poi (province/cluster luon rong). Mirror tu Giai doan B tro di, dung cho
+   * thuat toan cham diem quan he (relations-plan §1.3, §1.4 muc 1). */
+  types: string[];
 }
 
 /** Trang thai mirror toi thieu de ra quyet dinh sync */

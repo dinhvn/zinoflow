@@ -154,6 +154,11 @@ export class DestinationMirrorEntity {
   @Column({ name: "sync_flags", type: "jsonb", default: () => "'[]'" })
   syncFlags!: string[];
 
+  /** Slug cac loai hinh da gan (v2.DestinationTypeMap, nhieu-nhieu, chi kind=poi) —
+   * mirror tu Giai doan C1, dung cho thuat toan cham diem quan he (relations-plan §1.3). */
+  @Column({ name: "types", type: "jsonb", default: () => "'[]'" })
+  types!: string[];
+
   /** Mirror co thay doi local chua publish (chan sync de khi dong bo) */
   @Column({ name: "has_local_changes", type: "boolean", default: false })
   hasLocalChanges!: boolean;

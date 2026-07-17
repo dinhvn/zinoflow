@@ -81,7 +81,13 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         p.Code AS ProvinceCode,
         par.Slug AS ParentSlug,
         c.TicketPrice,
-        CONVERT(varchar(64), HASHBYTES('SHA2_256', CAST(c.ContentHtml AS nvarchar(max))), 2) AS ContentHash
+        CONVERT(varchar(64), HASHBYTES('SHA2_256', CAST(c.ContentHtml AS nvarchar(max))), 2) AS ContentHash,
+        (
+          SELECT STRING_AGG(t.Slug, ',')
+          FROM v2.DestinationTypeMap m
+          JOIN v2.DestinationType t ON t.Id = m.TypeId
+          WHERE m.DestinationId = d.Id
+        ) AS TypesCsv
       FROM v2.Destination d
       LEFT JOIN v2.Destination par ON par.Id = d.ParentId
       LEFT JOIN v2.Province p ON p.Id = d.ProvinceId
@@ -113,6 +119,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       contentHash: (r.ContentHash as string | null) ?? null,
       siteUpdatedAt: r.UpdatedAt ? new Date(r.UpdatedAt as string) : null,
       ticketPrice: (r.TicketPrice as string | null) ?? null,
+      types: r.TypesCsv ? String(r.TypesCsv).split(",") : [],
     }));
   }
 

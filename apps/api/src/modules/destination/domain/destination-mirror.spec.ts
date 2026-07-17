@@ -35,6 +35,7 @@ function siteRow(overrides: Partial<SiteDestinationRow> = {}): SiteDestinationRo
     contentHash: "hash-a",
     siteUpdatedAt: null,
     ticketPrice: null,
+    types: [],
     ...overrides,
   };
 }

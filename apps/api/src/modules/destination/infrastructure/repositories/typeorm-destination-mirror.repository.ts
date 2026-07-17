@@ -230,6 +230,7 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       contentSource: row.contentSource,
       contentHash: row.contentHash,
       ticketPrice: row.ticketPrice,
+      types: row.types,
       syncFlags: flags,
       hasLocalChanges: false,
       siteUpdatedAt: row.siteUpdatedAt,
