@@ -208,6 +208,25 @@ describe("buildRelatedItems (relations-plan §1.3-§1.4, Giai doan C2)", () => {
     expect(items.map((i) => i.slug)).toEqual(["cung-loai-cung-tinh", "cung-tinh-khac-loai"]);
   });
 
+  it("loai bo excludedSlugs khoi TOAN BO cac buoc (con, curated, cham diem) — relations-plan §5.7 muc 3", () => {
+    const self = candidate({ slug: "self" });
+    const all = [
+      self,
+      candidate({ slug: "con-bi-loai", parentSlug: "self" }),
+      candidate({ slug: "curated-bi-loai" }),
+      candidate({ slug: "diem-cao-bi-loai", types: ["bien-dao"] }),
+      candidate({ slug: "diem-thuong" }),
+    ];
+    const items = buildRelatedItems({
+      self: { ...self, types: ["bien-dao"] },
+      all,
+      curatedRelatedSlugs: ["curated-bi-loai"],
+      clusterDistances: noClusterDistances,
+      excludedSlugs: new Set(["con-bi-loai", "curated-bi-loai", "diem-cao-bi-loai"]),
+    });
+    expect(items.map((i) => i.slug)).toEqual(["diem-thuong"]);
+  });
+
   it("renders distance badge (haversine that) khi ca 2 ben co toa do, du xep hang bang diem uoc luong", () => {
     const self = candidate({ slug: "self", lat: 21.0285, lng: 105.8542, provinceCode: "22" });
     const all = [

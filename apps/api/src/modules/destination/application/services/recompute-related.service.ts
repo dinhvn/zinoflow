@@ -159,12 +159,16 @@ export class RecomputeRelatedService {
       if (!self || self.siteStatus !== 1 || siteId === undefined) continue;
       scanned += 1;
 
-      const curated = await this.relationRepo.findCuratedRelated(slug);
+      const [curated, excluded] = await Promise.all([
+        this.relationRepo.findCuratedRelated(slug),
+        this.relationRepo.findExcluded(slug),
+      ]);
       const items = buildRelatedItems({
         self,
         all: candidates,
         curatedRelatedSlugs: curated.map((r) => r.targetSlug),
         clusterDistances,
+        excludedSlugs: new Set(excluded),
       });
       const relatedChanged = await this.siteDb.updateRelatedJson(siteId, JSON.stringify(items));
 

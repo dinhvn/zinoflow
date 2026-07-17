@@ -760,8 +760,26 @@ B xong hoàn toàn** (không phải đang dở).
    "Biệt Thự Hằng Nga" trong DoD gốc chưa spot-check được vì điểm này vẫn
    chưa có Type nào (còn ở cột "Chưa phân loại" sau B4) — không phải lỗi
    thuật toán, ghi chú lại để rà khi tiếp tục B4.
-3. **C3. Thêm loại quan hệ `excluded`** (§5.7 mục 3) vào enum
-   `nearby/related/mentioned`, sửa thuật toán C2 lọc trước khi chấm điểm.
+3. ✅ **C3. Thêm loại quan hệ `excluded` — ĐÃ XONG (17/07/2026)** (§5.7 mục 3)
+   — chỉ ở Postgres (`dichoithoi_destination_relations.relation_type`, cột đã
+   là `varchar(16)` không ràng buộc enum cứng ở DB nên không cần migration
+   riêng), KHÔNG đụng SQL Server (xác nhận `RelationType` numeric bên site
+   chỉ dùng cho `mentioned`=3 auto-link, không liên quan `excluded`).
+   `DestinationRelationRepository` thêm `findExcluded`/`addExcluded`/
+   `removeExcluded` (idempotent, giống pattern `mentioned` đã có).
+   `buildRelatedItems()` nhận thêm `excludedSlugs?: ReadonlySet<string>` —
+   lọc khỏi TOÀN BỘ `all` NGAY ĐẦU hàm, trước cả 2 bậc cứng (con/curated) lẫn
+   scoring, đúng yêu cầu "bất kể điểm đó lẽ ra được điểm cao thế nào".
+   `RecomputeRelatedService` gọi `findExcluded(slug)` song song với
+   `findCuratedRelated`. **Chưa có UI tạo/xoá `excluded`** — đó là việc của
+   C4 (nối/xoá quan hệ tay trên bản đồ), C3 chỉ chuẩn bị hạ tầng domain +
+   repository để C4 gọi.
+   Verify: `tsc --noEmit` sạch, jest 377/377 pass (1 test mới: loại đúng cả
+   3 loại nguồn — con/curated/điểm-cao-do-scoring). Verify trên dữ liệu
+   thật: chèn tay 1 dòng `excluded` (Vịnh Hạ Long → Đảo Tuần Châu, mục đứng
+   đầu RelatedJson trước đó) vào Postgres, recompute → xác nhận Đảo Tuần
+   Châu biến mất khỏi `RelatedJson` thật, danh sách tự điền bù đúng 1 mục
+   khác — đã xoá dòng test sau khi verify.
 4. **C4. Lớp quan hệ trên trang bản đồ** (§5.3-5.4, §5.6-5.7) — vẽ đường nối
    cụm-cụm (đọc A2), toggle bật/tắt, spotlight đỏ (đọc RelatedJson từ C2),
    nối/xoá quan hệ tay + loại trừ (ghi qua C3).

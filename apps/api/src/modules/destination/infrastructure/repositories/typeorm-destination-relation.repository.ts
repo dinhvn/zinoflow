@@ -40,6 +40,27 @@ export class TypeOrmDestinationRelationRepository implements DestinationRelation
     return [...new Set(rows.map((r) => r.sourceSlug))];
   }
 
+  async findExcluded(sourceSlug: string): Promise<string[]> {
+    const rows = await this.repo.find({
+      where: { sourceSlug, relationType: "excluded" },
+      select: ["targetSlug"],
+    });
+    return rows.map((r) => r.targetSlug);
+  }
+
+  async addExcluded(sourceSlug: string, targetSlug: string): Promise<void> {
+    await this.repo
+      .createQueryBuilder()
+      .insert()
+      .values({ sourceSlug, targetSlug, relationType: "excluded", weight: 0, isAuto: false })
+      .orIgnore()
+      .execute();
+  }
+
+  async removeExcluded(sourceSlug: string, targetSlug: string): Promise<void> {
+    await this.repo.delete({ sourceSlug, targetSlug, relationType: "excluded" });
+  }
+
   private async insertMentioned(
     sourceSlug: string,
     targetSlugs: readonly string[],

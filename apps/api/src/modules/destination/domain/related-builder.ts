@@ -199,16 +199,23 @@ export interface RelatedInput {
   /** Khoang cach cum/tinh cap cao (dichoithoi_cluster_distances, Giai doan A2) —
    * khoa chuan hoa qua clusterDistanceKey(). */
   clusterDistances: ReadonlyMap<string, number>;
+  /** Slug bi ADMIN LOAI TRU tay khoi goi y cua self (relations-plan §5.7 muc 3,
+   * Giai doan C3) — loc TRUOC ca 2 bac cung lan scoring, bat ke le ra diem cao
+   * the nao. Mac dinh rong neu khong truyen (khong loai gi). */
+  excludedSlugs?: ReadonlySet<string>;
 }
 
 /**
- * Build RelatedJson cho 1 diem (relations-plan §1.3-§1.4, Giai doan C2). 2 bac
+ * Build RelatedJson cho 1 diem (relations-plan §1.3-§1.4, Giai doan C2-C3). 2 bac
  * CUNG truoc (quyet dinh nguoi/cay, KHONG qua scoring): con truc tiep (toi da
  * 4) -> related curated. Con lai CHAM DIEM toan bo ung vien, xep hang giam
- * dan, dien cho toi 8 muc. Dedupe + loai chinh no + chi published.
+ * dan, dien cho toi 8 muc. Dedupe + loai chinh no + chi published + loai
+ * excludedSlugs (neu co) TRUOC moi buoc.
  */
 export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
-  const { self, all, curatedRelatedSlugs, clusterDistances } = input;
+  const { self, curatedRelatedSlugs, clusterDistances } = input;
+  const excludedSlugs = input.excludedSlugs ?? new Set<string>();
+  const all = input.all.filter((c) => !excludedSlugs.has(c.slug));
   const bySlug = new Map(all.map((c) => [c.slug, c]));
 
   const picked: RelatedItem[] = [];

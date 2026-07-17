@@ -135,7 +135,7 @@ export const DESTINATION_RELATION_REPOSITORY = Symbol("DESTINATION_RELATION_REPO
 export interface RelationRecord {
   sourceSlug: string;
   targetSlug: string;
-  relationType: "nearby" | "related" | "mentioned";
+  relationType: "nearby" | "related" | "mentioned" | "excluded";
   weight: number;
   isAuto: boolean;
 }
@@ -149,4 +149,14 @@ export interface DestinationRelationRepository {
   findCuratedRelated(sourceSlug: string): Promise<RelationRecord[]>;
   /** Moi diem co quan he toi target — xac dinh bai BI ANH HUONG sau publish (spec §12.3) */
   findSourcesLinkingTo(targetSlug: string): Promise<string[]>;
+  /**
+   * Slug cac diem bi LOAI TRU khoi goi y cua 1 nguon (relations-plan §5.7 muc 3) —
+   * dung khi thuat toan cham diem (C2) tu chon sai, admin loai bo tay TREN BAN DO
+   * (C4). Loc TRUOC khi cham diem, bat ke diem do le ra duoc diem cao the nao.
+   */
+  findExcluded(sourceSlug: string): Promise<string[]>;
+  /** Ghi 1 quan he excluded (idempotent — da co thi bo qua) */
+  addExcluded(sourceSlug: string, targetSlug: string): Promise<void>;
+  /** Xoa 1 quan he excluded (vd admin doi y, muon goi y lai binh thuong) */
+  removeExcluded(sourceSlug: string, targetSlug: string): Promise<void>;
 }
