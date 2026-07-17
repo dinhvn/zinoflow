@@ -79,7 +79,15 @@ function buildPopupContent(item: DestinationMapItem): HTMLElement {
  * khong tu quan ly zoom/tile (relations-plan §5.1-5.2, Giai doan A4 — CHUA co lop
  * quan he/duong noi, xem Giai doan C4).
  */
-export function DestinationMapClusterLayer({ items }: { items: DestinationMapItem[] }) {
+export function DestinationMapClusterLayer({
+  items,
+  onMarkerClick,
+}: {
+  items: DestinationMapItem[];
+  /** Bao cho trang cha khi click 1 marker — dung cho lop quan he (spotlight/noi
+   * tay, relations-plan §5.6-§5.7, Giai doan C4). Khong thay the popup, ca 2 cung xay ra. */
+  onMarkerClick?: (item: DestinationMapItem) => void;
+}) {
   const map = useMap();
 
   useEffect(() => {
@@ -88,13 +96,14 @@ export function DestinationMapClusterLayer({ items }: { items: DestinationMapIte
       if (item.lat === null || item.lng === null) continue;
       const marker = L.marker([item.lat, item.lng], { icon: iconFor(item) });
       marker.bindPopup(buildPopupContent(item));
+      if (onMarkerClick) marker.on("click", () => onMarkerClick(item));
       group.addLayer(marker);
     }
     map.addLayer(group);
     return () => {
       map.removeLayer(group);
     };
-  }, [items, map]);
+  }, [items, map, onMarkerClick]);
 
   return null;
 }

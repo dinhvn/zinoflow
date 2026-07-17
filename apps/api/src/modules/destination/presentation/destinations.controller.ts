@@ -145,6 +145,18 @@ import { AcceptDestinationAiExtractionFieldsUseCase } from "../application/use-c
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { RecomputeClusterDistancesUseCase } from "../application/use-cases/recompute-cluster-distances.usecase";
+import { GetRelationsMapDataUseCase } from "../application/use-cases/get-relations-map-data.usecase";
+import { GetRelatedSpotlightUseCase } from "../application/use-cases/get-related-spotlight.usecase";
+import { ManageCuratedRelationUseCase } from "../application/use-cases/manage-curated-relation.usecase";
+import { ManageExcludedRelationUseCase } from "../application/use-cases/manage-excluded-relation.usecase";
+import {
+  manageCuratedRelationRequestSchema,
+  manageExcludedRelationRequestSchema,
+  type GetRelationsMapDataResponse,
+  type GetRelatedSpotlightResponse,
+  type ManageCuratedRelationRequest,
+  type ManageExcludedRelationRequest,
+} from "@zinoflow/contracts";
 import { IMAGE_CHECKER, type ImageChecker } from "../application/ports/image-checker.port";
 import {
   SHEET_CSV_FETCHER,
@@ -202,6 +214,10 @@ export class DestinationsController {
     private readonly acceptAiExtractionFields: AcceptDestinationAiExtractionFieldsUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     private readonly recomputeClusterDistancesUseCase: RecomputeClusterDistancesUseCase,
+    private readonly getRelationsMapData: GetRelationsMapDataUseCase,
+    private readonly getRelatedSpotlight: GetRelatedSpotlightUseCase,
+    private readonly manageCuratedRelation: ManageCuratedRelationUseCase,
+    private readonly manageExcludedRelation: ManageExcludedRelationUseCase,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
     @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
     @Inject(JOB_QUEUE) private readonly jobQueue: JobQueue,
@@ -340,6 +356,12 @@ export class DestinationsController {
     return this.getDestinationsMap.execute();
   }
 
+  /** Du lieu nen lop quan he tren ban do (relations-plan §5.3, Giai doan C4). Truoc ":slug". */
+  @Get("relations-map-data")
+  relationsMapData(): Promise<GetRelationsMapDataResponse> {
+    return this.getRelationsMapData.execute();
+  }
+
   /** Tra cuu dia chi cu->moi sau sap nhap (trang /dichoithoi/dia-chi). Truoc ":slug". */
   @Get("address-mappings")
   addressMappings(
@@ -467,6 +489,32 @@ export class DestinationsController {
   @Post("recompute-cluster-distances")
   recomputeClusterDistances(): Promise<RecomputeClusterDistancesReport> {
     return this.recomputeClusterDistancesUseCase.execute();
+  }
+
+  /** Lop "spotlight" — RelatedJson that da tinh san cua 1 diem (§5.6, Giai doan C4) */
+  @Get(":slug/related-spotlight")
+  relatedSpotlight(@Param("slug") slug: string): Promise<GetRelatedSpotlightResponse> {
+    return this.getRelatedSpotlight.execute(slug);
+  }
+
+  /** Noi/xoa quan he curated tay tren ban do (§5.7 muc 1-2, Giai doan C4) */
+  @Post("relations/curated")
+  async curatedRelation(
+    @Body(new ZodValidationPipe(manageCuratedRelationRequestSchema))
+    request: ManageCuratedRelationRequest,
+  ): Promise<{ ok: true }> {
+    await this.manageCuratedRelation.execute(request);
+    return { ok: true };
+  }
+
+  /** Loai tru/khoi phuc 1 goi y tu dong (§5.7 muc 3, Giai doan C4) */
+  @Post("relations/excluded")
+  async excludedRelation(
+    @Body(new ZodValidationPipe(manageExcludedRelationRequestSchema))
+    request: ManageExcludedRelationRequest,
+  ): Promise<{ ok: true }> {
+    await this.manageExcludedRelation.execute(request);
+    return { ok: true };
   }
 
   /**

@@ -35,6 +35,27 @@ export class TypeOrmDestinationRelationRepository implements DestinationRelation
     return rows.map(toRecord);
   }
 
+  async findAllCuratedRelated(): Promise<RelationRecord[]> {
+    const rows = await this.repo.find({
+      where: { relationType: "related" },
+      order: { weight: "DESC" },
+    });
+    return rows.map(toRecord);
+  }
+
+  async addCuratedRelated(sourceSlug: string, targetSlug: string, weight = 0): Promise<void> {
+    await this.repo
+      .createQueryBuilder()
+      .insert()
+      .values({ sourceSlug, targetSlug, relationType: "related", weight, isAuto: false })
+      .orIgnore()
+      .execute();
+  }
+
+  async removeCuratedRelated(sourceSlug: string, targetSlug: string): Promise<void> {
+    await this.repo.delete({ sourceSlug, targetSlug, relationType: "related" });
+  }
+
   async findSourcesLinkingTo(targetSlug: string): Promise<string[]> {
     const rows = await this.repo.find({ where: { targetSlug }, select: ["sourceSlug"] });
     return [...new Set(rows.map((r) => r.sourceSlug))];

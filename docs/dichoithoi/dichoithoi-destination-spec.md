@@ -871,22 +871,53 @@ Khi chạy: tự động hẹp sau mỗi publish (chỉ tính lại các bài B�
 anh em cùng cha, các điểm có quan hệ tới điểm vừa publish); nút chạy TOÀN BỘ ở
 màn Công cụ (sau re-link, sau sửa quan hệ tay hàng loạt).
 
-Thuật toán (mỗi điểm), 2 pha:
-- Pha 1 — chỉ khi lat/lng đổi hoặc có điểm mới: tính lại `nearby` — khoảng cách
-  haversine từ lat/lng tới mọi điểm published cùng tỉnh + tỉnh giáp ranh,
-  lấy top 10 trong bán kính 30km → upsert `DestinationRelation (nearby, Weight=mét)`.
-- Pha 2 — build RelatedJson: lấy ứng viên theo thứ tự ưu tiên (quy tắc trộn mặc
-  định, chỉnh được sau):
-  1. Con trực tiếp (nếu là tỉnh/cụm) — tối đa 4;
-  2. `related` curated (type 2, theo Weight);
-  3. `nearby` (type 1, gần nhất trước);
-  4. Anh em cùng cha;
-  5. Cùng loại chính trong cùng tỉnh.
-  Dedupe, loại chính nó, chỉ lấy Status=published, cắt đủ **8 mục**.
-  Mỗi mục: `{slug, name, thumbnail, badge}` (badge = loại hoặc "cách 2,5 km").
+**CẬP NHẬT 17/07/2026** — thay toàn bộ mô tả waterfall cứng cũ (5 bước theo
+NGUỒN: con → curated → nearby → anh em → cùng tỉnh) bằng thuật toán **chấm
+điểm (scoring)** theo MỨC ĐỘ LIÊN QUAN thật, xem chi tiết đầy đủ
+`docs/dichoithoi/dichoithoi-destination-relations-plan.md` §1.3 (nguồn thiết
+kế gốc) — bản dưới đây là bản rút gọn, giữ nguyên khi hai tài liệu lệch nhau
+tài liệu này (spec) là nguồn sự thật lâu dài.
+
+Thuật toán (mỗi điểm), thực thi tại `apps/api/.../domain/related-builder.ts`
+hàm `buildRelatedItems()`:
+
+1. **2 bậc cứng đứng TRƯỚC scoring** (quyết định cây/biên tập, không qua chấm
+   điểm): con trực tiếp (nếu là tỉnh/cụm, tối đa 4) → `related` curated
+   (type 2, theo Weight — bao gồm cả quan hệ tạo tay qua trang bản đồ
+   `/dichoithoi/ban-do`, xem §5.7 relations-plan).
+2. **Lọc `excluded`** (type 4, mới thêm Giai đoạn C3) — loại bỏ mọi ứng viên
+   admin đã đánh dấu "gợi ý sai" cho điểm này, TRƯỚC khi chấm điểm, bất kể
+   điểm đó lẽ ra được điểm cao thế nào.
+3. **Chấm điểm** toàn bộ ứng viên còn lại, cộng:
+   - `typeOverlapScore` = `1000 * |giao tập loại hình| / |tập loại hình của
+     self|` — yếu tố CHI PHỐI, cùng-loại-ở-xa vẫn thắng khác-loại-ở-gần
+     (loại hình mirror từ `v2.DestinationTypeMap` sang Postgres
+     `dichoithoi_destinations.types`, Giai đoạn C1).
+   - `+200` cùng cụm/cha, hoặc `+100` cùng tỉnh (loại trừ nhau).
+   - Điểm gần: `100 / (1 + khoảngCáchMét/1000)` — cùng cụm/tỉnh dùng
+     haversine trực tiếp từ toạ độ riêng; khác cụm dùng mô hình khoảng cách
+     2 tầng (`DistanceFromCenter` + bảng `dichoithoi_cluster_distances`,
+     Giai đoạn A2) CHỈ để xếp hạng (luôn ≥ thật do bất đẳng thức tam giác) —
+     badge hiển thị công khai luôn tính lại bằng haversine thật cho ≤8 mục
+     đã chọn, không dùng số ước lượng.
+   - `(6 - Priority) * 4` — Priority 1 (cao nhất) +20, Priority 5 +4, không
+     bao giờ 0/âm (không loại điểm ít được đánh giá).
+   - `+10` nếu `ContentTier = flagship`.
+   Xếp hạng giảm dần, điền cho tới đủ 8 mục.
+4. Dedupe, loại chính nó, chỉ lấy Status=published.
+   Mỗi mục: `{slug, name, thumbnail, badge}` (badge = "cách 2,5 km" nếu biết
+   toạ độ thật cả 2 bên, null nếu không).
 - So sánh JSON mới với cũ — **khác mới UPDATE** (tránh write + invalidate cache vô ích).
 - `mentioned` (type 3) KHÔNG vào RelatedJson — nó phục vụ thống kê + re-link,
   link đã nằm trong thân bài rồi, lặp lại ở khối liên quan là thừa.
+- `nearby` (type 1, tính bằng `computeNearby()`) KHÔNG còn dùng để BUILD
+  RelatedJson (đã gộp vào bước chấm điểm ở trên) — chỉ còn phục vụ panel
+  "gợi ý nearby" khi biên tập viên tự thêm quan hệ curated tay trên trang
+  sửa điểm đến.
+- Trang `/dichoithoi/ban-do` (CMS nội bộ) có lớp trực quan hoá TOÀN BỘ quan
+  hệ này — nền khoảng cách cụm/tỉnh (xám), quan hệ curated (tím), "spotlight"
+  đỏ hiện đúng `RelatedJson` thật của 1 điểm khi bấm chọn — dùng để QA thuật
+  toán + curate tay có ngữ cảnh (relations-plan §5).
 
 ### 12.4 Thứ tự khi chạy cả 3 (ví dụ sau migration)
 `Đồng bộ mirror` → `Re-link toàn bộ` → `Recompute related toàn bộ` —

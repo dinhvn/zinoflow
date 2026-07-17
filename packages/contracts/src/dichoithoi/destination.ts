@@ -805,6 +805,9 @@ export const destinationMapItemSchema = z.object({
   contentTier: destinationContentTierSchema.nullable(),
   provinceCode: z.string().nullable(),
   provinceName: z.string().nullable(),
+  /** Cum/tinh cha truc tiep — dung ve duong noi len tam cum khi bat lop quan
+   * he (relations-plan §5.2, Giai doan C4). */
+  parentSlug: z.string().nullable(),
 });
 export type DestinationMapItem = z.infer<typeof destinationMapItemSchema>;
 

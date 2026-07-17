@@ -82,6 +82,10 @@ import { GetDestinationsMapUseCase } from "./application/use-cases/get-destinati
 import { GetTaxonomyKanbanBoardUseCase } from "./application/use-cases/get-taxonomy-kanban-board.usecase";
 import { UpdateDestinationTypesUseCase } from "./application/use-cases/update-destination-types.usecase";
 import { SuggestTaxonomyTypesUseCase } from "./application/use-cases/suggest-taxonomy-types.usecase";
+import { GetRelationsMapDataUseCase } from "./application/use-cases/get-relations-map-data.usecase";
+import { GetRelatedSpotlightUseCase } from "./application/use-cases/get-related-spotlight.usecase";
+import { ManageCuratedRelationUseCase } from "./application/use-cases/manage-curated-relation.usecase";
+import { ManageExcludedRelationUseCase } from "./application/use-cases/manage-excluded-relation.usecase";
 import { TAXONOMY_SUGGESTION_REPOSITORY } from "./application/ports/taxonomy-suggestion.repository";
 import { TypeOrmTaxonomySuggestionRepository } from "./infrastructure/repositories/typeorm-taxonomy-suggestion.repository";
 import { TaxonomySuggestionEntity } from "./infrastructure/entities/taxonomy-suggestion.entity";
@@ -182,6 +186,10 @@ import {
     GetTaxonomyKanbanBoardUseCase,
     UpdateDestinationTypesUseCase,
     SuggestTaxonomyTypesUseCase,
+    GetRelationsMapDataUseCase,
+    GetRelatedSpotlightUseCase,
+    ManageCuratedRelationUseCase,
+    ManageExcludedRelationUseCase,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: CACHE_PURGE, useClass: HttpCachePurgeAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },

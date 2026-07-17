@@ -16,6 +16,7 @@ function loadMssqlDriver(host: string): typeof sql {
   return isLocalDbHost(host) ? require("mssql/msnodesqlv8") : require("mssql");
 }
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
+import type { RelatedItem } from "../../domain/related-builder";
 import type {
   DestinationCardFilter,
   DestinationCardRow,
@@ -316,6 +317,27 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       `);
       return (result.rowsAffected[0] ?? 0) > 0;
     });
+  }
+
+  async fetchRelatedJson(slug: string): Promise<RelatedItem[]> {
+    const rows = await this.runWithRetry<Array<{ RelatedJson: string | null }>>(async (pool) => {
+      const request = pool.request();
+      request.input("slug", slug);
+      const result = await request.query<{ RelatedJson: string | null }>(`
+        SELECT c.RelatedJson
+        FROM v2.Destination d
+        JOIN v2.DestinationContent c ON c.DestinationId = d.Id
+        WHERE d.Slug = @slug
+      `);
+      return result.recordset;
+    });
+    const raw = rows[0]?.RelatedJson;
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw) as RelatedItem[];
+    } catch {
+      return [];
+    }
   }
 
   async createDestination(meta: SiteDestinationMeta): Promise<{ siteId: number }> {

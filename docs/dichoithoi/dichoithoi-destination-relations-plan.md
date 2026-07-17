@@ -780,9 +780,51 @@ B xong hoàn toàn** (không phải đang dở).
    đầu RelatedJson trước đó) vào Postgres, recompute → xác nhận Đảo Tuần
    Châu biến mất khỏi `RelatedJson` thật, danh sách tự điền bù đúng 1 mục
    khác — đã xoá dòng test sau khi verify.
-4. **C4. Lớp quan hệ trên trang bản đồ** (§5.3-5.4, §5.6-5.7) — vẽ đường nối
-   cụm-cụm (đọc A2), toggle bật/tắt, spotlight đỏ (đọc RelatedJson từ C2),
-   nối/xoá quan hệ tay + loại trừ (ghi qua C3).
+4. ✅ **C4. Lớp quan hệ trên trang bản đồ — ĐÃ XONG (17/07/2026)** (§5.3-5.4,
+   §5.6-5.7) — làm trọn vẹn cả 5 phần (người dùng chốt làm full, không cắt
+   giảm xuống MVP).
+   - **Backend**: `GET /destinations/relations-map-data` (khoảng cách cụm/tỉnh
+     từ A2 + toàn bộ quan hệ curated — use-case mới `GetRelationsMapDataUseCase`,
+     dùng lại `ClusterDistanceRepository.findAll()` + `findAllCuratedRelated()`
+     mới thêm). `GET /destinations/:slug/related-spotlight` đọc ĐÚNG
+     `RelatedJson` đã lưu (site-db port `fetchRelatedJson()` mới — SELECT
+     trực tiếp, KHÔNG tính lại, đúng tinh thần "chỉ hiển thị cái đã tính
+     sẵn"). `POST /destinations/relations/curated` + `.../excluded` (body
+     `{sourceSlug,targetSlug,action:"add"|"remove"}`) — curated ghi CẢ 2
+     CHIỀU (quan hệ đối xứng, weight=100 phân biệt "nối tay" vs tự động),
+     excluded ghi 1 CHIỀU (nhận xét "gợi ý NÀY cho ĐIỂM NÀY sai", không đối
+     xứng) — tái dùng nguyên `addExcluded` đã có sẵn từ C3, chỉ thêm
+     `findAllCuratedRelated`/`addCuratedRelated`/`removeCuratedRelated` mới.
+     `destinationMapItemSchema` (DTO `/destinations/map` có sẵn từ A4) thêm
+     field `parentSlug` (dữ liệu vốn đã có ở SQL Server, chỉ thiếu map ra
+     DTO) để lớp quan hệ tra được cụm cha khi vẽ.
+   - **Frontend** (`apps/web/src/features/dichoithoi/destination-map-relations-layer.tsx`
+     mới, `destination-map-view.tsx`/`destination-map-cluster-layer.tsx`/
+     `ban-do/page.tsx` sửa) — 3 loại đường vẽ imperative qua `L.polyline`
+     (đồng bộ cách cluster-layer A4 đã làm, không dùng component JSX
+     `<Polyline>` của react-leaflet): (1) nền xám nhạt = khoảng cách cụm/tỉnh
+     A2, lọc theo dropdown "≤100km/≤300km/mọi khoảng cách" (§5.4); (2) tím
+     đậm = quan hệ curated, LUÔN hiện khi bật lớp quan hệ, bấm vào 1 đường
+     → xác nhận xoá cả 2 chiều; (3) đỏ nét đứt = spotlight, CHỈ hiện khi bấm
+     1 marker bất kỳ (kể cả poi lẻ, đúng §5.6 — không giới hạn cấp
+     cụm/tỉnh), bấm vào 1 đường đỏ → nếu đó cũng là quan hệ curated thì xoá
+     curated, nếu là gợi ý tự tính thì ghi `excluded` (UI tự phân biệt qua
+     tra cứu `curatedRelations`, người dùng không cần biết loại nào — đúng
+     §5.7 mục 4). Nút "Nối tay" (§5.7 mục 1) bật chế độ chọn 2 marker liên
+     tiếp bất kỳ (không giới hạn cụm/tỉnh, mở rộng hơn thiết kế §5.3 gốc) để
+     tạo quan hệ curated mới. Marker click dùng `window.confirm()` cho xác
+     nhận xoá — đơn giản, đủ dùng cho công cụ admin nội bộ, không cần Modal
+     riêng.
+   - Verify: `tsc --noEmit` (api+web) sạch, jest 377/377 pass. **Verify trên
+     dữ liệu thật qua Playwright** (không chỉ đọc code): bật lớp quan hệ →
+     276 đường xám nền hiện đúng nối các cụm/tỉnh; click 1 marker (Bùng Binh
+     Thiên, An Giang) → 8 đường đỏ spotlight hiện đúng theo `RelatedJson`
+     thật (ưu tiên chùa/miếu cùng loại hình, kể cả Chùa Long Sơn Nha Trang
+     cách 471km); click 1 đường đỏ ("Miếu Bà Chúa Xứ") → xác nhận qua psql
+     đã ghi đúng `excluded` 1 chiều; bật "Nối tay", click 2 marker liên tiếp
+     → xác nhận qua psql ghi đúng `related` CẢ 2 CHIỀU weight=100; click lại
+     đường tím vừa tạo → xác nhận đã xoá cả 2 dòng; xoá dữ liệu test +
+     recompute-related để khôi phục trạng thái sạch sau khi verify xong.
 5. **C5. Cập nhật `dichoithoi-destination-spec.md` §12.3** — thay mô tả
    waterfall cũ bằng thuật toán chấm điểm mới (spec đó mới là nguồn sự thật
    lâu dài, doc này chỉ là kế hoạch tạm).

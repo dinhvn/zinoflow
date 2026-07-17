@@ -147,6 +147,12 @@ export interface DestinationRelationRepository {
   addMentioned(sourceSlug: string, targetSlugs: readonly string[]): Promise<void>;
   /** Quan he related curated cua 1 nguon, sort weight giam dan (builder RelatedJson) */
   findCuratedRelated(sourceSlug: string): Promise<RelationRecord[]>;
+  /** TOAN BO quan he related curated (khong loc theo nguon) — ve duong noi tren ban do (C4) */
+  findAllCuratedRelated(): Promise<RelationRecord[]>;
+  /** Ghi 1 quan he curated (idempotent — da co thi bo qua). Goi 2 lan (2 chieu) tu UI ban do. */
+  addCuratedRelated(sourceSlug: string, targetSlug: string, weight?: number): Promise<void>;
+  /** Xoa 1 quan he curated */
+  removeCuratedRelated(sourceSlug: string, targetSlug: string): Promise<void>;
   /** Moi diem co quan he toi target — xac dinh bai BI ANH HUONG sau publish (spec §12.3) */
   findSourcesLinkingTo(targetSlug: string): Promise<string[]>;
   /**

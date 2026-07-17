@@ -39,6 +39,7 @@ export class GetDestinationsMapUseCase {
       contentTier: d.contentTier,
       provinceCode: d.provinceCode,
       provinceName: d.provinceCode ? (provinceNameByCode.get(d.provinceCode) ?? null) : null,
+      parentSlug: d.parentSlug,
     }));
 
     return { items };

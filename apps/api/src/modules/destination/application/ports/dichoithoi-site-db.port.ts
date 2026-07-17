@@ -1,4 +1,5 @@
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
+import type { RelatedItem } from "../../domain/related-builder";
 
 /**
  * Port doc/ghi SQL Server cua website dichoithoi (schema MOI — redesign doc §4).
@@ -189,6 +190,9 @@ export interface DichoithoiSiteDb {
   fetchSlugRedirects(): Promise<Map<string, string>>;
   /** Ghi RelatedJson, CHI khi khac gia tri cu (spec §12.3) — tra ve true neu co ghi */
   updateRelatedJson(siteId: number, relatedJson: string): Promise<boolean>;
+  /** Doc RelatedJson DA TINH SAN theo slug (khong tinh lai) — lop spotlight tren
+   * ban do (relations-plan §5.6, Giai doan C4). Mang rong neu chua tung recompute. */
+  fetchRelatedJson(slug: string): Promise<RelatedItem[]>;
   /**
    * Ghi AncestorsJson + ChildrenJson, CHI khi 1 trong 2 khac gia tri cu (Phase 14,
    * database-redesign §3.4) — tra ve true neu co ghi.
