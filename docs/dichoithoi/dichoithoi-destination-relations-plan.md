@@ -660,9 +660,45 @@ rộng, xem §6).
      Fairytale Land" → tick "Khu vui chơi - Giải trí" → xác nhận qua sqlcmd
      đã ghi đúng vào `v2.DestinationTypeMap`, cột "Chưa phân loại" tự cập
      nhật 6→5 ngay không cần reload trang.
-3. **B3. Job AI đánh giá + đề xuất hàng loạt** (§6.3) — bảng nháp
-   `dichoithoi_taxonomy_suggestions`, chạy cho toàn bộ 272 điểm, không ghi
-   thẳng vào `DestinationTypeMap`.
+3. ✅ **B3. Job AI đánh giá + đề xuất — ĐÃ XONG (17/07/2026)** (§6.3) — bảng nháp
+   Postgres `dichoithoi_taxonomy_suggestions` (migration
+   `1782180000000-DichoithoiTaxonomySuggestions.ts`, mẫu theo
+   `dichoithoi_destination_ai_extractions` — staging 1 dòng/điểm, upsert khi
+   chạy lại), KHÔNG ghi thẳng `v2.DestinationTypeMap`.
+   - **Phạm vi chạy = 1 cụm/tỉnh mỗi lần** (không phải 1 lệnh gọi AI cho cả
+     272 điểm cùng lúc) — đúng tinh thần "theo từng cụm một" đã chốt ở đầu
+     mục 6, và tránh 1 request AI khổng lồ (input gồm CẢ nội dung thật —
+     dài hơn nhiều so với chỉ tên — dễ vượt ngân sách token nếu gộp toàn
+     bộ). Muốn chạy hết 272 điểm thì bấm "Gợi ý AI" lần lượt qua từng cụm
+     trên trang Kanban (~25 cụm/tỉnh).
+   - `SuggestTaxonomyTypesUseCase`: input AI = tên + nội dung thật
+     (`fetchAllContentRows()` có sẵn, qua `stripHtml()` có sẵn, cắt 500 ký
+     tự đủ ngữ cảnh) + danh sách 16 loại-hình-place (đã đúng 16 sau B1,
+     không cần lọc gì thêm) — đúng nguyên tắc "không bịa dữ liệu, chỉ phân
+     loại trên nội dung đã có". Bỏ qua điểm đã `status=accepted` (người
+     dùng đã xử lý), tránh đề xuất lại vô ích/tốn phí AI.
+   - `GetTaxonomyKanbanBoardUseCase` gộp thêm `suggestedTypeSlugs`/
+     `suggestionReason`/`suggestionStatus` từ bảng nháp vào response Kanban.
+   - `UpdateDestinationTypesUseCase` (ghi Type thật) tự đánh dấu
+     `status=accepted` cho đề xuất tương ứng (nếu có) — bất kể người dùng
+     làm đúng theo gợi ý hay tự sửa tay, coi như "đã xử lý xong".
+   - UI (`/dichoithoi/phan-loai`): nút "Gợi ý AI cho cụm này" cạnh dropdown;
+     thẻ có đề xuất `pending` hiện chip "AI"; mở modal của điểm CHƯA có Type
+     thật → tự tick sẵn theo đề xuất + hiện dòng lý do AI (điểm ĐÃ có Type
+     thật giữ nguyên, không âm thầm ghi đè theo AI).
+   - Endpoint `POST /destination-types/suggest` (body `clusterSlug`).
+   - Verify: `tsc --noEmit` (api+web) sạch, jest 370/370 pass (3 test mới:
+     lọc đúng cụm + bỏ qua điểm accepted + lọc type không hợp lệ; trả rỗng
+     và KHÔNG gọi AI khi cụm không có ứng viên), migration đã chạy thật
+     trên Postgres dev. Playwright trên dữ liệu thật: bấm "Gợi ý AI cho cụm
+     này" ở cụm Đà Lạt → xác nhận lỗi hiển thị đúng khi môi trường dev
+     không có `ANTHROPIC_API_KEY` (stub provider từ chối, giống lỗi đã gặp
+     ở B1 khi soạn mô tả tag — không phải lỗi code); chèn tạm 1 dòng đề
+     xuất thật vào Postgres cho "Đồi Cù" → xác nhận chip "AI" hiện đúng,
+     mở modal tick sẵn "Khu vui chơi - Giải trí" + hiện đúng lý do, bấm lưu
+     → xác nhận qua sqlcmd đã ghi `v2.DestinationTypeMap` thật + qua psql
+     xác nhận `status` đổi `pending`→`accepted`, thẻ tự chuyển đúng cột và
+     chip "AI" biến mất — đã xoá dòng test sau khi verify xong.
 4. **B4. Người dùng duyệt qua trang Kanban** (dùng B2, đọc đề xuất từ B3) —
    xác nhận/sửa từng cụm cho tới khi phủ hết ~25 cụm/tỉnh.
 

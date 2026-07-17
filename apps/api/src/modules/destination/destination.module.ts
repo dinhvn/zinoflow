@@ -81,6 +81,10 @@ import { RecomputeClusterDistancesUseCase } from "./application/use-cases/recomp
 import { GetDestinationsMapUseCase } from "./application/use-cases/get-destinations-map.usecase";
 import { GetTaxonomyKanbanBoardUseCase } from "./application/use-cases/get-taxonomy-kanban-board.usecase";
 import { UpdateDestinationTypesUseCase } from "./application/use-cases/update-destination-types.usecase";
+import { SuggestTaxonomyTypesUseCase } from "./application/use-cases/suggest-taxonomy-types.usecase";
+import { TAXONOMY_SUGGESTION_REPOSITORY } from "./application/ports/taxonomy-suggestion.repository";
+import { TypeOrmTaxonomySuggestionRepository } from "./infrastructure/repositories/typeorm-taxonomy-suggestion.repository";
+import { TaxonomySuggestionEntity } from "./infrastructure/entities/taxonomy-suggestion.entity";
 import { CLUSTER_DISTANCE_REPOSITORY } from "./application/ports/cluster-distance.repository";
 import { TypeOrmClusterDistanceRepository } from "./infrastructure/repositories/typeorm-cluster-distance.repository";
 import { ClusterDistanceEntity } from "./infrastructure/entities/cluster-distance.entity";
@@ -116,6 +120,7 @@ import {
       AdminWardMappingEntity,
       DestinationAiExtractionEntity,
       ClusterDistanceEntity,
+      TaxonomySuggestionEntity,
     ]),
   ],
   controllers: [
@@ -176,6 +181,7 @@ import {
     GetDestinationsMapUseCase,
     GetTaxonomyKanbanBoardUseCase,
     UpdateDestinationTypesUseCase,
+    SuggestTaxonomyTypesUseCase,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: CACHE_PURGE, useClass: HttpCachePurgeAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
@@ -190,6 +196,7 @@ import {
       useClass: TypeOrmDestinationAiExtractionRepository,
     },
     { provide: CLUSTER_DISTANCE_REPOSITORY, useClass: TypeOrmClusterDistanceRepository },
+    { provide: TAXONOMY_SUGGESTION_REPOSITORY, useClass: TypeOrmTaxonomySuggestionRepository },
   ],
   exports: [DICHOITHOI_SITE_DB, DESTINATION_MIRROR_REPOSITORY],
 })

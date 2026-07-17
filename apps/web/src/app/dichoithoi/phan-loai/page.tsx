@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getTaxonomyKanbanBoardResponseSchema,
+  suggestTaxonomyTypesResponseSchema,
   type GetTaxonomyKanbanBoardResponse,
   type TaxonomyBoardDestination,
 } from "@zinoflow/contracts";
@@ -14,12 +15,14 @@ const QUERY_KEY = ["taxonomy-kanban-board"];
 const UNCLASSIFIED_COLUMN = "__unclassified__";
 
 /**
- * Bảng Kanban rà soát taxonomy Type (relations-plan §6.1-6.2, Giai đoạn B2) —
+ * Bảng Kanban rà soát taxonomy Type (relations-plan §6.1-6.3, Giai đoạn B2-B3) —
  * chọn 1 cụm/tỉnh, mỗi cột là 1 loại hình (chỉ hiện cột có điểm trong cụm đang
  * chọn), thẻ = điểm đến. Cột "Chưa phân loại" luôn hiện đầu, viền cảnh báo.
- * Bấm 1 thẻ để tick/bỏ tick loại hình — lưu ngay, không cần nút submit riêng.
- * Dùng để rà lại dữ liệu Type cũ (có thể sai/thiếu), KHÔNG có AI gợi ý ở bước
- * này (xem B3 trong plan — bảng nháp riêng, đề xuất chờ duyệt).
+ * Bấm "Gợi ý AI cho cụm này" để AI đánh giá lại toàn bộ điểm trong cụm dựa trên
+ * tên + nội dung thật (không bịa) — kết quả CHỈ lưu vào bảng nháp chờ duyệt,
+ * KHÔNG tự ghi. Thẻ có gợi ý AI hiện chip "AI" — bấm thẻ mở modal đã tick sẵn
+ * theo gợi ý (nếu điểm đó chưa có Type nào) kèm lý do, người dùng tick/bỏ tick
+ * rồi lưu — lưu ngay khi tick, không cần nút submit riêng.
  */
 export default function PhanLoaiPage() {
   const [clusterSlug, setClusterSlug] = useState("");
@@ -55,6 +58,15 @@ function KanbanBoard({
   onClusterChange: (slug: string) => void;
 }) {
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const suggest = useMutation({
+    mutationFn: async () =>
+      suggestTaxonomyTypesResponseSchema.parse(
+        await apiSend("POST", "/destination-types/suggest", { clusterSlug }),
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
 
   const destinationsInCluster = useMemo(
     () => data.destinations.filter((d) => d.parentSlug === clusterSlug),
@@ -96,11 +108,23 @@ function KanbanBoard({
           ))}
         </Select>
         {clusterSlug && (
-          <span className="text-sm text-zinc-500">
-            {classifiedCount}/{destinationsInCluster.length} điểm trong cụm đã phân loại
-          </span>
+          <>
+            <span className="text-sm text-zinc-500">
+              {classifiedCount}/{destinationsInCluster.length} điểm trong cụm đã phân loại
+            </span>
+            <Button size="sm" variant="secondary" onClick={() => suggest.mutate()} loading={suggest.isPending}>
+              Gợi ý AI cho cụm này
+            </Button>
+          </>
         )}
       </div>
+
+      {suggest.isError && <ErrorBox error={suggest.error} fallback="Lỗi gợi ý AI" />}
+      {suggest.isSuccess && (
+        <p className="text-sm text-zinc-500">
+          AI đã đề xuất cho {suggest.data.suggestions.length} điểm — mở từng thẻ để xem/duyệt.
+        </p>
+      )}
 
       {!clusterSlug && (
         <p className="text-sm text-zinc-500">Chọn 1 cụm/tỉnh ở trên để bắt đầu rà soát.</p>
@@ -178,7 +202,12 @@ function KanbanColumn({
             ) : (
               <div className="h-8 w-10 shrink-0 rounded bg-zinc-200 dark:bg-zinc-800" />
             )}
-            <span className="line-clamp-2 text-xs">{d.name}</span>
+            <span className="line-clamp-2 flex-1 text-xs">{d.name}</span>
+            {d.suggestionStatus === "pending" && (
+              <Badge tone="indigo" className="shrink-0">
+                AI
+              </Badge>
+            )}
           </button>
         ))}
       </div>
@@ -198,7 +227,14 @@ function EditTypesModal({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<Set<string>>(new Set(destination.typeSlugs));
+  const hasSuggestion = destination.suggestionStatus === "pending" && (destination.suggestedTypeSlugs?.length ?? 0) > 0;
+  // Diem CHUA co Type that -> tick san theo goi y AI cho nguoi dung duyet nhanh (§6.3);
+  // diem DA co Type that -> giu nguyen, khong ghi de am tham theo goi y AI.
+  const initialSelected =
+    destination.typeSlugs.length === 0 && hasSuggestion
+      ? (destination.suggestedTypeSlugs ?? [])
+      : destination.typeSlugs;
+  const [selected, setSelected] = useState<Set<string>>(new Set(initialSelected));
 
   const save = useMutation({
     mutationFn: () =>
@@ -221,6 +257,12 @@ function EditTypesModal({
   return (
     <Modal open onClose={onClose} title={destination.name}>
       <div className="space-y-4">
+        {hasSuggestion && (
+          <div className="rounded border border-indigo-200 bg-indigo-50 p-2 text-xs text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-300">
+            <span className="font-semibold">Gợi ý AI</span>{" "}
+            ({destination.suggestedTypeSlugs?.join(", ")}): {destination.suggestionReason}
+          </div>
+        )}
         {groups.map((g) => (
           <div key={g.slug}>
             <div className="mb-1.5 text-xs font-semibold text-zinc-500">{g.name}</div>
