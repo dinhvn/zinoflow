@@ -25,4 +25,7 @@ export interface ImageProcessor {
    * anh thu vien (gallery) chi can 1 kich thuoc, khac toWebpVariants (luon 3 co).
    */
   toWebp(source: Buffer, width: number): Promise<Buffer>;
+  /** Doc kich thuoc thuc te 1 buffer anh — dung de ghi width/height <img> chong CLS
+   * (content-image-library-plan §3.2). */
+  getDimensions(source: Buffer): Promise<{ width: number; height: number }>;
 }

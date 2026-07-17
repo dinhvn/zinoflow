@@ -12,6 +12,7 @@ export const BLOCK_KINDS = [
   "products",
   "product",
   "food-spots",
+  "image",
 ] as const;
 export type BlockKind = (typeof BLOCK_KINDS)[number];
 

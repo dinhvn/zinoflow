@@ -13,6 +13,7 @@ function setup() {
   const processor: ImageProcessor = {
     toWebpVariants: async () => fakeVariants,
     toWebp: async () => Buffer.from("gallery"),
+    getDimensions: async () => ({ width: 100, height: 100 }),
   };
   const uploader: ImageUploader = {
     upload: async (files, baseDirEnvVar) => {

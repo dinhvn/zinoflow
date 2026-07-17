@@ -18,7 +18,11 @@ import {
   type ProductRepository,
 } from "../../../product/application/ports/product.repository";
 import { matchProducts } from "../../../product/domain/product-matcher";
-import { renderCardGrid, type CardItem } from "../../domain/card-template";
+import { renderCardGrid, escapeHtml, type CardItem } from "../../domain/card-template";
+import {
+  CONTENT_IMAGE_REPOSITORY,
+  type ContentImageRepository,
+} from "../../../content-image/application/ports/content-image.repository";
 
 /** Category Product coi la "quan an" cho khoi food-spots (article-spec §3.1) — khop nguyen
  * van chuoi da nhap tay (category la free-text, khong bang chuan hoa rieng). */
@@ -40,7 +44,7 @@ const SANITIZE_ALLOWLIST = {
   ],
   allowedAttributes: {
     a: ["href", "title", "rel", "target"],
-    img: ["src", "alt", "title", "loading"],
+    img: ["src", "alt", "title", "loading", "width", "height"],
   },
   allowedSchemes: ["http", "https"],
   transformTags: {
@@ -61,6 +65,7 @@ export class ArticleBlockCompiler {
     @Inject(HOTEL_REPOSITORY) private readonly hotels: HotelRepository,
     @Inject(TOUR_REPOSITORY) private readonly tours: TourRepository,
     @Inject(PRODUCT_REPOSITORY) private readonly products: ProductRepository,
+    @Inject(CONTENT_IMAGE_REPOSITORY) private readonly contentImages: ContentImageRepository,
   ) {}
 
   async compile(rawMarkdown: string): Promise<CompiledArticle> {
@@ -95,6 +100,22 @@ export class ArticleBlockCompiler {
     }
 
     for (const token of tokens) {
+      if (token.kind === "image") {
+        const imageHtml = await this.resolveImageHtml(token);
+        if (!imageHtml) {
+          warnings.push({
+            raw: token.raw,
+            message: `Khối "${token.raw}" không tìm thấy ảnh id="${token.params.id}" — kiểm tra id hoặc bỏ khối`,
+          });
+          lines[token.lineIndex] = "";
+          continue;
+        }
+        const placeholder = `{{ZF_BLOCK_${token.lineIndex}}}`;
+        lines[token.lineIndex] = placeholder;
+        cardsByLine.set(token.lineIndex, imageHtml);
+        continue;
+      }
+
       const items = await this.resolveItems(token, provinceBySlug);
       if (items.length === 0) {
         warnings.push({
@@ -143,7 +164,19 @@ export class ArticleBlockCompiler {
     if (token.kind === "food-spots" && !token.params.tag) {
       return `Khối "food-spots" cần tham số tag (vd tag=da-lat — thường là slug điểm đến)`;
     }
+    if (token.kind === "image" && !token.params.id) {
+      return `Khối "image" cần tham số id (vd id=<uuid> — copy từ trang thư viện ảnh)`;
+    }
     return null;
+  }
+
+  /** Resolve rieng khoi "image" — khong phai card grid nen khong dung resolveItems/
+   * renderCardGrid (content-image-library-plan §3.2). Id khong ton tai -> null (warning). */
+  private async resolveImageHtml(token: ParsedBlockToken): Promise<string | null> {
+    const image = await this.contentImages.findById(token.params.id!);
+    if (!image) return null;
+    const url = process.env.DICHOITHOI_CONTENT_IMAGE_BASE_URL?.replace(/\/+$/, "") + "/" + image.path;
+    return `<img src="${escapeHtml(url)}" alt="${escapeHtml(image.altText)}" width="${image.width}" height="${image.height}" loading="lazy">`;
   }
 
   private async resolveItems(

@@ -5,6 +5,7 @@ import { DestinationModule } from "../destination/destination.module";
 import { HotelModule } from "../hotel/hotel.module";
 import { TourModule } from "../tour/tour.module";
 import { ProductModule } from "../product/product.module";
+import { ContentImageModule } from "../content-image/content-image.module";
 import { ArticlesController } from "./presentation/articles.controller";
 import { ArticleBlockCompiler } from "./application/services/article-block-compiler.service";
 import { ArticleAutoLinkService } from "./application/services/article-auto-link.service";
@@ -31,6 +32,7 @@ import { ArticlePublicationEntity } from "./infrastructure/entities/article-publ
     HotelModule,
     TourModule,
     ProductModule,
+    ContentImageModule,
     TypeOrmModule.forFeature([ArticlePublicationEntity]),
   ],
   controllers: [ArticlesController],

@@ -35,4 +35,9 @@ export class SharpImageProcessor implements ImageProcessor {
       .webp({ quality: WEBP_QUALITY })
       .toBuffer();
   }
+
+  async getDimensions(source: Buffer): Promise<{ width: number; height: number }> {
+    const meta = await sharp(source).metadata();
+    return { width: meta.width ?? 0, height: meta.height ?? 0 };
+  }
 }

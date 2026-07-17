@@ -3,6 +3,7 @@ import type { DichoithoiSiteDb } from "../../../destination/application/ports/di
 import type { HotelRepository } from "../../../hotel/application/ports/hotel.repository";
 import type { TourRepository } from "../../../tour/application/ports/tour.repository";
 import type { ProductRepository } from "../../../product/application/ports/product.repository";
+import type { ContentImageRepository } from "../../../content-image/application/ports/content-image.repository";
 
 function makeSiteDb(overrides: Partial<DichoithoiSiteDb> = {}): DichoithoiSiteDb {
   return {
@@ -72,9 +73,27 @@ function makeProducts(overrides: Partial<ProductRepository> = {}): ProductReposi
   } as ProductRepository;
 }
 
+function makeContentImages(overrides: Partial<ContentImageRepository> = {}): ContentImageRepository {
+  return {
+    findAll: async () => [],
+    findById: async () => null,
+    create: async () => { throw new Error("unused"); },
+    update: async () => { throw new Error("unused"); },
+    delete: async () => {},
+    countReferencesInDrafts: async () => 0,
+    ...overrides,
+  } as ContentImageRepository;
+}
+
 describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
   it("compile token destinations hop le thanh card HTML, giu nguyen phan van xuoi", async () => {
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
+    const compiler = new ArticleBlockCompiler(
+      makeSiteDb(),
+      makeHotels(),
+      makeTours(),
+      makeProducts(),
+      makeContentImages(),
+    );
     const md = [
       "# Các thác đẹp",
       "",
@@ -96,7 +115,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
   });
 
   it("token voi type khong ton tai -> error, chan publish", async () => {
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts(), makeContentImages());
     const md = "## Mục\n\n[[block:destinations type=khong-ton-tai]]";
     const result = await compiler.compile(md);
     expect(result.errors).toHaveLength(1);
@@ -106,7 +125,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
 
   it("token hop le nhung 0 ket qua -> warning, khong render section rong", async () => {
     const siteDb = makeSiteDb({ findDestinationCards: async () => [] });
-    const compiler = new ArticleBlockCompiler(siteDb, makeHotels(), makeTours(), makeProducts());
+    const compiler = new ArticleBlockCompiler(siteDb, makeHotels(), makeTours(), makeProducts(), makeContentImages());
     const md = "## Mục rỗng\n\n[[block:destinations type=thac-ho-suoi]]\n\nVăn xuôi tiếp theo.";
     const result = await compiler.compile(md);
     expect(result.errors).toHaveLength(0);
@@ -116,14 +135,14 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
   });
 
   it("kind khong nhan dien (cu phap sai) -> error", async () => {
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts(), makeContentImages());
     const result = await compiler.compile("[[block:unknown-thing]]");
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]!.message).toContain("Cú pháp");
   });
 
   it("khoi destination (so it) 1 slug cu the render card don", async () => {
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts(), makeContentImages());
     const result = await compiler.compile("[[block:destination slug=thac-datanla]]");
     expect(result.errors).toHaveLength(0);
     expect(result.html).toContain("Thác Datanla");
@@ -151,7 +170,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
         },
       ],
     });
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), products);
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), products, makeContentImages());
     const result = await compiler.compile("## Chuẩn bị đồ\n\n[[block:products tag=phuot limit=4]]");
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
@@ -160,7 +179,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
   });
 
   it("khoi products thieu tham so tag -> error", async () => {
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts(), makeContentImages());
     const result = await compiler.compile("[[block:products limit=4]]");
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]!.message).toContain("tham số tag");
@@ -205,7 +224,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
         },
       ],
     });
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), products);
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), products, makeContentImages());
     const result = await compiler.compile("## Ăn gì ở Đà Lạt\n\n[[block:food-spots tag=da-lat]]");
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
@@ -214,7 +233,7 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
   });
 
   it("khoi food-spots thieu tham so tag -> error", async () => {
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts());
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts(), makeContentImages());
     const result = await compiler.compile("[[block:food-spots limit=4]]");
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]!.message).toContain("tham số tag");
@@ -242,9 +261,64 @@ describe("ArticleBlockCompiler (dichoithoi-article-spec.md §4)", () => {
         },
       ],
     });
-    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), products);
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), products, makeContentImages());
     const result = await compiler.compile("## Ăn gì\n\n[[block:food-spots tag=da-lat]]");
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(1);
+  });
+
+  it("khoi image hop le render <img> voi width/height chong CLS (content-image-library-plan §3.2)", async () => {
+    const contentImages = makeContentImages({
+      findById: async (id) =>
+        id === "img-1"
+          ? {
+              id: "img-1",
+              path: "abc.webp",
+              altText: "Món ăn Đà Lạt",
+              caption: null,
+              width: 1200,
+              height: 800,
+              status: "active",
+              usageCount: 0,
+              uploadedAt: new Date("2026-01-01"),
+            }
+          : null,
+    });
+    process.env.DICHOITHOI_CONTENT_IMAGE_BASE_URL = "https://dichoithoi.com/noi-dung/";
+    const compiler = new ArticleBlockCompiler(makeSiteDb(), makeHotels(), makeTours(), makeProducts(), contentImages);
+    const result = await compiler.compile("## Món ăn\n\n[[block:image id=img-1]]");
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.html).toContain('src="https://dichoithoi.com/noi-dung/abc.webp"');
+    expect(result.html).toContain('alt="Món ăn Đà Lạt"');
+    expect(result.html).toContain('width="1200"');
+    expect(result.html).toContain('height="800"');
+  });
+
+  it("khoi image thieu tham so id -> error", async () => {
+    const compiler = new ArticleBlockCompiler(
+      makeSiteDb(),
+      makeHotels(),
+      makeTours(),
+      makeProducts(),
+      makeContentImages(),
+    );
+    const result = await compiler.compile("[[block:image]]");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]!.message).toContain("tham số id");
+  });
+
+  it("khoi image id khong ton tai -> warning, khong render", async () => {
+    const compiler = new ArticleBlockCompiler(
+      makeSiteDb(),
+      makeHotels(),
+      makeTours(),
+      makeProducts(),
+      makeContentImages(),
+    );
+    const result = await compiler.compile("## Món ăn\n\n[[block:image id=khong-ton-tai]]");
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.html).not.toContain("<img");
   });
 });

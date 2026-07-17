@@ -14,3 +14,4 @@ export { Modal } from "./modal";
 export { Combobox, type ComboboxOption } from "./combobox";
 export { Card, ActionRow } from "./card";
 export { PageHeader } from "./page-header";
+export { FeatureIntro } from "./feature-intro";

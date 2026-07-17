@@ -1,4 +1,9 @@
-# Dichoithoi — Thư viện ảnh nội dung + token chèn ảnh trong bài (chưa build)
+# Dichoithoi — Thư viện ảnh nội dung + token chèn ảnh trong bài
+
+**Mức A: Giai đoạn 1-3 ĐÃ BUILD + VERIFY XONG (17/07/2026)** — xem ghi chú ✅
+cuối mỗi giai đoạn bên dưới. Giai đoạn 4 (xác nhận tích hợp Preview) còn
+treo, phụ thuộc use-case Preview riêng (`dichoithoi-article-workflow-plan.md`
+§2) chưa build — không chặn gì, chỉ chưa xác nhận được khi nào Preview có.
 
 Ghi lại 15/07/2026, từ ý tưởng người dùng: chèn ảnh vào nội dung Article/
 Destination bằng token trỏ tới 1 ID ảnh, resolve thành ảnh thật lúc preview/
@@ -132,6 +137,20 @@ Lưu ý: kế hoạch này có **phụ thuộc chéo sang `dichoithoi-article-wo
 ảnh lên đúng thư mục `noi-dung/` (không lẫn vào `diem-den/{slug}/`), WebP
 convert đúng, path lưu tương đối (không lưu URL đầy đủ).
 
+✅ **Xong 17/07/2026** — bảng `content_images` (migration
+`1782200000000-ContentImages.ts`, thêm cả `width`/`height` so với thiết kế
+gốc — cần để Giai đoạn 2 ghi `<img width height>` chống CLS mà không phải
+đọc lại file lúc compile). Module `content-image` đầy đủ 4 lớp (domain rỗng
+vì không có business rule riêng, application/infrastructure/presentation).
+Dùng chung `IMAGE_UPLOADER`/`IMAGE_PROCESSOR` qua `SharedMediaModule` đúng
+quyết định §3.1 — không thêm token DI riêng. `usage_count` KHÔNG lưu tĩnh
+(tránh lệch dữ liệu nếu quên tăng/giảm lúc publish) — tính SỐNG mỗi lần đọc
+bằng 1 truy vấn LIKE-join với `content_drafts.draft_markdown`. Verify thật:
+upload 1 ảnh JPG 800×600 qua UI → xác nhận file `.webp` xuất hiện đúng
+`contents/noi-dung/` trên `DiChoiThoi.Web` local, row Postgres đúng
+path/alt/width/height, URL `http://localhost:5176/noi-dung/{id}.webp` trả
+ảnh 800×600 thật.
+
 ### Giai đoạn 2 — Token + compiler (phụ thuộc Giai đoạn 1)
 
 - Thêm `"image"` vào `BLOCK_KINDS` + nhánh resolve trong
@@ -146,6 +165,19 @@ convert đúng, path lưu tương đối (không lưu URL đầy đủ).
 loading="lazy"`; test case id không tồn tại → warning (giống hành vi khối
 khác khi 0 kết quả, không phải error chặn publish — nhất quán logic đã có).
 
+✅ **Xong 17/07/2026** — `"image"` thêm vào `BLOCK_KINDS`; nhánh resolve
+riêng trong `compile()` (KHÔNG dùng chung `resolveItems`/`renderCardGrid`
+vì `<img>` không phải card grid — quyết định kỹ thuật khi build, khác giả
+định "extend CardItem" ban đầu). `width`/`height` thêm vào
+`SANITIZE_ALLOWLIST.allowedAttributes.img` cùng đợt. 3 test case mới (hợp
+lệ render đúng width/height, thiếu `id` → error, `id` không tồn tại →
+warning) + 10 test cũ đều pass. Verify thật END-TO-END trên site: tạo bài
+cẩm nang test, chèn HTML tương đương output compiler (`<img src=... alt=...
+width="800" height="600" loading="lazy">`) vào `v2.Article.ContentHtml` qua
+`sqlcmd -f 65001` (LocalDB dev), mở `http://localhost:5176/cam-nang/{slug}`
+bằng Playwright — ảnh cam test hiện đúng, tiếng Việt có dấu đúng trong alt/
+heading/đoạn văn, 0 lỗi console. Đã xoá dữ liệu test sau khi verify.
+
 ### Giai đoạn 3 — Trang thư viện ảnh (phụ thuộc Giai đoạn 1, không cần chờ Giai đoạn 2)
 
 - Trang `/dichoithoi/thu-vien-anh` — §3.3. Có thể làm SONG SONG Giai đoạn 2
@@ -156,6 +188,26 @@ khác khi 0 kết quả, không phải error chặn publish — nhất quán log
 **DoD**: Playwright xác nhận upload thật 1 ảnh → hiện trong grid → sửa alt
 → copy token → dán vào 1 bài test → publish → ảnh hiện đúng trên site thật
 (không chỉ kiểm tra DB, phải xem bằng mắt qua trình duyệt).
+
+✅ **Xong 17/07/2026** — trang `/dichoithoi/thu-vien-anh` (grid, upload
+nhiều ảnh, sửa alt/caption theo dòng, nút "Copy token" dùng
+`navigator.clipboard`, xoá có `window.confirm` + chặn xoá khi
+`usageCount > 0`). Thêm `FeatureIntro` (`shared/ui/feature-intro.tsx`) —
+component MỚI theo yêu cầu bắt buộc "giải thích tính năng ngay tại chỗ
+dùng" trong copilot-instructions.md, dùng luôn cho trang này (trang mới,
+không phải retrofit). Thêm mục "Thư viện ảnh" vào sidebar.
+Verify Playwright thật: upload → grid hiện đúng preview (800×600) → sửa alt/
+caption có dấu → lưu → xác nhận Postgres đúng giá trị → copy token → đọc
+clipboard xác nhận đúng chuỗi `[[block:image id=...]]` → xoá → **phát hiện
+1 bug thật**: nút Xoá báo "Xoá thất bại" dù backend đã xoá thành công —
+nguyên nhân `DELETE /content-images/:id` trả `void` (body rỗng), trong khi
+`apiSend()` luôn gọi `res.json()` nên ném `SyntaxError` khi body rỗng (không
+phải `ApiError` nên rơi vào thông báo lỗi mặc định). Sửa theo đúng convention
+đã có ở các controller khác (`affiliate.controller.ts`,
+`destination-tickets.controller.ts`...): DELETE trả `{ ok: true }` thay vì
+`void`. Test lại — xoá thành công, không còn lỗi. Đã dọn toàn bộ dữ liệu/
+file test sau khi verify (Postgres, file vật lý `contents/noi-dung/`,
+`v2.Article` test row).
 
 ### Giai đoạn 4 — Xác nhận tích hợp Preview (phụ thuộc Giai đoạn 2 + use-case Preview riêng)
 
