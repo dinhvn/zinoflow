@@ -1,7 +1,9 @@
 import {
   buildRelatedItems,
+  clusterDistanceKey,
   computeNearby,
   haversineMeters,
+  scoreCandidate,
   type RelatedCandidate,
 } from "./related-builder";
 
@@ -18,6 +20,8 @@ function candidate(partial: Partial<RelatedCandidate> & { slug: string }): Relat
     priority: 3,
     order: 0,
     distanceFromCenter: null,
+    types: [],
+    contentTier: null,
     ...partial,
   };
 }
@@ -30,7 +34,7 @@ describe("haversineMeters", () => {
   });
 });
 
-describe("computeNearby (spec dichoithoi §12.3 pha 1)", () => {
+describe("computeNearby (panel goi y nearby khi curate tay)", () => {
   const self = candidate({ slug: "self", lat: 20.91, lng: 107.18 });
 
   it("returns closest-first within 30km, excluding self and unpublished", () => {
@@ -52,8 +56,95 @@ describe("computeNearby (spec dichoithoi §12.3 pha 1)", () => {
   });
 });
 
-describe("buildRelatedItems (redesign §9 — quy tac tron)", () => {
-  it("prioritizes children (max 4) then curated then nearby then siblings", () => {
+describe("scoreCandidate (relations-plan §1.3)", () => {
+  const noClusterDistances = new Map<string, number>();
+
+  it("cung loai hinh khac cum PHAI thang khac loai hinh cung cum", () => {
+    const self = candidate({ slug: "self", parentSlug: "cum-a", types: ["bien-dao"] });
+    const sameTypeOtherCluster = candidate({
+      slug: "cung-loai-khac-cum",
+      parentSlug: "cum-b",
+      types: ["bien-dao"],
+    });
+    const otherTypeSameCluster = candidate({
+      slug: "khac-loai-cung-cum",
+      parentSlug: "cum-a",
+      types: ["di-tich-lich-su"],
+    });
+
+    const scoreSameType = scoreCandidate(self, sameTypeOtherCluster, noClusterDistances);
+    const scoreSameCluster = scoreCandidate(self, otherTypeSameCluster, noClusterDistances);
+
+    expect(scoreSameType).toBeGreaterThan(scoreSameCluster);
+  });
+
+  it("Priority KHONG duoc dao thu tu cung-loai-hinh, ke ca Priority=1 vs Priority=5", () => {
+    const self = candidate({ slug: "self", types: ["bien-dao"] });
+    const sameTypeLowPriority = candidate({
+      slug: "cung-loai-uu-tien-thap",
+      types: ["bien-dao"],
+      priority: 5,
+    });
+    const otherTypeHighPriority = candidate({
+      slug: "khac-loai-uu-tien-cao",
+      types: ["di-tich-lich-su"],
+      priority: 1,
+    });
+
+    const scoreSameType = scoreCandidate(self, sameTypeLowPriority, noClusterDistances);
+    const scoreOtherType = scoreCandidate(self, otherTypeHighPriority, noClusterDistances);
+
+    expect(scoreSameType).toBeGreaterThan(scoreOtherType);
+  });
+
+  it("cung cum/cung tinh dung haversine truc tiep tu toa do rieng", () => {
+    const self = candidate({ slug: "self", parentSlug: "cum-a", lat: 21.0, lng: 105.8 });
+    const sibling = candidate({ slug: "anh-em", parentSlug: "cum-a", lat: 21.001, lng: 105.801 });
+    const score = scoreCandidate(self, sibling, noClusterDistances);
+    // Cung cum (+200) + diem gan (toa do gan nhau, ~100m => gan max 100) — it nhat > 290
+    expect(score).toBeGreaterThan(290);
+  });
+
+  it("khac cum dung mo hinh 2 tang (DistanceFromCenter + khoang cach cum) khi co du du lieu", () => {
+    const self = candidate({
+      slug: "self",
+      parentSlug: "cum-a",
+      provinceCode: "01",
+      distanceFromCenter: 2_000,
+      lat: null,
+      lng: null,
+    });
+    const other = candidate({
+      slug: "khac-cum",
+      parentSlug: "cum-b",
+      provinceCode: "02",
+      distanceFromCenter: 3_000,
+      lat: null,
+      lng: null,
+    });
+    const clusterDistances = new Map([[clusterDistanceKey("cum-a", "cum-b"), 50_000]]);
+
+    const score = scoreCandidate(self, other, clusterDistances);
+    const priorityOnlyScore = (6 - other.priority) * 4; // priority mac dinh 3 -> 12
+    // Khong cung cum/tinh (0) + diem gan uoc luong tu 55km (2+50+3, nho nhung > 0)
+    // + priority — chi can lon hon phan priority la du chung to co cong diem gan.
+    expect(score).toBeGreaterThan(priorityOnlyScore);
+    expect(score).toBeLessThan(priorityOnlyScore + 10);
+  });
+
+  it("khac cum, khong co du lieu khoang cach cum -> khong co diem gan (khong bia)", () => {
+    const self = candidate({ slug: "self", parentSlug: "cum-a", provinceCode: "01" });
+    const other = candidate({ slug: "khac-cum-khac-tinh", parentSlug: "cum-b", provinceCode: "02" });
+    const score = scoreCandidate(self, other, new Map());
+    // Chi con lai priority mac dinh (12) — hoan toan khong co diem gan/cung cum/cung loai
+    expect(score).toBe((6 - other.priority) * 4);
+  });
+});
+
+describe("buildRelatedItems (relations-plan §1.3-§1.4, Giai doan C2)", () => {
+  const noClusterDistances = new Map<string, number>();
+
+  it("prioritizes children (max 4) then curated, sau do cham diem dien not the rest", () => {
     const self = candidate({ slug: "self", parentSlug: "cha" });
     const all = [
       self,
@@ -63,22 +154,23 @@ describe("buildRelatedItems (redesign §9 — quy tac tron)", () => {
       candidate({ slug: "con-4", parentSlug: "self" }),
       candidate({ slug: "con-5", parentSlug: "self" }), // qua max 4 con
       candidate({ slug: "curated" }),
-      candidate({ slug: "nearby" }),
       candidate({ slug: "anh-em", parentSlug: "cha" }),
     ];
     const items = buildRelatedItems({
       self,
       all,
       curatedRelatedSlugs: ["curated"],
-      nearby: [{ slug: "nearby", distanceMeters: 2_500 }],
+      clusterDistances: noClusterDistances,
     });
-    expect(items.map((i) => i.slug)).toEqual([
-      "con-1", "con-2", "con-3", "con-4", // max 4 con
-      "curated",
-      "nearby",
-      "anh-em",
-      "con-5", // lap day tu "cung tinh"
+    // 4 con dau + curated luon co mat; phan con lai (con-5, anh-em) dien theo
+    // diem so (cung tinh +100 ca 2, hoa nhau -> thu tu con lai khong quan trong)
+    expect(items.slice(0, 5).map((i) => i.slug)).toEqual([
+      "con-1", "con-2", "con-3", "con-4", "curated",
     ]);
+    expect(items.map((i) => i.slug)).toEqual(
+      expect.arrayContaining(["con-5", "anh-em"]),
+    );
+    expect(items).toHaveLength(7);
   });
 
   it("dedupes, skips unpublished and caps at 8", () => {
@@ -92,7 +184,7 @@ describe("buildRelatedItems (redesign §9 — quy tac tron)", () => {
       self,
       all,
       curatedRelatedSlugs: ["p-0", "p-0", "an", "self"],
-      nearby: [],
+      clusterDistances: noClusterDistances,
     });
     expect(items).toHaveLength(8);
     expect(items[0]!.slug).toBe("p-0");
@@ -100,19 +192,36 @@ describe("buildRelatedItems (redesign §9 — quy tac tron)", () => {
     expect(items.map((i) => i.slug)).not.toContain("self");
   });
 
-  it("renders distance badge in Vietnamese format", () => {
-    const self = candidate({ slug: "self" });
-    const all = [self, candidate({ slug: "gan" }), candidate({ slug: "rat-gan" })];
+  it("cham diem dua diem cung loai hinh len truoc diem chi cung tinh", () => {
+    const self = candidate({ slug: "self", provinceCode: "22", types: ["bien-dao"] });
+    const all = [
+      self,
+      candidate({ slug: "cung-tinh-khac-loai", provinceCode: "22", types: ["di-tich-lich-su"] }),
+      candidate({ slug: "cung-loai-cung-tinh", provinceCode: "22", types: ["bien-dao"] }),
+    ];
     const items = buildRelatedItems({
       self,
       all,
       curatedRelatedSlugs: [],
-      nearby: [
-        { slug: "rat-gan", distanceMeters: 800 },
-        { slug: "gan", distanceMeters: 2_500 },
-      ],
+      clusterDistances: noClusterDistances,
     });
-    expect(items.find((i) => i.slug === "rat-gan")!.badge).toBe("cách 800 m");
-    expect(items.find((i) => i.slug === "gan")!.badge).toBe("cách 2,5 km");
+    expect(items.map((i) => i.slug)).toEqual(["cung-loai-cung-tinh", "cung-tinh-khac-loai"]);
+  });
+
+  it("renders distance badge (haversine that) khi ca 2 ben co toa do, du xep hang bang diem uoc luong", () => {
+    const self = candidate({ slug: "self", lat: 21.0285, lng: 105.8542, provinceCode: "22" });
+    const all = [
+      self,
+      candidate({ slug: "rat-gan", provinceCode: "22", lat: 21.0286, lng: 105.8543 }),
+      candidate({ slug: "khong-toa-do", provinceCode: "22" }),
+    ];
+    const items = buildRelatedItems({
+      self,
+      all,
+      curatedRelatedSlugs: [],
+      clusterDistances: noClusterDistances,
+    });
+    expect(items.find((i) => i.slug === "rat-gan")!.badge).toMatch(/^cách \d+ m$/);
+    expect(items.find((i) => i.slug === "khong-toa-do")!.badge).toBeNull();
   });
 });

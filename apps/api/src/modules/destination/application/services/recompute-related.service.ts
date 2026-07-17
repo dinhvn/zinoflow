@@ -8,8 +8,12 @@ import {
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 import { CACHE_PURGE, type CachePurgePort } from "../ports/cache-purge.port";
 import {
+  CLUSTER_DISTANCE_REPOSITORY,
+  type ClusterDistanceRepository,
+} from "../ports/cluster-distance.repository";
+import {
   buildRelatedItems,
-  computeNearby,
+  clusterDistanceKey,
   type RelatedCandidate,
 } from "../../domain/related-builder";
 import { buildAncestors, buildChildren } from "../../domain/ancestors-children-builder";
@@ -31,6 +35,8 @@ export class RecomputeRelatedService {
     private readonly relationRepo: DestinationRelationRepository,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(CACHE_PURGE) private readonly cachePurge: CachePurgePort,
+    @Inject(CLUSTER_DISTANCE_REPOSITORY)
+    private readonly clusterDistanceRepo: ClusterDistanceRepository,
   ) {}
 
   /** Tinh lai cho danh sach slug cu the. Tra ve so bai co RelatedJson THAY DOI. */
@@ -136,6 +142,13 @@ export class RecomputeRelatedService {
     const siteIdBySlug = new Map(
       all.filter((d) => d.siteId !== null).map((d) => [d.slug, d.siteId!]),
     );
+    const clusterDistancePairs = await this.clusterDistanceRepo.findAll();
+    const clusterDistances = new Map(
+      clusterDistancePairs.map((p) => [
+        clusterDistanceKey(p.clusterASlug, p.clusterBSlug),
+        p.distanceMeters,
+      ]),
+    );
 
     let scanned = 0;
     let updated = 0;
@@ -151,7 +164,7 @@ export class RecomputeRelatedService {
         self,
         all: candidates,
         curatedRelatedSlugs: curated.map((r) => r.targetSlug),
-        nearby: computeNearby(self, candidates),
+        clusterDistances,
       });
       const relatedChanged = await this.siteDb.updateRelatedJson(siteId, JSON.stringify(items));
 
@@ -189,5 +202,7 @@ function toCandidate(d: DestinationMirrorEntity): RelatedCandidate {
     priority: d.priority,
     order: d.order,
     distanceFromCenter: d.distanceFromCenter === null ? null : Number(d.distanceFromCenter),
+    types: d.types,
+    contentTier: d.contentTier,
   };
 }

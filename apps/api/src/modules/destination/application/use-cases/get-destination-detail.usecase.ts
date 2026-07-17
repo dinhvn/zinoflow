@@ -210,5 +210,7 @@ function toCandidate(d: DestinationMirrorEntity): RelatedCandidate {
     priority: d.priority,
     order: d.order,
     distanceFromCenter: d.distanceFromCenter === null ? null : Number(d.distanceFromCenter),
+    types: d.types,
+    contentTier: d.contentTier,
   };
 }

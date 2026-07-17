@@ -735,9 +735,31 @@ B xong hoàn toàn** (không phải đang dở).
    dev thật, bấm "Đồng bộ từ website" thật → xác nhận qua psql
    `doi-cu-dalat` có `types: ["khu-vui-choi"]`, `da-lat` (cluster) có
    `types: []` đúng như thiết kế.
-2. **C2. Viết thuật toán chấm điểm** (§1.3, hàm mới thay `buildRelatedItems()`
-   bước 3-5 cũ) + `related-builder.spec.ts` đầy đủ test case đã liệt kê ở
-   §1.4.
+2. ✅ **C2. Viết thuật toán chấm điểm — ĐÃ XONG (17/07/2026)** (§1.3, thay
+   `buildRelatedItems()` bước 3-5 cũ bằng `scoreCandidate()` + xếp hạng giảm
+   dần). Vẫn giữ 2 bậc cứng trước scoring: con trực tiếp (≤4) → related
+   curated. `RelatedCandidate` thêm `types`/`contentTier` (đọc từ mirror
+   Postgres, Giai đoạn C1). Khoảng cách dùng cho CHẤM ĐIỂM: haversine trực
+   tiếp khi cùng cụm/cùng tỉnh, mô hình 2 tầng (`DistanceFromCenter` +
+   `dichoithoi_cluster_distances`, Giai đoạn A2, qua `clusterDistanceKey()`)
+   khi khác cụm — badge HIỂN THỊ luôn dùng haversine thật (không dùng số
+   ước lượng cho người xem). `RecomputeRelatedService` inject thêm
+   `CLUSTER_DISTANCE_REPOSITORY`, build map 1 lần mỗi lượt recompute.
+   Verify: `tsc --noEmit` sạch, jest 376/376 pass — `related-builder.spec.ts`
+   viết lại đủ 3 case đã liệt kê ở §1.4: (a) cùng loại khác cụm thắng khác
+   loại cùng cụm; (b) Priority không đảo thứ tự cùng-loại-hình (kể cả
+   Priority=1 vs 5); (c) 2 tầng dùng đúng khi khác cụm, haversine trực tiếp
+   khi cùng cụm/tỉnh, không bịa khi thiếu dữ liệu khoảng cách cụm. **Verify
+   trên dữ liệu thật** (không chỉ đọc JSON, đúng yêu cầu DoD): sync mirror +
+   `POST /destinations/recompute-related` trên `dichoithoi_dev` (272/272
+   điểm cập nhật) → đọc `RelatedJson` thật của Vịnh Hạ Long, xác nhận 8 mục
+   đều là đảo/biển cùng loại "Biển-Đảo" (Đảo Tuần Châu, Bãi Cháy, Đảo Cô
+   Tô...), kể cả 2 điểm cách xa >300km (Bãi Biển Nhật Lệ, Vũng Chùa-Đảo Yến,
+   Quảng Bình) vẫn được chọn nhờ cùng loại hình thắng khoảng cách gần —
+   đúng ý đồ "cùng-loại-ở-xa vẫn thắng khác-loại-ở-gần" (§1.3). Case
+   "Biệt Thự Hằng Nga" trong DoD gốc chưa spot-check được vì điểm này vẫn
+   chưa có Type nào (còn ở cột "Chưa phân loại" sau B4) — không phải lỗi
+   thuật toán, ghi chú lại để rà khi tiếp tục B4.
 3. **C3. Thêm loại quan hệ `excluded`** (§5.7 mục 3) vào enum
    `nearby/related/mentioned`, sửa thuật toán C2 lọc trước khi chấm điểm.
 4. **C4. Lớp quan hệ trên trang bản đồ** (§5.3-5.4, §5.6-5.7) — vẽ đường nối

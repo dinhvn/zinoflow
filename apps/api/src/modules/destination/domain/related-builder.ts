@@ -1,7 +1,10 @@
 /**
- * Builder khoi "diem den lien quan" (RelatedJson) — spec dichoithoi §12.3,
- * quy tac tron da duyet o redesign doc §9: con -> related curated -> nearby ->
- * anh em cung cha -> cung tinh, dedupe, cat du 8 muc. Pure TS + unit tests.
+ * Builder khoi "diem den lien quan" (RelatedJson) — destination-relations-plan
+ * §1.3, Giai doan C2. 2 bac CUNG (quyet dinh nguoi/cay, dung truoc scoring):
+ * con truc tiep -> related curated. Sau do CHAM DIEM toan bo ung vien con lai
+ * theo cong thuc §1.3 (cung loai hinh la yeu to chi phoi, khoang cach/uu tien/
+ * tier chi la trong so phu), xep hang giam dan, dien cho toi khi du 8 muc.
+ * Pure TS + unit tests.
  */
 
 export const RELATED_ITEM_COUNT = 8;
@@ -28,6 +31,11 @@ export interface RelatedCandidate {
   order: number;
   /** Khoang cach toi trung tam cum/tinh cha, don vi MET (v2.Destination.DistanceFromCenter) — Phase 28.2 */
   distanceFromCenter: number | null;
+  /** Slug cac loai hinh da gan (v2.DestinationTypeMap, nhieu-nhieu) — mirror Giai doan C1.
+   * Rong voi kind != poi. Yeu to chi phoi thuat toan cham diem (relations-plan §1.3). */
+  types: string[];
+  /** Phan loai do sau noi dung — trong so phu trong cham diem (relations-plan §1.3) */
+  contentTier: "flagship" | "standard" | null;
 }
 
 /** 1 muc trong RelatedJson — website render truc tiep, khong query them */
@@ -35,7 +43,7 @@ export interface RelatedItem {
   slug: string;
   name: string;
   thumbnail: string | null;
-  /** "cách 2,5 km" voi nearby; nguon khac de trong (website tu render loai) */
+  /** "cách 2,5 km" khi biet toa do that ca 2 ben, nguoc lai de trong */
   badge: string | null;
 }
 
@@ -62,8 +70,10 @@ export interface NearbyEntry {
 }
 
 /**
- * Tinh danh sach nearby cho 1 diem (spec §12.3 pha 1): khoang cach toi moi diem
- * published co toa do, top 10 trong ban kinh 30km, gan nhat truoc.
+ * Tinh danh sach nearby cho 1 diem (panel "goi y nearby" khi bien tap tay
+ * quan he curated — KHONG con dung de xay RelatedJson, xem buildRelatedItems):
+ * khoang cach toi moi diem published co toa do, top 10 trong ban kinh 30km,
+ * gan nhat truoc.
  */
 export function computeNearby(
   self: RelatedCandidate,
@@ -93,29 +103,123 @@ function formatDistanceBadge(meters: number): string {
   return `cách ${km} km`;
 }
 
+/** Khoa chuan hoa cho map khoang cach cum/tinh (khop dung CHECK cua bang
+ * dichoithoi_cluster_distances: cluster_a_slug < cluster_b_slug). */
+export function clusterDistanceKey(a: string, b: string): string {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+/**
+ * Diem "cung loai hinh" (relations-plan §1.3) — so khop theo TI LE giao nhau
+ * giua 2 tap (khong phai 1 gia tri don), trung cang nhieu loai cang thang.
+ * self chua co loai nao (25/272 diem thuc te) -> luon 0, khong loi.
+ */
+function typeOverlapScore(self: RelatedCandidate, candidate: RelatedCandidate): number {
+  if (self.types.length === 0) return 0;
+  const selfTypes = new Set(self.types);
+  const overlap = candidate.types.filter((t) => selfTypes.has(t)).length;
+  return (1000 * overlap) / self.types.length;
+}
+
+function proximityTierScore(self: RelatedCandidate, candidate: RelatedCandidate): number {
+  if (candidate.parentSlug && candidate.parentSlug === self.parentSlug) return 200;
+  if (candidate.provinceCode && candidate.provinceCode === self.provinceCode) return 100;
+  return 0;
+}
+
+/**
+ * Khoang cach (met) dung de CHAM DIEM (mo hinh 2 tang, relations-plan §1.2) —
+ * cung cum/cung tinh: haversine truc tiep tu toa do rieng. Khac cum: uoc luong
+ * qua tam cum (DistanceFromCenter + khoang_cach_cum + DistanceFromCenter) —
+ * theo bat dang thuc tam giac LUON >= that, CHI dung de xep hang, KHONG hien thi
+ * (xem badgeDistanceMeters ben duoi cho so hien thi that).
+ */
+function rankingDistanceMeters(
+  self: RelatedCandidate,
+  candidate: RelatedCandidate,
+  clusterDistances: ReadonlyMap<string, number>,
+): number | null {
+  const sameCluster = Boolean(candidate.parentSlug && candidate.parentSlug === self.parentSlug);
+  const sameProvince = Boolean(candidate.provinceCode && candidate.provinceCode === self.provinceCode);
+  if (sameCluster || sameProvince) {
+    if (self.lat !== null && self.lng !== null && candidate.lat !== null && candidate.lng !== null) {
+      return haversineMeters(self.lat, self.lng, candidate.lat, candidate.lng);
+    }
+    return null;
+  }
+  if (
+    self.parentSlug &&
+    candidate.parentSlug &&
+    self.distanceFromCenter !== null &&
+    candidate.distanceFromCenter !== null
+  ) {
+    const clusterDist = clusterDistances.get(clusterDistanceKey(self.parentSlug, candidate.parentSlug));
+    if (clusterDist !== undefined) {
+      return self.distanceFromCenter + clusterDist + candidate.distanceFromCenter;
+    }
+  }
+  return null;
+}
+
+/** Diem gan — nghich dao khoang cach, toi da 100 (0km => 100, cang xa cang giam). */
+function distanceScore(meters: number | null): number {
+  if (meters === null) return 0;
+  return 100 / (1 + meters / 1000);
+}
+
+/** Priority 1 (cao nhat) => +20, Priority 5 (thap nhat) => +4 — khong bao gio 0/am. */
+function priorityScore(candidate: RelatedCandidate): number {
+  return (6 - candidate.priority) * 4;
+}
+
+function tierScore(candidate: RelatedCandidate): number {
+  return candidate.contentTier === "flagship" ? 10 : 0;
+}
+
+/** Cong thuc cham diem day du (relations-plan §1.3) — export de test tung phan. */
+export function scoreCandidate(
+  self: RelatedCandidate,
+  candidate: RelatedCandidate,
+  clusterDistances: ReadonlyMap<string, number>,
+): number {
+  return (
+    typeOverlapScore(self, candidate) +
+    proximityTierScore(self, candidate) +
+    distanceScore(rankingDistanceMeters(self, candidate, clusterDistances)) +
+    priorityScore(candidate) +
+    tierScore(candidate)
+  );
+}
+
 export interface RelatedInput {
   self: RelatedCandidate;
   all: readonly RelatedCandidate[];
   /** Quan he related curated (type 2), da sort theo weight giam dan */
   curatedRelatedSlugs: readonly string[];
-  /** Nearby da tinh (pha 1) — gan nhat truoc */
-  nearby: readonly NearbyEntry[];
+  /** Khoang cach cum/tinh cap cao (dichoithoi_cluster_distances, Giai doan A2) —
+   * khoa chuan hoa qua clusterDistanceKey(). */
+  clusterDistances: ReadonlyMap<string, number>;
 }
 
 /**
- * Build RelatedJson cho 1 diem (spec §12.3 pha 2). Thu tu uu tien:
- * 1. Con truc tiep (toi da 4) -> 2. related curated -> 3. nearby ->
- * 4. anh em cung cha -> 5. cung tinh. Dedupe + loai chinh no + chi published,
- * cat du 8 muc. (Quy tac "cung loai chinh" thay bang "cung tinh" — mirror
- * chua co type map; ghi nhan o spec §12.3.)
+ * Build RelatedJson cho 1 diem (relations-plan §1.3-§1.4, Giai doan C2). 2 bac
+ * CUNG truoc (quyet dinh nguoi/cay, KHONG qua scoring): con truc tiep (toi da
+ * 4) -> related curated. Con lai CHAM DIEM toan bo ung vien, xep hang giam
+ * dan, dien cho toi 8 muc. Dedupe + loai chinh no + chi published.
  */
 export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
-  const { self, all, curatedRelatedSlugs, nearby } = input;
+  const { self, all, curatedRelatedSlugs, clusterDistances } = input;
   const bySlug = new Map(all.map((c) => [c.slug, c]));
-  const distanceBySlug = new Map(nearby.map((e) => [e.slug, e.distanceMeters]));
 
   const picked: RelatedItem[] = [];
   const pickedSlugs = new Set<string>([self.slug]);
+
+  const badgeFor = (candidate: RelatedCandidate): string | null => {
+    if (self.lat === null || self.lng === null || candidate.lat === null || candidate.lng === null) {
+      return null;
+    }
+    return formatDistanceBadge(haversineMeters(self.lat, self.lng, candidate.lat, candidate.lng));
+  };
 
   const pick = (slug: string, badge: string | null): void => {
     if (picked.length >= RELATED_ITEM_COUNT || pickedSlugs.has(slug)) return;
@@ -125,35 +229,24 @@ export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
     picked.push({ slug: c.slug, name: c.name, thumbnail: c.thumbnail, badge });
   };
 
-  // 1. Con truc tiep (tinh/cum) — toi da 4
+  // Bac 1: con truc tiep (tinh/cum) — toi da 4, khong qua scoring
   const children = all.filter((c) => c.parentSlug === self.slug && c.siteStatus === 1);
   for (const child of children.slice(0, MAX_CHILDREN_IN_RELATED)) pick(child.slug, null);
 
-  // 2. Related curated (theo weight)
+  // Bac 2: related curated (quyet dinh bien tap, override thuat toan)
   for (const slug of curatedRelatedSlugs) pick(slug, null);
 
-  // 3. Nearby — badge khoang cach
-  for (const entry of nearby) {
-    pick(entry.slug, formatDistanceBadge(entry.distanceMeters));
-  }
+  // Bac 3: cham diem toan bo ung vien con lai, xep hang giam dan
+  if (picked.length < RELATED_ITEM_COUNT) {
+    const scored = all
+      .filter((c) => c.siteStatus === 1 && !pickedSlugs.has(c.slug))
+      .map((c) => ({ candidate: c, score: scoreCandidate(self, c, clusterDistances) }))
+      .filter((s) => s.score > 0)
+      .sort((a, b) => b.score - a.score);
 
-  // 4. Anh em cung cha
-  if (self.parentSlug) {
-    for (const c of all) {
-      if (c.parentSlug === self.parentSlug && c.slug !== self.slug) pick(c.slug, null);
+    for (const { candidate } of scored) {
+      pick(candidate.slug, badgeFor(candidate));
     }
-  }
-
-  // 5. Cung tinh (uu tien diem co toa do gan neu biet khoang cach)
-  if (self.provinceCode) {
-    const sameProvince = all
-      .filter((c) => c.provinceCode === self.provinceCode && c.slug !== self.slug)
-      .sort(
-        (a, b) =>
-          (distanceBySlug.get(a.slug) ?? Number.MAX_SAFE_INTEGER) -
-          (distanceBySlug.get(b.slug) ?? Number.MAX_SAFE_INTEGER),
-      );
-    for (const c of sameProvince) pick(c.slug, null);
   }
 
   return picked;

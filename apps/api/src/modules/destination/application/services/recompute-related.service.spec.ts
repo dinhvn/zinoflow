@@ -5,6 +5,7 @@ import type {
 } from "../ports/destination-mirror.repository";
 import type { DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 import type { CachePurgePort } from "../ports/cache-purge.port";
+import type { ClusterDistanceRepository } from "../ports/cluster-distance.repository";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
 function entity(slug: string, parentSlug: string | null): DestinationMirrorEntity {
@@ -19,7 +20,8 @@ describe("RecomputeRelatedService.affectedSlugsForRename", () => {
     } as unknown as DestinationRelationRepository;
     const siteDb = {} as DichoithoiSiteDb;
     const cachePurge = {} as CachePurgePort;
-    return new RecomputeRelatedService(mirrorRepo, relationRepo, siteDb, cachePurge);
+    const clusterDistanceRepo = { findAll: async () => [] } as unknown as ClusterDistanceRepository;
+    return new RecomputeRelatedService(mirrorRepo, relationRepo, siteDb, cachePurge, clusterDistanceRepo);
   }
 
   it("gom chinh no + cha + toan bo con chau (BFS nhieu tang)", async () => {
