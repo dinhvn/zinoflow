@@ -835,15 +835,44 @@ bản đồ (không phải chỉ đọc JSON) một số trường hợp đã bi
 đúng" (vd. Biệt Thự Hằng Nga phải ưu tiên gợi ý các công trình kiến trúc
 khác); Playwright xác nhận trang bản đồ vẽ đúng lớp quan hệ.
 
-### Giai đoạn D — UI nhãn + JSON-LD (phụ thuộc C)
+### Giai đoạn D — UI nhãn + JSON-LD (phụ thuộc C) — ✅ ĐÃ XONG (17/07/2026)
 
-1. **D1. Tách nhãn hiển thị theo tiêu chí** (mục 2) — cần `criterion` suy ra
-   từ kết quả C2, nên phải sau C2.
-2. **D2. JSON-LD cho quan hệ ngang cấp** (mục 4) — nên làm sau cùng, tránh
-   phải sửa lại JSON-LD nếu thuật toán C2 còn thay đổi trong lúc verify C.
+1. ✅ **D1. Tách nhãn hiển thị theo tiêu chí** (mục 2) — `RelatedItem` (zinoflow,
+   `related-builder.ts`) thêm field `criterion` (union type
+   `"child"|"curated"|"same-type-cluster"|"same-type"|"nearby"|"same-province"`).
+   2 bậc cứng (con/curated) gán criterion cố định ngay khi `pick()`; các mục
+   qua chấm điểm (C2) suy criterion qua hàm `classifyCriterion()` mới — có
+   điểm cùng-loại-hình (>0) là yếu tố chính (kèm cùng cụm → `same-type-cluster`,
+   không thì → `same-type`); không có điểm loại hình thì xét cùng
+   cụm/tỉnh → `same-province`, còn lại → `nearby`. Field này nằm trong JSON
+   serialize thẳng vào `RelatedJson` (không cần đổi contract Postgres/API).
+   Phía dichoithoi: `RelatedRefModel` thêm `Criterion` (Newtonsoft tự khớp
+   theo tên, không cần cấu hình gì thêm — an toàn ngược với dữ liệu
+   `RelatedJson` cũ chưa có field này, tự hiểu là `null`). Tách
+   `_RelatedDestinationList.cshtml` (logic group) khỏi `_RelatedDestinationGrid.cshtml`
+   mới (markup lưới ảnh, dùng lại cho cả phần không nhãn và từng nhóm có
+   nhãn) — con trực tiếp/curated hiện đầu KHÔNG có tiêu đề (đã rõ ngữ cảnh
+   qua vị trí), 3 nhóm còn lại có tiêu đề theo thứ tự cố định "Cùng loại
+   hình" → "Gần đây" → "Trong khu vực".
+2. ✅ **D2. JSON-LD cho quan hệ ngang cấp** (mục 4) — `SchemaUtil.CreateRelatedDestinationJsonLD()`
+   mới (dichoithoi), theo đúng khuôn `ItemList`/`ListItem`/`Position` đã có
+   sẵn cho `CreateDestinationListJsonLD` (trang danh sách) — `name` =
+   "Điểm đến liên quan tới {Name}", KHÔNG gộp vào JSON-LD `TouristAttraction`
+   chính, KHÔNG dùng `isPartOf`/`hasPart` (sai ngữ nghĩa cho quan hệ ngang
+   cấp). `DestinationController.Detail()` thêm vào mảng `jsonLds` khi
+   `relatedItems.Count > 0`, cùng cơ chế với `CreateFaqJsonLD` đã có.
+   Verify thật (Playwright, không chỉ Rich Results Test tĩnh): đọc trực tiếp
+   `<script type="application/ld+json">` trên trang thật, xác nhận đúng
+   `@type: ItemList`, `name: "Điểm đến liên quan tới Vịnh Hạ Long"`,
+   `itemListElement` đủ 8 mục đúng thứ tự + URL `/diem-den/{slug}` đúng.
 
-**DoD giai đoạn D**: Playwright xác nhận khối "Điểm đến liên quan" hiện đúng
-nhãn theo nhóm; Rich Results Test (Google) xác nhận JSON-LD `ItemList` hợp
-lệ, không lỗi.
+**DoD giai đoạn D**: ✅ jest zinoflow 378/378 pass (1 test mới kiểm tra đủ 6
+giá trị `criterion`); `dotnet build` dichoithoi sạch; Playwright trên dữ
+liệu thật (sau khi chạy `recompute-related` để field `criterion` có trong
+`RelatedJson`) — Vịnh Hạ Long + Búng Bình Thiên (An Giang) đều hiện đúng
+nhóm "Cùng loại hình" (8/8 mục, vì tất cả gợi ý đều cùng loại hình chi phối
+hoàn toàn theo thiết kế §1.3), 0 lỗi console không liên quan ảnh 404; JSON-LD
+`ItemList` hợp lệ trên trang thật, đúng cấu trúc schema.org.
 
-### Tổng thứ tự: A → B → C → D (A3/A4 có thể chạy sớm hơn, không cần chờ gì)
+### Tổng thứ tự: A → B → C → D — ✅ TOÀN BỘ 4 GIAI ĐOẠN ĐÃ XONG (17/07/2026)
+(A3/A4 chạy sớm hơn theo kế hoạch gốc, không cần chờ gì)
