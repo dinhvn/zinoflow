@@ -632,10 +632,34 @@ rộng, xem §6).
    thờ, Làng nghề truyền thống, Bảo tàng, Công trình kiến trúc (Văn hoá-Lịch
    sử); Khu vui chơi-Giải trí, Chợ-Phố đêm, Khu-Phố ẩm thực, Phố cổ-Phố đi bộ
    (Vui chơi-Trải nghiệm — còn 4/6, đã bớt 2 tag trải nghiệm).
-2. **B2. Trang Kanban rà soát taxonomy** (§6.1-6.2, route
-   `/dichoithoi/phan-loai`) — xây trước phần khung (chọn cụm, hiện cột,
-   click sửa tay), CHƯA cần tích hợp AI đề xuất ở bước này — có thể dùng
-   ngay để rà tay nếu muốn bắt đầu trước khi AI-đề-xuất sẵn sàng.
+2. ✅ **B2. Trang Kanban rà soát taxonomy — ĐÃ XONG (17/07/2026)** (§6.1-6.2,
+   route `/dichoithoi/phan-loai`) — chỉ phần khung (chọn cụm, hiện cột, click
+   sửa tay), CHƯA tích hợp AI đề xuất (xem B3 dưới) — dùng ngay để rà tay.
+   - Backend: `fetchTypeAssignments()`/`replaceTypeAssignments()` mới trong
+     `mssql-site-db.adapter.ts` (giống hệt pattern `fetchTagAssignments`/
+     `replaceTagAssignments` đã có cho Tag, đổi bảng `DestinationTypeMap`/
+     `DestinationType`, KHÔNG đụng `PrimaryTypeId`). Use-case
+     `GetTaxonomyKanbanBoardUseCase` gộp 3 nguồn cùng lúc — `fetchAllDestinations()`
+     (đã có sẵn, cho slug/kind/parentSlug/thumbnail của TOÀN BỘ 274 điểm, tái
+     dùng luôn thay vì viết query mới), `fetchTypeAssignments()`,
+     `fetchTaxonomyContent()` (nhóm 3 nhóm/16 loại) — chỉ điểm `kind=poi` mới
+     lên thẻ Kanban (tỉnh/cụm chỉ làm dropdown, không tự phân loại Type).
+     `UpdateDestinationTypesUseCase` ghi qua `replaceTypeAssignments`.
+     Endpoint `GET /destination-types/kanban-board`,
+     `PATCH /destination-types/:slug/types`.
+   - Frontend `apps/web/src/app/dichoithoi/phan-loai/page.tsx`: dropdown chọn
+     cụm/tỉnh, thanh tiến độ "X/Y điểm đã phân loại", cột "Chưa phân loại"
+     luôn đầu (viền cam), các cột Type khác chỉ hiện khi có ≥1 điểm (đúng
+     §6.1). Click 1 thẻ → `Modal` hiện checkbox 16 loại nhóm theo 3 nhóm —
+     tick/bỏ tick lưu NGAY (không nút submit riêng, đúng §6.2), tự
+     `invalidateQueries` để cột cập nhật ngay sau khi lưu.
+   - Verify: `tsc --noEmit` (api+web) sạch, jest 367/367 pass (1 test mới:
+     merge đúng, lọc `kind=poi`, gom `typeSlugs` nhiều-nhiều đúng); Playwright
+     trên `dichoithoi_dev` thật — chọn cụm "Đà Lạt" (45 điểm, "39/45 đã phân
+     loại"), 6 điểm ở cột "Chưa phân loại" đúng danh sách thật, click "Dalat
+     Fairytale Land" → tick "Khu vui chơi - Giải trí" → xác nhận qua sqlcmd
+     đã ghi đúng vào `v2.DestinationTypeMap`, cột "Chưa phân loại" tự cập
+     nhật 6→5 ngay không cần reload trang.
 3. **B3. Job AI đánh giá + đề xuất hàng loạt** (§6.3) — bảng nháp
    `dichoithoi_taxonomy_suggestions`, chạy cho toàn bộ 272 điểm, không ghi
    thẳng vào `DestinationTypeMap`.

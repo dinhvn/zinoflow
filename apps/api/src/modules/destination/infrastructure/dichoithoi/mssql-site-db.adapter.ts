@@ -27,6 +27,7 @@ import type {
   SiteDestinationMeta,
   SiteTagAssignmentRow,
   SiteTagRow,
+  SiteTypeAssignmentRow,
   SiteTypeRow,
   TaxonomyContentRows,
 } from "../../application/ports/dichoithoi-site-db.port";
@@ -758,6 +759,56 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       return request.query(
         `UPDATE v2.DestinationTag SET Description = @description WHERE Slug = @slug`,
       );
+    });
+  }
+
+  async fetchTypeAssignments(): Promise<SiteTypeAssignmentRow[]> {
+    const rows = await this.queryWithRetry<{
+      Id: number;
+      Slug: string;
+      Name: string;
+      TypeSlug: string | null;
+    }>(`
+      SELECT d.Id, d.Slug, d.Name, t.Slug AS TypeSlug
+      FROM v2.Destination d
+      LEFT JOIN v2.DestinationTypeMap m ON m.DestinationId = d.Id
+      LEFT JOIN v2.DestinationType t ON t.Id = m.TypeId
+      WHERE d.Status = 1
+      ORDER BY d.Name
+    `);
+    const byDestination = new Map<number, SiteTypeAssignmentRow>();
+    for (const r of rows) {
+      const id = Number(r.Id);
+      let entry = byDestination.get(id);
+      if (!entry) {
+        entry = { destinationId: id, destinationSlug: r.Slug, destinationName: r.Name, typeSlugs: [] };
+        byDestination.set(id, entry);
+      }
+      if (r.TypeSlug) entry.typeSlugs.push(r.TypeSlug);
+    }
+    return [...byDestination.values()];
+  }
+
+  async replaceTypeAssignments(destinationSlug: string, typeSlugs: readonly string[]): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("slug", destinationSlug);
+      typeSlugs.forEach((slug, i) => request.input(`type${i}`, slug));
+      const insertValues = typeSlugs
+        .map((_, i) => `SELECT @destinationId, Id FROM v2.DestinationType WHERE Slug = @type${i}`)
+        .join("\nUNION ALL\n");
+      await request.query(`
+        DECLARE @destinationId int = (SELECT Id FROM v2.Destination WHERE Slug = @slug);
+        IF @destinationId IS NOT NULL
+        BEGIN
+          DELETE FROM v2.DestinationTypeMap WHERE DestinationId = @destinationId;
+          ${
+            typeSlugs.length > 0
+              ? `INSERT INTO v2.DestinationTypeMap (DestinationId, TypeId)\n${insertValues}`
+              : ""
+          }
+        END
+      `);
     });
   }
 

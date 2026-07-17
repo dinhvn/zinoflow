@@ -4,6 +4,7 @@ import { AiContentModule } from "../ai-content/ai-content.module";
 import { AffiliateModule } from "../affiliate/affiliate.module";
 import { DestinationsController } from "./presentation/destinations.controller";
 import { DestinationTagsController } from "./presentation/destination-tags.controller";
+import { DestinationTypesController } from "./presentation/destination-types.controller";
 import { DestinationTicketsController } from "./presentation/destination-tickets.controller";
 import { ListDestinationsUseCase } from "./application/use-cases/list-destinations.usecase";
 import { SyncDestinationsUseCase } from "./application/use-cases/sync-destinations.usecase";
@@ -78,6 +79,8 @@ import { TypeOrmDestinationAiExtractionRepository } from "./infrastructure/repos
 import { DestinationAiExtractionEntity } from "./infrastructure/entities/destination-ai-extraction.entity";
 import { RecomputeClusterDistancesUseCase } from "./application/use-cases/recompute-cluster-distances.usecase";
 import { GetDestinationsMapUseCase } from "./application/use-cases/get-destinations-map.usecase";
+import { GetTaxonomyKanbanBoardUseCase } from "./application/use-cases/get-taxonomy-kanban-board.usecase";
+import { UpdateDestinationTypesUseCase } from "./application/use-cases/update-destination-types.usecase";
 import { CLUSTER_DISTANCE_REPOSITORY } from "./application/ports/cluster-distance.repository";
 import { TypeOrmClusterDistanceRepository } from "./infrastructure/repositories/typeorm-cluster-distance.repository";
 import { ClusterDistanceEntity } from "./infrastructure/entities/cluster-distance.entity";
@@ -115,7 +118,12 @@ import {
       ClusterDistanceEntity,
     ]),
   ],
-  controllers: [DestinationsController, DestinationTagsController, DestinationTicketsController],
+  controllers: [
+    DestinationsController,
+    DestinationTagsController,
+    DestinationTypesController,
+    DestinationTicketsController,
+  ],
   providers: [
     ListDestinationTagAssignmentsUseCase,
     SuggestTagAssignmentsUseCase,
@@ -166,6 +174,8 @@ import {
     AcceptDestinationAiExtractionFieldsUseCase,
     RecomputeClusterDistancesUseCase,
     GetDestinationsMapUseCase,
+    GetTaxonomyKanbanBoardUseCase,
+    UpdateDestinationTypesUseCase,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: CACHE_PURGE, useClass: HttpCachePurgeAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },

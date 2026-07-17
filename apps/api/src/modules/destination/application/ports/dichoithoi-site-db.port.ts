@@ -140,6 +140,14 @@ export interface SiteTagAssignmentRow {
   tagSlugs: string[];
 }
 
+/** 1 diem den + slug cac Type dang gan (v2.DestinationTypeMap join) — Kanban B2 */
+export interface SiteTypeAssignmentRow {
+  destinationId: number;
+  destinationSlug: string;
+  destinationName: string;
+  typeSlugs: string[];
+}
+
 /** Co du lieu content da co tren v2.DestinationContent — dung tinh Coverage Score (spec §2.2.2) */
 export interface SiteContentCoverageRow {
   destinationId: number;
@@ -264,6 +272,14 @@ export interface DichoithoiSiteDb {
   replaceTagAssignments(destinationSlug: string, tagSlugs: readonly string[]): Promise<void>;
   /** Ghi de Description cho 1 tag (buoc 3 — AI soan mo ta) */
   updateTagDescription(tagSlug: string, description: string | null): Promise<void>;
+
+  /** Moi diem den (chi diem da published) kem slug cac Type dang gan — Kanban ra soat B2 */
+  fetchTypeAssignments(): Promise<SiteTypeAssignmentRow[]>;
+  /**
+   * Ghi de TOAN BO Type cua 1 diem den (theo slug) — xoa cac dong DestinationTypeMap
+   * cu, insert lai theo typeSlugs moi. KHONG dung PrimaryTypeId (field rieng khac).
+   */
+  replaceTypeAssignments(destinationSlug: string, typeSlugs: readonly string[]): Promise<void>;
 
   /** Co du lieu content (chi diem da published) — dung tinh Coverage Score (spec §2.2.2) */
   fetchContentCoverageRows(): Promise<SiteContentCoverageRow[]>;
