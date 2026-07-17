@@ -243,4 +243,47 @@ describe("buildRelatedItems (relations-plan §1.3-§1.4, Giai doan C2)", () => {
     expect(items.find((i) => i.slug === "rat-gan")!.badge).toMatch(/^cách \d+ m$/);
     expect(items.find((i) => i.slug === "khong-toa-do")!.badge).toBeNull();
   });
+
+  it("gan dung criterion cho tung nguon (Giai doan D1)", () => {
+    const self = candidate({
+      slug: "self",
+      parentSlug: "cha",
+      provinceCode: "22",
+      types: ["bien-dao"],
+      distanceFromCenter: 1_000,
+    });
+    const all = [
+      self,
+      candidate({ slug: "con", parentSlug: "self" }),
+      candidate({ slug: "curated" }),
+      candidate({ slug: "cung-loai-cung-cum", parentSlug: "cha", types: ["bien-dao"] }),
+      candidate({
+        slug: "cung-loai-khac-cum",
+        parentSlug: "cum-khac",
+        provinceCode: "99",
+        types: ["bien-dao"],
+      }),
+      candidate({ slug: "cung-tinh-khac-loai", provinceCode: "22" }),
+      // Khac cum/tinh, khac loai, chi con lai diem gan (mo hinh 2 tang co du lieu)
+      candidate({
+        slug: "chi-gan",
+        parentSlug: "cum-xa",
+        provinceCode: "99",
+        distanceFromCenter: 1_000,
+      }),
+    ];
+    const items = buildRelatedItems({
+      self,
+      all,
+      curatedRelatedSlugs: ["curated"],
+      clusterDistances: new Map([[clusterDistanceKey("cha", "cum-xa"), 5_000]]),
+    });
+    const criterionBySlug = new Map(items.map((i) => [i.slug, i.criterion]));
+    expect(criterionBySlug.get("con")).toBe("child");
+    expect(criterionBySlug.get("curated")).toBe("curated");
+    expect(criterionBySlug.get("cung-loai-cung-cum")).toBe("same-type-cluster");
+    expect(criterionBySlug.get("cung-loai-khac-cum")).toBe("same-type");
+    expect(criterionBySlug.get("cung-tinh-khac-loai")).toBe("same-province");
+    expect(criterionBySlug.get("chi-gan")).toBe("nearby");
+  });
 });

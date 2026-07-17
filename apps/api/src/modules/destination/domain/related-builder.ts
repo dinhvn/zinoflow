@@ -38,6 +38,20 @@ export interface RelatedCandidate {
   contentTier: "flagship" | "standard" | null;
 }
 
+/**
+ * Ly do 1 muc duoc chon (relations-plan mục 2, Giai doan D1) — suy tu NGUON
+ * (child/curated) hoac tu 2 thanh phan diem cao nhat trong cong thuc cham
+ * diem §1.3 (khong phai nhan theo nguon nhu waterfall cu). Website group
+ * hien thi theo nhan nay thay vi 1 luoi phang 8 anh.
+ */
+export type RelatedCriterion =
+  | "child"
+  | "curated"
+  | "same-type-cluster"
+  | "same-type"
+  | "nearby"
+  | "same-province";
+
 /** 1 muc trong RelatedJson — website render truc tiep, khong query them */
 export interface RelatedItem {
   slug: string;
@@ -45,6 +59,7 @@ export interface RelatedItem {
   thumbnail: string | null;
   /** "cách 2,5 km" khi biet toa do that ca 2 ben, nguoc lai de trong */
   badge: string | null;
+  criterion: RelatedCriterion;
 }
 
 /** Khoang cach haversine (met) giua 2 toa do */
@@ -191,6 +206,23 @@ export function scoreCandidate(
   );
 }
 
+/**
+ * Suy criterion cho 1 muc duoc chon qua CHAM DIEM (khong ap dung cho con/curated,
+ * 2 nguon do da co criterion co dinh) — dua tren 2 thanh phan diem cao nhat
+ * (relations-plan mục 2): co diem cung-loai-hinh la yeu to chinh (>0) thi uu
+ * tien nhan "same-type*", cong them tier cum/tinh neu co; khong co diem loai
+ * hinh thi xet cum/tinh/khoang cach.
+ */
+function classifyCriterion(self: RelatedCandidate, candidate: RelatedCandidate): RelatedCriterion {
+  const hasTypeMatch = typeOverlapScore(self, candidate) > 0;
+  const sameCluster = Boolean(candidate.parentSlug && candidate.parentSlug === self.parentSlug);
+  const sameProvince = Boolean(candidate.provinceCode && candidate.provinceCode === self.provinceCode);
+  if (hasTypeMatch && sameCluster) return "same-type-cluster";
+  if (hasTypeMatch) return "same-type";
+  if (sameCluster || sameProvince) return "same-province";
+  return "nearby";
+}
+
 export interface RelatedInput {
   self: RelatedCandidate;
   all: readonly RelatedCandidate[];
@@ -228,20 +260,20 @@ export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
     return formatDistanceBadge(haversineMeters(self.lat, self.lng, candidate.lat, candidate.lng));
   };
 
-  const pick = (slug: string, badge: string | null): void => {
+  const pick = (slug: string, badge: string | null, criterion: RelatedCriterion): void => {
     if (picked.length >= RELATED_ITEM_COUNT || pickedSlugs.has(slug)) return;
     const c = bySlug.get(slug);
     if (!c || c.siteStatus !== 1) return;
     pickedSlugs.add(slug);
-    picked.push({ slug: c.slug, name: c.name, thumbnail: c.thumbnail, badge });
+    picked.push({ slug: c.slug, name: c.name, thumbnail: c.thumbnail, badge, criterion });
   };
 
   // Bac 1: con truc tiep (tinh/cum) — toi da 4, khong qua scoring
   const children = all.filter((c) => c.parentSlug === self.slug && c.siteStatus === 1);
-  for (const child of children.slice(0, MAX_CHILDREN_IN_RELATED)) pick(child.slug, null);
+  for (const child of children.slice(0, MAX_CHILDREN_IN_RELATED)) pick(child.slug, null, "child");
 
   // Bac 2: related curated (quyet dinh bien tap, override thuat toan)
-  for (const slug of curatedRelatedSlugs) pick(slug, null);
+  for (const slug of curatedRelatedSlugs) pick(slug, null, "curated");
 
   // Bac 3: cham diem toan bo ung vien con lai, xep hang giam dan
   if (picked.length < RELATED_ITEM_COUNT) {
@@ -252,7 +284,7 @@ export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
       .sort((a, b) => b.score - a.score);
 
     for (const { candidate } of scored) {
-      pick(candidate.slug, badgeFor(candidate));
+      pick(candidate.slug, badgeFor(candidate), classifyCriterion(self, candidate));
     }
   }
 
