@@ -4,6 +4,7 @@ import { use, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
 import {
+  aiUsageLogEntrySchema,
   contentJobSchema,
   destinationDetailSchema,
   draftArticleSchema,
@@ -59,6 +60,34 @@ const versionsSchema = z.array(
     createdAt: z.string(),
   }),
 );
+
+/**
+ * Nhan hien thi chi tiet cho 1 lan goi AI trong "Lich su goi AI" — thay vi chi
+ * "section:1" trơ trụi thi hien "section:1 · Tổng quan" (parse tu responseText
+ * da luu, khong goi API them). Parse loi/thieu field thi fallback ve operation goc.
+ */
+function describeUsageLogOperation(operation: string, responseText: string | null): string {
+  if (!responseText) return operation;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(responseText);
+  } catch {
+    return operation;
+  }
+  if (typeof parsed !== "object" || parsed === null) return operation;
+  const record = parsed as Record<string, unknown>;
+  if (/^section:\d+$/.test(operation) && typeof record.heading === "string") {
+    return `${operation} · ${record.heading}`;
+  }
+  if (operation === "outline" && typeof record.title === "string") {
+    return `${operation} · ${record.title}`;
+  }
+  if (operation === "frame" && typeof record.hero === "object" && record.hero !== null) {
+    const hero = record.hero as Record<string, unknown>;
+    if (typeof hero.title === "string") return `${operation} · ${hero.title}`;
+  }
+  return operation;
+}
 
 const GATE_LABELS: Record<string, string> = {
   structure: "Cấu trúc bài viết",
@@ -181,6 +210,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     enabled: Boolean(hasDraft),
   });
 
+  // Lich su goi AI (prompt/response tho tung buoc) — yeu cau nguoi dung 07/2026 de debug/audit
+  // + xem TIEN DO THAT khi dang chay (moi lan goi AI ghi vao DB NGAY, khong doi xong het):
+  // bat song song voi jobQuery ngay ca luc dang GeneratingOutline, tu lam moi 3s toi khi xong.
+  const usageLogsQuery = useQuery({
+    queryKey: ["job-usage-logs", id],
+    queryFn: () => apiGet(`/content/jobs/${id}/usage-logs`, z.array(aiUsageLogEntrySchema)),
+    enabled: Boolean(job),
+    refetchInterval: () => (job && ["Created", "GeneratingOutline"].includes(job.status) ? 3000 : false),
+  });
+
   function invalidateAll() {
     void queryClient.invalidateQueries({ queryKey: ["content-job", id] });
     void queryClient.invalidateQueries({ queryKey: ["content-draft", id] });
@@ -258,6 +297,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     onSuccess: () => {
       setActionError(null);
       setEditOpen(false);
+      invalidateAll();
+    },
+    onError: (error) => setActionError(toActionError(error)),
+  });
+
+  // Huy job dang chay ma bi "ket" (worker crash giua chung, khong tu chuyen Failed)
+  const cancelJob = useMutation({
+    mutationFn: () => apiSend("POST", `/content/jobs/${id}/cancel`, {}),
+    onSuccess: () => {
+      setActionError(null);
       invalidateAll();
     },
     onError: (error) => setActionError(toActionError(error)),
@@ -357,9 +406,20 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             {draft && <span>Version: v{draft.version}</span>}
           </div>
           {job.status === "GeneratingOutline" && (
-            <p className="mt-2 animate-pulse text-blue-600 dark:text-blue-400">
-              AI đang viết bài... (tự động cập nhật)
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <p className="animate-pulse text-blue-600 dark:text-blue-400">
+                AI đang viết bài... (tự động cập nhật)
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={cancelJob.isPending}
+                onClick={() => cancelJob.mutate()}
+                title="Dùng khi job đứng im quá lâu (worker bị treo/crash) — chuyển về Thất bại để có thể Thử lại"
+              >
+                Hủy job (bị kẹt)
+              </Button>
+            </div>
           )}
           {job.status === "Failed" && (
             <p className="mt-2 text-red-600 dark:text-red-400">
@@ -740,6 +800,69 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               ))}
             </ul>
           </div>
+        </div>
+      )}
+
+      {/* Lich su goi AI — moi buoc outline/section/frame, xem duoc prompt da gui + response tho.
+          Hien NGAY CA luc dang GeneratingOutline (khong doi hasDraft) — moi lan goi AI ghi DB
+          ngay sau khi xong, nen danh sach nay TU DAI RA theo thoi gian thuc trong luc cho, thay
+          vi doi ca pipeline xong moi thay gi do (yeu cau nguoi dung 07/2026: "chay toi dau thay
+          toi do"). */}
+      {job && (
+        <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+          <h3 className="mb-1 font-medium">Lịch sử gọi AI</h3>
+          <p className="mb-3 text-xs text-zinc-500">
+            Mỗi lần AI được gọi (mỗi bước outline/từng khối/frame) — bấm mở để xem đúng nội dung
+            prompt đã gửi và response thô AI trả về, dùng để kiểm tra vì sao bài ra như vậy.
+          </p>
+          {["Created", "GeneratingOutline"].includes(job.status) && (
+            <p className="mb-3 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-300 border-t-blue-600" />
+              Đang chạy — đã xong {usageLogsQuery.data?.length ?? 0} lệnh gọi (outline + 7 khối +
+              frame = 9 lệnh cho bài điểm đến, ít hơn cho loại bài khác), danh sách bên dưới tự cập
+              nhật.
+            </p>
+          )}
+          {(usageLogsQuery.data ?? []).length === 0 ? (
+            <p className="text-sm text-zinc-500">
+              {["Created", "GeneratingOutline"].includes(job.status)
+                ? "Đang chờ lệnh gọi đầu tiên (outline)..."
+                : "Chưa có log nào (job viết tay không gọi AI)."}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {usageLogsQuery.data!.map((log) => (
+                <li key={log.id} className="rounded border border-zinc-200 dark:border-zinc-800">
+                  <details>
+                    <summary className="cursor-pointer select-none p-2 text-sm">
+                      <span className="font-medium">
+                        {describeUsageLogOperation(log.operation, log.responseText)}
+                      </span>
+                      <span className="text-zinc-500">
+                        {" "}· {log.provider}/{log.model} · {log.inputTokens + log.outputTokens} tokens ·{" "}
+                        ${log.costUsd.toFixed(4)} · {log.latencyMs}ms ·{" "}
+                        {new Date(log.createdAt).toLocaleString("vi-VN")}
+                      </span>
+                    </summary>
+                    <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
+                      <div>
+                        <p className="mb-1 text-xs font-semibold text-zinc-500">Prompt đã gửi</p>
+                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
+                          {log.promptText ?? "(không có — job tạo trước khi bật ghi log)"}
+                        </pre>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-semibold text-zinc-500">Response nhận về</p>
+                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
+                          {log.responseText ?? "(không có — job tạo trước khi bật ghi log)"}
+                        </pre>
+                      </div>
+                    </div>
+                  </details>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>
