@@ -923,6 +923,13 @@ thì bắt buộc, đúng rủi ro "scaled content abuse" đã phân tích.
 
 ## C) Rủi ro/lưu ý vận hành (không phải task, nhưng đừng quên)
 
+0. ⚠️ **Checklist đầy đủ khi release lên production**: xem
+   `docs/dichoithoi/dichoithoi-release-checklist.md` (07/2026) — chiến lược
+   đã chốt là XOÁ SẠCH production + đưa nguyên code/database mới từ local
+   lên (không migrate-tại-chỗ như `dichoithoi-golive-runbook.md` mô tả, file
+   đó giờ chỉ còn là tài liệu tham khảo). Checklist gồm: chuẩn bị/backup
+   trước khi xoá, thao tác đưa code+DB lên, smoke test, SEO tổng quát, đo tốc
+   độ, rà data, theo dõi sau release.
 1. ⚠️ **Sau go-live phải khoá nút import Destination + Hotel + Tour trên CMS
    cũ** — tránh wipe dữ liệu AI tool vừa ghi (destination-spec §9.2,
    system-overview §1).
