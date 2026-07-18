@@ -1,5 +1,20 @@
 # Runbook Go-live cutover (Phase 10)
 
+**Cập nhật 07/2026 — chiến lược release đã đổi**: người dùng xác nhận sẽ
+KHÔNG chạy migrate-tại-chỗ trên production như runbook mô tả (bước 1-9 dưới
+đây) — thay vào đó, lúc release sẽ **xoá sạch production hiện tại rồi đưa
+nguyên code + database mới từ local lên**. Vì vậy code local đã được sửa đi
+trước 1 bước: `DestinationRepository.GetDetailAsync` (DiChoiThoi.Service)
+không còn đọc bảng v1 (`dbo.Destination`/`DestinationDetail`) nữa, luôn đọc
+thẳng v2 — đã audit xác nhận v2 đầy đủ dữ liệu (COUNT(*) khớp 271/271, các
+field OpeningTime/TicketPrice/Transport/Food/Tip/HotelText rỗng-tỷ-lệ giống
+hệt hoặc tốt hơn v1). Runbook bên dưới vẫn giữ nguyên làm tài liệu tham khảo
+cho tình huống migrate-tại-chỗ, nhưng KHÔNG còn là kế hoạch sẽ thực thi.
+Chưa động tới bảng v1 khác (`Hotel`/`HotelGroup`/`DestinationGroup`/
+`DestinationReview`/`Province`) hay `CmsDiChoiThoi.Web` (CMS cũ, vẫn còn 2
+route `import_destination`/`import_tour` ghi vào v1) — nằm ngoài phạm vi đã
+audit lần này.
+
 Gộp toàn bộ bước rải rác trong `dichoithoi-implementation-plan.md` Phase 10 +
 `dichoithoi-destination-spec.md` §8/§12 thành 1 danh sách thao tác theo ĐÚNG
 thứ tự bắt buộc, kèm lệnh cụ thể. Đã **rehearsal toàn bộ chuỗi bước 1-4 và 7
