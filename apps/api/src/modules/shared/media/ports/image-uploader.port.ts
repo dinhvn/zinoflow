@@ -24,4 +24,11 @@ export interface ImageUploader {
    *   cho khach san...). Mac dinh "DICHOITHOI_FTP_BASE_DIR" (giu nguyen hanh vi cu).
    */
   upload(files: UploadFile[], baseDirEnvVar?: string): Promise<void>;
+
+  /**
+   * Xoa nhieu file da upload (vd anh bi loai khoi thu vien). Best-effort —
+   * khong nem loi khi 1 file khong ton tai/xoa that bai, chi log canh bao,
+   * de khong chan viec luu danh sach gallery moi.
+   */
+  remove(paths: string[], baseDirEnvVar?: string): Promise<void>;
 }

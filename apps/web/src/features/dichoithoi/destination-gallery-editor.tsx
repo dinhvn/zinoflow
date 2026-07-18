@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { updateDestinationGalleryRequestSchema, type GalleryItem } from "@zinoflow/contracts";
 import { apiSend, apiUpload, ApiError } from "@/shared/api-client";
@@ -27,10 +27,33 @@ const MAX_MB = 15;
 export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<GalleryItem[]>(gallery);
-  const [urls, setUrls] = useState<(string | null)[]>(imageUrls);
+  // URL tung anh tra theo path (khong tra theo index) — chi vay moi song sot
+  // qua refetch cua parent (props gallery/imageUrls doi rerender, khong remount
+  // component nen useState(imageUrls) ban dau se khong tu cap nhat) va qua doi
+  // thu tu cuc bo (move/xoa khong lam lech cap path<->URL).
+  const [urlByPath, setUrlByPath] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    gallery.forEach((item, i) => {
+      const url = imageUrls[i];
+      if (url) map[item.path] = url;
+    });
+    return map;
+  });
   const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [savedJson, setSavedJson] = useState(JSON.stringify(gallery));
   const isDirty = JSON.stringify(items) !== savedJson;
+
+  useEffect(() => {
+    setUrlByPath((prev) => {
+      const next = { ...prev };
+      gallery.forEach((item, i) => {
+        const url = imageUrls[i];
+        if (url) next[item.path] = url;
+      });
+      return next;
+    });
+  }, [gallery, imageUrls]);
 
   const uploadOne = useMutation({
     mutationFn: (file: File) => {
@@ -42,9 +65,8 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
       setError(null);
       setItems(next);
       setSavedJson(JSON.stringify(next));
-      // Chi biet path moi vua them, chua co URL day du (server chua tra) — de trong,
-      // preview se hien dung sau khi trang refetch detail (onSaved).
-      setUrls((prev) => [...prev, ...Array(Math.max(0, next.length - prev.length)).fill(null)]);
+      // Anh moi vua them chua co URL (server chua tra) — se tu co sau khi
+      // onSaved() lam parent refetch, effect ben tren dien lai urlByPath.
       onSaved();
     },
     onError: (e) => setError(e instanceof Error ? e.message : "Upload ảnh thất bại"),
@@ -60,6 +82,18 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
     onError: (e) =>
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Lưu thất bại"),
   });
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const files = Array.from(e.clipboardData.items)
+      .filter((it) => it.type.startsWith("image/"))
+      .map((it) => it.getAsFile())
+      .filter((f): f is File => f !== null);
+    if (files.length === 0) return;
+    e.preventDefault();
+    const dt = new DataTransfer();
+    files.forEach((f) => dt.items.add(f));
+    handleFiles(dt.files);
+  }
 
   function handleFiles(files: FileList | null) {
     if (!files) return;
@@ -82,7 +116,6 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
 
   function remove(index: number) {
     setItems((prev) => prev.filter((_, i) => i !== index));
-    setUrls((prev) => prev.filter((_, i) => i !== index));
   }
 
   function move(index: number, dir: -1 | 1) {
@@ -91,11 +124,6 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
     setItems((prev) => {
       const next = [...prev];
       [next[index], next[target]] = [next[target]!, next[index]!];
-      return next;
-    });
-    setUrls((prev) => {
-      const next = [...prev];
-      [next[index], next[target]] = [next[target] ?? null, next[index] ?? null];
       return next;
     });
   }
@@ -114,10 +142,10 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {items.map((item, i) => (
             <div key={item.path} className="rounded border border-zinc-200 p-2 dark:border-zinc-800">
-              {urls[i] ? (
+              {urlByPath[item.path] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={urls[i]!}
+                  src={urlByPath[item.path]}
                   alt={item.altText ?? ""}
                   className="mb-2 h-24 w-full rounded object-cover"
                   onError={(e) => (e.currentTarget.style.display = "none")}
@@ -180,7 +208,25 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          handleFiles(e.dataTransfer.files);
+        }}
+        onPaste={handlePaste}
+        tabIndex={0}
+        className={`mt-3 flex flex-wrap items-center gap-2 rounded-lg border-2 border-dashed p-3 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+          dragOver
+            ? "border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/40"
+            : "border-zinc-300 dark:border-zinc-700"
+        }`}
+      >
         <input
           ref={inputRef}
           type="file"
@@ -206,7 +252,9 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
         {!isDirty && !save.isPending && items.length > 0 && (
           <span className="text-xs text-zinc-400">Đã lưu</span>
         )}
-        <span className="text-xs text-zinc-400">Tối đa {MAX_MB}MB/ảnh · chọn nhiều ảnh cùng lúc</span>
+        <span className="text-xs text-zinc-400">
+          Kéo/dán (Ctrl+V) ảnh vào khung này, hoặc bấm "+ Thêm ảnh" · tối đa {MAX_MB}MB/ảnh · nhiều ảnh cùng lúc
+        </span>
       </div>
 
       {error && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>}

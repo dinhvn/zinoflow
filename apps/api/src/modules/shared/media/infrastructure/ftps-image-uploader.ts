@@ -48,6 +48,33 @@ export class FtpsImageUploader implements ImageUploader {
     }
   }
 
+  async remove(paths: string[], baseDirEnvVar = DEFAULT_BASE_DIR_ENV_VAR): Promise<void> {
+    if (paths.length === 0) return;
+    let config: FtpConfig;
+    try {
+      config = this.readConfig(baseDirEnvVar);
+    } catch {
+      return;
+    }
+
+    const client = new Client(FTP_TIMEOUT_MS);
+    try {
+      await client.access(config);
+      for (const p of paths) {
+        const remote = this.joinRemote(config.baseDir, p);
+        try {
+          await client.remove(remote);
+        } catch (err) {
+          this.logger.warn(`Xoá file FTP thất bại (${remote}): ${err instanceof Error ? err.message : err}`);
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Không kết nối được FTP để xoá ảnh: ${err instanceof Error ? err.message : err}`);
+    } finally {
+      client.close();
+    }
+  }
+
   /** Gom env -> config; nem loi ro rang neu thieu bat ky truong bat buoc nao */
   private readConfig(baseDirEnvVar: string): FtpConfig {
     const host = process.env.DICHOITHOI_FTP_HOST;

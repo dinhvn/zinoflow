@@ -5,6 +5,7 @@ import {
   type DestinationMirrorRepository,
 } from "../ports/destination-mirror.repository";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+import { CACHE_PURGE, type CachePurgePort } from "../ports/cache-purge.port";
 
 /**
  * Cap nhat duong dan thumbnail cho 1 diem den (spec §14.3 — MVP).
@@ -19,6 +20,7 @@ export class UpdateThumbnailUseCase {
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly mirrorRepo: DestinationMirrorRepository,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
+    @Inject(CACHE_PURGE) private readonly cachePurge: CachePurgePort,
   ) {}
 
   async execute(slug: string, thumbnail: string | null): Promise<void> {
@@ -32,6 +34,7 @@ export class UpdateThumbnailUseCase {
     await this.mirrorRepo.setThumbnail(slug, value);
     if (destination.siteId !== null) {
       await this.siteDb.updateThumbnail(destination.siteId, value);
+      await this.cachePurge.purgeDestination(slug);
     }
     this.logger.log(`Cap nhat thumbnail diem den ${slug}: ${value ?? "(xoa)"}`);
   }

@@ -72,6 +72,13 @@ export function DestinationImageUploader({ slug, imageUrl, thumbnailPath, onUplo
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Lưu đường dẫn thất bại"),
   });
 
+  function handlePaste(e: React.ClipboardEvent) {
+    const item = Array.from(e.clipboardData.items).find((it) => it.type.startsWith("image/"));
+    if (!item) return;
+    e.preventDefault();
+    handleFile(item.getAsFile() ?? undefined);
+  }
+
   function handleFile(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -134,14 +141,16 @@ export function DestinationImageUploader({ slug, imageUrl, thumbnailPath, onUplo
             setDragOver(false);
             handleFile(e.dataTransfer.files[0]);
           }}
-          className={`flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 text-center text-sm transition-colors ${
+          onPaste={handlePaste}
+          tabIndex={0}
+          className={`flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 text-center text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 ${
             dragOver
               ? "border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/40"
               : "border-zinc-300 dark:border-zinc-700"
           }`}
         >
           <p className="text-zinc-500 dark:text-zinc-400">
-            Kéo ảnh vào đây, hoặc
+            Kéo ảnh vào đây, dán (Ctrl+V) sau khi bấm vào khung, hoặc
           </p>
           <input
             ref={inputRef}

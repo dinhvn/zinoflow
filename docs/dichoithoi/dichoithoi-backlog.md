@@ -230,6 +230,36 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   bàn thêm UX/luồng nhập liệu trước khi code (đặc biệt #1 — ép nhập alt có
   thể gây khó chịu nếu người dùng chỉ muốn upload nhanh nhiều ảnh).
 
+  **Cập nhật 07/2026 (redesign hero + lightbox, cùng đợt sửa bug hero dùng
+  nhầm ảnh 400px)**: #3 đã cải thiện đáng kể — caption/credit giờ hiện được
+  trong lightbox toàn màn hình (mọi ảnh) và đè trên 2 ảnh phụ của collage
+  desktop, nhưng slide trong carousel mobile vẫn CHƯA hiện caption inline
+  (chỉ xem được khi bấm mở lightbox). #2 vẫn còn nguyên (chỉ slide hero gốc
+  có `itemprop="image"`, các slide/ảnh khác trong carousel/collage/lightbox
+  chưa gắn).
+
+  **Việc mới phát sinh, CHƯA làm (quyết định 07/2026 — người dùng đồng ý để
+  sau)**: ảnh hero chính (`detail.HeroImage`, tức "Ảnh đại diện" upload rời,
+  khác cấu trúc "Thư viện ảnh") KHÔNG có field caption/mô tả riêng như ảnh
+  gallery, nên không đè được chữ lên ảnh hero to nhất. Cân nhắc 2 hướng khi
+  quay lại: (a) thêm field caption riêng cho Ảnh đại diện — cần migration DB
+  + sửa CMS `destination-image-uploader.tsx`, nhưng phần lớn điểm đến cũ sẽ
+  để trống lâu dài (ROI thấp lúc mới thêm); (b) rẻ hơn, không cần field mới —
+  đè `shortDescription`/tên điểm đến (đã có sẵn) lên ảnh hero thay vì caption
+  riêng. Ưu tiên hướng (b) nếu làm.
+
+  **Việc mới phát sinh #2, CHƯA làm (quyết định 07/2026 — người dùng đồng ý để
+  sau)**: ảnh chèn trong nội dung bài viết qua token `[[block:image]]` (thư
+  viện ảnh nội dung, khác bảng `extras.Gallery`) hiện KHÔNG mở được lightbox
+  — biên dịch ra `<img>` trơn không `data-lightbox-index`
+  (`article-block-compiler.service.ts:179`). Cách làm nếu muốn: quét
+  `.rich-content img` bằng JS phía client sau khi trang load, gắn thêm vào
+  cuối mảng ảnh lightbox hiện có — không cần đổi backend/compiler. Đánh giá:
+  lợi ích thấp (ảnh trong bài là minh hoạ theo đoạn văn, khác bản chất với
+  ảnh gallery để browse tổng thể — gộp chung 1 chuỗi lightbox dễ gây lộn xộn
+  ngữ nghĩa), chỉ nên làm nếu sau này có bài dài nhiều ảnh minh hoạ thực sự
+  cần phóng to.
+
 - **Gate "originality" (thứ 5) cho quality gates AI content** (`dichoithoi-
   seo-principles.md` §3.3/§3.4, phân tích 07/2026 — xác minh trực tiếp tài
   liệu Google `using-gen-ai-content`/`spam-policies`/`creating-helpful-

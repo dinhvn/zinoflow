@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { UpstreamApiError } from "../../errors/app-error";
 import type { ImageUploader, UploadFile } from "../ports/image-uploader.port";
@@ -39,6 +39,23 @@ export class LocalImageUploader implements ImageUploader {
       throw new UpstreamApiError(`Ghi ảnh vào local thất bại: ${message}`, [
         "Kiểm tra DICHOITHOI_LOCAL_WEB_ROOT và quyền ghi thư mục",
       ]);
+    }
+  }
+
+  async remove(paths: string[], baseDirEnvVar = DEFAULT_BASE_DIR_ENV_VAR): Promise<void> {
+    if (paths.length === 0) return;
+
+    const webRoot = process.env.DICHOITHOI_LOCAL_WEB_ROOT;
+    const baseDir = process.env[baseDirEnvVar];
+    if (!webRoot || !baseDir) return;
+
+    for (const p of paths) {
+      const target = path.join(webRoot, baseDir.replace(/^[/\\]+/, ""), p);
+      try {
+        await unlink(target);
+      } catch (err) {
+        this.logger.warn(`Xoá file local thất bại (${target}): ${err instanceof Error ? err.message : err}`);
+      }
     }
   }
 }

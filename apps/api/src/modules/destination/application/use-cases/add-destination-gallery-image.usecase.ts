@@ -6,6 +6,7 @@ import {
   type DestinationMirrorRepository,
 } from "../ports/destination-mirror.repository";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+import { CACHE_PURGE, type CachePurgePort } from "../ports/cache-purge.port";
 import { IMAGE_PROCESSOR, type ImageProcessor } from "../../../shared/media/ports/image-processor.port";
 import { IMAGE_UPLOADER, type ImageUploader } from "../../../shared/media/ports/image-uploader.port";
 import { buildGalleryJson } from "../services/gallery-json.util";
@@ -32,6 +33,7 @@ export class AddDestinationGalleryImageUseCase {
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(IMAGE_PROCESSOR) private readonly processor: ImageProcessor,
     @Inject(IMAGE_UPLOADER) private readonly uploader: ImageUploader,
+    @Inject(CACHE_PURGE) private readonly cachePurge: CachePurgePort,
   ) {}
 
   async execute(slug: string, source: Buffer): Promise<GalleryItem[]> {
@@ -59,6 +61,7 @@ export class AddDestinationGalleryImageUseCase {
     await this.mirrorRepo.setGallery(slug, gallery);
     if (destination.siteId !== null) {
       await this.siteDb.updateGallery(destination.siteId, buildGalleryJson(gallery));
+      await this.cachePurge.purgeDestination(slug);
     }
 
     this.logger.log(`Thêm ảnh thư viện ${slug} -> ${path} (${gallery.length} ảnh)`);

@@ -72,6 +72,7 @@ export function DestinationArticleEditor({
   onRequestSuggestion,
   onApproveSuggestion,
   onDismissSuggestion,
+  approving,
 }: {
   article: DestinationArticle;
   onChange: (next: DestinationArticle) => void;
@@ -81,6 +82,9 @@ export function DestinationArticleEditor({
   onRequestSuggestion?: (blockKey: DestinationBlockKey) => void;
   onApproveSuggestion?: (blockKey: DestinationBlockKey) => void;
   onDismissSuggestion?: (blockKey: DestinationBlockKey) => void;
+  /** Dang co 1 PATCH /draft-article chay (do duyet 1 khoi khac) — khoa nut Duyet
+   * de tranh 2 request song song ghi de mat noi dung nhau (xem approveBlockSuggestion). */
+  approving?: boolean;
 }) {
   const update = (patch: Partial<DestinationArticle>) => onChange({ ...article, ...patch });
   const sections = toFixedSections(article.sections);
@@ -96,7 +100,7 @@ export function DestinationArticleEditor({
   }
 
   return (
-    <div className="max-h-[600px] space-y-4 overflow-y-auto p-3">
+    <div className="space-y-4">
       <section className="space-y-3">
         <label className="block text-sm">
           <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">Tiêu đề (H1)</span>
@@ -129,6 +133,7 @@ export function DestinationArticleEditor({
             onRequestSuggestion={onRequestSuggestion ? () => onRequestSuggestion(blockKey) : undefined}
             onApproveSuggestion={onApproveSuggestion ? () => onApproveSuggestion(blockKey) : undefined}
             onDismissSuggestion={onDismissSuggestion ? () => onDismissSuggestion(blockKey) : undefined}
+            approving={approving}
           />
         );
       })}
@@ -173,6 +178,7 @@ function SectionBlockEditor({
   onRequestSuggestion,
   onApproveSuggestion,
   onDismissSuggestion,
+  approving,
 }: {
   section: DestinationSection;
   onChange: (patch: Partial<DestinationSection>) => void;
@@ -181,6 +187,7 @@ function SectionBlockEditor({
   onRequestSuggestion?: () => void;
   onApproveSuggestion?: () => void;
   onDismissSuggestion?: () => void;
+  approving?: boolean;
 }) {
   const blockKey = (section.blockKey ?? "khac") as DestinationBlockKey;
   const isList = DESTINATION_LIST_BLOCK_KEYS.includes(blockKey);
@@ -257,9 +264,11 @@ function SectionBlockEditor({
             <Button
               size="sm"
               className="bg-violet-600 px-2 py-1 text-xs text-white hover:bg-violet-700"
+              disabled={approving}
+              title={approving ? "Đang lưu khối vừa duyệt — chờ xong rồi duyệt tiếp" : undefined}
               onClick={onApproveSuggestion}
             >
-              Duyệt — áp dụng
+              {approving ? "Đang lưu..." : "Duyệt — áp dụng"}
             </Button>
             <Button size="sm" variant="ghost" className="px-2 py-1 text-xs" onClick={onDismissSuggestion}>
               Bỏ qua

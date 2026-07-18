@@ -169,14 +169,22 @@ const GATE_LABELS: Record<string, string> = {
   data: "Dữ liệu thực tế",
 };
 
-/** Trang co 16 khoi — gom thanh 5 nhom + menu nhay nhanh de khong phai cuon mo mit. */
-const QUICK_NAV = [
-  { id: "content", label: "📝 Nội dung & xuất bản" },
-  { id: "basic-info", label: "ℹ️ Thông tin cơ bản" },
-  { id: "commerce", label: "💰 Thương mại & bổ trợ" },
-  { id: "recommendations", label: "🔗 Gợi ý liên quan" },
-  { id: "relations", label: "🧭 Quan hệ & đồng bộ" },
+/**
+ * Trang co 16 khoi — thay vi cuon 1 trang dai (cu, gay roi/kho dung — phan hoi
+ * nguoi dung 07/2026), gom thanh 6 tab + menu doc CO DINH ben phai. Bam 1 muc
+ * chi hien DUNG panel do (cac panel khac an bang CSS "hidden", KHONG unmount,
+ * de khong mat state form khi chuyen qua lai). Chi toi uu desktop — khong lam
+ * fallback mobile (nguoi dung xac nhan chi dung man hinh rong).
+ */
+const TABS = [
+  { id: "images", label: "Hình ảnh", icon: "🖼️" },
+  { id: "content", label: "Nội dung & xuất bản", icon: "📝" },
+  { id: "basic-info", label: "Thông tin cơ bản", icon: "ℹ️" },
+  { id: "commerce", label: "Thương mại & bổ trợ", icon: "💰" },
+  { id: "recommendations", label: "Gợi ý liên quan", icon: "🔗" },
+  { id: "relations", label: "Quan hệ & đồng bộ", icon: "🧭" },
 ] as const;
+type TabId = (typeof TABS)[number]["id"];
 
 function formatDistance(meters: number | null): string {
   if (meters === null) return "";
@@ -230,33 +238,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     void queryClient.invalidateQueries({ queryKey: ["destination-detail", slug] });
   }
 
-  // Highlight menu nhanh dang doc khi cuon trang — cung thuat toan
-  // wireActiveTocHighlight() ben website (destination-detail.ts, Phase 28.1):
-  // IntersectionObserver chi bao entry VUA DOI trang thai nen phai tu luu lai
-  // toan bo trang thai giao (isIntersecting) qua cac lan goi, roi chon section
-  // SAU CUNG (theo thu tu DOM = thu tu QUICK_NAV) dang giao lam "dang doc".
-  const [activeSection, setActiveSection] = useState<string>(QUICK_NAV[0].id);
-  useEffect(() => {
-    if (!d) return;
-    const ids: string[] = QUICK_NAV.map((item) => item.id);
-    const isIntersecting = new Map<string, boolean>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => isIntersecting.set(entry.target.id, entry.isIntersecting));
-        let active: string = QUICK_NAV[0].id;
-        for (const id of ids) {
-          if (isIntersecting.get(id)) active = id;
-        }
-        setActiveSection(active);
-      },
-      { rootMargin: "-64px 0px -70% 0px" },
-    );
-    ids.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [d]);
+  // Tab dang mo — menu doc ben phai (thay scrollspy cu, xem ghi chu o TABS).
+  const [activeTab, setActiveTab] = useState<TabId>(TABS[0].id);
 
   // --- Chon AI provider / model (spec §7.4 "chon provider/model nhu form job") ---
   const [provider, setProvider] = useState("");
@@ -385,8 +368,13 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     }
   }
 
-  // Duyet 1 goi y: merge vao draftArticle CUC BO roi luu ngay (khong tu dong ghi de khi chua duyet)
+  // Duyet 1 goi y: merge vao draftArticle CUC BO roi luu ngay (khong tu dong ghi de khi chua duyet).
+  // Chan duyet khoi khac trong luc con 1 PATCH dang chay — 2 request /draft-article
+  // song song co the tra ve khong dung thu tu va GHI DE mat noi dung khoi duyet
+  // truoc do (endpoint chi UPDATE thang, khong merge). UI cung disable nut Duyet
+  // luc approving=true (xem DestinationArticleEditor) de khong bam duoc.
   function approveBlockSuggestion(blockKey: DestinationBlockKey) {
+    if (saveDraftArticle.isPending) return;
     const suggestion = suggestions[blockKey];
     if (!draftArticle || !suggestion) return;
     const nextSections = draftArticle.sections.map((s) =>
@@ -518,7 +506,7 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   const canPublish = !missingThumbnail && gatePassed && !isDraftDirty;
 
   return (
-    <div className="max-w-5xl space-y-5">
+    <div className="max-w-6xl space-y-4">
       <a href="/dichoithoi" className="text-sm text-zinc-500 hover:underline">
         ← Quay lại danh sách
       </a>
@@ -569,37 +557,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         </div>
       </div>
 
-      {/* Menu nhanh — trang rat dai (16 khoi), nhay thang toi nhom can sua */}
-      <nav className="sticky top-0 z-10 -mx-1 flex flex-wrap gap-1.5 rounded-lg border border-zinc-200 bg-white/95 p-2 text-xs backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
-        {QUICK_NAV.map((item) => (
-          <a
-            key={item.id}
-            href={`#${item.id}`}
-            className={
-              item.id === activeSection
-                ? "rounded bg-blue-100 px-2 py-1 font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                : "rounded px-2 py-1 font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
-            }
-          >
-            {item.label}
-          </a>
-        ))}
-      </nav>
-
-      <DestinationImageUploader
-        slug={d.slug}
-        imageUrl={d.imageUrl}
-        thumbnailPath={d.thumbnail}
-        onUploaded={invalidate}
-      />
-
-      <DestinationGalleryEditor
-        slug={d.slug}
-        gallery={d.gallery}
-        imageUrls={d.galleryImageUrls}
-        onSaved={invalidate}
-      />
-
       {actionError && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
           <p className="font-medium">{actionError.message}</p>
@@ -613,17 +570,139 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         </div>
       )}
 
-      {publish.data && (
-        <div className="rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
-          ✅ Đã đăng lên dichoithoi ({(publish.data.durationMs / 1000).toFixed(1)}s) — cập nhật khối
-          liên quan cho {publish.data.relatedRecomputed} điểm.
-          {publish.data.addedLinks.length > 0 &&
-            ` Link nội bộ: ${publish.data.addedLinks.map((l) => l.targetName).join(", ")}.`}
+      {/* Trang thai xuat ban — dua len day (thay vi nam trong tab "Noi dung & xuat
+          ban") vi gate + nut Dang la thao tac nguoi dung can thay/bam DU DANG O
+          TAB NAO (phan hoi nguoi dung 07/2026), khong chi khi dang xem noi dung. */}
+      <Group title="Trạng thái xuất bản">
+        <div className="space-y-1 text-sm">
+          {qualityQuery.isFetching ? (
+            <p className="text-zinc-400">Đang kiểm tra...</p>
+          ) : qualityQuery.isError ? (
+            <div className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+              <p className="font-medium">
+                {qualityQuery.error instanceof ApiError
+                  ? qualityQuery.error.message
+                  : "Chưa kiểm tra được — nội dung chưa đủ để phân tích"}
+              </p>
+              {qualityQuery.error instanceof ApiError && qualityQuery.error.details.length > 0 && (
+                <ul className="mt-1 list-inside list-disc">
+                  {qualityQuery.error.details.map((detail, i) => (
+                    <li key={i}>{detail}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : qualityChecks.length === 0 ? (
+            <p className="text-zinc-400">Chưa chạy kiểm tra.</p>
+          ) : (
+            qualityChecks.map((check) => (
+              <div key={check.gateName} className="flex items-start justify-between gap-3">
+                <span>{GATE_LABELS[check.gateName] ?? check.gateName}</span>
+                {check.passed ? (
+                  <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                    Đạt
+                  </span>
+                ) : (
+                  <span
+                    className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
+                    title={check.details.join("; ")}
+                  >
+                    Chưa đạt ({check.details.length})
+                  </span>
+                )}
+              </div>
+            ))
+          )}
+          {qualityChecks.some((c) => !c.passed) && (
+            <ul className="mt-2 list-inside list-disc rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+              {qualityChecks
+                .filter((c) => !c.passed)
+                .flatMap((c) => c.details)
+                .map((detail, i) => (
+                  <li key={i}>{detail}</li>
+                ))}
+            </ul>
+          )}
         </div>
-      )}
 
-      {/* Cung cap thong tin cho AI viet bai (spec §7.4 / §3.5-3.6) */}
-      <SectionHeader id="content" title="Nội dung & xuất bản" />
+        {missingThumbnail && (
+          <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+            ⚠️ Chưa có <strong>ảnh đại diện</strong> — bắt buộc phải có ảnh mới đăng lên web được.
+            Thêm ảnh ở tab &quot;🖼️ Hình ảnh&quot; bên phải.
+          </div>
+        )}
+        {isDraftDirty && (
+          <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
+            Có thay đổi chưa lưu — bấm &quot;Lưu bản nháp&quot; (tab &quot;📝 Nội dung &amp; xuất bản&quot;) trước
+            khi kiểm tra/đăng.
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button size="sm" loading={qualityQuery.isFetching} onClick={() => qualityQuery.refetch()}>
+            Chạy kiểm tra
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={previewPublish.isPending}
+            onClick={() => previewPublish.mutate()}
+          >
+            👁️ Xem trước bản sẽ đăng
+          </Button>
+          <Button
+            size="sm"
+            className="bg-blue-600 text-white hover:bg-blue-700"
+            loading={publish.isPending}
+            disabled={!canPublish}
+            title={
+              isDraftDirty
+                ? "Lưu bản nháp trước khi đăng"
+                : missingThumbnail
+                  ? "Chưa có ảnh đại diện"
+                  : !gatePassed
+                    ? "Chưa qua hết các gate kiểm tra ở trên"
+                    : undefined
+            }
+            onClick={() => publish.mutate()}
+          >
+            {publish.isPending ? "Đang đăng..." : "Đăng lên dichoithoi"}
+          </Button>
+        </div>
+
+        {publish.data && (
+          <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+            ✅ Đã đăng lên dichoithoi ({(publish.data.durationMs / 1000).toFixed(1)}s) — cập nhật khối
+            liên quan cho {publish.data.relatedRecomputed} điểm.
+            {publish.data.addedLinks.length > 0 &&
+              ` Link nội bộ: ${publish.data.addedLinks.map((l) => l.targetName).join(", ")}.`}
+          </div>
+        )}
+      </Group>
+
+      {/* Layout tab: noi dung ben trai, menu doc CO DINH ben phai (redesign 07/2026 —
+          trang cu 1 mach dai 16 khoi gay roi, xem TABS). Panel an bang "hidden"
+          (khong unmount) de giu nguyen state form khi chuyen qua lai. */}
+      <div className="grid grid-cols-[1fr_190px] items-start gap-5">
+        <div className="min-w-0 space-y-4">
+          <div className={activeTab === "images" ? "space-y-4" : "hidden"}>
+            <PanelHead title="🖼️ Hình ảnh" hint="Ảnh đại diện dùng cho card/thumbnail và thư viện ảnh hiển thị ở hero + dải ảnh vuốt trên web." />
+            <DestinationImageUploader
+              slug={d.slug}
+              imageUrl={d.imageUrl}
+              thumbnailPath={d.thumbnail}
+              onUploaded={invalidate}
+            />
+            <DestinationGalleryEditor
+              slug={d.slug}
+              gallery={d.gallery}
+              imageUrls={d.galleryImageUrls}
+              onSaved={invalidate}
+            />
+          </div>
+
+          <div className={activeTab === "content" ? "space-y-4" : "hidden"}>
+            <PanelHead title="📝 Nội dung & xuất bản" hint="Viết bài bằng AI, duyệt từng khối gợi ý. Trạng thái gate/nút đăng bài xem ở khung phía trên đầu trang." />
 
       <Group title="✍️ Viết bài bằng AI">
         {d.activeContentJobId ? (
@@ -648,7 +727,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         ) : (
           <div className="space-y-4">
             <p className="rounded bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-900">
-              AI tự dùng dữ liệu điểm đến phía trên (tên, địa chỉ, tọa độ, điểm lân cận) làm nền.
+              AI tự dùng dữ liệu điểm đến ở tab &quot;ℹ️ Thông tin cơ bản&quot; (tên, địa chỉ, tọa độ, điểm
+              lân cận) làm nền.
               Phần dưới đây là nơi bạn <strong>bổ sung thông tin chính xác</strong> và{" "}
               <strong>website để AI đọc thêm</strong> — AI không bịa giá vé / giờ mở cửa, sẽ ưu tiên
               dữ liệu bạn cung cấp.
@@ -802,168 +882,40 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         />
       )}
 
-      {/* Noi dung bai viet — sua truc tiep tai day (pivot gop editor vao trang detail) */}
-      <Group title="Nội dung bài viết">
-        {draftArticle && (
-          <DestinationArticleEditor
-            article={draftArticle}
-            onChange={setDraftArticle}
-            suggestions={suggestions}
-            suggestLoading={suggestLoading}
-            onRequestSuggestion={requestBlockSuggestion}
-            onApproveSuggestion={approveBlockSuggestion}
-            onDismissSuggestion={dismissBlockSuggestion}
-          />
-        )}
-        <div className="mt-3 flex items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-          <Button
-            variant="primary"
-            loading={saveDraftArticle.isPending}
-            disabled={!isDraftDirty}
-            onClick={() => draftArticle && saveDraftArticle.mutate(draftArticle)}
-          >
-            {saveDraftArticle.isPending ? "Đang lưu..." : "Lưu bản nháp"}
-          </Button>
-          {!isDraftDirty && !saveDraftArticle.isPending && (
-            <span className="text-xs text-zinc-400">Đã lưu</span>
-          )}
-        </div>
-      </Group>
-
-      {/* Trang thai xuat ban — gate chay tai day thay vi buoc Duyet rieng (pivot) */}
-      <Group title="Trạng thái xuất bản">
-        <div className="space-y-1 text-sm">
-          {qualityQuery.isFetching ? (
-            <p className="text-zinc-400">Đang kiểm tra...</p>
-          ) : qualityQuery.isError ? (
-            <div className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-              <p className="font-medium">
-                {qualityQuery.error instanceof ApiError
-                  ? qualityQuery.error.message
-                  : "Chưa kiểm tra được — nội dung chưa đủ để phân tích"}
-              </p>
-              {qualityQuery.error instanceof ApiError && qualityQuery.error.details.length > 0 && (
-                <ul className="mt-1 list-inside list-disc">
-                  {qualityQuery.error.details.map((detail, i) => (
-                    <li key={i}>{detail}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : qualityChecks.length === 0 ? (
-            <p className="text-zinc-400">Chưa chạy kiểm tra.</p>
-          ) : (
-            qualityChecks.map((check) => (
-              <div key={check.gateName} className="flex items-start justify-between gap-3">
-                <span>{GATE_LABELS[check.gateName] ?? check.gateName}</span>
-                {check.passed ? (
-                  <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                    Đạt
-                  </span>
-                ) : (
-                  <span
-                    className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
-                    title={check.details.join("; ")}
-                  >
-                    Chưa đạt ({check.details.length})
-                  </span>
-                )}
-              </div>
-            ))
-          )}
-          {qualityChecks.some((c) => !c.passed) && (
-            <ul className="mt-2 list-inside list-disc rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-              {qualityChecks
-                .filter((c) => !c.passed)
-                .flatMap((c) => c.details)
-                .map((detail, i) => (
-                  <li key={i}>{detail}</li>
-                ))}
-            </ul>
-          )}
-        </div>
-
-        {missingThumbnail && (
-          <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
-            ⚠️ Chưa có <strong>ảnh đại diện</strong> — bắt buộc phải có ảnh mới đăng lên web được.
-            Thêm ảnh ở mục &quot;Ảnh đại diện&quot; phía trên.
-          </div>
-        )}
-        {isDraftDirty && (
-          <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
-            Có thay đổi chưa lưu — bấm &quot;Lưu bản nháp&quot; trước khi kiểm tra/đăng.
-          </p>
-        )}
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Button size="sm" loading={qualityQuery.isFetching} onClick={() => qualityQuery.refetch()}>
-            Chạy kiểm tra
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            loading={previewPublish.isPending}
-            onClick={() => previewPublish.mutate()}
-          >
-            👁️ Xem trước bản sẽ đăng
-          </Button>
-          <Button
-            size="sm"
-            className="bg-blue-600 text-white hover:bg-blue-700"
-            loading={publish.isPending}
-            disabled={!canPublish}
-            title={
-              isDraftDirty
-                ? "Lưu bản nháp trước khi đăng"
-                : missingThumbnail
-                  ? "Chưa có ảnh đại diện"
-                  : !gatePassed
-                    ? "Chưa qua hết các gate kiểm tra ở trên"
-                    : undefined
-            }
-            onClick={() => publish.mutate()}
-          >
-            {publish.isPending ? "Đang đăng..." : "Đăng lên dichoithoi"}
-          </Button>
-        </div>
-
-        {publish.data && (
-          <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
-            ✅ Đã đăng lên dichoithoi ({(publish.data.durationMs / 1000).toFixed(1)}s) — cập nhật khối
-            liên quan cho {publish.data.relatedRecomputed} điểm.
-            {publish.data.addedLinks.length > 0 &&
-              ` Link nội bộ: ${publish.data.addedLinks.map((l) => l.targetName).join(", ")}.`}
-          </div>
-        )}
-      </Group>
-
-      {previewOpen && previewPublish.data && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">👁️ Xem trước bản sẽ đăng</h3>
-              <Button size="sm" variant="ghost" onClick={() => setPreviewOpen(false)}>
-                Đóng
-              </Button>
-            </div>
-            {previewPublish.data.addedLinks.length > 0 && (
-              <p className="mb-3 rounded border border-violet-200 bg-violet-50 p-2 text-xs text-violet-700 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300">
-                Link nội bộ sẽ được tự động chèn:{" "}
-                {previewPublish.data.addedLinks.map((l) => l.targetName).join(", ")}
-              </p>
-            )}
-            <div
-              className="prose prose-zinc dark:prose-invert max-w-none text-sm
-                [&_a]:text-blue-600 [&_a]:underline [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold
-                [&_h3]:mt-3 [&_h3]:font-semibold [&_img]:rounded [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
-              dangerouslySetInnerHTML={{ __html: previewPublish.data.html }}
-            />
-          </div>
-        </div>
+      {/* Noi dung bai viet — sua truc tiep tai day (pivot gop editor vao trang detail).
+          KHONG boc trong <Group> (card lien nhau se thanh 3 cap long nhau: panel >
+          card > tung block ben trong editor) — o day chi can 1 cap: tung block cua
+          editor tu la 1 khoi ro rang, khong can them 1 lop card ngoai nua. */}
+      <h3 className="font-medium">Nội dung bài viết</h3>
+      {draftArticle && (
+        <DestinationArticleEditor
+          article={draftArticle}
+          onChange={setDraftArticle}
+          suggestions={suggestions}
+          suggestLoading={suggestLoading}
+          onRequestSuggestion={requestBlockSuggestion}
+          onApproveSuggestion={approveBlockSuggestion}
+          onDismissSuggestion={dismissBlockSuggestion}
+          approving={saveDraftArticle.isPending}
+        />
       )}
+      <div className="flex items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <Button
+          variant="primary"
+          loading={saveDraftArticle.isPending}
+          disabled={!isDraftDirty}
+          onClick={() => draftArticle && saveDraftArticle.mutate(draftArticle)}
+        >
+          {saveDraftArticle.isPending ? "Đang lưu..." : "Lưu bản nháp"}
+        </Button>
+        {!isDraftDirty && !saveDraftArticle.isPending && (
+          <span className="text-xs text-zinc-400">Đã lưu</span>
+        )}
+      </div>
+          </div>
 
-      {/* Thong tin diem den — form sua truc tiep (spec §7.3 tab Thong tin) */}
-      <SectionHeader id="basic-info" title="Thông tin cơ bản" />
+          <div className={activeTab === "basic-info" ? "space-y-4" : "hidden"}>
+            <PanelHead title="ℹ️ Thông tin cơ bản" hint="Metadata điểm đến (tên, toạ độ, địa chỉ, liên hệ...), trích xuất AI từ Google Maps/web tham khảo, Meta Title SEO, và thao tác đổi slug." />
 
       <Group title="Thông tin điểm đến">
         <p className="mb-3 text-xs text-zinc-500">
@@ -974,6 +926,24 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         <DestinationMetadataForm
           initial={detailToFormValues(d)}
           isNew={false}
+          onSaved={() => invalidate()}
+        />
+      </Group>
+
+      {/* Trich xuat AI tu Google Maps + web tham khao (dichoithoi-destination-ai-extraction-plan
+          §2.3) — cung nhom du lieu voi "Thong tin diem den" (dia chi/SDT/gio mo cua/mo ta), khong
+          phai "goi y lien quan" (link khach san/tour) nen chuyen ve day, khong tach tab rieng. */}
+      <Group title="Trích xuất AI (Google Maps + web tham khảo)">
+        <DestinationAiExtractionPanel slug={d.slug} onAccepted={() => invalidate()} />
+      </Group>
+
+      {/* Meta title thu cong — them cach cho bulk-edit CSV. Ghi thang len site (nhu
+          DestinationMetadataForm o tren), khong lien quan "Thuong mai" nen chuyen ve
+          day (07/2026). */}
+      <Group title="Meta Title (thẻ <title> SEO)">
+        <DestinationMetaTitleEditor
+          slug={d.slug}
+          metaTitle={d.metaTitle}
           onSaved={() => invalidate()}
         />
       </Group>
@@ -1043,11 +1013,13 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           </div>
         )}
       </Group>
+          </div>
+
+          <div className={activeTab === "commerce" ? "space-y-4" : "hidden"}>
+            <PanelHead title="💰 Thương mại & bổ trợ" hint="Vé/giá, lưu ý thực tế, đánh giá biên tập và link đánh giá ngoài đi kèm bài viết." />
 
       {/* Link mua ve (affiliate-link-conversion-spec §5) — sua tap trung o
           /dichoithoi/ve (07/2026, thay the editor nhung ngay tai day). */}
-      <SectionHeader id="commerce" title="Thương mại & nội dung bổ trợ" />
-
       <Group title="Link mua vé">
         {d.ticketLinks.length > 0 ? (
           <div className="space-y-2">
@@ -1117,15 +1089,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         />
       </Group>
 
-      {/* Meta title thu cong — them cach cho bulk-edit CSV */}
-      <Group title="Meta Title (thẻ <title> SEO)">
-        <DestinationMetaTitleEditor
-          slug={d.slug}
-          metaTitle={d.metaTitle}
-          onSaved={() => invalidate()}
-        />
-      </Group>
-
       {/* Link "Xem them tren" (destination-spec §2.2 khoi #10/#15, Phase 28.0) */}
       <Group title="Xem thêm trên (TripAdvisor/Facebook...)">
         <DestinationExternalReviewUrlsEditor
@@ -1134,15 +1097,12 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           onSaved={() => invalidate()}
         />
       </Group>
+          </div>
 
-      {/* Trich xuat AI tu Google Maps + web tham khao (dichoithoi-destination-ai-extraction-plan §2.3) */}
-      <Group title="Trích xuất AI (Google Maps + web tham khảo)">
-        <DestinationAiExtractionPanel slug={d.slug} onAccepted={() => invalidate()} />
-      </Group>
+          <div className={activeTab === "recommendations" ? "space-y-4" : "hidden"}>
+            <PanelHead title="🔗 Gợi ý liên quan" hint="Khách sạn và tour gợi ý gắn với điểm đến này." />
 
       {/* Khach san goi y (hotel-spec §6) */}
-      <SectionHeader id="recommendations" title="Gợi ý liên quan" />
-
       <Group title="Khách sạn gợi ý">
         <DestinationHotelPanel slug={d.slug} />
       </Group>
@@ -1151,10 +1111,12 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       <Group title="Tour gợi ý">
         <DestinationTourPanel slug={d.slug} />
       </Group>
+          </div>
+
+          <div className={activeTab === "relations" ? "space-y-4" : "hidden"}>
+            <PanelHead title="🧭 Quan hệ & đồng bộ" hint="Liên kết với điểm đến khác và trạng thái đồng bộ mirror ↔ site." />
 
       {/* Quan he (spec §7.3 tab 3) */}
-      <SectionHeader id="relations" title="Quan hệ & đồng bộ" />
-
       <Group title="Quan hệ">
         <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
           <RefList title={`Trực thuộc (${d.children.length})`} refs={d.children} />
@@ -1177,6 +1139,62 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         </Field>
         <Field label="Site ID">{d.siteId ?? "— (chưa có trên web)"}</Field>
       </Group>
+          </div>
+        </div>
+
+        <nav className="sticky top-4 flex flex-col gap-0.5 rounded-lg border border-zinc-200 p-1.5 dark:border-zinc-800">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              aria-selected={activeTab === tab.id}
+              className={
+                activeTab === tab.id
+                  ? "flex items-center gap-2 rounded-md bg-blue-50 px-2.5 py-2 text-left text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                  : "flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+              }
+            >
+              <span className="text-sm">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {previewOpen && previewPublish.data && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">👁️ Xem trước bản sẽ đăng</h3>
+              <Button size="sm" variant="ghost" onClick={() => setPreviewOpen(false)}>
+                Đóng
+              </Button>
+            </div>
+            {previewPublish.data.addedLinks.length > 0 && (
+              <p className="mb-3 rounded border border-violet-200 bg-violet-50 p-2 text-xs text-violet-700 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300">
+                Link nội bộ sẽ được tự động chèn:{" "}
+                {previewPublish.data.addedLinks.map((l) => l.targetName).join(", ")}
+              </p>
+            )}
+            <div
+              className="prose prose-zinc dark:prose-invert max-w-none text-sm
+                [&_a]:text-blue-600 [&_a]:underline [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold
+                [&_h3]:mt-3 [&_h3]:font-semibold [&_img]:rounded [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
+              dangerouslySetInnerHTML={{ __html: previewPublish.data.html }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PanelHead({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div>
+      <h2 className="text-base font-semibold">{title}</h2>
+      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>
     </div>
   );
 }
@@ -1187,18 +1205,6 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
       <h3 className="mb-3 font-medium">{title}</h3>
       <div className="space-y-2">{children}</div>
     </div>
-  );
-}
-
-/** Tieu de nhom (5 nhom gom 16 khoi) — khac Group: khong phai the, chi phan cach + anchor. */
-function SectionHeader({ id, title }: { id: string; title: string }) {
-  return (
-    <h2
-      id={id}
-      className="scroll-mt-14 border-b border-zinc-300 pb-1.5 pt-2 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
-    >
-      {title}
-    </h2>
   );
 }
 

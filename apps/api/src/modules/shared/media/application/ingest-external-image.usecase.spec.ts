@@ -19,6 +19,7 @@ function setup() {
     upload: async (files, baseDirEnvVar) => {
       uploaded.push({ files, baseDirEnvVar });
     },
+    remove: async () => {},
   };
   const usecase = new IngestExternalImageUseCase(processor, uploader);
   return { usecase, uploaded };
