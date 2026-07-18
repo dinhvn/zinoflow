@@ -5,6 +5,10 @@ import type { ImageProcessor, WebpVariants } from "../ports/image-processor.port
 // 3 co co dinh (spec §14.2). hero cho dau bai/og:image, medium cho srcset, thumb cho card.
 const WIDTHS = { hero: 1600, medium: 800, thumb: 400 } as const;
 const WEBP_QUALITY = 80;
+// effort 0-6 (mac dinh sharp la 4) — 6 la muc nen manh nhat, cung quality thi
+// file nho hon nhung encode cham hon (chi anh huong luc upload, chap nhan
+// duoc vi khong phai duong nong).
+const WEBP_EFFORT = 6;
 
 /**
  * Xu ly anh bang sharp: resize theo chieu rong + encode WebP.
@@ -17,7 +21,7 @@ export class SharpImageProcessor implements ImageProcessor {
       sharp(source)
         .rotate() // ton trong EXIF orientation truoc khi resize
         .resize({ width, withoutEnlargement: true })
-        .webp({ quality: WEBP_QUALITY })
+        .webp({ quality: WEBP_QUALITY, effort: WEBP_EFFORT })
         .toBuffer();
 
     const [hero, medium, thumb] = await Promise.all([
@@ -32,7 +36,7 @@ export class SharpImageProcessor implements ImageProcessor {
     return sharp(source)
       .rotate()
       .resize({ width, withoutEnlargement: true })
-      .webp({ quality: WEBP_QUALITY })
+      .webp({ quality: WEBP_QUALITY, effort: WEBP_EFFORT })
       .toBuffer();
   }
 
