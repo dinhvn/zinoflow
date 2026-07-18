@@ -15,10 +15,16 @@ import {
   type AiCallUsage,
   type AiProviderRegistry,
   type ContentAiProvider,
+  type StructuredGenerationRequest,
 } from "../ports/content-ai-provider.port";
 import { PRODUCT_CATALOG, type ProductCatalog } from "../ports/product-catalog.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../ports/ai-usage-recorder.port";
+import {
+  CONTENT_GENERATION_CHECKPOINT_REPOSITORY,
+  type ContentGenerationCheckpointRepository,
+} from "../ports/content-generation-checkpoint.repository";
 import { PromptBuilder, type PromptJobContext } from "../services/prompt-builder";
+import type { OutlineLike } from "../services/article-type-profiles";
 
 /**
  * Use case: generate noi dung cho 1 content job (chay trong pg-boss worker) — M2: 3 buoc.
@@ -31,6 +37,14 @@ import { PromptBuilder, type PromptJobContext } from "../services/prompt-builder
  * -> validate articleSchema -> save draft (version tang dan) -> DraftReady.
  *
  * Loi sau khi het retry: job -> Failed (pg-boss retry ca job, Failed -> GeneratingOutline hop le).
+ *
+ * Checkpoint/resume: outline (sau normalize) va tung section DA XONG duoc luu ngay
+ * vao content_generation_checkpoints sau moi buoc. Neu worker chet giua chung (crash,
+ * restart dev --watch, pg-boss redeliver het expireInSeconds), lan chay lai se doc
+ * checkpoint va TIEP TUC tu section con thieu — khong goi lai AI cho outline/section
+ * da xong (bug 07/2026: job chay lai tu dau, ton AI 2 lan khi worker bi giet giua chung).
+ * Checkpoint bi xoa khi job xong (DraftReady) hoac khi sua tham so sinh bai (outline cu
+ * het dung — EditContentJobUseCase).
  */
 @Injectable()
 export class GenerateContentUseCase {
@@ -47,6 +61,8 @@ export class GenerateContentUseCase {
     @Inject(AI_PROVIDER_REGISTRY) private readonly providers: AiProviderRegistry,
     @Inject(PRODUCT_CATALOG) private readonly catalog: ProductCatalog,
     @Inject(AI_USAGE_RECORDER) private readonly usage: AiUsageRecorder,
+    @Inject(CONTENT_GENERATION_CHECKPOINT_REPOSITORY)
+    private readonly checkpoints: ContentGenerationCheckpointRepository,
     private readonly prompts: PromptBuilder,
   ) {}
 
@@ -93,36 +109,65 @@ export class GenerateContentUseCase {
         products,
       };
 
-      // Buoc 1 — outline
-      const { output: outline, usage: outlineUsage } = await provider.generateStructured(
-        await this.prompts.buildOutline(ctx),
-        profile.outlineSchema,
-      );
-      await this.recordUsage(job.id, provider, snapshot.aiModel, "outline", outlineUsage);
+      // Resume: doc checkpoint truoc — co outline/section da xong thi khong goi lai AI
+      // cho cac buoc do (bug 07/2026: worker chet giua chung -> chay lai tu dau, ton AI).
+      const checkpoint = await this.checkpoints.findByJobId(job.id);
 
-      // Buoc 2 — expand tung section, retry per-section
-      const sections: ContentSection[] = [];
+      // Buoc 1 — outline (bo qua neu checkpoint da co san)
+      let outline: OutlineLike;
+      if (checkpoint?.outline) {
+        outline = checkpoint.outline;
+        this.logger.log(`Job ${job.id} resume: dung lai outline tu checkpoint`);
+      } else {
+        const outlineRequest = await this.prompts.buildOutline(ctx);
+        const { output: rawOutline, usage: outlineUsage } = await provider.generateStructured(
+          outlineRequest,
+          profile.outlineSchema,
+        );
+        await this.recordUsage(job.id, provider, snapshot.aiModel, "outline", outlineUsage, outlineRequest, rawOutline);
+        // Ep cung sectionHeadings/blockKey theo dung 7 chu de co dinh cho bai diem den
+        // (destinationProfile.normalizeOutline) — khong tin AI tu dat dung tieu de/thu
+        // tu, tranh lac de (bug 07/2026, xem ghi chu o ArticleTypeProfile.normalizeOutline).
+        // Cac profile khac khong khai bao hook nay -> giu nguyen outline goc.
+        outline = profile.normalizeOutline ? profile.normalizeOutline(rawOutline, snapshot.topic) : rawOutline;
+        await this.checkpoints.save({
+          jobId: job.id,
+          outline: outline as OutlineLike & Record<string, unknown>,
+          sections: checkpoint?.sections ?? [],
+        });
+      }
+
+      // Buoc 2 — expand tung section, retry per-section; section da co trong checkpoint
+      // (resume) thi bo qua, khong goi lai AI.
+      const sections: ContentSection[] = checkpoint?.sections ? [...checkpoint.sections] : [];
+      const resumeFromIndex = sections.length;
       for (const [index, heading] of outline.sectionHeadings.entries()) {
-        const section = await this.generateSectionWithRetry(
+        if (index < resumeFromIndex) continue;
+        const sectionRequest = await this.prompts.buildSection(ctx, outline, heading);
+        const rawSection = await this.generateSectionWithRetry(
           provider,
           job.id,
           snapshot.aiModel,
           index,
-          async () =>
-            provider.generateStructured(
-              await this.prompts.buildSection(ctx, outline, heading),
-              profile.sectionSchema,
-            ),
+          sectionRequest,
+          () => provider.generateStructured(sectionRequest, profile.sectionSchema),
         );
-        sections.push(section);
+        sections.push(profile.normalizeSection ? profile.normalizeSection(rawSection, index) : rawSection);
+        // Luu ngay sau moi section — worker chet giua chung van resume duoc tu day
+        await this.checkpoints.save({
+          jobId: job.id,
+          outline: outline as OutlineLike & Record<string, unknown>,
+          sections,
+        });
       }
 
       // Buoc 3 — frame (moi block tru sections) + assemble
+      const frameRequest = await this.prompts.buildFrame(ctx, outline, sections);
       const { output: frame, usage: frameUsage } = await provider.generateStructured(
-        await this.prompts.buildFrame(ctx, outline, sections),
+        frameRequest,
         profile.frameSchema,
       );
-      await this.recordUsage(job.id, provider, snapshot.aiModel, "frame", frameUsage);
+      await this.recordUsage(job.id, provider, snapshot.aiModel, "frame", frameUsage, frameRequest, frame);
 
       // Assemble + validate lai toan bai — schema toan bai la nguon su that cuoi cung
       const article = profile.assemble(frame, sections);
@@ -141,11 +186,15 @@ export class GenerateContentUseCase {
 
       job.transitionTo("DraftReady");
       await this.jobs.save(job);
+      // Xong roi — xoa checkpoint, khong con can resume nua
+      await this.checkpoints.clear(job.id);
       this.logger.log(
         `Job ${job.id} -> DraftReady (provider: ${provider.key}, ${sections.length} sections)`,
       );
     } catch (error) {
-      // Danh dau Failed roi rethrow de pg-boss ap retry policy
+      // Danh dau Failed roi rethrow de pg-boss ap retry policy.
+      // KHONG xoa checkpoint — retry sau se resume tu outline/section da xong,
+      // khong chay lai tu dau.
       job.transitionTo("Failed");
       await this.jobs.save(job);
       this.logger.error(
@@ -165,6 +214,7 @@ export class GenerateContentUseCase {
     jobId: string,
     model: string,
     sectionIndex: number,
+    request: StructuredGenerationRequest,
     call: () => Promise<{ output: ContentSection; usage: AiCallUsage }>,
   ): Promise<ContentSection> {
     const operation = `section:${sectionIndex + 1}`;
@@ -173,7 +223,7 @@ export class GenerateContentUseCase {
     for (let attempt = 1; attempt <= GenerateContentUseCase.SECTION_MAX_ATTEMPTS; attempt++) {
       try {
         const { output, usage } = await call();
-        await this.recordUsage(jobId, provider, model, operation, usage);
+        await this.recordUsage(jobId, provider, model, operation, usage, request, output);
         return output;
       } catch (error) {
         lastError = error;
@@ -195,8 +245,18 @@ export class GenerateContentUseCase {
     model: string,
     operation: string,
     usage: { inputTokens: number; outputTokens: number; costUsd: number; latencyMs: number },
+    request: StructuredGenerationRequest,
+    output: unknown,
   ): Promise<void> {
-    await this.usage.record({ ...usage, jobId, provider: provider.key, model, operation });
+    await this.usage.record({
+      ...usage,
+      jobId,
+      provider: provider.key,
+      model,
+      operation,
+      promptText: `${request.system}\n\n${request.prompt}`,
+      responseText: JSON.stringify(output),
+    });
   }
 
   private delay(ms: number): Promise<void> {

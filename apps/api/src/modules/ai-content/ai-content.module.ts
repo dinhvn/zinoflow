@@ -5,6 +5,7 @@ import { CreateContentJobUseCase } from "./application/use-cases/create-content-
 import { CreateManualDraftUseCase } from "./application/use-cases/create-manual-draft.usecase";
 import { GenerateContentUseCase } from "./application/use-cases/generate-content.usecase";
 import { RetryContentJobUseCase } from "./application/use-cases/retry-content-job.usecase";
+import { CancelContentJobUseCase } from "./application/use-cases/cancel-content-job.usecase";
 import { EditContentJobUseCase } from "./application/use-cases/edit-content-job.usecase";
 import { RunQualityChecksUseCase } from "./application/use-cases/run-quality-checks.usecase";
 import { SubmitForReviewUseCase } from "./application/use-cases/submit-for-review.usecase";
@@ -33,11 +34,13 @@ import { CONTENT_JOB_REPOSITORY } from "./application/ports/content-job.reposito
 import { CONTENT_DRAFT_REPOSITORY } from "./application/ports/content-draft.repository";
 import { AI_USAGE_RECORDER } from "./application/ports/ai-usage-recorder.port";
 import { AI_USAGE_READER } from "./application/ports/ai-usage-reader.port";
+import { CONTENT_GENERATION_CHECKPOINT_REPOSITORY } from "./application/ports/content-generation-checkpoint.repository";
 import { AI_PROVIDER_REGISTRY } from "./application/ports/content-ai-provider.port";
 import { TypeOrmContentJobRepository } from "./infrastructure/repositories/typeorm-content-job.repository";
 import { TypeOrmContentDraftRepository } from "./infrastructure/repositories/typeorm-content-draft.repository";
 import { TypeOrmAiUsageRecorder } from "./infrastructure/repositories/typeorm-ai-usage-recorder";
 import { TypeOrmAiUsageReader } from "./infrastructure/repositories/typeorm-ai-usage-reader";
+import { TypeOrmContentGenerationCheckpointRepository } from "./infrastructure/repositories/typeorm-content-generation-checkpoint.repository";
 import { StubContentAiProvider } from "./infrastructure/ai-providers/stub-content-ai.provider";
 import { AnthropicContentAiProvider } from "./infrastructure/ai-providers/anthropic-content-ai.provider";
 import { GeminiContentAiProvider } from "./infrastructure/ai-providers/gemini-content-ai.provider";
@@ -49,6 +52,7 @@ import { ContentReviewRecordEntity } from "./infrastructure/entities/content-rev
 import { PromptTemplateEntity } from "./infrastructure/entities/prompt-template.entity";
 import { ContentQualityResultEntity } from "./infrastructure/entities/content-quality-result.entity";
 import { AiUsageLogEntity } from "./infrastructure/entities/ai-usage-log.entity";
+import { ContentGenerationCheckpointEntity } from "./infrastructure/entities/content-generation-checkpoint.entity";
 import { AiProviderSettingEntity } from "./infrastructure/entities/ai-provider-setting.entity";
 import { AI_PROVIDER_SETTINGS } from "./application/ports/ai-provider-settings.port";
 import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm-ai-provider-settings";
@@ -63,6 +67,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
       ContentQualityResultEntity,
       AiUsageLogEntity,
       AiProviderSettingEntity,
+      ContentGenerationCheckpointEntity,
     ]),
   ],
   controllers: [ContentController],
@@ -71,6 +76,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     CreateManualDraftUseCase,
     GenerateContentUseCase,
     RetryContentJobUseCase,
+    CancelContentJobUseCase,
     EditContentJobUseCase,
     RunQualityChecksUseCase,
     SubmitForReviewUseCase,
@@ -97,6 +103,10 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     { provide: CONTENT_DRAFT_REPOSITORY, useClass: TypeOrmContentDraftRepository },
     { provide: AI_USAGE_RECORDER, useClass: TypeOrmAiUsageRecorder },
     { provide: AI_USAGE_READER, useClass: TypeOrmAiUsageReader },
+    {
+      provide: CONTENT_GENERATION_CHECKPOINT_REPOSITORY,
+      useClass: TypeOrmContentGenerationCheckpointRepository,
+    },
     { provide: AI_PROVIDER_SETTINGS, useClass: TypeOrmAiProviderSettings },
     { provide: PROMPT_TEMPLATE_REPOSITORY, useClass: TypeOrmPromptTemplateRepository },
     { provide: QUALITY_RESULT_REPOSITORY, useClass: TypeOrmQualityResultRepository },

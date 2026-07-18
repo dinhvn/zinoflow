@@ -9,6 +9,10 @@ import {
   AI_PROVIDER_SETTINGS,
   type AiProviderSettings,
 } from "../ports/ai-provider-settings.port";
+import {
+  CONTENT_GENERATION_CHECKPOINT_REPOSITORY,
+  type ContentGenerationCheckpointRepository,
+} from "../ports/content-generation-checkpoint.repository";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 
 /**
@@ -22,6 +26,8 @@ export class EditContentJobUseCase {
   constructor(
     @Inject(CONTENT_JOB_REPOSITORY) private readonly repository: ContentJobRepository,
     @Inject(AI_PROVIDER_SETTINGS) private readonly providerSettings: AiProviderSettings,
+    @Inject(CONTENT_GENERATION_CHECKPOINT_REPOSITORY)
+    private readonly checkpoints: ContentGenerationCheckpointRepository,
   ) {}
 
   async execute(contentJobId: string, request: UpdateContentJobRequest): Promise<ContentJob> {
@@ -41,6 +47,8 @@ export class EditContentJobUseCase {
 
     job.updateGenerationParams(request);
     await this.repository.save(job);
+    // Tham so doi -> checkpoint cu (outline/section theo topic/keyword cu) khong con dung
+    await this.checkpoints.clear(contentJobId);
     return job;
   }
 }

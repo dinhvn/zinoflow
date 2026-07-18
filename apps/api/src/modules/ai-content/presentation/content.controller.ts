@@ -13,6 +13,7 @@ import {
   type ActivatePromptVersionRequest,
   type AiProviderInfo,
   type AiProviderKey,
+  type AiUsageLogEntry,
   type AiUsageSummaryQuery,
   type AiUsageSummaryResponse,
   type ContentJob as ContentJobDto,
@@ -34,6 +35,7 @@ import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { CreateContentJobUseCase } from "../application/use-cases/create-content-job.usecase";
 import { CreateManualDraftUseCase } from "../application/use-cases/create-manual-draft.usecase";
 import { RetryContentJobUseCase } from "../application/use-cases/retry-content-job.usecase";
+import { CancelContentJobUseCase } from "../application/use-cases/cancel-content-job.usecase";
 import { EditContentJobUseCase } from "../application/use-cases/edit-content-job.usecase";
 import { RunQualityChecksUseCase } from "../application/use-cases/run-quality-checks.usecase";
 import { SubmitForReviewUseCase } from "../application/use-cases/submit-for-review.usecase";
@@ -66,6 +68,7 @@ import {
   AI_PROVIDER_SETTINGS,
   type AiProviderSettings,
 } from "../application/ports/ai-provider-settings.port";
+import { AI_USAGE_READER, type AiUsageReader } from "../application/ports/ai-usage-reader.port";
 import { Inject } from "@nestjs/common";
 
 /**
@@ -107,6 +110,7 @@ export class ContentController {
     private readonly createContentJob: CreateContentJobUseCase,
     private readonly createManualDraft: CreateManualDraftUseCase,
     private readonly retryContentJob: RetryContentJobUseCase,
+    private readonly cancelContentJob: CancelContentJobUseCase,
     private readonly editContentJob: EditContentJobUseCase,
     private readonly runQualityChecks: RunQualityChecksUseCase,
     private readonly submitForReview: SubmitForReviewUseCase,
@@ -123,6 +127,7 @@ export class ContentController {
     @Inject(CONTENT_JOB_REPOSITORY) private readonly repository: ContentJobRepository,
     @Inject(CONTENT_DRAFT_REPOSITORY) private readonly drafts: ContentDraftRepository,
     @Inject(AI_PROVIDER_SETTINGS) private readonly providerSettings: AiProviderSettings,
+    @Inject(AI_USAGE_READER) private readonly usageReader: AiUsageReader,
   ) {}
 
   @Post("jobs")
@@ -146,6 +151,16 @@ export class ContentController {
   @Post("jobs/:id/retry")
   async retry(@Param("id") id: string): Promise<{ jobId: string; status: string }> {
     return this.retryContentJob.execute(id);
+  }
+
+  /**
+   * Huy job dang chay (Created/GeneratingOutline) -> Failed. Dung khi worker
+   * chet giua chung ma khong tu chuyen Failed (job "ket" mai o GeneratingOutline).
+   * Sau khi huy co the bam Retry lai binh thuong.
+   */
+  @Post("jobs/:id/cancel")
+  async cancel(@Param("id") id: string): Promise<{ jobId: string; status: string }> {
+    return this.cancelContentJob.execute(id);
   }
 
   /**
@@ -205,6 +220,16 @@ export class ContentController {
   @Get("jobs/:id/reviews")
   async listReviews(@Param("id") id: string) {
     return this.reviewRecords.listByJobId(id);
+  }
+
+  /**
+   * Lich su goi AI cua job (moi buoc outline/section/frame), kem prompt/response
+   * tho — yeu cau nguoi dung 07/2026 de debug/audit (truoc day khong xem duoc
+   * o dau ca, chi co tokens/cost trong ai_usage_logs).
+   */
+  @Get("jobs/:id/usage-logs")
+  async listUsageLogs(@Param("id") id: string): Promise<AiUsageLogEntry[]> {
+    return this.usageReader.listByJobId(id);
   }
 
   /** Chay 4 quality gates va luu ket qua — spec §7.4. */
