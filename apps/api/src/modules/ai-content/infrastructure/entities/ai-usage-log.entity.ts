@@ -36,6 +36,14 @@ export class AiUsageLogEntity {
   @Column({ name: "latency_ms", type: "int" })
   latencyMs!: number;
 
+  /** Prompt day du (system + user) da gui cho AI — de debug/audit (07/2026, xem dichoithoi-backlog). */
+  @Column({ name: "prompt_text", type: "text", nullable: true })
+  promptText!: string | null;
+
+  /** Response tho (JSON structured output) AI tra ve — cung muc dich voi promptText. */
+  @Column({ name: "response_text", type: "text", nullable: true })
+  responseText!: string | null;
+
   @Index()
   @Column({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;

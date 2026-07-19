@@ -16,6 +16,7 @@ describe("GetAiUsageSummaryUseCase", () => {
         calls.push({ from, to });
         return EMPTY;
       },
+      listByJobId: async () => [],
     };
     return { usecase: new GetAiUsageSummaryUseCase(reader), calls };
   }

@@ -87,6 +87,8 @@ export class SuggestEditorialReviewUseCase {
       model: DEFAULT_MODEL,
       operation: "suggest-editorial-review",
       ...usage,
+      promptText: `${SYSTEM}\n\n${prompt}`,
+      responseText: JSON.stringify(output),
     });
     return output;
   }

@@ -104,6 +104,8 @@ export class SuggestCmsSeoUseCase {
       model,
       operation: "cms-seo-description",
       ...usage,
+      promptText: `${SYSTEM}\n\n${prompt}`,
+      responseText: JSON.stringify(output),
     });
     return output;
   }

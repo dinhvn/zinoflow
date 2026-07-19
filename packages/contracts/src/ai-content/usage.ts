@@ -56,3 +56,23 @@ export const aiUsageSummaryResponseSchema = z.object({
   daily: z.array(aiUsageDailyStatSchema),
 });
 export type AiUsageSummaryResponse = z.infer<typeof aiUsageSummaryResponseSchema>;
+
+/**
+ * 1 lan goi AI cu the cua 1 job — gom ca prompt/response tho (yeu cau nguoi dung
+ * 07/2026 de debug/audit: bam vao 1 content job xem duoc AI da nhan prompt gi,
+ * tra ve gi cho tung buoc outline/section/frame).
+ */
+export const aiUsageLogEntrySchema = z.object({
+  id: z.string(),
+  operation: z.string(),
+  provider: z.string(),
+  model: z.string(),
+  inputTokens: z.number().int(),
+  outputTokens: z.number().int(),
+  costUsd: z.number(),
+  latencyMs: z.number().int(),
+  promptText: z.string().nullable(),
+  responseText: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type AiUsageLogEntry = z.infer<typeof aiUsageLogEntrySchema>;

@@ -25,6 +25,8 @@ export class TypeOrmAiUsageRecorder implements AiUsageRecorder {
     entity.outputTokens = entry.outputTokens;
     entity.costUsd = entry.costUsd.toFixed(6);
     entity.latencyMs = entry.latencyMs;
+    entity.promptText = entry.promptText ?? null;
+    entity.responseText = entry.responseText ?? null;
     entity.createdAt = new Date();
     await this.repo.save(entity);
   }

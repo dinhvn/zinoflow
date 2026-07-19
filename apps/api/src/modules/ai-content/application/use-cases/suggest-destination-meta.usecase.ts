@@ -69,6 +69,8 @@ export class SuggestDestinationMetaUseCase {
       model,
       operation: "suggest-meta",
       ...usage,
+      promptText: `${SYSTEM}\n\n${prompt}`,
+      responseText: JSON.stringify(output),
     });
     return output;
   }

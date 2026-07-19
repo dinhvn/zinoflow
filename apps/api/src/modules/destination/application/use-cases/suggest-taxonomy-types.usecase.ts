@@ -118,6 +118,8 @@ export class SuggestTaxonomyTypesUseCase {
       model,
       operation: "suggest-taxonomy-types",
       ...usage,
+      promptText: `${SYSTEM}\n\n${prompt}`,
+      responseText: JSON.stringify(output),
     });
 
     const validTypeSlugs = new Set(taxonomy.types.map((t) => t.slug));

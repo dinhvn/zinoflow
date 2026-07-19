@@ -97,6 +97,8 @@ export class SuggestTagAssignmentsUseCase {
       model,
       operation: "suggest-destination-tags",
       ...usage,
+      promptText: `${SYSTEM}\n\n${prompt}`,
+      responseText: JSON.stringify(output),
     });
 
     const validSlugs = new Set(tags.map((t) => t.slug));

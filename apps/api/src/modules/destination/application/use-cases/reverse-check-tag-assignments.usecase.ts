@@ -106,6 +106,8 @@ export class ReverseCheckTagAssignmentsUseCase {
       model: MODEL,
       operation: "reverse-check-destination-tags",
       ...usage,
+      promptText: `${SYSTEM}\n\n${prompt}`,
+      responseText: JSON.stringify(output),
     });
 
     const validPairs = new Set(

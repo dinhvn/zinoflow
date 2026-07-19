@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import type { AiUsageLogEntry } from "@zinoflow/contracts";
 import type {
   AiUsageReader,
   AiUsageSummaryData,
@@ -91,5 +92,22 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
         costUsd: Number(r.costUsd),
       })),
     };
+  }
+
+  async listByJobId(jobId: string): Promise<AiUsageLogEntry[]> {
+    const rows = await this.repo.find({ where: { jobId }, order: { createdAt: "ASC" } });
+    return rows.map((r) => ({
+      id: r.id,
+      operation: r.operation,
+      provider: r.provider,
+      model: r.model,
+      inputTokens: r.inputTokens,
+      outputTokens: r.outputTokens,
+      costUsd: Number(r.costUsd),
+      latencyMs: r.latencyMs,
+      promptText: r.promptText,
+      responseText: r.responseText,
+      createdAt: r.createdAt.toISOString(),
+    }));
   }
 }

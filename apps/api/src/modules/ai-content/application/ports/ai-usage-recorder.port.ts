@@ -10,6 +10,10 @@ export interface AiUsageEntry extends AiCallUsage {
   model: string;
   /** Buoc nao trong pipeline: "outline" | "article" | "section" | ... */
   operation: string;
+  /** Prompt day du (system + user) da gui cho AI — de debug/audit, hien tren UI content draft. */
+  promptText?: string | null;
+  /** Response tho (structured output JSON) AI tra ve. */
+  responseText?: string | null;
 }
 
 export interface AiUsageRecorder {

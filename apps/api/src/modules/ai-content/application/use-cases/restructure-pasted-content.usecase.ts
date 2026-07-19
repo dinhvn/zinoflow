@@ -126,6 +126,8 @@ export class RestructurePastedContentUseCase {
       model,
       operation: "restructure-paste",
       ...usage,
+      promptText: `${SYSTEM}\n\n${prompt}`,
+      responseText: JSON.stringify(output),
     });
 
     return assembleDestinationArticle(request.topic, request.keywordSeed, output);

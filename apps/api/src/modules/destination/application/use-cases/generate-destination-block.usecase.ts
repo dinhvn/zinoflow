@@ -105,6 +105,8 @@ export class GenerateDestinationBlockUseCase {
       model,
       operation: `generate-block-${blockKey}`,
       ...usage,
+      promptText: `${promptRequest.system}\n\n${promptRequest.prompt}`,
+      responseText: JSON.stringify(output),
     });
     this.logger.log(`Tao goi y AI cho block "${blockKey}" cua ${slug}`);
     return section;
