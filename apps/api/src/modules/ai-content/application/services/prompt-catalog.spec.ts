@@ -11,12 +11,14 @@ describe("PROMPT_CATALOG", () => {
   it("system prompt khong gan articleType, cac key con lai co", () => {
     const system = findCatalogEntry("article.system.vi");
     expect(system?.articleType).toBeNull();
-    expect(findCatalogEntry("guide-diem-den.frame.vi")?.articleType).toBe("guide-diem-den");
+    expect(findCatalogEntry("guide-diem-den.content.vi")?.articleType).toBe("guide-diem-den");
   });
 
-  it("section/frame co them bien rieng so voi outline", () => {
+  it("section/frame/content co them bien rieng so voi outline", () => {
     expect(findCatalogEntry("toplist.section.vi")?.variables).toContain("sectionHeading");
     expect(findCatalogEntry("toplist.frame.vi")?.variables).toContain("sectionsSummary");
+    expect(findCatalogEntry("toplist.content.vi")?.variables).toContain("outline");
+    expect(findCatalogEntry("toplist.content.vi")?.variables).not.toContain("sectionsSummary");
     expect(findCatalogEntry("toplist.outline.vi")?.variables).not.toContain("sectionHeading");
   });
 });

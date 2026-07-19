@@ -1,21 +1,18 @@
 import { z } from "zod/v4";
 import {
-  articleCamNangFrameSchema,
   articleCamNangOutlineSchema,
   articleCamNangSchema,
-  articleFrameSchema,
   articleOutlineSchema,
   articleSchema,
-  cmsArticleFrameSchema,
   cmsArticleSchema,
   cmsOutlineSchema,
   contentSectionSchema,
   DESTINATION_BLOCK_LABELS,
   DESTINATION_LIST_BLOCK_KEYS,
   DESTINATION_SECTION_ORDER,
-  destinationArticleFrameSchema,
   destinationArticleSchema,
   destinationOutlineSchema,
+  destinationSectionSchema,
   MIN_LIST_ITEMS,
   type Article,
   type ArticleCamNang,
@@ -23,6 +20,7 @@ import {
   type CmsArticle,
   type ContentSection,
   type DestinationArticle,
+  type DestinationBlockKey,
 } from "@zinoflow/contracts";
 import { renderArticleMarkdown } from "./article-markdown.renderer";
 import { renderDestinationMarkdown } from "./destination-markdown.renderer";
@@ -47,12 +45,20 @@ export type AnyArticle = Article | DestinationArticle | CmsArticle | ArticleCamN
 export interface ArticleTypeProfile {
   /** Schema buoc 1 — phai chua title + sectionHeadings */
   outlineSchema: z.ZodType<OutlineLike>;
-  /** Schema buoc 2 — 1 section */
-  sectionSchema: typeof contentSectionSchema;
-  /** Schema buoc 3 — toan bai tru sections */
-  frameSchema: z.ZodType<Record<string, unknown>>;
-  /** Ghep frame + sections va validate bang schema toan bai (nguon su that cuoi) */
-  assemble(frame: Record<string, unknown>, sections: ContentSection[]): AnyArticle;
+  /**
+   * Schema cho goi y 1 khoi rieng le (nut "Tạo lại bằng AI" tung block,
+   * generate-destination-block.usecase.ts) — KHONG con dung trong pipeline
+   * generate chinh (buoc 2 da gop section+frame lam 1, Option 3 09/2026,
+   * xem generate-content.usecase.ts).
+   */
+  sectionSchema: z.ZodType<ContentSection>;
+  /**
+   * Schema buoc 2 — TOAN BO bai (moi section + frame: intro/quickFacts/faq/
+   * metadata...) trong 1 lan goi AI duy nhat. Cung la schema validate cuoi
+   * cung — khong can buoc assemble rieng nua vi provider.generateStructured()
+   * da tu validate output bang chinh schema nay truoc khi tra ve.
+   */
+  contentSchema: z.ZodType<AnyArticle>;
   renderMarkdown(article: AnyArticle): string;
   /** Title de luu vao draft record */
   extractTitle(article: AnyArticle): string;
@@ -64,6 +70,22 @@ export interface ArticleTypeProfile {
    * nguoi dung sua lai het qua man edit thong thuong (article-spec §1.1).
    */
   createManualSkeleton(topic: string): AnyArticle;
+  /**
+   * Sua outline AI tra ve TRUOC KHI dung cho buoc 2 (tuy chon, mac dinh giu nguyen).
+   * Bai diem den luon co 7 chu de CO DINH theo DUNG THU TU (DESTINATION_SECTION_ORDER)
+   * — AI de bi lac de (vd viet "meo nho"/"diem lan can" thay vi "an gi"/"qua mang ve",
+   * bug phat hien 07/2026: 3/7 khoi bi bo, section bi gan blockKey sai/trung). Thay vi
+   * tin AI tu dat dung 7 tieu de, ep cung sectionHeadings theo template co dinh — AI
+   * chi con viet NOI DUNG dung chu de duoc giao, khong con co hoi lac de o buoc nay.
+   */
+  normalizeOutline?(outline: OutlineLike, topic: string): OutlineLike;
+  /**
+   * Sua 1 section AI tra ve TRUOC KHI dua vao mang sections (tuy chon). Bai diem den
+   * ep cung blockKey theo DUNG VI TRI trong DESTINATION_SECTION_ORDER — khong tin AI
+   * tu gan lai blockKey (cung nguyen tac da dung o GenerateDestinationBlockUseCase),
+   * tranh truong hop AI gan sai/trung blockKey khi noi dung headings da bi ep dung roi.
+   */
+  normalizeSection?(section: ContentSection, index: number): ContentSection;
 }
 
 /** Placeholder ro rang de nguoi viet tay biet can thay the — khong bia du lieu that. */
@@ -77,8 +99,7 @@ function padTitle(topic: string, minLen: number): string {
 const affiliateProfile: ArticleTypeProfile = {
   outlineSchema: articleOutlineSchema as z.ZodType<OutlineLike>,
   sectionSchema: contentSectionSchema,
-  frameSchema: articleFrameSchema as unknown as z.ZodType<Record<string, unknown>>,
-  assemble: (frame, sections) => articleSchema.parse({ ...frame, sections }),
+  contentSchema: articleSchema as unknown as z.ZodType<AnyArticle>,
   renderMarkdown: (article) => renderArticleMarkdown(article as Article),
   extractTitle: (article) => (article as Article).hero.title,
   usesProductCatalog: true,
@@ -118,14 +139,44 @@ const affiliateProfile: ArticleTypeProfile = {
     }),
 };
 
+/**
+ * Tieu de mau cho dung 7 chu de co dinh (DESTINATION_SECTION_ORDER) — khop dung
+ * template da mo ta trong prompt outline (default-prompts.ts, muc "guide-diem-den"/
+ * "guide-diem-den-flagship"). Dung de EP CUNG sectionHeadings sau khi AI tra ve, thay
+ * vi tin AI tu dat dung 7 tieu de theo dung thu tu (bug 07/2026: AI de lac de, bo qua
+ * "lich-trinh"/"an-gi"/"qua-mang-ve" de thay bang chu de tuy hung khac).
+ */
+const DESTINATION_HEADING_TEMPLATES: Partial<Record<DestinationBlockKey, (topic: string) => string>> = {
+  "tong-quan": (topic) => `Tổng quan / giới thiệu về ${topic}`,
+  "trai-nghiem": (topic) => `Trải nghiệm gì ở ${topic}`,
+  "mua-nao": (topic) => `Nên đi ${topic} vào mùa nào`,
+  "lich-trinh": (topic) => `Lịch trình gợi ý khi đi ${topic}`,
+  "di-chuyen": (topic) => `Di chuyển tới ${topic}`,
+  "an-gi": (topic) => `Ăn gì đặc trưng ở ${topic}`,
+  "qua-mang-ve": (topic) => `Quà mang về từ ${topic}`,
+};
+
 const destinationProfile: ArticleTypeProfile = {
   outlineSchema: destinationOutlineSchema as z.ZodType<OutlineLike>,
-  sectionSchema: contentSectionSchema,
-  frameSchema: destinationArticleFrameSchema as unknown as z.ZodType<Record<string, unknown>>,
-  assemble: (frame, sections) => destinationArticleSchema.parse({ ...frame, sections }),
+  // Section schema RIENG (khac 3 profile con lai) — gioi han blockKey dung 7 gia
+  // tri hien hanh, tranh AI chon nham gia tri legacy "meo-luu-y"/"khac" (van hop
+  // le trong contentSectionSchema dung chung) khien section bi loc mat khoi UI
+  // duyet (bug 07/2026, xem ghi chu o destinationSectionSchema).
+  sectionSchema: destinationSectionSchema,
+  contentSchema: destinationArticleSchema as unknown as z.ZodType<AnyArticle>,
   renderMarkdown: (article) => renderDestinationMarkdown(article as DestinationArticle),
   extractTitle: (article) => (article as DestinationArticle).title,
   usesProductCatalog: false,
+  normalizeOutline: (outline, topic) => ({
+    ...outline,
+    sectionHeadings: DESTINATION_SECTION_ORDER.map(
+      (key) => DESTINATION_HEADING_TEMPLATES[key]?.(topic) ?? DESTINATION_BLOCK_LABELS[key],
+    ),
+  }),
+  normalizeSection: (section, index) => ({
+    ...section,
+    blockKey: DESTINATION_SECTION_ORDER[index] ?? section.blockKey,
+  }),
   createManualSkeleton: (topic) =>
     destinationArticleSchema.parse({
       title: padTitle(topic, 10),
@@ -172,8 +223,7 @@ const destinationProfile: ArticleTypeProfile = {
 const cmsProfile: ArticleTypeProfile = {
   outlineSchema: cmsOutlineSchema as z.ZodType<OutlineLike>,
   sectionSchema: contentSectionSchema,
-  frameSchema: cmsArticleFrameSchema as unknown as z.ZodType<Record<string, unknown>>,
-  assemble: (frame, sections) => cmsArticleSchema.parse({ ...frame, sections }),
+  contentSchema: cmsArticleSchema as unknown as z.ZodType<AnyArticle>,
   renderMarkdown: (article) => renderCmsMarkdown(article as CmsArticle),
   extractTitle: (article) => (article as CmsArticle).title,
   usesProductCatalog: false,
@@ -196,8 +246,7 @@ const cmsProfile: ArticleTypeProfile = {
 const camNangProfile: ArticleTypeProfile = {
   outlineSchema: articleCamNangOutlineSchema as z.ZodType<OutlineLike>,
   sectionSchema: contentSectionSchema,
-  frameSchema: articleCamNangFrameSchema as unknown as z.ZodType<Record<string, unknown>>,
-  assemble: (frame, sections) => articleCamNangSchema.parse({ ...frame, sections }),
+  contentSchema: articleCamNangSchema as unknown as z.ZodType<AnyArticle>,
   renderMarkdown: (article) => renderCamNangMarkdown(article as ArticleCamNang),
   extractTitle: (article) => (article as ArticleCamNang).title,
   usesProductCatalog: false,

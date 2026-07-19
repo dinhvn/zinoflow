@@ -39,7 +39,7 @@ function createFakeRepo(): PromptTemplateRepository {
   };
 }
 
-const KEY = "guide-diem-den.frame.vi";
+const KEY = "guide-diem-den.content.vi";
 
 describe("CreatePromptVersionUseCase", () => {
   it("tao version tang dan, chi 1 active", async () => {

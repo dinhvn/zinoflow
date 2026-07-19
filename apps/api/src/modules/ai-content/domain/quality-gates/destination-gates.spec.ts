@@ -197,7 +197,7 @@ describe("destination gates — Flagship tier (Phase 28.3)", () => {
 });
 
 describe("destination gates — blockKey 7 khoi co dinh (redesign luong viet bai)", () => {
-  /** Bai moi da gan blockKey cho 6/7 khoi co dinh (thieu "trai-nghiem"/"lich-trinh", khong bat buoc du het),
+  /** Bai moi da gan blockKey du 7/7 khoi co dinh (structure gate 07/2026 bat buoc phu du) —
    * "an-gi"/"qua-mang-ve" dang danh sach. */
   function articleWithBlockKeys(): DestinationArticle {
     const article = validArticle();
@@ -205,7 +205,9 @@ describe("destination gates — blockKey 7 khoi co dinh (redesign luong viet bai
       ...article,
       sections: [
         { heading: "Tổng quan Vịnh Hạ Long", content: longContent("Vịnh Hạ Long"), blockKey: "tong-quan" },
+        { heading: "Trải nghiệm ở Vịnh Hạ Long", content: longContent("Chèo thuyền kayak"), blockKey: "trai-nghiem" },
         { heading: "Nên đi mùa nào", content: longContent("Mùa thu"), blockKey: "mua-nao" },
+        { heading: "Lịch trình gợi ý", content: longContent("2 ngày 1 đêm"), blockKey: "lich-trinh" },
         { heading: "Di chuyển tới Hạ Long", content: longContent("Cao tốc"), blockKey: "di-chuyen" },
         {
           heading: "Ăn gì đặc trưng",

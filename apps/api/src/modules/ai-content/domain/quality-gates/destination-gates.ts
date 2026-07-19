@@ -1,5 +1,11 @@
 import type { ContentSection, DestinationArticle, QualityCheck } from "@zinoflow/contracts";
-import { DESTINATION_FIELD_LIMITS, DESTINATION_LIST_BLOCK_KEYS, MIN_LIST_ITEMS } from "@zinoflow/contracts";
+import {
+  DESTINATION_BLOCK_LABELS,
+  DESTINATION_FIELD_LIMITS,
+  DESTINATION_LIST_BLOCK_KEYS,
+  DESTINATION_SECTION_ORDER,
+  MIN_LIST_ITEMS,
+} from "@zinoflow/contracts";
 import { containsNormalized, countWords } from "./text-matching";
 
 /**
@@ -108,6 +114,18 @@ export function evaluateDestinationStructureGate(input: DestinationGateInput): Q
   // Uu tien check theo blockKey co dinh (7 khoi chuan) khi bai da gan blockKey;
   // bai cu chua co blockKey nao thi fallback ve keyword-matching heading nhu truoc.
   const hasAnyBlockKey = article.sections.some((section) => Boolean(section.blockKey));
+
+  // Bai co gan blockKey (tao/sua sau 07/2026) phai phu du 7 khoi co dinh — truoc
+  // day khong gate nao check dieu nay, AI co the tra ve thieu khoi (chi 1-2 block)
+  // ma van qua duoc structure gate (bug phat hien 07/2026).
+  if (hasAnyBlockKey) {
+    const presentKeys = new Set(article.sections.map((s) => s.blockKey));
+    const missingKeys = DESTINATION_SECTION_ORDER.filter((key) => !presentKeys.has(key));
+    if (missingKeys.length > 0) {
+      const missingLabels = missingKeys.map((k) => DESTINATION_BLOCK_LABELS[k]).join(", ");
+      details.push(`Bài thiếu khối nội dung cố định: ${missingLabels}`);
+    }
+  }
 
   if (input.contentTier === "flagship") {
     const hasSeasonSection = hasAnyBlockKey

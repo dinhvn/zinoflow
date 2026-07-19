@@ -37,6 +37,7 @@ function makeRepos(job: ContentJob, latestDraft: DraftRecord) {
     findById: async (id) => (id === job.id ? job : null),
     findAll: async () => [job],
     findStatusesByIds: async () => new Map([[job.id, job.status]]),
+    findLatestBySourceRef: async () => null,
   };
   const drafts: ContentDraftRepository = {
     save: async (d) => {

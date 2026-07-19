@@ -52,11 +52,91 @@ export class StubContentAiProvider implements ContentAiProvider {
         return isDestination
           ? this.buildDestinationFrame(request.vars)
           : this.buildFrame(request.vars);
+      case "content":
+        return this.buildContent(request);
       case "restructure-paste":
         return this.buildRestructurePaste(request.vars);
       default:
         throw new AiProviderError(`Stub provider: unknown operation "${request.operation}"`);
     }
+  }
+
+  /**
+   * "content" (Option 3, 09/2026) — gop section+frame lam 1 lan goi AI duy nhat.
+   * Stub tai dung buildSection/buildFrame/buildDestinationFrame hien co (van
+   * dung cho "section"/"frame" rieng le — xem "section" o tren + buildFrame cu),
+   * chi lap qua outline.sectionHeadings de sinh du sections roi merge voi frame.
+   */
+  private buildContent(request: StructuredGenerationRequest): unknown {
+    const vars = request.vars;
+    const articleType = String(vars["articleType"] ?? "");
+    if (articleType === "guide-diem-den") return this.buildDestinationContent(vars);
+    if (articleType.startsWith("km-")) return this.buildCmsContent(vars);
+    if (articleType === "cam-nang") return this.buildCamNangContent(vars);
+    return this.buildAffiliateContent(vars);
+  }
+
+  private sectionHeadingsFrom(vars: Readonly<Record<string, unknown>>): string[] {
+    const outline = vars["outline"] as { sectionHeadings?: unknown } | undefined;
+    return Array.isArray(outline?.sectionHeadings) ? (outline!.sectionHeadings as string[]) : [];
+  }
+
+  private buildDestinationContent(vars: Readonly<Record<string, unknown>>): unknown {
+    const headings = this.sectionHeadingsFrom(vars);
+    const blockKeys = [
+      "tong-quan",
+      "trai-nghiem",
+      "mua-nao",
+      "lich-trinh",
+      "di-chuyen",
+      "an-gi",
+      "qua-mang-ve",
+    ];
+    const sections = headings.map((heading, i) => ({
+      ...this.buildSection({ ...vars, sectionHeading: heading }),
+      blockKey: blockKeys[i] ?? null,
+    }));
+    return { ...(this.buildDestinationFrame(vars) as object), sections };
+  }
+
+  private buildAffiliateContent(vars: Readonly<Record<string, unknown>>): unknown {
+    const headings = this.sectionHeadingsFrom(vars);
+    const sections = headings.map((heading) => this.buildSection({ ...vars, sectionHeading: heading }));
+    return { ...(this.buildFrame(vars) as object), sections };
+  }
+
+  private buildCmsContent(vars: Readonly<Record<string, unknown>>): unknown {
+    const headings = this.sectionHeadingsFrom(vars);
+    const sections = headings.map((heading) => this.buildSection({ ...vars, sectionHeading: heading }));
+    const topic = String(vars["topic"] ?? "chủ đề thử nghiệm");
+    const title = String(vars["title"] ?? `${topic} — bài viết mẫu`);
+    return {
+      title,
+      excerpt: `Bài viết mẫu (stub) tổng hợp thông tin về ${topic}, dùng để kiểm tra pipeline không tốn chi phí AI thật.`,
+      sections,
+    };
+  }
+
+  private buildCamNangContent(vars: Readonly<Record<string, unknown>>): unknown {
+    const headings = this.sectionHeadingsFrom(vars);
+    const sections = headings.map((heading) => this.buildSection({ ...vars, sectionHeading: heading }));
+    const topic = String(vars["topic"] ?? "chủ đề thử nghiệm");
+    const title = String(vars["title"] ?? `${topic}: cẩm nang tổng hợp 2026`);
+    return {
+      title,
+      intro:
+        `${topic} là chủ đề được nhiều du khách quan tâm. Bài cẩm nang này do stub provider sinh ra ` +
+        "để kiểm tra pipeline, tổng hợp các mục chính liên quan mà không gọi API thật, không tốn chi phí.",
+      metadata: {
+        metaTitle: title.slice(0, 140),
+        metaDescription:
+          `Cẩm nang tổng hợp thông tin về ${topic}: các mục chính cần biết trước khi lên kế hoạch, ` +
+          "tổng hợp bởi stub provider để kiểm tra pipeline.",
+        slugSuggestion: this.toSlug(title),
+        searchKeyword: `${topic}, cẩm nang ${topic}`.toLowerCase().slice(0, 250),
+      },
+      sections,
+    };
   }
 
   /** Goi y metadata "mem" cho diem den (suggest-meta) — output deterministic. */
@@ -77,16 +157,19 @@ export class StubContentAiProvider implements ContentAiProvider {
     };
   }
 
-  /** Outline bai diem den (guide-diem-den) — >=3 heading theo destinationOutlineSchema. */
+  /** Outline bai diem den (guide-diem-den) — dung 7 heading theo destinationOutlineSchema (khop DESTINATION_SECTION_ORDER). */
   private buildDestinationOutline(vars: Readonly<Record<string, unknown>>): unknown {
     const topic = String(vars["topic"] ?? "điểm đến thử nghiệm");
     return {
       title: `${topic}: kinh nghiệm tham quan, giá vé, ăn gì 2026`,
       sectionHeadings: [
-        "Giới thiệu tổng quan",
-        `Chơi gì ở ${topic}`,
-        "Thời điểm đẹp nhất để đi",
-        "Món ăn và đặc sản gần đó",
+        `Tổng quan về ${topic} — câu chuyện văn hoá, lịch sử`,
+        `Trải nghiệm gì ở ${topic}`,
+        "Nên đi mùa nào, thời điểm đẹp nhất",
+        "Lịch trình gợi ý",
+        "Di chuyển đến nơi này",
+        "Ăn gì đặc trưng gần đây",
+        "Quà mang về",
       ],
       plannedFaqQuestions: [
         `Đi ${topic} mùa nào đẹp nhất?`,

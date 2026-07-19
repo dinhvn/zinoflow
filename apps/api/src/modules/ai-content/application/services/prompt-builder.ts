@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import type { ArticleType, ContentSection } from "@zinoflow/contracts";
+import type { ArticleType } from "@zinoflow/contracts";
 import type { OutlineLike } from "./article-type-profiles";
 import type { StructuredGenerationRequest } from "../ports/content-ai-provider.port";
 import type { ProductContext } from "../ports/product-catalog.port";
@@ -37,8 +37,10 @@ export interface PromptJobContext {
   contentTier?: "flagship" | "standard" | null;
 }
 
-// max_tokens theo do dai du kien cua tung buoc (output JSON)
-const MAX_TOKENS = { outline: 8_000, section: 4_000, frame: 12_000 } as const;
+// max_tokens theo do dai du kien cua tung buoc (output JSON). "content" (Option 3,
+// 09/2026) gop section+frame cu lam 1 lan goi — ngan sach = tong 2 buoc cu (~ 7 khoi
+// + frame) cong them de du cho JSON scaffolding cua 1 object lon hon.
+const MAX_TOKENS = { outline: 8_000, section: 4_000, content: 24_000 } as const;
 
 @Injectable()
 export class PromptBuilder {
@@ -82,27 +84,29 @@ export class PromptBuilder {
     };
   }
 
-  async buildFrame(
-    ctx: PromptJobContext,
-    outline: OutlineLike,
-    sections: readonly ContentSection[],
-  ): Promise<StructuredGenerationRequest> {
+  /**
+   * Buoc 2 (Option 3, gop pipeline 09/2026) — sinh TOAN BO bai (moi section +
+   * frame: intro/quickFacts/faq/metadata...) trong 1 lan goi AI duy nhat, thay
+   * vi 1 request/section + 1 request frame rieng (9 request cho bai diem den
+   * truoc day). Ly do: model viet frame ma KHONG thay het noi dung sections da
+   * viet (chi thay outline) gay trung lap that (vd mo bai lap lai "Tong quan",
+   * quickFacts.food/transport lap lai section an-gi/di-chuyen — phat hien
+   * 07/2026). Gop lam 1 request giai quyet tan goc vi model thay toan bo noi
+   * dung no dang viet trong cung 1 luot, dong thoi giam manh token overhead
+   * (system prompt chi gui 1 lan thay vi 7-9 lan).
+   */
+  async buildContent(ctx: PromptJobContext, outline: OutlineLike): Promise<StructuredGenerationRequest> {
     const vars = {
       ...this.baseVars(ctx),
       title: outline.title,
       outline,
-      // Chi dua heading + cau dau cua moi section de frame khong lap lai noi dung
-      sectionsSummary: sections.map((s) => ({
-        heading: s.heading,
-        firstSentence: s.content.split(/(?<=[.!?])\s/)[0] ?? "",
-      })),
     };
     return {
       model: ctx.model,
-      operation: "frame",
+      operation: "content",
       system: await this.resolveTemplate(this.systemKeys(ctx)),
-      prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("frame", ctx)), vars),
-      maxTokens: MAX_TOKENS.frame,
+      prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("content", ctx)), vars),
+      maxTokens: MAX_TOKENS.content,
       vars,
     };
   }
@@ -128,7 +132,7 @@ export class PromptBuilder {
    * <site>.<articleType>.<step> -> <articleType>.<step>
    * (bai km them: -> <site>.km-bai-viet.<step> -> km-bai-viet.<step>)
    */
-  private stepKeys(step: "outline" | "section" | "frame", ctx: PromptJobContext): string[] {
+  private stepKeys(step: "outline" | "section" | "content", ctx: PromptJobContext): string[] {
     const at = ctx.articleType;
     const site = ctx.siteCode;
     const keys: string[] = [];

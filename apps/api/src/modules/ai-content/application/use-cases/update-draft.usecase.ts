@@ -78,17 +78,16 @@ export class UpdateDraftUseCase {
   }
 
   /**
-   * Validate article theo dung schema cua articleType (assemble = frame + sections,
-   * nguon su that cuoi cung §19.3), roi render lai markdown tu article da validate —
-   * dam bao article JSON (publish) va draftMarkdown (preview) luon dong bo.
+   * Validate article theo dung schema cua articleType (contentSchema = nguon su that
+   * cuoi cung §19.3), roi render lai markdown tu article da validate — dam bao article
+   * JSON (publish) va draftMarkdown (preview) luon dong bo.
    */
   private applyStructuredArticle(
     articleType: ArticleType,
     rawArticle: Record<string, unknown>,
   ): { article: DraftRecord["article"]; draftMarkdown: string; title: string } {
     const profile = getArticleTypeProfile(articleType);
-    const { sections, ...frame } = rawArticle as { sections?: unknown[] } & Record<string, unknown>;
-    const article = profile.assemble(frame, (sections ?? []) as Parameters<typeof profile.assemble>[1]);
+    const article = profile.contentSchema.parse(rawArticle);
     return {
       article,
       draftMarkdown: profile.renderMarkdown(article),

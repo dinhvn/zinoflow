@@ -5,8 +5,11 @@ import { z } from "zod/v4";
  * Prompt luu DB co version; doi prompt = tao version moi + active (rollback duoc).
  */
 
-/** Buoc pipeline + system message dung chung */
-export const promptOperationSchema = z.enum(["system", "outline", "section", "frame"]);
+/**
+ * Buoc pipeline + system message dung chung. "frame" la buoc 3 CU — khong con
+ * dung trong pipeline generate chinh (thay bang "content", Option 3 09/2026).
+ */
+export const promptOperationSchema = z.enum(["system", "outline", "section", "frame", "content"]);
 export type PromptOperation = z.infer<typeof promptOperationSchema>;
 
 /** 1 dong trong man list (gom theo articleType) */

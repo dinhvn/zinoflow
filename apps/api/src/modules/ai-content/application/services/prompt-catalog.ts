@@ -8,8 +8,13 @@
  */
 import { PROMPT_KEYS, SYSTEM_PROMPT_KEY } from "./default-prompts";
 
-/** Buoc trong pipeline 3 buoc + system message dung chung */
-export type PromptOperation = "system" | "outline" | "section" | "frame";
+/**
+ * Buoc trong pipeline + system message dung chung. "frame" la buoc 3 CU —
+ * KHONG con dung trong pipeline generate chinh (thay bang "content", Option 3
+ * 09/2026, xem generate-content.usecase.ts) nhung van liet ke trong catalog vi
+ * DEFAULT_PROMPTS van giu key nay (3 migration cu doc key do de seed DB).
+ */
+export type PromptOperation = "system" | "outline" | "section" | "frame" | "content";
 
 /**
  * Loai bai co prompt rieng (khop articleTypeSchema). null = system dung chung.
@@ -55,8 +60,9 @@ export const ARTICLE_TYPE_LABELS: Record<PromptArticleType, string> = {
 const OPERATION_LABELS: Record<PromptOperation, string> = {
   system: "System (giọng + nguyên tắc chung)",
   outline: "Outline (bước 1 — dàn ý)",
-  section: "Section (bước 2 — viết từng mục)",
-  frame: "Frame (bước 3 — khung + metadata)",
+  section: "Section (gợi ý AI cho 1 khối riêng lẻ — nút \"Tạo lại bằng AI\")",
+  frame: "Frame (bước cũ — KHÔNG còn dùng, xem 'Content')",
+  content: "Content (bước 2 — viết toàn bộ khối + khung bài trong 1 lần gọi AI)",
 };
 
 /** Bien chung moi prompt deu nhan (tu PromptBuilder.baseVars) */
@@ -76,6 +82,7 @@ const VARS_BY_OPERATION: Record<PromptOperation, string[]> = {
   outline: COMMON_VARS,
   section: [...COMMON_VARS, "title", "outline", "sectionHeading"],
   frame: [...COMMON_VARS, "title", "outline", "sectionsSummary"],
+  content: [...COMMON_VARS, "title", "outline"],
 };
 
 function entry(
@@ -93,13 +100,14 @@ function entry(
   };
 }
 
-/** Toan bo template quan ly duoc — system truoc, roi tung loai bai (outline/section/frame). */
+/** Toan bo template quan ly duoc — system truoc, roi tung loai bai (outline/section/frame/content). */
 export const PROMPT_CATALOG: readonly PromptCatalogEntry[] = [
   entry(SYSTEM_PROMPT_KEY, null, "system"),
   ...ARTICLE_TYPES.flatMap((type) => [
     entry(PROMPT_KEYS.outline(type), type, "outline"),
     entry(PROMPT_KEYS.section(type), type, "section"),
     entry(PROMPT_KEYS.frame(type), type, "frame"),
+    entry(PROMPT_KEYS.content(type), type, "content"),
   ]),
 ];
 

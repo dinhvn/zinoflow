@@ -32,8 +32,9 @@ class InMemoryCheckpointRepository implements ContentGenerationCheckpointReposit
 }
 
 /**
- * Test gate M2: "Generate fail 1 section -> chi retry section do, job khong chet."
- * Provider gia lap loi tam thoi o buoc section; outline/frame dung stub that.
+ * Test gate: "Loi tam thoi o buoc content -> retry ca buoc do, job khong chet
+ * ngay lan dau." (Option 3, 09/2026 — thay gate M2 cu ve retry-tung-section,
+ * xem generate-content.usecase.ts).
  */
 
 class InMemoryDraftRepository implements ContentDraftRepository {
@@ -52,13 +53,13 @@ class InMemoryDraftRepository implements ContentDraftRepository {
   }
 }
 
-/** Provider boc stub, nem loi cho N lan goi "section" dau tien. */
+/** Provider boc stub, nem loi cho N lan goi "content" dau tien. */
 class FlakyProvider implements ContentAiProvider {
   readonly key = "stub" as const;
   private readonly stub = new StubContentAiProvider();
-  sectionCalls = 0;
+  contentCalls = 0;
 
-  constructor(private failFirstNSectionCalls: number) {}
+  constructor(private failFirstNContentCalls: number) {}
 
   isConfigured(): boolean {
     return true;
@@ -68,24 +69,24 @@ class FlakyProvider implements ContentAiProvider {
     request: StructuredGenerationRequest,
     schema: TSchema,
   ): Promise<{ output: z.infer<TSchema>; usage: AiCallUsage }> {
-    if (request.operation === "section") {
-      this.sectionCalls++;
-      if (this.sectionCalls <= this.failFirstNSectionCalls) {
-        throw new AiProviderError("Loi tam thoi (gia lap) khi generate section");
+    if (request.operation === "content") {
+      this.contentCalls++;
+      if (this.contentCalls <= this.failFirstNContentCalls) {
+        throw new AiProviderError("Loi tam thoi (gia lap) khi generate content");
       }
     }
     return this.stub.generateStructured(request, schema);
   }
 }
 
-/** Provider boc stub, nem loi TU lan goi "section" thu K tro di (dung de mo phong crash vinh vien o 1 section cu the). */
-class FailFromSectionCallProvider implements ContentAiProvider {
+/** Provider boc stub, nem loi VINH VIEN tu 1 diem trong pipeline — dung mo phong crash sau outline. */
+class FailAfterOutlineProvider implements ContentAiProvider {
   readonly key = "stub" as const;
   private readonly stub = new StubContentAiProvider();
-  sectionCalls = 0;
   outlineCalls = 0;
+  contentCalls = 0;
 
-  constructor(private failFromCallNumber: number) {}
+  constructor(private shouldFailContent: boolean) {}
 
   isConfigured(): boolean {
     return true;
@@ -96,10 +97,10 @@ class FailFromSectionCallProvider implements ContentAiProvider {
     schema: TSchema,
   ): Promise<{ output: z.infer<TSchema>; usage: AiCallUsage }> {
     if (request.operation === "outline") this.outlineCalls++;
-    if (request.operation === "section") {
-      this.sectionCalls++;
-      if (this.sectionCalls >= this.failFromCallNumber) {
-        throw new AiProviderError("Loi vinh vien (gia lap) khi generate section");
+    if (request.operation === "content") {
+      this.contentCalls++;
+      if (this.shouldFailContent) {
+        throw new AiProviderError("Loi vinh vien (gia lap) khi generate content");
       }
     }
     return this.stub.generateStructured(request, schema);
@@ -157,8 +158,8 @@ function createJob(): ContentJob {
   });
 }
 
-describe("GenerateContentUseCase (M2 - 3 buoc + per-section retry)", () => {
-  it("generates draft through outline -> sections -> frame and reaches DraftReady", async () => {
+describe("GenerateContentUseCase (Option 3 - 2 buoc: outline -> content gop)", () => {
+  it("generates draft through outline -> content and reaches DraftReady", async () => {
     const provider = new FlakyProvider(0);
     const { useCase, jobs, drafts, usageRecords } = buildUseCase(provider);
     const job = createJob();
@@ -172,12 +173,11 @@ describe("GenerateContentUseCase (M2 - 3 buoc + per-section retry)", () => {
     expect(drafts.saved[0]?.article?.sections.length).toBeGreaterThan(0);
     const operations = usageRecords.map((u) => u.operation);
     expect(operations).toContain("outline");
-    expect(operations).toContain("section:1");
-    expect(operations).toContain("frame");
+    expect(operations).toContain("content");
   });
 
-  it("retries ONLY the failed section and the job survives (gate M2)", async () => {
-    const provider = new FlakyProvider(1); // section dau fail 1 lan roi ok
+  it("retries the content step on transient failure and the job survives", async () => {
+    const provider = new FlakyProvider(1); // content fail 1 lan roi ok
     const { useCase, jobs, drafts } = buildUseCase(provider);
     const job = createJob();
     await jobs.save(job);
@@ -186,11 +186,10 @@ describe("GenerateContentUseCase (M2 - 3 buoc + per-section retry)", () => {
 
     expect((await jobs.findById(job.id))?.status).toBe("DraftReady");
     expect(drafts.saved).toHaveLength(1);
-    // 2 section tu stub outline + 1 lan fail = 3 lan goi section, khong generate lai outline
-    expect(provider.sectionCalls).toBe(3);
+    expect(provider.contentCalls).toBe(2); // 1 lan fail + 1 lan thanh cong
   });
 
-  it("marks job Failed after a section exhausts all attempts", async () => {
+  it("marks job Failed after the content step exhausts all attempts", async () => {
     const provider = new FlakyProvider(Number.MAX_SAFE_INTEGER);
     const { useCase, jobs, drafts } = buildUseCase(provider);
     const job = createJob();
@@ -201,7 +200,7 @@ describe("GenerateContentUseCase (M2 - 3 buoc + per-section retry)", () => {
     expect(drafts.saved).toHaveLength(0);
   });
 
-  it("resumes from checkpoint after a crash mid-section — does not regenerate outline/section already done", async () => {
+  it("resumes from checkpoint after a crash after outline — does not regenerate outline", async () => {
     const jobs = new InMemoryContentJobRepository();
     const drafts = new InMemoryDraftRepository();
     const checkpoints = new InMemoryCheckpointRepository();
@@ -218,8 +217,8 @@ describe("GenerateContentUseCase (M2 - 3 buoc + per-section retry)", () => {
     const job = createJob();
     await jobs.save(job);
 
-    // Lan 1: section thu 2 (call #2) fail vinh vien -> job Failed sau khi da xong outline + section 1
-    const crashingProvider = new FailFromSectionCallProvider(2);
+    // Lan 1: outline xong nhung content fail vinh vien -> job Failed, checkpoint con outline
+    const crashingProvider = new FailAfterOutlineProvider(true);
     const useCase1 = new GenerateContentUseCase(
       jobs,
       drafts,
@@ -235,10 +234,9 @@ describe("GenerateContentUseCase (M2 - 3 buoc + per-section retry)", () => {
 
     const checkpointAfterCrash = await checkpoints.findByJobId(job.id);
     expect(checkpointAfterCrash?.outline).not.toBeNull();
-    expect(checkpointAfterCrash?.sections).toHaveLength(1); // section 1 da xong, section 2 chua
 
     // Lan 2 (resume, vd sau khi bam Retry): provider khong loi nua
-    const healthyProvider = new FailFromSectionCallProvider(Number.MAX_SAFE_INTEGER);
+    const healthyProvider = new FailAfterOutlineProvider(false);
     const jobRetry = await jobs.findById(job.id);
     jobRetry!.transitionTo("GeneratingOutline");
     await jobs.save(jobRetry!);
@@ -256,10 +254,9 @@ describe("GenerateContentUseCase (M2 - 3 buoc + per-section retry)", () => {
 
     expect((await jobs.findById(job.id))?.status).toBe("DraftReady");
     expect(drafts.saved).toHaveLength(1);
-    expect(drafts.saved[0]?.article?.sections.length).toBe(2);
-    // Resume: outline khong goi lai; chi section con thieu (section 2) duoc goi = 1 lan
+    // Resume: outline khong goi lai; content duoc goi 1 lan
     expect(healthyProvider.outlineCalls).toBe(0);
-    expect(healthyProvider.sectionCalls).toBe(1);
+    expect(healthyProvider.contentCalls).toBe(1);
     // Checkpoint da xoa sau khi job xong
     expect(await checkpoints.findByJobId(job.id)).toBeNull();
   });

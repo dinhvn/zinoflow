@@ -62,6 +62,32 @@ export const contentSectionSchema = z.object({
 });
 export type ContentSection = z.infer<typeof contentSectionSchema>;
 
+/**
+ * 7 gia tri hop le cho blockKey khi AI TAO MOI bai diem den — PHAI khop
+ * DESTINATION_SECTION_ORDER (destination-article.ts). Khac destinationBlockKeySchema
+ * o tren (day du 9 gia tri, giu "meo-luu-y"/"khac" de con doc/hien thi dung bai CU
+ * da luu) — schema day du KHONG duoc dung lam structured-output cho AI, vi mo hinh
+ * van hop le duoc phep chon 2 gia tri legacy do du prompt da noi ro chi dung 7 gia
+ * tri hien hanh, khien section bi UI loc mat hoan toan khoi danh sach cho duyet
+ * (bug phat hien 07/2026 — nguoi dung duyet xong nhung 1 so khoi khong bao gio
+ * xuat hien de duyet, tuong nham la loi luu du lieu).
+ */
+export const destinationSectionBlockKeySchema = z.enum([
+  "tong-quan",
+  "trai-nghiem",
+  "mua-nao",
+  "lich-trinh",
+  "di-chuyen",
+  "an-gi",
+  "qua-mang-ve",
+]);
+
+/** Section schema RIENG cho structured-output AI cua bai diem den — blockKey gioi
+ * han dung 7 gia tri hien hanh (xem destinationSectionBlockKeySchema). */
+export const destinationSectionSchema = contentSectionSchema.extend({
+  blockKey: destinationSectionBlockKeySchema.nullable().optional(),
+});
+
 /** Block 5 — Product recommendation item (uu/nhuoc diem, gia, doi tuong phu hop). */
 export const productRecommendationSchema = z.object({
   name: z.string(),

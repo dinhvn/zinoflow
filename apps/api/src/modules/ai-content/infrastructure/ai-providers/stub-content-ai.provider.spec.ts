@@ -3,6 +3,8 @@ import {
   articleOutlineSchema,
   articleSchema,
   contentSectionSchema,
+  destinationArticleSchema,
+  destinationOutlineSchema,
 } from "@zinoflow/contracts";
 import { StubContentAiProvider } from "./stub-content-ai.provider";
 import { renderArticleMarkdown } from "../../application/services/article-markdown.renderer";
@@ -84,5 +86,34 @@ describe("StubContentAiProvider", () => {
     expect(markdown).toContain("## Câu hỏi thường gặp");
     expect(markdown).toContain("## Kết luận");
     expect(markdown).toContain(article.hero.affiliateDisclosure); // policy gate can disclosure
+  });
+
+  describe('"content" operation (Option 3, 09/2026 — gop section+frame lam 1 request)', () => {
+    it("sinh bai top-list hop le qua articleSchema, sections khop outline.sectionHeadings", async () => {
+      const { output: outline } = await provider.generateStructured(
+        request("outline", { articleType: "toplist" }),
+        articleOutlineSchema,
+      );
+      const { output } = await provider.generateStructured(
+        request("content", { articleType: "toplist", title: outline.title, outline }),
+        articleSchema,
+      );
+      expect(() => articleSchema.parse(output)).not.toThrow();
+      expect(output.sections.map((s) => s.heading)).toEqual(outline.sectionHeadings);
+    });
+
+    it("sinh bai diem den hop le qua destinationArticleSchema, dung 7 section co blockKey", async () => {
+      const { output: outline } = await provider.generateStructured(
+        request("outline", { articleType: "guide-diem-den" }),
+        destinationOutlineSchema,
+      );
+      const { output } = await provider.generateStructured(
+        request("content", { articleType: "guide-diem-den", title: outline.title, outline }),
+        destinationArticleSchema,
+      );
+      expect(() => destinationArticleSchema.parse(output)).not.toThrow();
+      expect(output.sections).toHaveLength(7);
+      expect(output.sections.every((s) => s.blockKey)).toBe(true);
+    });
   });
 });

@@ -16,6 +16,7 @@ describe("CreateManualDraftUseCase (dichoithoi-article-spec §1.1)", () => {
       findById: async () => null,
       findAll: async () => [],
       findStatusesByIds: async () => new Map(),
+      findLatestBySourceRef: async () => null,
     };
 
     const drafts: ContentDraftRepository = {
