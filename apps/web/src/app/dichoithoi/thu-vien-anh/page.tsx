@@ -53,7 +53,10 @@ export default function ThuVienAnhPage() {
         summary="Upload ảnh minh hoạ chung (món ăn, cảnh sinh hoạt...) rồi copy token dán vào bài viết đang soạn để chèn ảnh."
         details={
           <ul className="list-disc space-y-1 pl-4">
-            <li>Upload ảnh → điền Alt text (bắt buộc, dùng cho SEO + người khiếm thị).</li>
+            <li>
+              Upload ảnh (kéo-thả, dán Ctrl+V, hoặc bấm nút) → điền Alt text (bắt buộc, dùng cho SEO
+              + người khiếm thị).
+            </li>
             <li>
               Bấm <span className="font-medium">Copy token</span> trên ảnh muốn dùng, dán dòng đó vào
               đúng chỗ trong markdown đang soạn — khối phải nằm riêng 1 dòng, có tiêu đề H2/H3 ngay
@@ -119,6 +122,7 @@ function ImageLibrary({ images, tab }: { images: ContentImage[]; tab: Tab }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const queryClient = useQueryClient();
 
   const upload = useMutation({
@@ -150,6 +154,18 @@ function ImageLibrary({ images, tab }: { images: ContentImage[]; tab: Tab }) {
     }
   }
 
+  function handlePaste(e: React.ClipboardEvent) {
+    const files = Array.from(e.clipboardData.items)
+      .filter((it) => it.type.startsWith("image/"))
+      .map((it) => it.getAsFile())
+      .filter((f): f is File => f !== null);
+    if (files.length === 0) return;
+    e.preventDefault();
+    const dt = new DataTransfer();
+    files.forEach((f) => dt.items.add(f));
+    handleFiles(dt.files);
+  }
+
   function copyToken(id: string) {
     navigator.clipboard.writeText(`[[block:image id=${id}]]`);
     setCopiedId(id);
@@ -159,7 +175,25 @@ function ImageLibrary({ images, tab }: { images: ContentImage[]; tab: Tab }) {
   return (
     <div className="space-y-3">
       {tab === "active" && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            handleFiles(e.dataTransfer.files);
+          }}
+          onPaste={handlePaste}
+          tabIndex={0}
+          className={`flex flex-wrap items-center gap-2 rounded-lg border-2 border-dashed p-3 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+            dragOver
+              ? "border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/40"
+              : "border-zinc-300 dark:border-zinc-700"
+          }`}
+        >
           <input
             ref={inputRef}
             type="file"
@@ -179,7 +213,10 @@ function ImageLibrary({ images, tab }: { images: ContentImage[]; tab: Tab }) {
           >
             {upload.isPending ? "Đang upload..." : "+ Thêm ảnh"}
           </Button>
-          <span className="text-xs text-zinc-400">Tối đa {MAX_MB}MB/ảnh · chọn nhiều ảnh cùng lúc</span>
+          <span className="text-xs text-zinc-400">
+            Kéo/dán (Ctrl+V) ảnh vào khung này, hoặc bấm nút · tối đa {MAX_MB}MB/ảnh · chọn nhiều ảnh
+            cùng lúc
+          </span>
         </div>
       )}
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
