@@ -64,8 +64,13 @@ export interface PublishDestinationInput {
   contentHtml: string;
   openingTime: string;
   ticketPrice: string;
-  transport: string;
-  food: string;
+  /**
+   * null = KHONG ghi (thay vi ghi de rong) khi bai da co khoi noi dung day du
+   * tuong ung (an-gi/di-chuyen trong 7 khoi co dinh) — tranh web hien 2 H2 cung
+   * chu de (quickFacts ngan + khoi noi dung day du), xem PublishDestinationUseCase.
+   */
+  transport: string | null;
+  food: string | null;
   hotel: string;
   tip: string;
   /** JSON [{q,a}] — website render FAQ + JSON-LD */

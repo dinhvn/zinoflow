@@ -119,6 +119,14 @@ export class PublishDestinationUseCase {
     const siteIdBySlug = new Map(
       all.filter((d) => d.siteId !== null && d.slug !== slug).map((d) => [d.slug, d.siteId!]),
     );
+    // an-gi/di-chuyen la 2 trong 7 khoi noi dung co dinh — khi bai co san khoi day
+    // du (hau het bai tao qua AI tool), gia tri quickFacts.food/transport chi lap
+    // lai y het khoi noi dung day du, khien web hien 2 H2 cung chu de cach xa nhau
+    // (bug phat hien 07/2026, xem danh gia trinh bay). Chi giu quickFacts lam
+    // NGUON DUY NHAT khi bai KHONG co khoi tuong ung (bai cu truoc khi co blockKey,
+    // xem migrate-sheet-content-to-tong-quan.ts) — tranh mat thong tin bai legacy.
+    const hasAnGiBlock = article.sections.some((s) => s.blockKey === "an-gi");
+    const hasDiChuyenBlock = article.sections.some((s) => s.blockKey === "di-chuyen");
     const { contentHash } = await this.siteDb.publishDestination({
       siteId,
       title: article.title,
@@ -128,8 +136,8 @@ export class PublishDestinationUseCase {
       contentHtml: linkedHtml,
       openingTime: article.quickFacts.openingTime,
       ticketPrice: article.quickFacts.ticketPrice,
-      transport: article.quickFacts.transport,
-      food: article.quickFacts.food,
+      transport: hasDiChuyenBlock ? null : article.quickFacts.transport,
+      food: hasAnGiBlock ? null : article.quickFacts.food,
       hotel: article.quickFacts.hotel,
       tip: article.quickFacts.tip,
       faqJson: buildFaqJson(article),
