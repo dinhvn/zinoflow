@@ -32,6 +32,7 @@ import { ParseMapsLinkUseCase } from "./application/use-cases/parse-maps-link.us
 import { SharedMediaModule } from "../shared/media/shared-media.module";
 import { SharedSheetImportModule } from "../shared/sheet-import/shared-sheet-import.module";
 import { UpdateThumbnailUseCase } from "./application/use-cases/update-thumbnail.usecase";
+import { UpdateDestinationHeroImageMetaUseCase } from "./application/use-cases/update-destination-hero-image-meta.usecase";
 import { ManageDestinationTicketsUseCase } from "./application/use-cases/manage-destination-tickets.usecase";
 import { ImportDestinationTicketsUseCase } from "./application/use-cases/import-destination-tickets.usecase";
 import { SyncDestinationTicketLinksService } from "./application/services/sync-destination-ticket-links.service";
@@ -150,6 +151,7 @@ import {
     RelinkAllUseCase,
     RelinkAllWorker,
     UpdateThumbnailUseCase,
+    UpdateDestinationHeroImageMetaUseCase,
     ManageDestinationTicketsUseCase,
     ImportDestinationTicketsUseCase,
     SyncDestinationTicketLinksService,

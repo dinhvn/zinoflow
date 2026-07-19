@@ -242,6 +242,8 @@ export interface DichoithoiSiteDb {
   updateExternalReviewUrls(siteId: number, externalReviewUrlsJson: string): Promise<void>;
   /** Ghi de GalleryJson — them/xoa/sua/doi thu tu anh thu vien */
   updateGallery(siteId: number, galleryJson: string): Promise<void>;
+  /** Ghi de HeroImageMetaJson — mo ta rieng (alt/caption/credit) cho Anh dai dien */
+  updateHeroImageMeta(siteId: number, heroImageMetaJson: string | null): Promise<void>;
   /** Insert diem den MOI (resolve ParentId/ProvinceId tu slug/code) -> tra ve siteId */
   createDestination(meta: SiteDestinationMeta): Promise<{ siteId: number }>;
   /** Cap nhat metadata diem den da ton tai (khong dong cham content/quan he) */

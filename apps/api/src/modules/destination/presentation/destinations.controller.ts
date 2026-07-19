@@ -29,6 +29,7 @@ import {
   restructurePastedContentRequestSchema,
   suggestDestinationMetaRequestSchema,
   updateThumbnailRequestSchema,
+  updateHeroImageMetaRequestSchema,
   updatePriceBreakdownRequestSchema,
   updatePracticalNotesRequestSchema,
   updateEditorialReviewRequestSchema,
@@ -83,6 +84,7 @@ import {
   type MigrateDestinationImagesReport,
   type MigrateDestinationImagesRequest,
   type UpdateThumbnailRequest,
+  type UpdateHeroImageMetaRequest,
   type UpdatePriceBreakdownRequest,
   type UpdatePracticalNotesRequest,
   type UploadDestinationImageResponse,
@@ -113,6 +115,7 @@ import { CreateDestinationJobUseCase } from "../application/use-cases/create-des
 import { PublishDestinationUseCase } from "../application/use-cases/publish-destination.usecase";
 import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
 import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnail.usecase";
+import { UpdateDestinationHeroImageMetaUseCase } from "../application/use-cases/update-destination-hero-image-meta.usecase";
 import { UpdatePriceBreakdownUseCase } from "../application/use-cases/update-price-breakdown.usecase";
 import { UpdatePracticalNotesUseCase } from "../application/use-cases/update-practical-notes.usecase";
 import { SuggestPracticalNotesUseCase } from "../application/use-cases/suggest-practical-notes.usecase";
@@ -183,6 +186,7 @@ export class DestinationsController {
     private readonly publishDestination: PublishDestinationUseCase,
     private readonly relinkAll: RelinkAllUseCase,
     private readonly updateThumbnail: UpdateThumbnailUseCase,
+    private readonly updateHeroImageMeta: UpdateDestinationHeroImageMetaUseCase,
     private readonly updatePriceBreakdown: UpdatePriceBreakdownUseCase,
     private readonly updatePracticalNotes: UpdatePracticalNotesUseCase,
     private readonly suggestPracticalNotes: SuggestPracticalNotesUseCase,
@@ -544,6 +548,16 @@ export class DestinationsController {
     @Body(new ZodValidationPipe(updateThumbnailRequestSchema)) request: UpdateThumbnailRequest,
   ): Promise<{ ok: true }> {
     await this.updateThumbnail.execute(slug, request.thumbnail);
+    return { ok: true };
+  }
+
+  /** Cap nhat mo ta rieng (alt/caption/credit) cho Anh dai dien, giong Thu vien anh */
+  @Post(":slug/hero-image-meta")
+  async setHeroImageMeta(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updateHeroImageMetaRequestSchema)) request: UpdateHeroImageMetaRequest,
+  ): Promise<{ ok: true }> {
+    await this.updateHeroImageMeta.execute(slug, request.heroImageMeta);
     return { ok: true };
   }
 

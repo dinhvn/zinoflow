@@ -620,6 +620,17 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     });
   }
 
+  async updateHeroImageMeta(siteId: number, heroImageMetaJson: string | null): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("heroImageMetaJson", heroImageMetaJson);
+      return request.query(
+        `UPDATE v2.DestinationContent SET HeroImageMetaJson = @heroImageMetaJson WHERE DestinationId = @siteId`,
+      );
+    });
+  }
+
   async updateThumbnail(siteId: number, thumbnail: string | null): Promise<void> {
     await this.runWithRetry(async (pool) => {
       const request = pool.request();

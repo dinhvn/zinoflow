@@ -4,8 +4,10 @@ import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   checkImageResponseSchema,
+  updateHeroImageMetaRequestSchema,
   updateThumbnailRequestSchema,
   uploadDestinationImageResponseSchema,
+  type HeroImageMeta,
 } from "@zinoflow/contracts";
 import { apiSend, apiUpload, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
@@ -17,6 +19,8 @@ interface Props {
   imageUrl: string | null;
   /** Duong dan tuong doi hien tai cua thumbnail (cot Thumbnail); null neu chua co */
   thumbnailPath: string | null;
+  /** Mo ta rieng (alt/caption/credit) cho Anh dai dien; null neu chua nhap */
+  heroImageMeta: HeroImageMeta | null;
   /** Goi khi upload xong de trang refetch (imageUrl doi) */
   onUploaded: () => void;
 }
@@ -28,7 +32,13 @@ const MAX_MB = 15;
  * API tu convert 3 co WebP + FTP len hosting + ghi cot Thumbnail (spec §14.3).
  * Component chi lo chon file + hien trang thai; khong biet FTP/sharp.
  */
-export function DestinationImageUploader({ slug, imageUrl, thumbnailPath, onUploaded }: Props) {
+export function DestinationImageUploader({
+  slug,
+  imageUrl,
+  thumbnailPath,
+  heroImageMeta,
+  onUploaded,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +46,20 @@ export function DestinationImageUploader({ slug, imageUrl, thumbnailPath, onUplo
   const [manualPath, setManualPath] = useState(thumbnailPath ?? "");
   const [imageCheck, setImageCheck] = useState<{ exists: boolean } | null>(null);
   const [manualSaved, setManualSaved] = useState(false);
+  const [altText, setAltText] = useState(heroImageMeta?.altText ?? "");
+  const [caption, setCaption] = useState(heroImageMeta?.caption ?? "");
+  const [credit, setCredit] = useState(heroImageMeta?.credit ?? "");
+  const normalizeMeta = (m: HeroImageMeta): HeroImageMeta | null =>
+    m.altText || m.caption || m.credit ? m : null;
+  const [savedMetaJson, setSavedMetaJson] = useState(
+    JSON.stringify(normalizeMeta(heroImageMeta ?? { altText: null, caption: null, credit: null })),
+  );
+  const currentMeta: HeroImageMeta = {
+    altText: altText.trim() || null,
+    caption: caption.trim() || null,
+    credit: credit.trim() || null,
+  };
+  const isMetaDirty = JSON.stringify(normalizeMeta(currentMeta)) !== savedMetaJson;
 
   const upload = useMutation({
     mutationFn: (file: File) => {
@@ -48,6 +72,22 @@ export function DestinationImageUploader({ slug, imageUrl, thumbnailPath, onUplo
       onUploaded();
     },
     onError: (e) => setError(e instanceof Error ? e.message : "Upload ảnh thất bại"),
+  });
+
+  const saveHeroImageMeta = useMutation({
+    mutationFn: () => {
+      const body = updateHeroImageMetaRequestSchema.parse({
+        heroImageMeta: normalizeMeta(currentMeta),
+      });
+      return apiSend("POST", `/destinations/${slug}/hero-image-meta`, body);
+    },
+    onSuccess: () => {
+      setError(null);
+      setSavedMetaJson(JSON.stringify(normalizeMeta(currentMeta)));
+      onUploaded();
+    },
+    onError: (e) =>
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Lưu mô tả thất bại"),
   });
 
   const checkImage = useMutation({
@@ -223,6 +263,50 @@ export function DestinationImageUploader({ slug, imageUrl, thumbnailPath, onUplo
         {manualSaved && (
           <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">Đã lưu đường dẫn.</p>
         )}
+      </div>
+
+      <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          Mô tả riêng cho ảnh đại diện (giống Thư viện ảnh)
+        </p>
+        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+          Website đè chú thích này lên ảnh hero to nhất ở đầu trang. Bỏ trống thì hero không hiện
+          chú thích (alt vẫn fallback về tên điểm đến).
+        </p>
+        <div className="mt-1.5 space-y-1.5">
+          <Input
+            value={altText}
+            onChange={(e) => setAltText(e.target.value)}
+            placeholder="Alt text (mô tả ảnh cho SEO/trình đọc màn hình)"
+            className="w-full text-sm"
+          />
+          <Input
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="Chú thích đè lên ảnh hero"
+            className="w-full text-sm"
+          />
+          <Input
+            value={credit}
+            onChange={(e) => setCredit(e.target.value)}
+            placeholder="Nguồn ảnh"
+            className="w-full text-sm"
+          />
+        </div>
+        <div className="mt-1.5 flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="primary"
+            loading={saveHeroImageMeta.isPending}
+            disabled={!isMetaDirty}
+            onClick={() => saveHeroImageMeta.mutate()}
+          >
+            Lưu mô tả ảnh đại diện
+          </Button>
+          {!isMetaDirty && !saveHeroImageMeta.isPending && (
+            <span className="text-xs text-zinc-400">Đã lưu</span>
+          )}
+        </div>
       </div>
     </div>
   );

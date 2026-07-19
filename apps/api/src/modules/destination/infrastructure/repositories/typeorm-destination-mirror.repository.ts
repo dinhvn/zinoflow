@@ -7,6 +7,7 @@ import type {
   DestinationOpeningHours,
   ExternalReviewUrlItem,
   GalleryItem,
+  HeroImageMeta,
   ListDestinationsQuery,
   PracticalNoteItem,
   PriceBreakdownItem,
@@ -325,6 +326,10 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
 
   async setGallery(slug: string, gallery: readonly GalleryItem[]): Promise<void> {
     await this.repo.update({ slug }, { gallery: [...gallery] });
+  }
+
+  async setHeroImageMeta(slug: string, heroImageMeta: HeroImageMeta | null): Promise<void> {
+    await this.repo.update({ slug }, { heroImageMeta });
   }
 
   async saveAiInputs(

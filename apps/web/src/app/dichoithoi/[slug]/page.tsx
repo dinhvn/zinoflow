@@ -931,6 +931,7 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               slug={d.slug}
               imageUrl={d.imageUrl}
               thumbnailPath={d.thumbnail}
+              heroImageMeta={d.heroImageMeta}
               onUploaded={invalidate}
             />
             <DestinationGalleryEditor

@@ -124,6 +124,7 @@ export class GetDestinationDetailUseCase {
       metaTitle: entity.metaTitle,
       externalReviewUrls: entity.externalReviewUrls,
       gallery: entity.gallery,
+      heroImageMeta: entity.heroImageMeta,
       hotelGroupId: entity.hotelGroupId,
       priority: entity.priority,
       contentTier: entity.contentTier,

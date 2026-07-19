@@ -202,6 +202,12 @@ GO
 IF COL_LENGTH('v2.DestinationContent', 'SouvenirProductsJson') IS NULL
   ALTER TABLE v2.DestinationContent ADD SouvenirProductsJson nvarchar(max) NULL;
 GO
+-- Vay 07/2026: mo ta rieng (alt/caption/credit) cho Anh dai dien (Thumbnail) —
+-- {altText,caption,credit}, khong co path vi da dung chung Thumbnail. Quyet dinh
+-- 07/2026, xem dichoithoi-backlog.md muc "SEO ảnh cho gallery hero". Idempotent.
+IF COL_LENGTH('v2.DestinationContent', 'HeroImageMetaJson') IS NULL
+  ALTER TABLE v2.DestinationContent ADD HeroImageMetaJson nvarchar(1000) NULL;
+GO
 
 /* ===== Loai diem den — 2 tang (redesign §3.2, §4.4, vay 07/2026) ===== */
 IF OBJECT_ID('v2.DestinationTypeGroup') IS NULL

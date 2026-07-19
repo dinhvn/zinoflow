@@ -97,6 +97,7 @@ export class ListDestinationsUseCase {
       metaTitle: e.metaTitle,
       externalReviewUrls: e.externalReviewUrls,
       gallery: e.gallery,
+      heroImageMeta: e.heroImageMeta,
       hotelGroupId: e.hotelGroupId,
       priority: e.priority,
       contentTier: e.contentTier,

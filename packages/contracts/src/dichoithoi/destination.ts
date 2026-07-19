@@ -94,6 +94,25 @@ export const updateDestinationGalleryRequestSchema = z.object({
 export type UpdateDestinationGalleryRequest = z.infer<typeof updateDestinationGalleryRequestSchema>;
 
 /**
+ * Mo ta rieng cho Anh dai dien (hero image, khac cau truc Thu vien anh —
+ * khong co `path` vi da dung chung thumbnail) — cho phep hien alt/caption/
+ * credit de tren anh hero to nhat trang chi tiet, giong Thu vien anh
+ * (quyet dinh 07/2026, xem dichoithoi-backlog.md muc "SEO ảnh cho gallery hero").
+ */
+export const heroImageMetaSchema = z.object({
+  altText: z.string().max(200).nullable(),
+  caption: z.string().max(300).nullable(),
+  credit: z.string().max(200).nullable(),
+});
+export type HeroImageMeta = z.infer<typeof heroImageMetaSchema>;
+
+/** Ghi de mo ta Anh dai dien — null = xoa het (khong con alt/caption/credit rieng) */
+export const updateHeroImageMetaRequestSchema = z.object({
+  heroImageMeta: heroImageMetaSchema.nullable(),
+});
+export type UpdateHeroImageMetaRequest = z.infer<typeof updateHeroImageMetaRequestSchema>;
+
+/**
  * 1 dong "vé tham quan" — bang rieng destination_tickets (thay ticketLinks[] nhung
  * trong Destination), quan ly giong Hotel/Tour (moi dong = 1 nguon ban ve, gan
  * DUNG 1 diem den — khac Hotel/Tour co the gan nhieu diem qua map table). Doc:
@@ -214,6 +233,8 @@ export const destinationMirrorSchema = z.object({
   externalReviewUrls: z.array(externalReviewUrlItemSchema),
   /** Thu vien anh (khac thumbnail don) — website render thanh dai cuon o hero + duoi hero */
   gallery: z.array(galleryItemSchema),
+  /** Mo ta rieng cho Anh dai dien — de tren anh hero to nhat, giong Thu vien anh. null = chua nhap */
+  heroImageMeta: heroImageMetaSchema.nullable(),
   hotelGroupId: z.string().nullable(),
   /** Do uu tien tay boi admin, 1-5 (1=cao nhat, mac dinh 3) — thay IsFeatured cu
    * (dichoithoi-destination-relations-plan.md §1.1, gop voi y tuong "do uu tien" moi). */

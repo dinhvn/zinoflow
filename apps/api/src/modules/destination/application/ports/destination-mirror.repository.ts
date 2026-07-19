@@ -5,6 +5,7 @@ import type {
   DestinationOpeningHours,
   ExternalReviewUrlItem,
   GalleryItem,
+  HeroImageMeta,
   ListDestinationsQuery,
   PracticalNoteItem,
   PriceBreakdownItem,
@@ -96,6 +97,8 @@ export interface DestinationMirrorRepository {
   ): Promise<void>;
   /** Ghi de nguyen mang thu vien anh (them/xoa/sua/doi thu tu deu qua day) */
   setGallery(slug: string, gallery: readonly GalleryItem[]): Promise<void>;
+  /** Cap nhat mo ta rieng cho Anh dai dien (alt/caption/credit), giong Thu vien anh */
+  setHeroImageMeta(slug: string, heroImageMeta: HeroImageMeta | null): Promise<void>;
   /** Luu thong tin nguoi dung cung cap cho AI (ghi chu + URL nguon) — tai dung lan sau */
   saveAiInputs(
     slug: string,

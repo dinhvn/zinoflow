@@ -3,6 +3,7 @@ import type {
   AffiliateLinkItem,
   ExternalReviewUrlItem,
   GalleryItem,
+  HeroImageMeta,
   PracticalNoteItem,
   PriceBreakdownItem,
 } from "@zinoflow/contracts";
@@ -184,6 +185,10 @@ export class DestinationMirrorEntity {
   /** Thu vien anh (khac thumbnail don) — {path, altText, caption, credit}[], thu tu = index mang. */
   @Column({ type: "jsonb", default: () => "'[]'" })
   gallery!: GalleryItem[];
+
+  /** Mo ta rieng cho Anh dai dien (hero image) — {altText, caption, credit}, giong Thu vien anh */
+  @Column({ name: "hero_image_meta", type: "jsonb", nullable: true })
+  heroImageMeta!: HeroImageMeta | null;
 
   /**
    * Gio mo cua chuan hoa (dichoithoi-destination-ai-extraction-plan §2.2) — note = hien

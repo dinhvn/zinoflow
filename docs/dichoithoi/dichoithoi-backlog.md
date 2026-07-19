@@ -238,15 +238,14 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   có `itemprop="image"`, các slide/ảnh khác trong carousel/collage/lightbox
   chưa gắn).
 
-  **Việc mới phát sinh, CHƯA làm (quyết định 07/2026 — người dùng đồng ý để
-  sau)**: ảnh hero chính (`detail.HeroImage`, tức "Ảnh đại diện" upload rời,
-  khác cấu trúc "Thư viện ảnh") KHÔNG có field caption/mô tả riêng như ảnh
-  gallery, nên không đè được chữ lên ảnh hero to nhất. Cân nhắc 2 hướng khi
-  quay lại: (a) thêm field caption riêng cho Ảnh đại diện — cần migration DB
-  + sửa CMS `destination-image-uploader.tsx`, nhưng phần lớn điểm đến cũ sẽ
-  để trống lâu dài (ROI thấp lúc mới thêm); (b) rẻ hơn, không cần field mới —
-  đè `shortDescription`/tên điểm đến (đã có sẵn) lên ảnh hero thay vì caption
-  riêng. Ưu tiên hướng (b) nếu làm.
+  **ĐÃ XONG 19/07/2026**: ảnh hero chính (`detail.HeroImage`, "Ảnh đại diện")
+  giờ có field mô tả riêng `heroImageMeta` (altText/caption/credit, cùng cấu
+  trúc 1 phần tử "Thư viện ảnh" nhưng không có `path`) — chọn hướng (a) thay
+  vì tái dùng `shortDescription`. CMS: ô nhập trong `destination-image-uploader.tsx`.
+  DB: cột `hero_image_meta` jsonb (Postgres) + `HeroImageMetaJson` nvarchar
+  (SQL Server, `v2.DestinationContent`). Website: `Detail.cshtml` đè
+  alt/caption lên ảnh hero ở cả carousel mobile, collage desktop, fallback
+  không-gallery, và lightbox slide 0.
 
   **Việc mới phát sinh #2, CHƯA làm (quyết định 07/2026 — người dùng đồng ý để
   sau)**: ảnh chèn trong nội dung bài viết qua token `[[block:image]]` (thư
