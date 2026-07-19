@@ -40,6 +40,14 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
     return new Map(rows.map((r) => [r.id, r.status as ContentJobStatus]));
   }
 
+  async findLatestBySourceRef(siteCode: string, sourceRef: string): Promise<ContentJob | null> {
+    const entity = await this.repo.findOne({
+      where: { siteCode, sourceRef },
+      order: { createdAt: "DESC" },
+    });
+    return entity ? this.toDomain(entity) : null;
+  }
+
   private toEntity(job: ContentJob): ContentJobEntity {
     const s = job.toSnapshot();
     const entity = new ContentJobEntity();

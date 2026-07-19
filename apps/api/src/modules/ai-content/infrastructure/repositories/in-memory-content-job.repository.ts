@@ -31,4 +31,14 @@ export class InMemoryContentJobRepository implements ContentJobRepository {
     }
     return result;
   }
+
+  async findLatestBySourceRef(siteCode: string, sourceRef: string): Promise<ContentJob | null> {
+    const matches = [...this.jobs.values()]
+      .filter((j) => {
+        const s = j.toSnapshot();
+        return s.siteCode === siteCode && s.sourceRef === sourceRef;
+      })
+      .sort((a, b) => b.toSnapshot().createdAt.getTime() - a.toSnapshot().createdAt.getTime());
+    return matches[0] ?? null;
+  }
 }

@@ -38,6 +38,7 @@ describe("GetDichoithoiDashboardAlertsUseCase (destination-spec §7.2, Phase 23)
       findById: async () => null,
       findAll: async () => overrides.jobs ?? [],
       findStatusesByIds: async () => new Map(),
+      findLatestBySourceRef: async () => null,
     };
     const siteDb = {
       fetchTags: async () => overrides.tags ?? [],

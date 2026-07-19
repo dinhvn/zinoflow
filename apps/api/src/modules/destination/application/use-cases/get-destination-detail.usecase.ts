@@ -63,6 +63,11 @@ export class GetDestinationDetailUseCase {
       const job = await this.jobRepo.findById(entity.activeContentJobId);
       activeJobStatus = job ? job.toSnapshot().status : null;
     }
+    // Job MOI NHAT theo sourceRef — co the KHAC activeContentJobId khi publish da
+    // clear no nhung sau đo nguoi dung Retry job cu tu trang /content chung (bug
+    // 07/2026: goi y AI/status AI bien mat vinh vien sau lan publish dau tien).
+    const latestJob = await this.jobRepo.findLatestBySourceRef("dichoithoi", slug);
+    const latestContentJobId = latestJob?.id ?? null;
 
     // Cay: cha truc tiep + con truc tiep
     const parent = entity.parentSlug ? this.toRef(bySlug.get(entity.parentSlug)) : null;
@@ -131,6 +136,7 @@ export class GetDestinationDetailUseCase {
       }),
       productionState: deriveProductionState(entity.siteId, entity.siteStatus),
       activeContentJobId: entity.activeContentJobId,
+      latestContentJobId,
       syncFlags: entity.syncFlags as DestinationDetail["syncFlags"],
       siteUpdatedAt: entity.siteUpdatedAt?.toISOString() ?? null,
       syncedAt: entity.syncedAt?.toISOString() ?? null,

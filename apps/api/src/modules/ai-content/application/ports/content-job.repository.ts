@@ -16,4 +16,11 @@ export interface ContentJobRepository {
    * trang thai bai). Chi tra status — khong nan ca domain object cho nhe.
    */
   findStatusesByIds(ids: string[]): Promise<Map<string, ContentJobStatus>>;
+  /**
+   * Job MOI NHAT (theo createdAt) khop siteCode+sourceRef, bat ke con "active"
+   * hay khong (publish clear activeContentJobId nhung job/draft van con) — dung
+   * de trang detail diem den nap lai goi y AI sau khi retry job da publish
+   * (bug 07/2026, xem ghi chu latestContentJobId trong contracts).
+   */
+  findLatestBySourceRef(siteCode: string, sourceRef: string): Promise<ContentJob | null>;
 }

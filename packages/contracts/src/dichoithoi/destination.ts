@@ -475,6 +475,15 @@ export const destinationDetailSchema = destinationMirrorSchema.extend({
   /** Trang thai job ai-content dang chay (neu co) — de hien link dung cho */
   activeJobStatus: z.string().nullable(),
   /**
+   * Job ai-content GAN NHAT cho diem nay theo sourceRef (co the KHAC
+   * activeContentJobId — publish clear activeContentJobId nhung job cu van
+   * con draft; neu nguoi dung bam "Retry" o trang /content chung sau khi da
+   * publish, job do khong tu relink lai activeContentJobId). Field nay CHI
+   * dung de FE nap goi y AI/hien status AI, KHONG dung cho cac gate chan
+   * "dang co job dang chay" (van phai dung activeContentJobId, bug 07/2026).
+   */
+  latestContentJobId: z.string().nullable(),
+  /**
    * Ban nhap bai viet (tieu de/intro/6 block/FAQ/quickFacts/metadata) — pivot
    * gop editor vao trang detail. Raw object CHUA chac hop le du du lieu (dang
    * soan dat do) — FE tu parse theo DestinationArticle; validate that chi chay
