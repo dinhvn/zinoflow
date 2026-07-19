@@ -118,10 +118,16 @@ export const DESTINATION_LIST_BLOCK_KEYS: readonly DestinationBlockKey[] = [
 /** So muc toi thieu cho danh sach co cau truc (an-gi/qua-mang-ve) — dung o gate + skeleton. */
 export const MIN_LIST_ITEMS = 3;
 
-/** Outline buoc 1 — khong co plannedProducts (diem den khong co product). */
+/**
+ * Outline buoc 1 — khong co plannedProducts (diem den khong co product).
+ * sectionHeadings PHAI dung 7 phan tu, khop DESTINATION_SECTION_ORDER — truoc
+ * day min(3).max(8) cho phep AI lo prompt (da noi ro "dung 7 muc") va tra ve
+ * it hon, khien bai thieu khoi ma khong gate nao bat loi (bug phat hien 07/2026,
+ * nguoi dung thay AI chi tao 1-2 block).
+ */
 export const destinationOutlineSchema = z.object({
   title: z.string(),
-  sectionHeadings: z.array(z.string()).min(3).max(8),
+  sectionHeadings: z.array(z.string()).length(DESTINATION_SECTION_ORDER.length),
   plannedFaqQuestions: z.array(z.string()).min(3),
 });
 export type DestinationOutline = z.infer<typeof destinationOutlineSchema>;

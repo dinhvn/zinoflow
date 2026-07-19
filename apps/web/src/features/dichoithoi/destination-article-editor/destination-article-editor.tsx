@@ -70,9 +70,9 @@ export function DestinationArticleEditor({
   suggestions,
   suggestLoading,
   onRequestSuggestion,
-  onApproveSuggestion,
+  onApplySuggestion,
+  applyingBlockKey,
   onDismissSuggestion,
-  approving,
 }: {
   article: DestinationArticle;
   onChange: (next: DestinationArticle) => void;
@@ -80,11 +80,12 @@ export function DestinationArticleEditor({
   suggestions?: Partial<Record<DestinationBlockKey, ContentSection>>;
   suggestLoading?: ReadonlySet<DestinationBlockKey>;
   onRequestSuggestion?: (blockKey: DestinationBlockKey) => void;
-  onApproveSuggestion?: (blockKey: DestinationBlockKey) => void;
+  /** Ap dung NGAY 1 goi y (luu luon, khong qua tick + nut gop) — nut bi disable
+   * trong luc co request khac dang chay (applyingBlockKey) de tranh 2 PATCH
+   * chay song song ghi de nhau. */
+  onApplySuggestion?: (blockKey: DestinationBlockKey) => void;
+  applyingBlockKey?: DestinationBlockKey | null;
   onDismissSuggestion?: (blockKey: DestinationBlockKey) => void;
-  /** Dang co 1 PATCH /draft-article chay (do duyet 1 khoi khac) — khoa nut Duyet
-   * de tranh 2 request song song ghi de mat noi dung nhau (xem approveBlockSuggestion). */
-  approving?: boolean;
 }) {
   const update = (patch: Partial<DestinationArticle>) => onChange({ ...article, ...patch });
   const sections = toFixedSections(article.sections);
@@ -131,9 +132,10 @@ export function DestinationArticleEditor({
             suggestion={suggestions?.[blockKey]}
             loading={suggestLoading?.has(blockKey) ?? false}
             onRequestSuggestion={onRequestSuggestion ? () => onRequestSuggestion(blockKey) : undefined}
-            onApproveSuggestion={onApproveSuggestion ? () => onApproveSuggestion(blockKey) : undefined}
+            onApplySuggestion={onApplySuggestion ? () => onApplySuggestion(blockKey) : undefined}
+            applying={applyingBlockKey === blockKey}
+            applyDisabled={applyingBlockKey != null && applyingBlockKey !== blockKey}
             onDismissSuggestion={onDismissSuggestion ? () => onDismissSuggestion(blockKey) : undefined}
-            approving={approving}
           />
         );
       })}
@@ -176,18 +178,20 @@ function SectionBlockEditor({
   suggestion,
   loading,
   onRequestSuggestion,
-  onApproveSuggestion,
+  onApplySuggestion,
+  applying,
+  applyDisabled,
   onDismissSuggestion,
-  approving,
 }: {
   section: DestinationSection;
   onChange: (patch: Partial<DestinationSection>) => void;
   suggestion?: ContentSection;
   loading?: boolean;
   onRequestSuggestion?: () => void;
-  onApproveSuggestion?: () => void;
+  onApplySuggestion?: () => void;
+  applying?: boolean;
+  applyDisabled?: boolean;
   onDismissSuggestion?: () => void;
-  approving?: boolean;
 }) {
   const blockKey = (section.blockKey ?? "khac") as DestinationBlockKey;
   const isList = DESTINATION_LIST_BLOCK_KEYS.includes(blockKey);
@@ -241,11 +245,7 @@ function SectionBlockEditor({
       )}
       {suggestion && (
         <div className="mt-3 rounded border border-violet-300 bg-violet-50 p-3 dark:border-violet-800 dark:bg-violet-950/40">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">
-              🤖 Gợi ý AI — chờ duyệt
-            </span>
-          </div>
+          <p className="mb-2 text-xs font-semibold text-violet-700 dark:text-violet-300">🤖 Gợi ý AI</p>
           <p className="mb-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">{suggestion.heading}</p>
           {suggestion.items && suggestion.items.length > 0 ? (
             <ul className="mb-2 list-inside list-disc text-sm text-zinc-700 dark:text-zinc-300">
@@ -263,14 +263,15 @@ function SectionBlockEditor({
           <div className="flex gap-2">
             <Button
               size="sm"
-              className="bg-violet-600 px-2 py-1 text-xs text-white hover:bg-violet-700"
-              disabled={approving}
-              title={approving ? "Đang lưu khối vừa duyệt — chờ xong rồi duyệt tiếp" : undefined}
-              onClick={onApproveSuggestion}
+              variant="primary"
+              className="px-2 py-1 text-xs"
+              loading={applying}
+              disabled={applyDisabled}
+              onClick={onApplySuggestion}
             >
-              {approving ? "Đang lưu..." : "Duyệt — áp dụng"}
+              {applying ? "Đang áp dụng..." : "Áp dụng"}
             </Button>
-            <Button size="sm" variant="ghost" className="px-2 py-1 text-xs" onClick={onDismissSuggestion}>
+            <Button size="sm" variant="ghost" className="px-2 py-1 text-xs" disabled={applying} onClick={onDismissSuggestion}>
               Bỏ qua
             </Button>
           </div>

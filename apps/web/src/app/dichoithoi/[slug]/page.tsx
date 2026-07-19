@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
@@ -21,6 +22,7 @@ import {
   DESTINATION_SECTION_ORDER,
   type ContentSection,
   type DestinationArticle,
+  type DestinationArticleFrame,
   type DestinationBlockKey,
   type DestinationContentState,
   type DestinationDetail,
@@ -42,14 +44,23 @@ import { DestinationEditorialReviewEditor } from "@/features/dichoithoi/destinat
 import { DestinationMetaTitleEditor } from "@/features/dichoithoi/destination-meta-title-editor";
 import { DestinationExternalReviewUrlsEditor } from "@/features/dichoithoi/destination-external-review-urls-editor";
 import { DestinationAiExtractionPanel } from "@/features/dichoithoi/destination-ai-extraction-panel";
+import {
+  DestinationJobSuggestionsModal,
+  countAppliedFrameGroups,
+  countAppliedJobSuggestions,
+  mergeFrameGroup,
+  FRAME_GROUP_KEYS,
+  type FrameGroupKey,
+} from "@/features/dichoithoi/destination-job-suggestions-modal";
 import { DestinationHotelPanel } from "@/features/dichoithoi/destination-hotel-panel";
 import { DestinationTourPanel } from "@/features/dichoithoi/destination-tour-panel";
 import { Button, buttonClasses } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
 
-/** Draft response tu GET /content/jobs/:id/draft — chi can article de lay goi y AI toan bai. */
+/** Draft response tu GET /content/jobs/:id/draft — article de lay goi y AI toan bai, id de tu choi job khi "Lam lai tu dau". */
 const jobDraftSchema = z.object({
+  id: z.string(),
   article: destinationArticleSchema.nullable().catch(null),
 });
 
@@ -158,6 +169,54 @@ const CONTENT_STATE_STYLES: Record<DestinationContentState, string> = {
   "da-publish": "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
 };
 
+/**
+ * "Status bai viet" (CONTENT_STATE_LABELS) va "Status AI" la 2 truc khac nhau,
+ * nguoi dung yeu cau tach rieng (07/2026) thay vi ghep chung 1 dong nhu truoc
+ * ("Đang soạn / duyệt · DraftReady" gay kho hieu). Status bai viet = vong doi
+ * publish (it doi). Status AI = tien do rieng cua job AI dang chay, gom ca
+ * "duyet 1 phan" — thong tin MOI, tinh tu so khoi da ap dung goi y AI qua popup
+ * (destination-job-suggestions-modal.tsx) chu KHONG co san trong ContentJobStatus.
+ */
+type AiStatusInfo = { label: string; tone: string };
+
+function aiStatusInfo(
+  jobStatus: string | null,
+  jobSuggestions: Partial<Record<DestinationBlockKey, ContentSection>>,
+  frameSuggestion: DestinationArticleFrame | null,
+  draftArticle: DestinationArticle | null,
+): AiStatusInfo | null {
+  if (!jobStatus) return null;
+  if (jobStatus === "Created" || jobStatus === "GeneratingOutline") {
+    return { label: "🤖 AI: Đang soạn", tone: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" };
+  }
+  if (jobStatus === "Failed") {
+    return { label: "🤖 AI: Lỗi, cần tạo lại", tone: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300" };
+  }
+  if (jobStatus === "Approved") {
+    return { label: "🤖 AI: Đã duyệt", tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" };
+  }
+  // DraftReady / InReview / Rejected — tinh theo so muc (khoi + nhom thong tin
+  // chung) da ap dung goi y thuc te, chinh xac hon la doan theo status tho cua job.
+  const sectionProgress = draftArticle
+    ? countAppliedJobSuggestions(jobSuggestions, draftArticle)
+    : { total: 0, applied: 0 };
+  const frameProgress = draftArticle
+    ? countAppliedFrameGroups(frameSuggestion, draftArticle)
+    : { total: 0, applied: 0 };
+  const total = sectionProgress.total + frameProgress.total;
+  const applied = sectionProgress.applied + frameProgress.applied;
+  if (total === 0 || applied === 0) {
+    return { label: "🤖 AI: Chờ duyệt", tone: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300" };
+  }
+  if (applied < total) {
+    return {
+      label: `🤖 AI: Duyệt 1 phần (${applied}/${total} mục)`,
+      tone: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+    };
+  }
+  return { label: "🤖 AI: Đã duyệt", tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" };
+}
+
 const SITE_BASE_URL = "https://dichoithoi.com";
 /** DiChoiThoi.Web chay local qua `dotnet run` (profile http/https) — Properties/launchSettings.json */
 const LOCAL_SITE_BASE_URL = "http://localhost:5176";
@@ -178,7 +237,8 @@ const GATE_LABELS: Record<string, string> = {
  */
 const TABS = [
   { id: "images", label: "Hình ảnh", icon: "🖼️" },
-  { id: "content", label: "Nội dung & xuất bản", icon: "📝" },
+  { id: "ai-tools", label: "AI hỗ trợ", icon: "🤖" },
+  { id: "content", label: "Nội dung", icon: "📝" },
   { id: "basic-info", label: "Thông tin cơ bản", icon: "ℹ️" },
   { id: "commerce", label: "Thương mại & bổ trợ", icon: "💰" },
   { id: "recommendations", label: "Gợi ý liên quan", icon: "🔗" },
@@ -239,7 +299,19 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   }
 
   // Tab dang mo — menu doc ben phai (thay scrollspy cu, xem ghi chu o TABS).
-  const [activeTab, setActiveTab] = useState<TabId>(TABS[0].id);
+  // Dong bo voi query param ?tab= de reload trang KHONG bi nhay ve tab mac dinh
+  // "Hinh anh" (bug nguoi dung phat hien 07/2026 — truoc day chi la useState thuan,
+  // mat het khi F5).
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const activeTab: TabId = TABS.some((t) => t.id === tabFromUrl) ? (tabFromUrl as TabId) : TABS[0].id;
+  function setActiveTab(next: TabId) {
+    const qs = new URLSearchParams(searchParams.toString());
+    qs.set("tab", next);
+    router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+  }
 
   // --- Chon AI provider / model (spec §7.4 "chon provider/model nhu form job") ---
   const [provider, setProvider] = useState("");
@@ -313,6 +385,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     onSuccess: () => {
       setActionError(null);
       setLoadedSuggestionsForJob(null);
+      setJobSuggestions({});
+      setJobFrameSuggestion(null);
       invalidate();
     },
     onError: (e) => setActionError(toActionError(e)),
@@ -344,9 +418,53 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     onError: (e) => setActionError(toActionError(e)),
   });
 
+  // --- "Lam lai tu dau" (yeu cau nguoi dung 07/2026): tu choi job dang do (neu co,
+  // qua submit-review -> InReview -> Reject) de mo khoa "Tao bai AI", roi xoa sach
+  // ban nhap ve skeleton rong. Tai dung nguyen endpoint review/submit-review da co,
+  // khong them use-case BE moi.
+  const resetDraft = useMutation({
+    mutationFn: async () => {
+      if (!d) throw new Error("Chưa tải xong dữ liệu điểm đến");
+      if (d.activeContentJobId && jobStatus && ["Created", "GeneratingOutline"].includes(jobStatus)) {
+        throw new Error("AI đang xử lý bài — đợi xong (hoặc Failed) rồi mới làm lại được");
+      }
+      if (d.activeContentJobId && jobStatus && !["Failed", "Rejected"].includes(jobStatus)) {
+        if (jobStatus === "DraftReady" || jobStatus === "Approved") {
+          await apiSend("POST", `/content/jobs/${d.activeContentJobId}/submit-review`, {});
+        }
+        const draft = await apiGet(`/content/jobs/${d.activeContentJobId}/draft`, jobDraftSchema);
+        await apiSend("POST", `/content/drafts/${draft.id}/review`, {
+          action: "Reject",
+          note: "Người dùng chọn Làm lại từ đầu",
+        });
+      }
+      const empty = emptyDraftArticle(d.name);
+      await apiSend("PATCH", `/destinations/${slug}/draft-article`, { draftArticle: empty });
+      return empty;
+    },
+    onSuccess: (empty) => {
+      setActionError(null);
+      setDraftArticle(empty);
+      setSavedDraftJson(JSON.stringify(empty));
+      setSuggestions({});
+      setJobSuggestions({});
+      setJobFrameSuggestion(null);
+      invalidate();
+      void jobStatusQuery.refetch();
+      void qualityQuery.refetch();
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+
   // --- Goi y AI theo tung block (pivot: AI ho tro doc lap, khong tu ghi de) ---
   const [suggestions, setSuggestions] = useState<Partial<Record<DestinationBlockKey, ContentSection>>>({});
   const [suggestLoading, setSuggestLoading] = useState<Set<DestinationBlockKey>>(new Set());
+  // Khoi dang duoc ap dung (PATCH dang chay) — chi 1 khoi tai 1 thoi diem, cac
+  // nut "Ap dung" khac bi disable trong luc nay de dam bao luon merge tren
+  // draftArticle moi nhat, tranh 2 PATCH song song ghi de nhau (bug 07/2026:
+  // duyet xong reload lai mat du lieu — nguyen nhan that la schema AI sai, da
+  // fix o destinationSectionSchema, day chi la chot an toan them).
+  const [applyingBlockKey, setApplyingBlockKey] = useState<DestinationBlockKey | null>(null);
 
   async function requestBlockSuggestion(blockKey: DestinationBlockKey) {
     setSuggestLoading((prev) => new Set(prev).add(blockKey));
@@ -368,26 +486,30 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     }
   }
 
-  // Duyet 1 goi y: merge vao draftArticle CUC BO roi luu ngay (khong tu dong ghi de khi chua duyet).
-  // Chan duyet khoi khac trong luc con 1 PATCH dang chay — 2 request /draft-article
-  // song song co the tra ve khong dung thu tu va GHI DE mat noi dung khoi duyet
-  // truoc do (endpoint chi UPDATE thang, khong merge). UI cung disable nut Duyet
-  // luc approving=true (xem DestinationArticleEditor) de khong bam duoc.
-  function approveBlockSuggestion(blockKey: DestinationBlockKey) {
-    if (saveDraftArticle.isPending) return;
+  // Ap dung NGAY 1 goi y — merge vao draftArticle HIEN TAI roi PATCH luon (khong
+  // qua buoc tick + nut gop nua, nguoi dung muon duyet xong la luu ngay tai cho).
+  // applyingBlockKey chan cac nut "Ap dung" khac trong luc request nay dang chay
+  // de dam bao tuan tu, khong bao gio 2 PATCH bay song song ghi de nhau.
+  async function applySuggestion(blockKey: DestinationBlockKey) {
+    if (applyingBlockKey !== null || !draftArticle) return;
     const suggestion = suggestions[blockKey];
-    if (!draftArticle || !suggestion) return;
+    if (!suggestion) return;
     const nextSections = draftArticle.sections.map((s) =>
       s.blockKey === blockKey ? { ...s, ...suggestion, blockKey } : s,
     );
     const next = { ...draftArticle, sections: nextSections };
     setDraftArticle(next);
-    setSuggestions((prev) => {
-      const rest = { ...prev };
-      delete rest[blockKey];
-      return rest;
-    });
-    saveDraftArticle.mutate(next);
+    setApplyingBlockKey(blockKey);
+    try {
+      await saveDraftArticle.mutateAsync(next);
+      setSuggestions((prev) => {
+        const rest = { ...prev };
+        delete rest[blockKey];
+        return rest;
+      });
+    } finally {
+      setApplyingBlockKey(null);
+    }
   }
 
   function dismissBlockSuggestion(blockKey: DestinationBlockKey) {
@@ -398,8 +520,81 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     });
   }
 
+  // --- Goi y AI toan bai (6 khoi) tu job vua tao — xem/ap dung qua popup, giong
+  // co che "Xem thong tin AI trich xuat": khong tu dong hien inline, khong tu an
+  // sau khi ap dung, ap dung lai duoc bat ky luc nao ke ca sau khi reload trang
+  // (fix bug 07/2026: truoc day hien inline va nap lai moi lan reload). ---
+  const [jobSuggestions, setJobSuggestions] = useState<Partial<Record<DestinationBlockKey, ContentSection>>>({});
+  // Phan "frame" (tieu de/mo bai/quickFacts/faq/metadata) AI cung sinh ra cung luc
+  // voi 7 khoi noi dung nhung truoc day bi bo qua hoan toan trong popup — nguoi
+  // dung phai go tay lai tu dau du AI da viet san (phat hien 07/2026).
+  const [jobFrameSuggestion, setJobFrameSuggestion] = useState<DestinationArticleFrame | null>(null);
+  const [applyingAllJobSuggestions, setApplyingAllJobSuggestions] = useState(false);
+  const [applyingFrameGroup, setApplyingFrameGroup] = useState<FrameGroupKey | null>(null);
+  const anyJobSuggestionBusy = applyingBlockKey !== null || applyingAllJobSuggestions || applyingFrameGroup !== null;
+
+  async function applyJobSuggestion(blockKey: DestinationBlockKey) {
+    if (anyJobSuggestionBusy || !draftArticle) return;
+    const suggestion = jobSuggestions[blockKey];
+    if (!suggestion) return;
+    const nextSections = draftArticle.sections.map((s) =>
+      s.blockKey === blockKey ? { ...s, ...suggestion, blockKey } : s,
+    );
+    const next = { ...draftArticle, sections: nextSections };
+    setDraftArticle(next);
+    setApplyingBlockKey(blockKey);
+    try {
+      await saveDraftArticle.mutateAsync(next);
+    } finally {
+      setApplyingBlockKey(null);
+    }
+  }
+
+  async function applyJobFrameGroup(group: FrameGroupKey) {
+    if (anyJobSuggestionBusy || !draftArticle || !jobFrameSuggestion) return;
+    const next = mergeFrameGroup(draftArticle, group, jobFrameSuggestion);
+    setDraftArticle(next);
+    setApplyingFrameGroup(group);
+    try {
+      await saveDraftArticle.mutateAsync(next);
+    } finally {
+      setApplyingFrameGroup(null);
+    }
+  }
+
+  // Ap dung 1 luot TOAN BO goi y AI dang co — ca 7 khoi noi dung LAN 4 nhom thong
+  // tin chung (khong chi rieng phan chua ap dung — bam lai van ghi de ve dung ban
+  // AI goc cho ca phan da ap dung truoc do) — gop thanh 1 PATCH duy nhat thay vi
+  // tung muc mot de tranh nhieu request roi rac.
+  async function applyAllJobSuggestions() {
+    if (anyJobSuggestionBusy || !draftArticle) return;
+    const nextSections = draftArticle.sections.map((s) => {
+      const blockKey = s.blockKey as DestinationBlockKey;
+      const suggestion = jobSuggestions[blockKey];
+      return suggestion ? { ...s, ...suggestion, blockKey } : s;
+    });
+    let next = { ...draftArticle, sections: nextSections };
+    if (jobFrameSuggestion) {
+      for (const group of FRAME_GROUP_KEYS) {
+        next = mergeFrameGroup(next, group, jobFrameSuggestion);
+      }
+    }
+    setDraftArticle(next);
+    setApplyingAllJobSuggestions(true);
+    try {
+      await saveDraftArticle.mutateAsync(next);
+    } finally {
+      setApplyingAllJobSuggestions(false);
+    }
+  }
+
   // --- Theo doi job AI toan bai (neu dang chay) de lay goi y cho ca 6 block ---
-  const jobId = d?.activeContentJobId ?? null;
+  // Dung latestContentJobId (KHONG phai activeContentJobId): publish clear
+  // activeContentJobId, nhung job cu van co the duoc Retry lai tu trang /content
+  // chung sau do — neu chi theo activeContentJobId thi goi y/status AI cua lan
+  // chay do bien mat vinh vien (bug 07/2026). Gate "dang co job dang chay" (tao
+  // job moi/lam lai tu dau) van dung activeContentJobId rieng, khong doi.
+  const jobId = d?.latestContentJobId ?? d?.activeContentJobId ?? null;
   const jobStatusQuery = useQuery({
     queryKey: ["destination-content-job-status", jobId],
     queryFn: () => apiGet(`/content/jobs/${jobId}`, contentJobSchema),
@@ -408,23 +603,65 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       q.state.data && ["Created", "GeneratingOutline"].includes(q.state.data.status) ? 3000 : false,
   });
   const jobStatus = jobStatusQuery.data?.status ?? null;
+  // Key theo jobId + status: job co the CHAY LAI (giu nguyen jobId, tao draft version moi) —
+  // neu chi gate theo jobId thi lan chay thu 2/3 tro di se KHONG bao gio fetch lai goi y moi,
+  // nut Ap dung/status AI bien mat sau khi chay lai (bug 07/2026, phat hien qua lan chay 3).
   const [loadedSuggestionsForJob, setLoadedSuggestionsForJob] = useState<string | null>(null);
   useEffect(() => {
     if (!jobId || !jobStatus) return;
-    if (jobStatus === "Created" || jobStatus === "GeneratingOutline" || jobStatus === "Failed") return;
-    if (loadedSuggestionsForJob === jobId) return;
-    setLoadedSuggestionsForJob(jobId);
+    if (jobStatus === "Created" || jobStatus === "GeneratingOutline") {
+      // Job dang chay lai (co the la lan 2/3...) — reset gate de khi xong se fetch lai goi y moi.
+      if (loadedSuggestionsForJob !== null) setLoadedSuggestionsForJob(null);
+      return;
+    }
+    if (jobStatus === "Failed") return;
+    const loadKey = `${jobId}:${jobStatus}`;
+    if (loadedSuggestionsForJob === loadKey) return;
+    setLoadedSuggestionsForJob(loadKey);
     void (async () => {
       try {
         const draft = await apiGet(`/content/jobs/${jobId}/draft`, jobDraftSchema);
         if (!draft.article) return;
         const next: Partial<Record<DestinationBlockKey, ContentSection>> = {};
+        // Canh bao neu bai AI co blockKey khong hop le (khoi cu "meo-luu-y"/"khac")
+        // hoac trung lap — truoc day AM THAM mat noi dung (ghi de/loc bo) khien
+        // nguoi dung tuong nham la loi luu du lieu (bug 07/2026). Da chan tu goc o
+        // schema output AI (destinationSectionSchema), day chi la luoi an toan cho
+        // job cu tao truoc khi sua.
+        const invalidHeadings: string[] = [];
+        const duplicateHeadings: string[] = [];
         for (const s of draft.article.sections) {
-          if (s.blockKey && (DESTINATION_SECTION_ORDER as readonly string[]).includes(s.blockKey)) {
-            next[s.blockKey as DestinationBlockKey] = s;
+          if (!s.blockKey || !(DESTINATION_SECTION_ORDER as readonly string[]).includes(s.blockKey)) {
+            invalidHeadings.push(s.heading);
+            continue;
           }
+          if (next[s.blockKey as DestinationBlockKey]) {
+            duplicateHeadings.push(s.heading);
+          }
+          next[s.blockKey as DestinationBlockKey] = s;
         }
-        setSuggestions((prev) => ({ ...prev, ...next }));
+        if (invalidHeadings.length > 0 || duplicateHeadings.length > 0) {
+          const parts = [];
+          if (invalidHeadings.length > 0) {
+            parts.push(`không gán đúng khối chuẩn: ${invalidHeadings.join(", ")}`);
+          }
+          if (duplicateHeadings.length > 0) {
+            parts.push(`trùng khối với mục khác (chỉ giữ bản sau): ${duplicateHeadings.join(", ")}`);
+          }
+          setActionError({
+            message: "AI tạo bài nhưng một số khối không hiển thị được để duyệt — bấm \"🤖 Tạo lại bằng AI\" riêng cho khối đó.",
+            details: parts,
+          });
+        }
+        setJobSuggestions(next);
+        setJobFrameSuggestion({
+          title: draft.article.title,
+          intro: draft.article.intro,
+          quickFacts: draft.article.quickFacts,
+          faq: draft.article.faq,
+          updateNotice: draft.article.updateNotice,
+          metadata: draft.article.metadata,
+        });
       } catch {
         // Job co the chua co draft (vd Failed truoc do) — bo qua, khong chan UI
       }
@@ -531,8 +768,11 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               </span>
               <span className={`rounded px-2 py-0.5 ${CONTENT_STATE_STYLES[d.contentState]}`}>
                 {CONTENT_STATE_LABELS[d.contentState]}
-                {d.activeJobStatus ? ` · ${d.activeJobStatus}` : ""}
               </span>
+              {(() => {
+                const ai = aiStatusInfo(jobStatus, jobSuggestions, jobFrameSuggestion, draftArticle);
+                return ai ? <span className={`rounded px-2 py-0.5 ${ai.tone}`}>{ai.label}</span> : null;
+              })()}
               <span className="font-mono text-zinc-400">{d.slug}</span>
             </div>
           </div>
@@ -633,7 +873,7 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         )}
         {isDraftDirty && (
           <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
-            Có thay đổi chưa lưu — bấm &quot;Lưu bản nháp&quot; (tab &quot;📝 Nội dung &amp; xuất bản&quot;) trước
+            Có thay đổi chưa lưu — bấm &quot;Lưu bản nháp&quot; (tab &quot;📝 Nội dung&quot;) trước
             khi kiểm tra/đăng.
           </p>
         )}
@@ -701,12 +941,27 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
             />
           </div>
 
-          <div className={activeTab === "content" ? "space-y-4" : "hidden"}>
-            <PanelHead title="📝 Nội dung & xuất bản" hint="Viết bài bằng AI, duyệt từng khối gợi ý. Trạng thái gate/nút đăng bài xem ở khung phía trên đầu trang." />
+          <div className={activeTab === "ai-tools" ? "space-y-4" : "hidden"}>
+            <PanelHead title="🤖 AI hỗ trợ" hint="Trích xuất dữ liệu điểm đến từ Google Maps/web tham khảo, và nhập thông tin để AI viết bài — kết quả dùng ở tab &quot;📝 Nội dung&quot; và &quot;ℹ️ Thông tin cơ bản&quot;/&quot;💰 Thương mại & bổ trợ&quot;." />
+
+      {/* Trich xuat AI tu Google Maps + web tham khao (dichoithoi-destination-ai-extraction-plan
+          §2.3) — tach tab rieng (07/2026, theo yeu cau nguoi dung): ket qua trich xuat ghi
+          vao CA 3 tab (Thong tin co ban: ten/dia chi/SDT/website/mo ta/meta title; Thuong mai:
+          gio mo cua/gia/danh gia bien tap/link review; va aiReferenceSummary lam ngu canh nen
+          cho AI viet bai ngay duoi day) — khong thuoc rieng 1 tab do nen gom chung voi phan
+          nhap thong tin AI vao 1 tab "AI ho tro". */}
+      <Group title="🔎 Trích xuất AI (Google Maps + web tham khảo)">
+        <DestinationAiExtractionPanel slug={d.slug} onAccepted={() => invalidate()} />
+      </Group>
 
       <Group title="✍️ Viết bài bằng AI">
-        {d.activeContentJobId ? (
-          <div className="text-sm text-zinc-600 dark:text-zinc-400">
+        {/* Trang thai job AI toan bai (neu co) — TACH RIENG khoi form nhap ben duoi:
+            truoc day form nay bi AN HOAN TOAN mien co activeContentJobId (ke ca job
+            da xong DraftReady), khien nguoi dung khong con thay lai ghi chu/link
+            nguon da nhap (bug phat hien 07/2026, khong lien quan redesign tab). Gio
+            form nhap LUON hien, chi disable rieng nut "Tao bai AI" khi co job dang chay. */}
+        {d.activeContentJobId && (
+          <div className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
             <p className="flex items-center gap-2">
               {(jobStatus === "Created" || jobStatus === "GeneratingOutline") && (
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-violet-300 border-t-violet-600" />
@@ -716,15 +971,16 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
             </p>
             {jobStatus && !["Created", "GeneratingOutline"].includes(jobStatus) && (
               <p className="mt-1 text-emerald-700 dark:text-emerald-400">
-                ✅ Đã có gợi ý AI cho các khối nội dung — mở từng khối bên dưới ở mục &quot;Nội dung
-                bài viết&quot; để xem, Duyệt hoặc Bỏ qua.
+                ✅ Đã có gợi ý AI cho các khối nội dung — qua tab &quot;📝 Nội dung&quot;, mở từng khối
+                bấm &quot;Áp dụng&quot; để lưu ngay khối đó, hoặc Bỏ qua.
               </p>
             )}
-            <p className="mt-1 text-xs text-zinc-500">
-              Muốn tạo lại với thông tin mới? Chờ bài hiện tại hoàn tất trước.
-            </p>
           </div>
-        ) : (
+        )}
+        {(() => {
+          const jobBlocking =
+            Boolean(d.activeContentJobId) && jobStatus !== "Failed" && jobStatus !== "Rejected";
+          return (
           <div className="space-y-4">
             <p className="rounded bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-900">
               AI tự dùng dữ liệu điểm đến ở tab &quot;ℹ️ Thông tin cơ bản&quot; (tên, địa chỉ, tọa độ, điểm
@@ -733,6 +989,23 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               <strong>website để AI đọc thêm</strong> — AI không bịa giá vé / giờ mở cửa, sẽ ưu tiên
               dữ liệu bạn cung cấp.
             </p>
+
+            {d.aiReferenceSummary && (
+              <div className="rounded border border-violet-200 bg-violet-50 p-3 dark:border-violet-900 dark:bg-violet-950/40">
+                <p className="mb-1 text-sm font-medium text-violet-700 dark:text-violet-300">
+                  Tóm tắt nguồn tham khảo (từ khung &quot;Trích xuất AI&quot; phía trên)
+                </p>
+                <p className="mb-1 text-xs text-zinc-500">
+                  Tự động đưa vào ngữ cảnh khi tạo bài, KHÔNG cần nhập lại ở ô bên dưới. Muốn sửa/làm
+                  mới, chạy lại skill trích xuất rồi chấp nhận lại ở khung &quot;Trích xuất AI&quot; phía trên.
+                  {d.aiReferenceSummaryUpdatedAt &&
+                    ` Cập nhật lúc ${new Date(d.aiReferenceSummaryUpdatedAt).toLocaleString("vi-VN")}.`}
+                </p>
+                <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
+                  {d.aiReferenceSummary}
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="mb-1 block text-sm font-medium">
@@ -840,7 +1113,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               <Button
                 variant="primary"
                 loading={createJob.isPending}
-                disabled={!selectedProvider || !selectedModel}
+                disabled={!selectedProvider || !selectedModel || jobBlocking}
+                title={jobBlocking ? "Đang có bài soạn/duyệt dở — hoàn tất hoặc từ chối job hiện tại trước" : undefined}
                 onClick={() => createJob.mutate()}
               >
                 {createJob.isPending
@@ -858,6 +1132,44 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                 </span>
               )}
             </div>
+            {jobBlocking && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                ⚠️ Đang có bài soạn/duyệt dở nên chưa tạo job AI mới được — vẫn có thể sửa/lưu ghi
+                chú ở đây, và dùng &quot;🤖 Tạo lại bằng AI&quot; ở từng khối trong tab &quot;📝 Nội
+                dung&quot;. Hoặc bấm &quot;Làm lại từ đầu&quot; bên dưới để bỏ hẳn job/bài cũ.
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                loading={resetDraft.isPending}
+                disabled={
+                  Boolean(d.activeContentJobId) &&
+                  Boolean(jobStatus) &&
+                  ["Created", "GeneratingOutline"].includes(jobStatus ?? "")
+                }
+                title={
+                  Boolean(d.activeContentJobId) &&
+                  ["Created", "GeneratingOutline"].includes(jobStatus ?? "")
+                    ? "AI đang xử lý — đợi xong rồi mới làm lại được"
+                    : undefined
+                }
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Làm lại từ đầu: từ chối job AI đang dở (nếu có) và XOÁ SẠCH bản nháp bài viết hiện tại (không thể hoàn tác). Tiếp tục?",
+                    )
+                  ) {
+                    resetDraft.mutate();
+                  }
+                }}
+              >
+                {resetDraft.isPending ? "Đang làm lại..." : "🗑️ Làm lại từ đầu"}
+              </Button>
+            </div>
 
             <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
               <span className="text-xs text-zinc-500">
@@ -868,7 +1180,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               </Button>
             </div>
           </div>
-        )}
+          );
+        })()}
       </Group>
 
       {pasteModalOpen && (
@@ -881,12 +1194,31 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           }}
         />
       )}
+          </div>
+
+          <div className={activeTab === "content" ? "space-y-4" : "hidden"}>
+            <PanelHead title="📝 Nội dung" hint="Soạn/duyệt từng khối nội dung bài viết. Trích xuất AI + nhập thông tin cho AI viết bài xem ở tab &quot;🤖 AI hỗ trợ&quot;. Trạng thái gate/nút đăng bài xem ở khung phía trên đầu trang." />
 
       {/* Noi dung bai viet — sua truc tiep tai day (pivot gop editor vao trang detail).
           KHONG boc trong <Group> (card lien nhau se thanh 3 cap long nhau: panel >
           card > tung block ben trong editor) — o day chi can 1 cap: tung block cua
           editor tu la 1 khoi ro rang, khong can them 1 lop card ngoai nua. */}
-      <h3 className="font-medium">Nội dung bài viết</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-medium">Nội dung bài viết</h3>
+        {draftArticle && (
+          <DestinationJobSuggestionsModal
+            jobSuggestions={jobSuggestions}
+            frameSuggestion={jobFrameSuggestion}
+            currentArticle={draftArticle}
+            applyingBlockKey={applyingBlockKey}
+            applyingFrameGroup={applyingFrameGroup}
+            applyingAll={applyingAllJobSuggestions}
+            onApply={(blockKey) => void applyJobSuggestion(blockKey)}
+            onApplyFrameGroup={(group) => void applyJobFrameGroup(group)}
+            onApplyAll={() => void applyAllJobSuggestions()}
+          />
+        )}
+      </div>
       {draftArticle && (
         <DestinationArticleEditor
           article={draftArticle}
@@ -894,9 +1226,9 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           suggestions={suggestions}
           suggestLoading={suggestLoading}
           onRequestSuggestion={requestBlockSuggestion}
-          onApproveSuggestion={approveBlockSuggestion}
+          onApplySuggestion={(blockKey) => void applySuggestion(blockKey)}
+          applyingBlockKey={applyingBlockKey}
           onDismissSuggestion={dismissBlockSuggestion}
-          approving={saveDraftArticle.isPending}
         />
       )}
       <div className="flex items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
@@ -915,7 +1247,7 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           </div>
 
           <div className={activeTab === "basic-info" ? "space-y-4" : "hidden"}>
-            <PanelHead title="ℹ️ Thông tin cơ bản" hint="Metadata điểm đến (tên, toạ độ, địa chỉ, liên hệ...), trích xuất AI từ Google Maps/web tham khảo, Meta Title SEO, và thao tác đổi slug." />
+            <PanelHead title="ℹ️ Thông tin cơ bản" hint="Metadata điểm đến (tên, toạ độ, địa chỉ, liên hệ...), Meta Title SEO, và thao tác đổi slug. Trích xuất AI từ Google Maps/web tham khảo xem ở khung phía trên đầu trang." />
 
       <Group title="Thông tin điểm đến">
         <p className="mb-3 text-xs text-zinc-500">
@@ -928,13 +1260,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           isNew={false}
           onSaved={() => invalidate()}
         />
-      </Group>
-
-      {/* Trich xuat AI tu Google Maps + web tham khao (dichoithoi-destination-ai-extraction-plan
-          §2.3) — cung nhom du lieu voi "Thong tin diem den" (dia chi/SDT/gio mo cua/mo ta), khong
-          phai "goi y lien quan" (link khach san/tour) nen chuyen ve day, khong tach tab rieng. */}
-      <Group title="Trích xuất AI (Google Maps + web tham khảo)">
-        <DestinationAiExtractionPanel slug={d.slug} onAccepted={() => invalidate()} />
       </Group>
 
       {/* Meta title thu cong — them cach cho bulk-edit CSV. Ghi thang len site (nhu
