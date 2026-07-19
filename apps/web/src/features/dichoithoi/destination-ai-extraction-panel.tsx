@@ -131,15 +131,30 @@ export function DestinationAiExtractionPanel({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-zinc-500">
-        Claude đọc Google Maps + web tham khảo (skill{" "}
-        <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
-          dichoithoi-extract-destination-info
-        </code>
-        ) rồi lưu kết quả vào đây — dữ liệu CỨNG (SĐT/giờ mở cửa/địa chỉ) chỉ điền khi
-        tìm thấy trong nguồn, không đoán. Tick trường đúng rồi bấm &quot;Chấp nhận&quot; để ghi
-        đè; trường bỏ tick giữ nguyên dữ liệu cũ.
-      </p>
+      <div className="rounded bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-900">
+        <p>
+          Trang này <strong>chỉ xem và duyệt</strong> kết quả — KHÔNG có nút chạy trích xuất trong
+          web CMS. Muốn trích xuất mới/lại, phải mở{" "}
+          <strong>Claude Code (VS Code)</strong> ở thư mục dự án <code>zinoflow</code>
+          (API zinoflow phải đang chạy local), rồi yêu cầu Claude — vd:
+        </p>
+        <p className="my-1 rounded bg-zinc-100 px-2 py-1 font-mono dark:bg-zinc-800">
+          Trích xuất thông tin cho điểm đến {"<tên điểm đến>"}, Google Maps: {"<link>"}, web tham
+          khảo: {"<link 1>"}, {"<link 2>"}...
+        </p>
+        <p>
+          Claude sẽ tự nhận skill{" "}
+          <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
+            dichoithoi-extract-destination-info
+          </code>{" "}
+          và đọc từng nguồn rồi lưu kết quả vào đây — dữ liệu CỨNG (SĐT/giờ mở cửa/địa chỉ) chỉ điền
+          khi tìm thấy trong nguồn, không đoán. Chạy xong quay lại trang này, bấm &quot;Xem thông tin
+          AI trích xuất&quot;, tick trường đúng rồi bấm &quot;Chấp nhận&quot; để ghi đè; trường bỏ
+          tick giữ nguyên dữ liệu hiện tại. Trường đã chấp nhận trước đó vẫn tick lại được bình
+          thường (vd nếu dữ liệu thật bị mất/sửa nhầm sau này) — nhãn &quot;Đã chấp nhận/Đã bỏ
+          qua&quot; chỉ là gợi ý lần trước, không khoá.
+        </p>
+      </div>
 
       {error !== null && <ErrorBox error={error} />}
       {extractionQuery.isError && <ErrorBox error={extractionQuery.error} />}
@@ -192,16 +207,18 @@ export function DestinationAiExtractionPanel({
                       </td>
                       <td className="whitespace-pre-line p-2">{formatFieldValue(field.newValue)}</td>
                       <td className="p-2 text-center">
-                        {field.status !== "pending" ? (
-                          <Badge tone={field.status === "accepted" ? "emerald" : "gray"}>
-                            {field.status === "accepted" ? "Đã chấp nhận" : "Đã bỏ qua"}
-                          </Badge>
-                        ) : field.found ? (
-                          <Checkbox
-                            label=""
-                            checked={checked.has(i)}
-                            onChange={() => toggle(i)}
-                          />
+                        {field.found ? (
+                          <div className="flex flex-col items-center gap-1">
+                            <Checkbox label="" checked={checked.has(i)} onChange={() => toggle(i)} />
+                            {/* Chi la GOI Y trang thai lan truoc — KHONG khoa tick lai, cho phep
+                                ap dung lai neu du lieu that bi mat/sua nham sau do (yeu cau nguoi
+                                dung 07/2026). */}
+                            {field.status !== "pending" && (
+                              <Badge tone={field.status === "accepted" ? "emerald" : "gray"}>
+                                {field.status === "accepted" ? "Đã chấp nhận" : "Đã bỏ qua"}
+                              </Badge>
+                            )}
+                          </div>
                         ) : (
                           <Badge tone="gray">Không tìm thấy</Badge>
                         )}
@@ -221,7 +238,7 @@ export function DestinationAiExtractionPanel({
                 disabled={checked.size === 0}
                 onClick={() => accept.mutate()}
               >
-                {accept.isPending ? "Đang chấp nhận..." : `Chấp nhận ${checked.size} mục đã tick`}
+                {accept.isPending ? "Đang chấp nhận..." : `Chấp nhận / áp dụng lại ${checked.size} mục đã tick`}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
                 Đóng
