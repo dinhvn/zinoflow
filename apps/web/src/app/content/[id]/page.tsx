@@ -6,6 +6,7 @@ import { z } from "zod/v4";
 import {
   aiUsageLogEntrySchema,
   contentJobSchema,
+  type AiUsageLogEntry,
   destinationDetailSchema,
   draftArticleSchema,
   listAiProvidersResponseSchema,
@@ -87,6 +88,40 @@ function describeUsageLogOperation(operation: string, responseText: string | nul
     if (typeof hero.title === "string") return `${operation} · ${hero.title}`;
   }
   return operation;
+}
+
+/**
+ * Gom "Lịch sử gọi AI" (danh sách phẳng theo thời gian) thành TỪNG LẦN CHẠY —
+ * mỗi lần chạy luôn bắt đầu bằng 1 lệnh "outline" (xem generate-content.usecase.ts),
+ * nên tách nhóm mới mỗi khi gặp operation "outline". Yêu cầu người dùng 07/2026:
+ * trước đây danh sách phẳng lẫn lộn nhiều lần chạy (kể cả lần lỗi giữa chừng),
+ * không phân biệt được lần nào tạo ra version nào.
+ */
+function groupUsageLogsByRun(logs: AiUsageLogEntry[]): AiUsageLogEntry[][] {
+  const groups: AiUsageLogEntry[][] = [];
+  for (const log of logs) {
+    if (log.operation === "outline" || groups.length === 0) {
+      groups.push([log]);
+    } else {
+      groups[groups.length - 1]!.push(log);
+    }
+  }
+  return groups;
+}
+
+/** Version nao duoc tao ra tu 1 lan chay — khop theo createdAt nam trong khoang [dau lan chay, dau lan chay ke tiep). */
+function findVersionForRun(
+  group: AiUsageLogEntry[],
+  nextRunStart: string | undefined,
+  versions: { version: number; createdAt: string }[],
+): number | null {
+  const runStart = new Date(group[0]!.createdAt).getTime();
+  const boundEnd = nextRunStart ? new Date(nextRunStart).getTime() : Infinity;
+  const match = versions.find((v) => {
+    const t = new Date(v.createdAt).getTime();
+    return t >= runStart && t < boundEnd;
+  });
+  return match?.version ?? null;
 }
 
 const GATE_LABELS: Record<string, string> = {
@@ -810,7 +845,15 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           toi do"). */}
       {job && (
         <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-          <h3 className="mb-1 font-medium">Lịch sử gọi AI</h3>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-medium">Lịch sử gọi AI</h3>
+            {(usageLogsQuery.data ?? []).length > 0 && (
+              <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                Tổng chi phí: $
+                {usageLogsQuery.data!.reduce((sum, log) => sum + log.costUsd, 0).toFixed(4)}
+              </span>
+            )}
+          </div>
           <p className="mb-3 text-xs text-zinc-500">
             Mỗi lần AI được gọi (mỗi bước outline/từng khối/frame) — bấm mở để xem đúng nội dung
             prompt đã gửi và response thô AI trả về, dùng để kiểm tra vì sao bài ra như vậy.
@@ -830,38 +873,78 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 : "Chưa có log nào (job viết tay không gọi AI)."}
             </p>
           ) : (
-            <ul className="space-y-2">
-              {usageLogsQuery.data!.map((log) => (
-                <li key={log.id} className="rounded border border-zinc-200 dark:border-zinc-800">
-                  <details>
-                    <summary className="cursor-pointer select-none p-2 text-sm">
-                      <span className="font-medium">
-                        {describeUsageLogOperation(log.operation, log.responseText)}
+            <div className="space-y-4">
+              {(() => {
+                const groups = groupUsageLogsByRun(usageLogsQuery.data!);
+                return groups
+                  .map((group, i) => ({
+                    group,
+                    runNumber: i + 1,
+                    producedVersion: findVersionForRun(
+                      group,
+                      groups[i + 1]?.[0]?.createdAt,
+                      versionsQuery.data ?? [],
+                    ),
+                    groupCostUsd: group.reduce((sum, log) => sum + log.costUsd, 0),
+                  }))
+                  .reverse();
+              })().map(({ group, runNumber, producedVersion, groupCostUsd }) => {
+                return (
+                  <div key={group[0]!.id}>
+                    <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                        Lần chạy {runNumber}
                       </span>
-                      <span className="text-zinc-500">
-                        {" "}· {log.provider}/{log.model} · {log.inputTokens + log.outputTokens} tokens ·{" "}
-                        ${log.costUsd.toFixed(4)} · {log.latencyMs}ms ·{" "}
-                        {new Date(log.createdAt).toLocaleString("vi-VN")}
+                      <span className="text-zinc-400">
+                        {new Date(group[0]!.createdAt).toLocaleString("vi-VN")}
                       </span>
-                    </summary>
-                    <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
-                      <div>
-                        <p className="mb-1 text-xs font-semibold text-zinc-500">Prompt đã gửi</p>
-                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
-                          {log.promptText ?? "(không có — job tạo trước khi bật ghi log)"}
-                        </pre>
-                      </div>
-                      <div>
-                        <p className="mb-1 text-xs font-semibold text-zinc-500">Response nhận về</p>
-                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
-                          {log.responseText ?? "(không có — job tạo trước khi bật ghi log)"}
-                        </pre>
-                      </div>
+                      <span className="text-zinc-500">${groupCostUsd.toFixed(4)}</span>
+                      {producedVersion !== null ? (
+                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                          → đã tạo v{producedVersion}
+                        </span>
+                      ) : (
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                          → không tạo được bản nháp (lỗi/dừng giữa chừng)
+                        </span>
+                      )}
                     </div>
-                  </details>
-                </li>
-              ))}
-            </ul>
+                    <ul className="space-y-2">
+                      {group.map((log) => (
+                        <li key={log.id} className="rounded border border-zinc-200 dark:border-zinc-800">
+                          <details>
+                            <summary className="cursor-pointer select-none p-2 text-sm">
+                              <span className="font-medium">
+                                {describeUsageLogOperation(log.operation, log.responseText)}
+                              </span>
+                              <span className="text-zinc-500">
+                                {" "}· {log.provider}/{log.model} · {log.inputTokens + log.outputTokens} tokens ·{" "}
+                                ${log.costUsd.toFixed(4)} · {log.latencyMs}ms ·{" "}
+                                {new Date(log.createdAt).toLocaleString("vi-VN")}
+                              </span>
+                            </summary>
+                            <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
+                              <div>
+                                <p className="mb-1 text-xs font-semibold text-zinc-500">Prompt đã gửi</p>
+                                <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
+                                  {log.promptText ?? "(không có — job tạo trước khi bật ghi log)"}
+                                </pre>
+                              </div>
+                              <div>
+                                <p className="mb-1 text-xs font-semibold text-zinc-500">Response nhận về</p>
+                                <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
+                                  {log.responseText ?? "(không có — job tạo trước khi bật ghi log)"}
+                                </pre>
+                              </div>
+                            </div>
+                          </details>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
