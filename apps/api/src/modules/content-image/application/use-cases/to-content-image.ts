@@ -2,7 +2,7 @@ import type { ContentImage } from "@zinoflow/contracts";
 import type { ContentImageRecord } from "../ports/content-image.repository";
 
 /** Resolve path tuong doi -> URL day du qua DICHOITHOI_CONTENT_IMAGE_BASE_URL */
-function resolveImageUrl(path: string): string {
+export function resolveImageUrl(path: string): string {
   const base = process.env.DICHOITHOI_CONTENT_IMAGE_BASE_URL ?? "";
   return base.replace(/\/+$/, "") + "/" + path.replace(/^\/+/, "");
 }

@@ -63,6 +63,7 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
     entity.contentTier = s.contentTier;
     entity.comparisonKey = s.comparisonKey;
     entity.originalityExcerpt = s.originalityExcerpt;
+    entity.coverImageId = s.coverImageId;
     entity.status = s.status;
     entity.aiProvider = s.aiProvider;
     entity.aiModel = s.aiModel;
@@ -85,6 +86,7 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
       contentTier: entity.contentTier,
       comparisonKey: entity.comparisonKey,
       originalityExcerpt: entity.originalityExcerpt,
+      coverImageId: entity.coverImageId,
       status: entity.status,
       aiProvider: entity.aiProvider,
       aiModel: entity.aiModel,

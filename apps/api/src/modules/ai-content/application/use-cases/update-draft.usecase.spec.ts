@@ -18,6 +18,7 @@ function makeJob(articleType: "guide-diem-den" | "cam-nang", status: "DraftReady
     contentTier: null,
     comparisonKey: null,
     originalityExcerpt: null,
+    coverImageId: null,
     aiProvider: "anthropic",
     aiModel: "manual",
   });

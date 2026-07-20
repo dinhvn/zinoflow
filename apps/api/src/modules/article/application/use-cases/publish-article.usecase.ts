@@ -17,6 +17,11 @@ import {
   ARTICLE_PUBLICATION_REPOSITORY,
   type ArticlePublicationRepository,
 } from "../ports/article-publication.repository";
+import {
+  CONTENT_IMAGE_REPOSITORY,
+  type ContentImageRepository,
+} from "../../../content-image/application/ports/content-image.repository";
+import { resolveImageUrl } from "../../../content-image/application/use-cases/to-content-image";
 
 const SHORT_DESCRIPTION_MAX = 500;
 
@@ -36,6 +41,7 @@ export class PublishArticleUseCase {
     @Inject(ARTICLE_SITE_DB) private readonly siteDb: ArticleSiteDb,
     @Inject(ARTICLE_PUBLICATION_REPOSITORY)
     private readonly publications: ArticlePublicationRepository,
+    @Inject(CONTENT_IMAGE_REPOSITORY) private readonly contentImages: ContentImageRepository,
     private readonly compiler: ArticleBlockCompiler,
     private readonly autoLink: ArticleAutoLinkService,
   ) {}
@@ -75,12 +81,18 @@ export class PublishArticleUseCase {
     const existing = await this.publications.findByJobId(jobId);
     const slug = existing?.slug ?? article.metadata.slugSuggestion;
 
+    // Anh dai dien (og:image/JSON-LD image) — chon tay tu Thu vien anh noi dung,
+    // null neu chua chon (sua lo hong SEO audit 07/2026: truoc day luon null).
+    const coverImageId = snapshot.coverImageId;
+    const coverImage = coverImageId ? await this.contentImages.findById(coverImageId) : null;
+    const thumbnail = coverImage ? resolveImageUrl(coverImage.path) : null;
+
     const { siteId } = await this.siteDb.upsertArticle({
       siteId: existing?.siteId ?? null,
       slug,
       title: article.title,
       shortDescription: article.intro.slice(0, SHORT_DESCRIPTION_MAX),
-      thumbnail: null,
+      thumbnail,
       contentHtml: linkedHtml,
       metaTitle: article.metadata.metaTitle,
       metaDescription: article.metadata.metaDescription,

@@ -351,6 +351,7 @@ export class ContentController {
       status: s.status,
       aiProvider: s.aiProvider,
       aiModel: s.aiModel,
+      coverImageId: s.coverImageId,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     };

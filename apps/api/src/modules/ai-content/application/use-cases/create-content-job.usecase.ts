@@ -59,6 +59,7 @@ export class CreateContentJobUseCase {
       contentTier: request.contentTier ?? null,
       comparisonKey: request.comparisonKey ?? null,
       originalityExcerpt: null,
+      coverImageId: null,
       aiProvider,
       aiModel:
         request.aiModel ??

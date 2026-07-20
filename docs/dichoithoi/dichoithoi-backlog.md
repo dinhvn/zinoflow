@@ -118,12 +118,42 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   tắc preview đã áp dụng cho Destination. Ngoài ra phát hiện `Tag`/
   `TagController` (API `/api/tags`) là code chết, 0 nơi gọi — ứng viên dọn
   dẹp sau này giống đợt xoá module Blog, chưa xử lý. (3) Audit SEO Article
-  (mục 4 trong plan): `Thumbnail` hardcode `null` lúc publish là lỗ hổng
-  gốc kéo theo `og:image`/JSON-LD `image` luôn rỗng; JSON-LD `Article`
-  thiếu `author`/`publisher` (dưới mức tối thiểu Google yêu cầu rich
-  result); breadcrumb thiếu hoàn toàn trên Article (khác mọi controller
-  khác); ảnh thân bài thiếu `width`/`height` (rủi ro CLS, bị sanitize-html
-  xoá dù nguồn có sẵn).
+  — ✅ **3/4 mục ĐÃ XONG (20/07/2026)**, mục còn lại cố ý để sau (quyết định
+  qua AskUserQuestion):
+  - ✅ **Thumbnail null lúc publish** — thêm field `coverImageId` (nullable)
+    trên `content_jobs` (migration `1782400000000-ArticleCoverImage`, chỉ
+    có nghĩa với `articleType=cam-nang`), CMS `content/[id]/page.tsx` có
+    panel "Ảnh đại diện (og:image)" chọn tay từ Thư viện ảnh nội dung có
+    sẵn (`SetArticleCoverImageUseCase`, `PUT /articles/:jobId/cover-image`
+    — không ép chọn, không chặn đăng bài). `PublishArticleUseCase` resolve
+    `coverImageId` → URL thật qua `resolveImageUrl` (tái dùng của module
+    content-image) ghi vào `v2.Article.Thumbnail` thay vì `null` cứng.
+  - ✅ **JSON-LD Article thiếu author/publisher** — site không có khái niệm
+    "tác giả cá nhân" (bài AI/biên tập nội bộ) nên dùng chính `Organization`
+    (brand "Đi chơi thôi") làm cả `author` lẫn `publisher`
+    (`SchemaUtil.CreateArticleJsonLD`, Google chấp nhận Organization làm
+    author, không bắt buộc phải là Person).
+  - ✅ **Breadcrumb thiếu hoàn toàn trên Article** — thêm
+    `BreadcrumbUtils.CreateArticleDetailBreadcrumb` (Trang chủ → Cẩm nang →
+    tên bài, theo đúng pattern `CreateDestinationDetailBreadcrumb`), wire
+    vào `ArticleController.Detail` (breadcrumb UI hiện + JSON-LD
+    `BreadcrumbList`).
+  - ⏸️ **Ảnh thân bài thiếu width/height — CỐ Ý ĐỂ SAU**. Khảo sát lại phát
+    hiện mô tả cũ SAI: ảnh chèn qua token `[[block:image]]` đã CÓ
+    width/height đúng từ trước (không phải bug) — sanitize-html không hề
+    xoá gì. Chỉ ảnh markdown tự do (`![alt](url)` gõ tay) thiếu, vì cú
+    pháp markdown không mang được kích thước, không phải do sanitize xoá.
+    Rủi ro CLS thấp + khó sửa triệt để (không biết trước kích thước ảnh
+    ngoài) — quyết định bỏ qua, ưu tiên việc khác có giá trị SEO rõ hơn.
+  - Verify: 27 suites/202 test jest sạch (module ai-content/article/
+    content-image), `tsc --noEmit` api+web sạch, `dotnet build` sạch,
+    migration chạy thật trên Postgres dev. Test thật end-to-end trên
+    `dichoithoi_dev`: tạo bài cẩm nang test → upload ảnh vào Thư viện ảnh →
+    chọn làm ảnh đại diện → duyệt → đăng → xác nhận `v2.Article.Thumbnail`
+    có URL thật (không null), trang `/cam-nang/{slug}` render đúng
+    breadcrumb (UI + JSON-LD `BreadcrumbList`), JSON-LD `Article` có
+    `image`/`author`/`publisher` đầy đủ qua HTML server-render thật. Đã
+    xoá sạch dữ liệu test (bài, ảnh, job) khỏi cả Postgres và SQL Server.
 - ✅ **Thư viện ảnh nội dung + token chèn ảnh — MỨC A ĐÃ BUILD + VERIFY XONG
   (17/07/2026)** — `dichoithoi-content-image-library-plan.md`. Bảng
   `content_images` (Postgres), token `[[block:image id=...]]` resolve

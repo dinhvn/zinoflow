@@ -59,6 +59,10 @@ export class ContentJobEntity {
   @Column({ name: "originality_excerpt", type: "text", nullable: true })
   originalityExcerpt!: string | null;
 
+  /** Anh dai dien (og:image/JSON-LD image) — CHI y nghia voi articleType cam-nang. */
+  @Column({ name: "cover_image_id", type: "uuid", nullable: true })
+  coverImageId!: string | null;
+
   @Index()
   @Column({ type: "varchar", length: 30 })
   status!: ContentJobStatus;

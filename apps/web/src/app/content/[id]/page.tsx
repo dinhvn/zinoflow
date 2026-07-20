@@ -10,6 +10,7 @@ import {
   destinationDetailSchema,
   draftArticleSchema,
   listAiProvidersResponseSchema,
+  listContentImagesResponseSchema,
   publishArticleResultSchema,
   publishDestinationResultSchema,
   refreshDynamicBlocksResultSchema,
@@ -215,6 +216,26 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   });
   const draft = draftQuery.data;
   const isDestination = job?.articleType === "guide-diem-den";
+  const isArticle = job?.articleType === "cam-nang";
+
+  // Anh dai dien (og:image/JSON-LD image) bai cam nang — SEO audit 07/2026,
+  // sua "Thumbnail luon null luc publish". Chon tu Thu vien anh noi dung co san.
+  const contentImagesQuery = useQuery({
+    queryKey: ["content-images-for-cover"],
+    queryFn: () => apiGet("/content-images", listContentImagesResponseSchema),
+    enabled: Boolean(isArticle),
+  });
+  const [coverImageId, setCoverImageId] = useState<string>("");
+  useEffect(() => {
+    if (isArticle) setCoverImageId(job?.coverImageId ?? "");
+  }, [isArticle, job?.coverImageId]);
+  const saveCoverImage = useMutation({
+    mutationFn: () =>
+      apiSend("PUT", `/articles/${id}/cover-image`, {
+        contentImageId: coverImageId || null,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content-job", id] }),
+  });
 
   // Dong bo editor moi khi load draft/version moi (khong ghi de khi dang go)
   useEffect(() => {
@@ -639,6 +660,49 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 >
                   {refreshBlocks.isPending ? "Đang làm mới..." : "Làm mới khối động"}
                 </Button>
+              )}
+            </div>
+          )}
+
+          {isArticle && (
+            <div className="mt-3 rounded border border-zinc-200 p-3 dark:border-zinc-800">
+              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                Ảnh đại diện (og:image)
+              </p>
+              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                Ảnh hiện khi chia sẻ bài lên mạng xã hội và trong kết quả tìm kiếm — chọn từ Thư
+                viện ảnh nội dung. Chưa chọn thì để trống (không chặn đăng bài).
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Select
+                  value={coverImageId}
+                  onChange={(e) => setCoverImageId(e.target.value)}
+                  className="min-w-64"
+                >
+                  <option value="">— Không có ảnh đại diện —</option>
+                  {(contentImagesQuery.data?.images ?? []).map((img) => (
+                    <option key={img.id} value={img.id}>
+                      {img.altText}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={saveCoverImage.isPending}
+                  disabled={coverImageId === (job?.coverImageId ?? "")}
+                  onClick={() => saveCoverImage.mutate()}
+                >
+                  {saveCoverImage.isPending ? "Đang lưu..." : "Lưu ảnh đại diện"}
+                </Button>
+              </div>
+              {coverImageId && contentImagesQuery.data && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={contentImagesQuery.data.images.find((img) => img.id === coverImageId)?.imageUrl}
+                  alt=""
+                  className="mt-2 h-24 w-40 rounded object-cover"
+                />
               )}
             </div>
           )}

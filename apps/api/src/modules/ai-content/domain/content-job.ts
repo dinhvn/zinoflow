@@ -24,6 +24,8 @@ export interface ContentJobProps {
   comparisonKey: string | null;
   /** Doan van trich xuat de lam corpus so sanh cho job KHAC — ghi luc Approved. */
   originalityExcerpt: string | null;
+  /** Anh dai dien (og:image/JSON-LD image) — CHI y nghia voi articleType cam-nang. */
+  coverImageId: string | null;
   status: ContentJobStatus;
   aiProvider: AiProviderKey;
   aiModel: string;
@@ -90,6 +92,18 @@ export class ContentJob {
   /** Ghi doan trich xuat gate "originality" — goi luc Approve (review-draft.usecase.ts). */
   setOriginalityExcerpt(excerpt: string): void {
     this.props.originalityExcerpt = excerpt;
+    this.props.updatedAt = new Date();
+  }
+
+  /**
+   * Chon/doi anh dai dien tu Thu vien anh noi dung — chi ap dung bai cam-nang
+   * (article-spec SEO audit 07/2026, sua "Thumbnail luon null" luc publish).
+   */
+  setCoverImage(contentImageId: string | null): void {
+    if (this.props.articleType !== "cam-nang") {
+      throw new DomainRuleError("Chỉ bài cẩm nang mới có ảnh đại diện chọn tay ở đây");
+    }
+    this.props.coverImageId = contentImageId;
     this.props.updatedAt = new Date();
   }
 

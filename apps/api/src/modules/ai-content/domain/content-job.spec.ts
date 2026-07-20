@@ -16,6 +16,7 @@ function makeJob(status: ContentJobStatus): ContentJob {
     contentTier: null,
     comparisonKey: null,
     originalityExcerpt: null,
+    coverImageId: null,
     status,
     aiProvider: "anthropic",
     aiModel: "claude-opus-4-8",

@@ -98,10 +98,18 @@ export const contentJobSchema = z.object({
   status: contentJobStatusSchema,
   aiProvider: aiProviderKeySchema,
   aiModel: z.string(),
+  /** Anh dai dien (og:image/JSON-LD image) — CHI y nghia voi articleType cam-nang, chon tay tu Thu vien anh. */
+  coverImageId: z.string().uuid().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 export type ContentJob = z.infer<typeof contentJobSchema>;
+
+/** Chon/doi anh dai dien cho bai cam-nang tu Thu vien anh noi dung (article-spec SEO audit 07/2026). */
+export const setArticleCoverImageRequestSchema = z.object({
+  contentImageId: z.string().uuid().nullable(),
+});
+export type SetArticleCoverImageRequest = z.infer<typeof setArticleCoverImageRequestSchema>;
 
 export const createContentJobResponseSchema = z.object({
   jobId: z.string().uuid(),
