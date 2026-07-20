@@ -25,6 +25,7 @@ export class TypeOrmQualityResultRepository implements QualityResultRepository {
         entity.gateName = check.gateName;
         entity.passed = check.passed;
         entity.details = [...check.details];
+        entity.severity = check.severity;
         entity.createdAt = now;
         return entity;
       });
@@ -38,6 +39,7 @@ export class TypeOrmQualityResultRepository implements QualityResultRepository {
       gateName: e.gateName as QualityGateName,
       passed: e.passed,
       details: e.details,
+      severity: e.severity,
     }));
   }
 }

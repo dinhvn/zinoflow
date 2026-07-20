@@ -20,6 +20,10 @@ export interface ContentJobProps {
   sourceContext: string | null;
   /** flagship | standard | null — chi y nghia voi articleType guide-diem-den (Phase 28.3) */
   contentTier: "flagship" | "standard" | null;
+  /** Gate "originality" (07/2026) — pham vi so sanh (vd ma tinh), null = gate tu bo qua. */
+  comparisonKey: string | null;
+  /** Doan van trich xuat de lam corpus so sanh cho job KHAC — ghi luc Approved. */
+  originalityExcerpt: string | null;
   status: ContentJobStatus;
   aiProvider: AiProviderKey;
   aiModel: string;
@@ -80,6 +84,12 @@ export class ContentJob {
     if (input.toneProfile !== undefined) this.props.toneProfile = input.toneProfile;
     if (input.aiProvider !== undefined) this.props.aiProvider = input.aiProvider;
     if (input.aiModel !== undefined) this.props.aiModel = input.aiModel;
+    this.props.updatedAt = new Date();
+  }
+
+  /** Ghi doan trich xuat gate "originality" — goi luc Approve (review-draft.usecase.ts). */
+  setOriginalityExcerpt(excerpt: string): void {
+    this.props.originalityExcerpt = excerpt;
     this.props.updatedAt = new Date();
   }
 

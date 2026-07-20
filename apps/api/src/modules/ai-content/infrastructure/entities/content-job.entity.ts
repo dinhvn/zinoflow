@@ -47,6 +47,18 @@ export class ContentJobEntity {
   @Column({ name: "content_tier", type: "varchar", length: 16, nullable: true })
   contentTier!: "flagship" | "standard" | null;
 
+  /**
+   * Gate "originality" (07/2026) — slug tinh, copy 1 lan luc tao job, CHI set
+   * khi articleType=guide-diem-den. Dung lam pham vi so sanh (chi so voi bai
+   * cung tinh, tranh false-positive giua cac tinh khac nhau).
+   */
+  @Column({ name: "comparison_key", type: "varchar", length: 255, nullable: true })
+  comparisonKey!: string | null;
+
+  /** Doan van trich xuat (mo bai + section rui ro) — ghi luc job Approved, dung lam corpus so sanh cho job sau. */
+  @Column({ name: "originality_excerpt", type: "text", nullable: true })
+  originalityExcerpt!: string | null;
+
   @Index()
   @Column({ type: "varchar", length: 30 })
   status!: ContentJobStatus;

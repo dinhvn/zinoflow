@@ -14,6 +14,8 @@ function makeJob(status: ContentJobStatus): ContentJob {
     toneProfile: null,
     sourceContext: null,
     contentTier: null,
+    comparisonKey: null,
+    originalityExcerpt: null,
     status,
     aiProvider: "anthropic",
     aiModel: "claude-opus-4-8",

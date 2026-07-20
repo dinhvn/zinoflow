@@ -16,6 +16,8 @@ function fakeJob(overrides: Partial<ContentJobProps>): ContentJob {
     toneProfile: null,
     sourceContext: null,
     contentTier: null,
+    comparisonKey: null,
+    originalityExcerpt: null,
     status: "Created",
     aiProvider: "gemini",
     aiModel: "gemini-2.5-flash",

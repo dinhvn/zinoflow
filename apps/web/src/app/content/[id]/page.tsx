@@ -129,6 +129,7 @@ const GATE_LABELS: Record<string, string> = {
   seo: "SEO",
   policy: "Chính sách nội dung",
   data: "Dữ liệu sản phẩm",
+  originality: "Trùng lặp nội dung (cảnh báo)",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -711,7 +712,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       {hasDraft && draft && (
         <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-medium">Kiểm tra chất lượng (4 gates)</h3>
+            <h3 className="font-medium">Kiểm tra chất lượng</h3>
             <button
               onClick={() => runChecks.mutate()}
               disabled={runChecks.isPending}
@@ -723,27 +724,36 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           {checks.length === 0 ? (
             <p className="text-sm text-zinc-500">
               Chưa chạy kiểm tra cho version này. Bấm &quot;Chạy kiểm tra&quot; — bài chỉ duyệt được
-              khi cả 4 gate đạt.
+              khi các gate bắt buộc đạt (⚠️ chỉ là cảnh báo, không chặn duyệt).
             </p>
           ) : (
             <ul className="space-y-2 text-sm">
-              {checks.map((check) => (
-                <li key={check.gateName} className="flex gap-2">
-                  <span>{check.passed ? "✅" : "❌"}</span>
-                  <div>
-                    <span className="font-medium">
-                      {GATE_LABELS[check.gateName] ?? check.gateName}
-                    </span>
-                    {check.details.length > 0 && (
-                      <ul className="mt-1 list-inside list-disc text-red-600 dark:text-red-400">
-                        {check.details.map((d, i) => (
-                          <li key={i}>{d}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </li>
-              ))}
+              {checks.map((check) => {
+                const isWarning = !check.passed && check.severity === "warning";
+                return (
+                  <li key={check.gateName} className="flex gap-2">
+                    <span>{check.passed ? "✅" : isWarning ? "⚠️" : "❌"}</span>
+                    <div>
+                      <span className="font-medium">
+                        {GATE_LABELS[check.gateName] ?? check.gateName}
+                      </span>
+                      {check.details.length > 0 && (
+                        <ul
+                          className={`mt-1 list-inside list-disc ${
+                            isWarning
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-red-600 dark:text-red-400"
+                          }`}
+                        >
+                          {check.details.map((d, i) => (
+                            <li key={i}>{d}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

@@ -41,6 +41,8 @@ export class CreateManualDraftUseCase {
       toneProfile: null,
       sourceContext: request.sourceContext ?? null,
       contentTier: null,
+      comparisonKey: null,
+      originalityExcerpt: null,
       aiProvider: CreateManualDraftUseCase.INERT_PROVIDER,
       aiModel: CreateManualDraftUseCase.INERT_MODEL,
     });

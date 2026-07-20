@@ -21,6 +21,10 @@ export class ContentQualityResultEntity {
   @Column({ type: "jsonb", default: () => "'[]'" })
   details!: string[];
 
+  /** error = chan Approve, warning = chi hien canh bao (gate "originality", 07/2026). */
+  @Column({ type: "varchar", length: 10, default: "error" })
+  severity!: "error" | "warning";
+
   @Column({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 }

@@ -1,7 +1,10 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import type { ReviewDraftRequest } from "@zinoflow/contracts";
+import type { DestinationArticle, ReviewDraftRequest } from "@zinoflow/contracts";
 import { evaluateGatesForArticle } from "../../domain/quality-gates/gate-dispatcher";
+import { extractOriginalityExcerpt } from "../../domain/quality-gates/originality-excerpt";
+import type { SimilarDestinationExcerpt } from "../../domain/quality-gates/originality-gate";
+import { ContentJob } from "../../domain/content-job";
 import {
   CONTENT_DRAFT_REPOSITORY,
   type ContentDraftRepository,
@@ -18,6 +21,10 @@ import {
   REVIEW_RECORD_REPOSITORY,
   type ReviewRecordRepository,
 } from "../ports/review-record.repository";
+import {
+  ORIGINALITY_CORPUS_REPOSITORY,
+  type OriginalityCorpusRepository,
+} from "../ports/originality-corpus.repository";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 
 /**
@@ -38,6 +45,8 @@ export class ReviewDraftUseCase {
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobs: ContentJobRepository,
     @Inject(QUALITY_RESULT_REPOSITORY) private readonly results: QualityResultRepository,
     @Inject(REVIEW_RECORD_REPOSITORY) private readonly reviews: ReviewRecordRepository,
+    @Inject(ORIGINALITY_CORPUS_REPOSITORY)
+    private readonly originalityCorpus: OriginalityCorpusRepository,
   ) {}
 
   async execute(draftId: string, request: ReviewDraftRequest): Promise<{ newStatus: string }> {
@@ -57,7 +66,7 @@ export class ReviewDraftUseCase {
 
     switch (request.action) {
       case "Approve": {
-        await this.assertAllGatesPass(draft.id);
+        await this.assertAllGatesPass(draft.id, job);
         job.transitionTo("Approved");
         break;
       }
@@ -88,19 +97,40 @@ export class ReviewDraftUseCase {
     return { newStatus: job.status };
   }
 
-  /** Approve bi block den khi ca 4 gate pass — spec §9. */
-  private async assertAllGatesPass(draftId: string): Promise<void> {
+  /**
+   * Approve bi block den khi ca 4 gate error pass — spec §9. Gate "originality"
+   * (severity=warning) KHONG chan (allPassed tu evaluateGatesForArticle da bo
+   * qua no) — chi hien canh bao cho nguoi duyet tu quyet dinh (07/2026).
+   * Nhan `job` (instance dang dung o execute(), CHUA save) de ghi thang
+   * originalityExcerpt vao cung instance nay — save() o execute() se persist
+   * luon, khong can fetch/save rieng.
+   */
+  private async assertAllGatesPass(draftId: string, job: ContentJob): Promise<void> {
     const draft = await this.drafts.findById(draftId);
     if (!draft?.article || !draft.draftMarkdown) {
       throw new DomainRuleError("Draft chưa có nội dung để duyệt");
     }
-    const job = await this.jobs.findById(draft.jobId);
+    const snapshot = job.toSnapshot();
+
+    let originalitySimilarTo: SimilarDestinationExcerpt[] | undefined;
+    let excerpt: string | undefined;
+    if (snapshot.articleType === "guide-diem-den" && snapshot.comparisonKey) {
+      excerpt = extractOriginalityExcerpt(draft.article as DestinationArticle);
+      originalitySimilarTo = await this.originalityCorpus.findSimilar({
+        excerpt,
+        comparisonKey: snapshot.comparisonKey,
+        articleType: snapshot.articleType,
+        excludeJobId: snapshot.id,
+      });
+    }
+
     const { checks, allPassed } = evaluateGatesForArticle({
-      articleType: job ? job.toSnapshot().articleType : "toplist",
+      articleType: snapshot.articleType,
       article: draft.article,
       draftMarkdown: draft.draftMarkdown,
-      keywordSeed: job ? job.toSnapshot().keywordSeed : [],
-      contentTier: job?.toSnapshot().contentTier,
+      keywordSeed: snapshot.keywordSeed,
+      contentTier: snapshot.contentTier,
+      originalitySimilarTo,
     });
     await this.results.replaceForDraft(draftId, checks);
 
@@ -112,6 +142,10 @@ export class ReviewDraftUseCase {
         "Không thể duyệt: còn quality gate chưa đạt — sửa nội dung rồi thử lại",
         failures,
       );
+    }
+
+    if (excerpt !== undefined) {
+      job.setOriginalityExcerpt(excerpt);
     }
   }
 }

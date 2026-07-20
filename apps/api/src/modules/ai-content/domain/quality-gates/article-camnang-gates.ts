@@ -52,7 +52,7 @@ export function evaluateArticleCamNangStructureGate(input: ArticleCamNangGateInp
     details.push(`Khối động "${token.raw}" cần có tiêu đề H2/H3 giới thiệu ngay phía trên`);
   }
 
-  return { gateName: "structure", passed: details.length === 0, details };
+  return { gateName: "structure", passed: details.length === 0, details, severity: "error" };
 }
 
 /** SEO gate (§6.3): keyword trong title/intro, meta day du, slug hop le. */
@@ -74,7 +74,7 @@ export function evaluateArticleCamNangSeoGate(input: ArticleCamNangGateInput): Q
     details.push(`Meta description vượt ${ARTICLE_FIELD_LIMITS.metaDescription} ký tự`);
   }
 
-  return { gateName: "seo", passed: details.length === 0, details };
+  return { gateName: "seo", passed: details.length === 0, details, severity: "error" };
 }
 
 /** Chay ca 2 gate cam nang — Approve chi khi allPassed. */

@@ -59,6 +59,12 @@ export const createContentJobRequestSchema = z.object({
    * ContentTier=flagship. Null/undefined voi moi loai bai khac.
    */
   contentTier: destinationContentTierSchema.nullable().optional(),
+  /**
+   * Gate "originality" (07/2026) — pham vi so sanh trung lap (vd slug/ma tinh
+   * cua diem den). CHI co y nghia voi articleType guide-diem-den, null/undefined
+   * voi moi loai bai khac (gate se tu bo qua khi khong co comparisonKey).
+   */
+  comparisonKey: z.string().nullable().optional(),
   /** Optional — default theo SiteProfile neu khong truyen. */
   aiProvider: aiProviderKeySchema.optional(),
   aiModel: z.string().optional(),

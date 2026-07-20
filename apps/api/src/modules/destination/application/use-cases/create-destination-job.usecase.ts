@@ -102,6 +102,9 @@ export class CreateDestinationJobUseCase {
       keywordSeed: [destination.name],
       sourceContext,
       contentTier: destination.contentTier,
+      // Gate "originality" (07/2026) — chi so trung lap voi bai KHAC cung tinh,
+      // null (chua gan tinh) = gate tu bo qua khi khong co comparisonKey.
+      comparisonKey: destination.provinceCode,
       aiProvider: request.aiProvider
         ? aiProviderKeySchema.parse(request.aiProvider)
         : undefined,

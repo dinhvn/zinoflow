@@ -52,7 +52,7 @@ const MISSING_DATA_MARKERS = ["cần kiểm tra", "không áp dụng", "miễn p
  * khoi "cau chuyen/y nghia van hoa - lich su" (content-seo-ux-plan §5.6, don bay
  * E-E-A-T that su, khong chi nhoi tu khoa kho khan gio mo cua/gia ve).
  */
-const CULTURAL_STORY_HEADING_KEYWORDS: readonly string[] = [
+export const CULTURAL_STORY_HEADING_KEYWORDS: readonly string[] = [
   "văn hoá",
   "văn hóa",
   "lịch sử",
@@ -66,7 +66,7 @@ const CULTURAL_STORY_HEADING_KEYWORDS: readonly string[] = [
  * bang yeu cau "mua/thoi diem dep nhat" — cau hoi search intent hang dau voi
  * diem den lon, khung 1 diem tham quan don le khong hop (Phase 28.3).
  */
-const SEASON_HEADING_KEYWORDS: readonly string[] = ["mùa", "thời điểm"];
+export const SEASON_HEADING_KEYWORDS: readonly string[] = ["mùa", "thời điểm"];
 
 /**
  * Structure gate (§6.1): 1 H1, >=3 section du noi dung, FAQ >=3,
@@ -151,7 +151,7 @@ export function evaluateDestinationStructureGate(input: DestinationGateInput): Q
   // Bai da co blockKey nhung khong phai flagship: khong con bat buoc rieng
   // "van hoa-lich su" vi khung 6 khoi co dinh da bao phu du (tong-quan/mua-nao/...).
 
-  return { gateName: "structure", passed: details.length === 0, details };
+  return { gateName: "structure", passed: details.length === 0, details, severity: "error" };
 }
 
 /** Section co thuoc khoi dang danh sach co cau truc (an-gi/qua-mang-ve) va co gan items khong. */
@@ -205,7 +205,7 @@ export function evaluateDestinationSeoGate(input: DestinationGateInput): Quality
     details.push(`Mô tả ngắn vượt ${DESTINATION_FIELD_LIMITS.description} ký tự`);
   }
 
-  return { gateName: "seo", passed: details.length === 0, details };
+  return { gateName: "seo", passed: details.length === 0, details, severity: "error" };
 }
 
 /**
@@ -237,7 +237,7 @@ export function evaluateDestinationPolicyGate(input: DestinationGateInput): Qual
     }
   }
 
-  return { gateName: "policy", passed: details.length === 0, details };
+  return { gateName: "policy", passed: details.length === 0, details, severity: "error" };
 }
 
 /**
@@ -278,7 +278,7 @@ export function evaluateDestinationDataGate(input: DestinationGateInput): Qualit
     );
   }
 
-  return { gateName: "data", passed: details.length === 0, details };
+  return { gateName: "data", passed: details.length === 0, details, severity: "error" };
 }
 
 /** Chay ca 4 gate travel theo thu tu co dinh — Approve chi khi allPassed. */

@@ -226,6 +226,7 @@ const GATE_LABELS: Record<string, string> = {
   seo: "SEO",
   policy: "Chính sách nội dung",
   data: "Dữ liệu thực tế",
+  originality: "Trùng lặp nội dung (cảnh báo)",
 };
 
 /**
@@ -835,28 +836,48 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           ) : qualityChecks.length === 0 ? (
             <p className="text-zinc-400">Chưa chạy kiểm tra.</p>
           ) : (
-            qualityChecks.map((check) => (
-              <div key={check.gateName} className="flex items-start justify-between gap-3">
-                <span>{GATE_LABELS[check.gateName] ?? check.gateName}</span>
-                {check.passed ? (
-                  <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                    Đạt
-                  </span>
-                ) : (
-                  <span
-                    className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
-                    title={check.details.join("; ")}
-                  >
-                    Chưa đạt ({check.details.length})
-                  </span>
-                )}
-              </div>
-            ))
+            qualityChecks.map((check) => {
+              const isWarning = !check.passed && check.severity === "warning";
+              return (
+                <div key={check.gateName} className="flex items-start justify-between gap-3">
+                  <span>{GATE_LABELS[check.gateName] ?? check.gateName}</span>
+                  {check.passed ? (
+                    <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                      Đạt
+                    </span>
+                  ) : isWarning ? (
+                    <span
+                      className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                      title={check.details.join("; ")}
+                    >
+                      ⚠️ Cảnh báo ({check.details.length})
+                    </span>
+                  ) : (
+                    <span
+                      className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
+                      title={check.details.join("; ")}
+                    >
+                      Chưa đạt ({check.details.length})
+                    </span>
+                  )}
+                </div>
+              );
+            })
           )}
-          {qualityChecks.some((c) => !c.passed) && (
+          {qualityChecks.some((c) => !c.passed && c.severity !== "warning") && (
             <ul className="mt-2 list-inside list-disc rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
               {qualityChecks
-                .filter((c) => !c.passed)
+                .filter((c) => !c.passed && c.severity !== "warning")
+                .flatMap((c) => c.details)
+                .map((detail, i) => (
+                  <li key={i}>{detail}</li>
+                ))}
+            </ul>
+          )}
+          {qualityChecks.some((c) => !c.passed && c.severity === "warning") && (
+            <ul className="mt-2 list-inside list-disc rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+              {qualityChecks
+                .filter((c) => !c.passed && c.severity === "warning")
                 .flatMap((c) => c.details)
                 .map((detail, i) => (
                   <li key={i}>{detail}</li>

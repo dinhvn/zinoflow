@@ -56,6 +56,8 @@ import { ContentGenerationCheckpointEntity } from "./infrastructure/entities/con
 import { AiProviderSettingEntity } from "./infrastructure/entities/ai-provider-setting.entity";
 import { AI_PROVIDER_SETTINGS } from "./application/ports/ai-provider-settings.port";
 import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm-ai-provider-settings";
+import { ORIGINALITY_CORPUS_REPOSITORY } from "./application/ports/originality-corpus.repository";
+import { TypeOrmOriginalityCorpusRepository } from "./infrastructure/repositories/typeorm-originality-corpus.repository";
 
 @Module({
   imports: [
@@ -111,6 +113,7 @@ import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm
     { provide: PROMPT_TEMPLATE_REPOSITORY, useClass: TypeOrmPromptTemplateRepository },
     { provide: QUALITY_RESULT_REPOSITORY, useClass: TypeOrmQualityResultRepository },
     { provide: REVIEW_RECORD_REPOSITORY, useClass: TypeOrmReviewRecordRepository },
+    { provide: ORIGINALITY_CORPUS_REPOSITORY, useClass: TypeOrmOriginalityCorpusRepository },
     {
       provide: PRODUCT_CATALOG,
       // CMS_BASE_URL co gia tri -> goi CMS that; chua co -> mock (du lieu mau theo site)

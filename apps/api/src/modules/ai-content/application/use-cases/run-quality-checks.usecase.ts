@@ -1,6 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { RunQualityChecksResponse } from "@zinoflow/contracts";
+import type { DestinationArticle, RunQualityChecksResponse } from "@zinoflow/contracts";
 import { evaluateGatesForArticle } from "../../domain/quality-gates/gate-dispatcher";
+import { extractOriginalityExcerpt } from "../../domain/quality-gates/originality-excerpt";
+import type { SimilarDestinationExcerpt } from "../../domain/quality-gates/originality-gate";
 import {
   CONTENT_DRAFT_REPOSITORY,
   type ContentDraftRepository,
@@ -13,6 +15,10 @@ import {
   QUALITY_RESULT_REPOSITORY,
   type QualityResultRepository,
 } from "../ports/quality-result.repository";
+import {
+  ORIGINALITY_CORPUS_REPOSITORY,
+  type OriginalityCorpusRepository,
+} from "../ports/originality-corpus.repository";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 
 /**
@@ -25,6 +31,8 @@ export class RunQualityChecksUseCase {
     @Inject(CONTENT_DRAFT_REPOSITORY) private readonly drafts: ContentDraftRepository,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobs: ContentJobRepository,
     @Inject(QUALITY_RESULT_REPOSITORY) private readonly results: QualityResultRepository,
+    @Inject(ORIGINALITY_CORPUS_REPOSITORY)
+    private readonly originalityCorpus: OriginalityCorpusRepository,
   ) {}
 
   async execute(draftId: string): Promise<RunQualityChecksResponse> {
@@ -39,14 +47,26 @@ export class RunQualityChecksUseCase {
     }
 
     const job = await this.jobs.findById(draft.jobId);
-    const keywordSeed = job ? job.toSnapshot().keywordSeed : [];
+    const snapshot = job?.toSnapshot();
+    const keywordSeed = snapshot ? snapshot.keywordSeed : [];
+
+    let originalitySimilarTo: SimilarDestinationExcerpt[] | undefined;
+    if (snapshot?.articleType === "guide-diem-den" && snapshot.comparisonKey) {
+      originalitySimilarTo = await this.originalityCorpus.findSimilar({
+        excerpt: extractOriginalityExcerpt(draft.article as DestinationArticle),
+        comparisonKey: snapshot.comparisonKey,
+        articleType: snapshot.articleType,
+        excludeJobId: snapshot.id,
+      });
+    }
 
     const { checks, allPassed } = evaluateGatesForArticle({
-      articleType: job ? job.toSnapshot().articleType : "toplist",
+      articleType: snapshot ? snapshot.articleType : "toplist",
       article: draft.article,
       draftMarkdown: draft.draftMarkdown,
       keywordSeed,
-      contentTier: job?.toSnapshot().contentTier,
+      contentTier: snapshot?.contentTier,
+      originalitySimilarTo,
     });
     await this.results.replaceForDraft(draft.id, checks);
 

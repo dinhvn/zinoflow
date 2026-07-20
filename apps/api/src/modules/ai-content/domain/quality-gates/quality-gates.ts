@@ -55,7 +55,7 @@ export function evaluateStructureGate(input: QualityGateInput): QualityCheck {
     }
   }
 
-  return { gateName: "structure", passed: details.length === 0, details };
+  return { gateName: "structure", passed: details.length === 0, details, severity: "error" };
 }
 
 /** SEO gate: keyword trong H1 + intro, meta day du, >=2 internal links — spec §17.5.2. */
@@ -93,7 +93,7 @@ export function evaluateSeoGate(input: QualityGateInput): QualityCheck {
     );
   }
 
-  return { gateName: "seo", passed: details.length === 0, details };
+  return { gateName: "seo", passed: details.length === 0, details, severity: "error" };
 }
 
 /** Policy gate: co affiliate disclosure, khong co claim qua da — spec §17.5.3. */
@@ -113,7 +113,7 @@ export function evaluatePolicyGate(input: QualityGateInput): QualityCheck {
     }
   }
 
-  return { gateName: "policy", passed: details.length === 0, details };
+  return { gateName: "policy", passed: details.length === 0, details, severity: "error" };
 }
 
 /** Data gate: product URL hop le (khong placeholder), khong block rong — spec §17.5.4. */
@@ -146,7 +146,7 @@ export function evaluateDataGate(input: QualityGateInput): QualityCheck {
     details.push("Thiếu nội dung kết luận (final CTA)");
   }
 
-  return { gateName: "data", passed: details.length === 0, details };
+  return { gateName: "data", passed: details.length === 0, details, severity: "error" };
 }
 
 /** Chay ca 4 gate theo thu tu co dinh. Approve chi duoc phep khi allPassed. */
