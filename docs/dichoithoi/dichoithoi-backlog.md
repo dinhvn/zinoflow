@@ -238,6 +238,32 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   có `itemprop="image"`, các slide/ảnh khác trong carousel/collage/lightbox
   chưa gắn).
 
+  ✅ **#2 và #3 ĐÃ XONG (20/07/2026, repo dichoithoi commit `ff384d5`)** —
+  thuần `Detail.cshtml`, không đổi zinoflow/schema. `itemprop="image"` giờ
+  gắn đủ cho MỌI ảnh gallery (carousel mobile, collage desktop, dải "Hình
+  ảnh {tên}"), không chỉ hero — verify qua HTML server-render thật
+  (`dalat-fairytale-land`): 10 thẻ `itemprop="image"` (trước chỉ 2). Slide
+  gallery trong carousel mobile (khác hero, vốn đã có) giờ hiện caption
+  overlay inline giống style collage desktop, không cần mở lightbox — verify
+  3 caption thật hiện đúng ("Trang trí halloween", "Cổng vào Fairy land",
+  "Đêm ở Fairy land").
+
+  ✅ **#1/#4/#5 ĐÃ XONG (20/07/2026)** — quyết định qua AskUserQuestion: #1 tự
+  gợi ý placeholder alt lúc upload (`"{tên điểm đến} - ảnh {số thứ tự}"`,
+  không còn để `null`) + cảnh báo mềm (không chặn) trước khi bấm "Lưu thư viện
+  ảnh" nếu còn alt trống/trùng nhau; #4 tên file slug hoá từ chính alt gợi ý
+  (tái dùng `slugifyVietnamese()` có sẵn, không viết slugify mới); #5
+  `AddDestinationGalleryImageUseCase` đổi từ `toWebp()` 1 size sang
+  `toWebpVariants()` 3 size (hero/medium/thumb, giống ảnh đại diện) — `path`
+  lưu DB đổi thành BASE NAME không đuôi file, website (`GalleryItemModel.cs`)
+  dùng đuôi `.webp` có/không trong `path` làm cờ phân biệt ảnh CŨ (1 file, y
+  nguyên hành vi) / ảnh MỚI (3 size, render `srcset`) — **không cần backfill
+  dữ liệu cũ**. Verify qua API + DB thật (`dalat-fairytale-land`): upload ảnh
+  test → alt tự động "Dalat Fairytale Land - ảnh 4", 3 file
+  `-hero/-medium/-thumb.webp` sinh đúng, HTML render đủ `srcset` 3 size cho
+  ảnh mới, 3 ảnh cũ giữ nguyên `<img>` đơn không đổi. Đã xoá ảnh test + phục
+  hồi đúng dữ liệu 3 ảnh cũ sau khi verify.
+
   **ĐÃ XONG 19/07/2026**: ảnh hero chính (`detail.HeroImage`, "Ảnh đại diện")
   giờ có field mô tả riêng `heroImageMeta` (altText/caption/credit, cùng cấu
   trúc 1 phần tử "Thư viện ảnh" nhưng không có `path`) — chọn hướng (a) thay
@@ -259,18 +285,38 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   ngữ nghĩa), chỉ nên làm nếu sau này có bài dài nhiều ảnh minh hoạ thực sự
   cần phóng to.
 
-- **Gate "originality" (thứ 5) cho quality gates AI content** (`dichoithoi-
-  seo-principles.md` §3.3/§3.4, phân tích 07/2026 — xác minh trực tiếp tài
-  liệu Google `using-gen-ai-content`/`spam-policies`/`creating-helpful-
-  content`): 4 gate hiện có (structure/SEO/policy/data,
-  `destination-gates.ts`) đã đúng hướng chống "scaled content abuse" nhưng
-  CHƯA có gate kiểm tra trùng lặp NỘI BỘ (nhiều bài cùng khung dễ lặp công
-  thức, nhất là đoạn "câu chuyện văn hoá", "lưu ý thực tế", giới thiệu trang
-  cluster/tỉnh). Đề xuất: so sánh similarity với bài đã publish cùng loại/
-  tỉnh, chặn publish nếu vượt ngưỡng — CHƯA code, cần chọn phương pháp đo
-  similarity (full-text search đơn giản hay embedding) trước khi build.
-  Đồng thời chốt: KHÔNG dùng AI-detector (GPTZero/Originality.ai) làm tiêu
-  chuẩn pass/fail — không phải cơ chế Google dùng, chỉ tham khảo phụ.
+- ✅ **Gate "originality" (thứ 5) cho quality gates AI content — ĐÃ XONG
+  (20/07/2026)** (`dichoithoi-seo-principles.md` §3.3/§3.4). Quyết định qua
+  AskUserQuestion: dùng so khớp văn bản thuần Postgres `pg_trgm`
+  `similarity()` (không embedding — tránh phải thêm provider/DB extension
+  mới chỉ cho 1 gate), và **chỉ cảnh báo, KHÔNG chặn Approve** (severity
+  `warning`, lần đầu có khái niệm severity khác 4 gate error cũ — thêm field
+  `severity` vào `QualityCheck` contract, `assertAllGatesPass` chỉ throw khi
+  còn check `severity=error` fail).
+  - So sánh phần TRÍCH XUẤT rủi ro thật (mở bài + section "câu chuyện văn
+    hoá"/"mùa-thời điểm"), không so nguyên `draftMarkdown` (tránh false-
+    positive từ bảng giá/giờ mở cửa vốn giống nhau tự nhiên) —
+    `originality-excerpt.ts` (domain, pure function, tái dùng keyword-list
+    có sẵn của structure gate).
+  - Phạm vi so sánh = cùng tỉnh (`content_jobs.comparison_key` = mã tỉnh,
+    copy 1 lần lúc tạo job, cùng pattern `content_tier` Phase 28.3) + cùng
+    `articleType`, chỉ so với job khác đã `Approved`
+    (`originality_excerpt` ghi lúc Approve, migration
+    `1782250000000-ContentJobOriginality` thêm `pg_trgm` extension + 2 cột
+    `content_jobs` + cột `severity` cho `content_quality_results`).
+  - Port `IOriginalityCorpusRepository` (module `ai-content`, KHÔNG reach
+    sang module `destination` — giữ ranh giới clean architecture, dữ liệu so
+    sánh nằm sẵn trong `content_drafts`/`content_jobs`).
+  - UI (`content/[id]/page.tsx`, `dichoithoi/[slug]/page.tsx`): gate fail do
+    severity=warning hiện ⚠️ vàng riêng biệt với ❌ đỏ (error), không chặn nút
+    Approve.
+  - Verify: 64 suites/400 test jest sạch (thêm `originality-excerpt.spec.ts`,
+    `originality-gate.spec.ts`, `review-draft.usecase.spec.ts` mới — case
+    warning không chặn/error vẫn chặn), `tsc --noEmit` api+web sạch, migration
+    chạy thật trên Postgres dev.
+  - Đồng thời chốt (giữ nguyên từ phân tích gốc): KHÔNG dùng AI-detector
+    (GPTZero/Originality.ai) làm tiêu chuẩn pass/fail — không phải cơ chế
+    Google dùng, chỉ tham khảo phụ.
 
 - **Sim du lịch — gợi ý/gắn link sản phẩm liên quan** (repo `dichoithoi`, ghi
   nhận 07/2026, CHƯA phân tích): mục đích gợi ý và gắn link sản phẩm liên quan

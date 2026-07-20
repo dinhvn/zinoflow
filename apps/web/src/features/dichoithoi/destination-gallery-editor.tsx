@@ -72,6 +72,32 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
     onError: (e) => setError(e instanceof Error ? e.message : "Upload ảnh thất bại"),
   });
 
+  /**
+   * Canh bao mem truoc khi luu (SEO ảnh gallery #1, 20/07/2026) — KHONG chan
+   * cung, chi hoi lai khi con anh thieu alt hoac alt trung nhau (dung khi
+   * nguoi dung tu xoa alt tu goi y roi upload nhieu anh cung 1 chu thich).
+   */
+  function hasWeakAltText(list: GalleryItem[]): boolean {
+    const normalized = list.map((it) => (it.altText ?? "").trim().toLowerCase());
+    if (normalized.some((a) => a.length === 0)) return true;
+    const seen = new Set<string>();
+    for (const a of normalized) {
+      if (seen.has(a)) return true;
+      seen.add(a);
+    }
+    return false;
+  }
+
+  function handleSaveClick() {
+    if (hasWeakAltText(items) && !window.confirm(
+      "Có ảnh đang thiếu mô tả (alt text) hoặc mô tả giống hệt ảnh khác — " +
+        "điều này làm giảm hiệu quả SEO ảnh. Vẫn muốn lưu?",
+    )) {
+      return;
+    }
+    save.mutate();
+  }
+
   const save = useMutation({
     mutationFn: () => apiSend("POST", `/destinations/${slug}/gallery`, { gallery: items }),
     onSuccess: () => {
@@ -246,7 +272,7 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
         >
           {uploadOne.isPending ? "Đang upload..." : "+ Thêm ảnh"}
         </Button>
-        <Button size="sm" variant="primary" loading={save.isPending} disabled={!isDirty} onClick={() => save.mutate()}>
+        <Button size="sm" variant="primary" loading={save.isPending} disabled={!isDirty} onClick={handleSaveClick}>
           {save.isPending ? "Đang lưu..." : "Lưu thư viện ảnh"}
         </Button>
         {!isDirty && !save.isPending && items.length > 0 && (

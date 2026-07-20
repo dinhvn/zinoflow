@@ -10,18 +10,28 @@ import { CACHE_PURGE, type CachePurgePort } from "../ports/cache-purge.port";
 import { IMAGE_PROCESSOR, type ImageProcessor } from "../../../shared/media/ports/image-processor.port";
 import { IMAGE_UPLOADER, type ImageUploader } from "../../../shared/media/ports/image-uploader.port";
 import { buildGalleryJson } from "../services/gallery-json.util";
+import { slugifyVietnamese } from "../../../shared/text/vietnamese";
 
-/** Chieu rong 1 anh thu vien — du net cho ca card cuon ngang lan slide hero. */
-const GALLERY_IMAGE_WIDTH = 1400;
 /** Chan upload loop tran dung luong FTP (khong co trong spec goc, gioi han an toan). */
 const MAX_GALLERY_IMAGES = 30;
 
 /**
- * Them 1 anh vao thu vien anh cua 1 diem den (khac anh dai diem — 1 diem co the
- * co nhieu anh thu vien). Resize 1 co WebP -> FTP vao {slug}/gallery/ -> append
- * vao mang gallery cua mirror -> ghi thang SQL Server GalleryJson neu diem da
- * co bai (khong cho Publish). alt/caption/credit de trong, nguoi dung tu dien
- * o editor sau khi upload.
+ * Them 1 anh vao thu vien anh cua 1 diem den (khac anh dai dien — 1 diem co the
+ * co nhieu anh thu vien). Convert 3 co WebP (hero/medium/thumb, giong toWebpVariants
+ * dung cho anh dai dien — cho phep website dung srcset responsive, SEO ảnh gallery
+ * #5, 07/2026) -> FTP vao {slug}/gallery/ -> append vao mang gallery cua mirror ->
+ * ghi thang SQL Server GalleryJson neu diem da co bai (khong cho Publish).
+ *
+ * `path` luu la BASE NAME (KHONG co duoi .webp) — website tu ghep hau to
+ * "-hero/-medium/-thumb.webp" luc render (dung lam co phan biet anh CU: path anh
+ * cu tu truoc 07/2026 luon co san duoi .webp, chi 1 file, khong co 3 bien the —
+ * xem GalleryItemModel.HasSizeVariants ben repo dichoithoi).
+ *
+ * alt text KHONG con de trong mac dinh (SEO ảnh gallery #1, 07/2026) — tu goi y
+ * "{ten diem den} - ảnh {so thu tu}" (moi anh 1 so thu tu khac nhau nen khong con
+ * trung nhau nhu truoc), nguoi dung van sua duoc binh thuong o editor sau upload.
+ * Ten file (#4) cung slug hoa tu chinh goi y nay — mang tu khoa thay vi timestamp
+ * tran, tai dung slugifyVietnamese() da co san (khong viet slugify moi).
  */
 @Injectable()
 export class AddDestinationGalleryImageUseCase {
@@ -50,13 +60,23 @@ export class AddDestinationGalleryImageUseCase {
       );
     }
 
-    const resized = await this.processor.toWebp(source, GALLERY_IMAGE_WIDTH);
-    const path = `${slug}/gallery/${slug}-${Date.now()}.webp`;
-    await this.uploader.upload([{ path, body: resized, contentType: "image/webp" }]);
+    const ordinal = destination.gallery.length + 1;
+    const suggestedAlt = `${destination.name} - ảnh ${ordinal}`;
+    // Hau to ngan chong trung ten file giua nhieu anh cung goi y alt (vd nguoi dung
+    // xoa bot anh giua roi upload them — ordinal co the trung lai).
+    const uniqueSuffix = Date.now().toString().slice(-6);
+    const basePath = `${slug}/gallery/${slugifyVietnamese(suggestedAlt)}-${uniqueSuffix}`;
+
+    const variants = await this.processor.toWebpVariants(source);
+    await this.uploader.upload([
+      { path: `${basePath}-hero.webp`, body: variants.hero, contentType: "image/webp" },
+      { path: `${basePath}-medium.webp`, body: variants.medium, contentType: "image/webp" },
+      { path: `${basePath}-thumb.webp`, body: variants.thumb, contentType: "image/webp" },
+    ]);
 
     const gallery: GalleryItem[] = [
       ...destination.gallery,
-      { path, altText: null, caption: null, credit: null },
+      { path: basePath, altText: suggestedAlt, caption: null, credit: null },
     ];
     await this.mirrorRepo.setGallery(slug, gallery);
     if (destination.siteId !== null) {
@@ -64,7 +84,7 @@ export class AddDestinationGalleryImageUseCase {
       await this.cachePurge.purgeDestination(slug);
     }
 
-    this.logger.log(`Thêm ảnh thư viện ${slug} -> ${path} (${gallery.length} ảnh)`);
+    this.logger.log(`Thêm ảnh thư viện ${slug} -> ${basePath} (${gallery.length} ảnh)`);
     return gallery;
   }
 }
