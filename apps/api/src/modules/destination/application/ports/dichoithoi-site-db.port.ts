@@ -221,6 +221,8 @@ export interface DichoithoiSiteDb {
   updateSouvenirProducts(siteId: number, souvenirProductsJson: string): Promise<boolean>;
   /** Cap nhat rieng cot Thumbnail (metadata — sua truc tiep, khong qua publish) */
   updateThumbnail(siteId: number, thumbnail: string | null): Promise<void>;
+  /** Cap nhat DistanceFromCenter (met) — dichoithoi-poi-distance-plan.md Giai doan 2 */
+  updateDistanceFromCenter(siteId: number, distanceMeters: number): Promise<void>;
   /**
    * Ghi de TicketLinksJson (DestinationContent) — dung khi diem DA co bai (siteId
    * ton tai), khong can publish lai toan bai (affiliate-link-conversion-spec §5).

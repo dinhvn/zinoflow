@@ -9,9 +9,11 @@ import {
   migrateDestinationImagesReportSchema,
   recomputeRelatedReportSchema,
   recomputeClusterDistancesReportSchema,
+  recomputeGroupDistancesReportSchema,
   refreshAllDynamicBlocksReportSchema,
   relinkAllReportSchema,
   syncDestinationsResultSchema,
+  getDestinationsMapResponseSchema,
   type MigrateDestinationImagesReport,
   type DestinationContentState,
   type DestinationKind,
@@ -20,6 +22,7 @@ import {
   type DestinationSortBy,
   type RecomputeRelatedReport,
   type RecomputeClusterDistancesReport,
+  type RecomputeGroupDistancesReport,
   type RefreshAllDynamicBlocksReport,
   type RelinkAllReport,
   type SyncDestinationsResult,
@@ -114,6 +117,7 @@ export default function DichoithoiPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [provinceCode, setProvinceCode] = useState("");
+  const [parentSlug, setParentSlug] = useState("");
   const [kind, setKind] = useState("");
   const [contentState, setContentState] = useState("");
   const [production, setProduction] = useState("");
@@ -138,6 +142,7 @@ export default function DichoithoiPage() {
       "dichoithoi-destinations",
       search,
       provinceCode,
+      parentSlug,
       kind,
       contentState,
       production,
@@ -155,6 +160,7 @@ export default function DichoithoiPage() {
       });
       if (search) params.set("q", search);
       if (provinceCode) params.set("provinceCode", provinceCode);
+      if (parentSlug) params.set("parentSlug", parentSlug);
       if (kind) params.set("kind", kind);
       if (contentState) params.set("contentState", contentState);
       if (production) params.set("production", production);
@@ -225,6 +231,38 @@ export default function DichoithoiPage() {
     },
     onError: (err) =>
       setSyncError(err instanceof Error ? err.message : "Tính lại khoảng cách cụm/tỉnh thất bại"),
+  });
+
+  // Khoang cach duong bo that (OpenRouteService) theo 1 cum/tinh — chon rieng
+  // vi khac 2 nut tren (khong tham so): dichoithoi-poi-distance-plan.md Giai doan 2.
+  const groupsQuery = useQuery({
+    queryKey: ["dichoithoi-groups-for-distance"],
+    queryFn: () => apiGet("/destinations/map", getDestinationsMapResponseSchema),
+    staleTime: 5 * 60 * 1000,
+  });
+  const groupOptions = (groupsQuery.data?.items ?? [])
+    .filter((d) => d.kind === "province" || d.kind === "cluster")
+    .sort((a, b) => a.name.localeCompare(b.name, "vi"));
+  const [selectedGroupSlug, setSelectedGroupSlug] = useState("");
+  const [groupDistancesReport, setGroupDistancesReport] =
+    useState<RecomputeGroupDistancesReport | null>(null);
+  const recomputeGroupDistancesMutation = useMutation({
+    mutationFn: async () =>
+      recomputeGroupDistancesReportSchema.parse(
+        await apiSend(
+          "POST",
+          `/destinations/groups/${encodeURIComponent(selectedGroupSlug)}/recompute-distances`,
+          {},
+        ),
+      ),
+    onSuccess: (report) => {
+      setGroupDistancesReport(report);
+      setSyncError(null);
+    },
+    onError: (err) =>
+      setSyncError(
+        err instanceof Error ? err.message : "Tính khoảng cách đường bộ cho cụm/tỉnh thất bại",
+      ),
   });
 
   const [refreshBlocksReport, setRefreshBlocksReport] = useState<RefreshAllDynamicBlocksReport | null>(
@@ -489,6 +527,30 @@ export default function DichoithoiPage() {
               ? "Đang tính..."
               : "Tính lại khoảng cách cụm/tỉnh"}
           </Button>
+          <span className="flex items-center gap-1.5">
+            <Select
+              value={selectedGroupSlug}
+              onChange={(e) => setSelectedGroupSlug(e.target.value)}
+              className="text-xs"
+            >
+              <option value="">— Chọn cụm/tỉnh —</option>
+              {groupOptions.map((g) => (
+                <option key={g.slug} value={g.slug}>
+                  {g.name}
+                </option>
+              ))}
+            </Select>
+            <Button
+              size="sm"
+              disabled={!selectedGroupSlug}
+              loading={recomputeGroupDistancesMutation.isPending}
+              onClick={() => recomputeGroupDistancesMutation.mutate()}
+            >
+              {recomputeGroupDistancesMutation.isPending
+                ? "Đang tính..."
+                : "Tính khoảng cách đường bộ (con↔cha+con)"}
+            </Button>
+          </span>
           <Button
             size="sm"
             loading={refreshAllBlocksMutation.isPending}
@@ -563,6 +625,13 @@ export default function DichoithoiPage() {
             {(clusterDistancesReport.durationMs / 1000).toFixed(1)}s).
           </p>
         )}
+        {groupDistancesReport && (
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            ✅ Khoảng cách đường bộ &quot;{groupDistancesReport.parentSlug}&quot;:{" "}
+            {groupDistancesReport.children} con, ghi {groupDistancesReport.pairs} cặp con↔con (
+            {(groupDistancesReport.durationMs / 1000).toFixed(1)}s).
+          </p>
+        )}
         {refreshBlocksReport && (
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             ✅ Khối động: kiểm tra {refreshBlocksReport.totalChecked} bài, làm mới{" "}
@@ -628,6 +697,20 @@ export default function DichoithoiPage() {
           {taxonomyQuery.data?.provinces.map((p) => (
             <option key={p.provinceCode} value={p.provinceCode}>
               {p.shortName}
+            </option>
+          ))}
+        </Select>
+        <Select
+          value={parentSlug}
+          onChange={(e) => {
+            setParentSlug(e.target.value);
+            resetToFirstPage();
+          }}
+        >
+          <option value="">Tất cả cụm/tỉnh cha</option>
+          {groupOptions.map((g) => (
+            <option key={g.slug} value={g.slug}>
+              {g.name}
             </option>
           ))}
         </Select>
@@ -718,6 +801,7 @@ export default function DichoithoiPage() {
         filter={{
           q: search || undefined,
           provinceCode: provinceCode || undefined,
+          parentSlug: parentSlug || undefined,
           kind: kind || undefined,
           contentState: contentState || undefined,
           production: production || undefined,

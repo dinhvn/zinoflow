@@ -316,6 +316,8 @@ export type DestinationSortBy = z.infer<typeof destinationSortBySchema>;
 export const listDestinationsQuerySchema = z.object({
   q: z.string().optional(),
   provinceCode: z.string().optional(),
+  /** Loc theo cha truc tiep (slug cum/tinh) — vd xem het diem trong 1 cum */
+  parentSlug: z.string().optional(),
   kind: destinationKindSchema.optional(),
   contentState: destinationContentStateSchema.optional(),
   production: destinationProductionStateSchema.optional(),
@@ -459,6 +461,36 @@ export const recomputeClusterDistancesReportSchema = z.object({
 export type RecomputeClusterDistancesReport = z.infer<
   typeof recomputeClusterDistancesReportSchema
 >;
+
+/**
+ * Bao cao tinh khoang cach duong bo that (OpenRouteService) cho 1 cum/tinh —
+ * dichoithoi-poi-distance-plan.md Giai doan 2. Ghi ca DistanceFromCenter (con->
+ * cha) lan poi_distances (con<->con), full recompute moi lan chay.
+ */
+export const recomputeGroupDistancesReportSchema = z.object({
+  parentSlug: z.string(),
+  /** So con published co toa do dung de tinh */
+  children: z.number().int(),
+  /** So cap con<->con da ghi (toi da C(children,2)) */
+  pairs: z.number().int(),
+  durationMs: z.number().int(),
+});
+export type RecomputeGroupDistancesReport = z.infer<typeof recomputeGroupDistancesReportSchema>;
+
+/**
+ * Bao cao tinh khoang cach duong bo that cho 1 diem theo ban kinh vat ly —
+ * dichoithoi-poi-distance-plan.md Giai doan 3. Tu dong goi lai RelatedJson cho
+ * diem nay ngay sau khi ghi xong.
+ */
+export const recomputeNearbyDistancesReportSchema = z.object({
+  slug: z.string(),
+  /** So ung vien gan (Haversine, ban kinh 30km) duoc dung de goi ORS */
+  candidates: z.number().int(),
+  /** RelatedJson cua diem nay co thay doi sau khi tinh lai khong */
+  relatedUpdated: z.boolean(),
+  durationMs: z.number().int(),
+});
+export type RecomputeNearbyDistancesReport = z.infer<typeof recomputeNearbyDistancesReportSchema>;
 
 /** 1 diem den lien quan toi diem dang xem (cho trang chi tiet §7.3 tab Quan he) */
 export const relatedDestinationRefSchema = z.object({
@@ -671,6 +703,7 @@ export const exportDestinationsQuerySchema = z.object({
   fields: z.string().min(1),
   q: z.string().optional(),
   provinceCode: z.string().optional(),
+  parentSlug: z.string().optional(),
   kind: destinationKindSchema.optional(),
   contentState: destinationContentStateSchema.optional(),
   production: destinationProductionStateSchema.optional(),

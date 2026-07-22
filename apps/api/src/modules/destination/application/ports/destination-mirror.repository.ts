@@ -73,6 +73,8 @@ export interface DestinationMirrorRepository {
   setSiteId(slug: string, siteId: number): Promise<void>;
   /** Cap nhat duong dan thumbnail (spec §14.3) */
   setThumbnail(slug: string, thumbnail: string | null): Promise<void>;
+  /** Cap nhat khoang cach toi trung tam cum/tinh cha, met (dichoithoi-poi-distance-plan.md) */
+  setDistanceFromCenter(slug: string, distanceMeters: number): Promise<void>;
   /**
    * Doi slug 1 diem den (Phase 24 chieu ghi) — cascade TRONG 1 transaction:
    * dichoithoi_destinations.slug + parent_slug cua con, dichoithoi_destination_relations

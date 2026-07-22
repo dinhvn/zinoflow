@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  destinationTaxonomySchema,
   fetchSheetResponseSchema,
   importDestinationsResultSchema,
   type DestinationImportRow,
 } from "@zinoflow/contracts";
-import { apiSend, ApiError } from "@/shared/api-client";
+import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import { Button, Input, Modal } from "@/shared/ui";
-import { parseRowsFromText } from "./sheet-import-csv";
+import { parseRowsFromText, formatValidationDetail, resolveProvinceCode } from "./sheet-import-csv";
+
+const DEFAULT_SHEET_URL =
+  "https://docs.google.com/spreadsheets/d/1dj2Zwb496l6rTJykOpMYLyP8syD13Bv4MFrIi9fgIpo/edit?gid=1621981463#gid=1621981463";
 
 const CSV_HEADERS = [
   "name",
@@ -48,7 +52,10 @@ function parseRefUrls(s: string | undefined): DestinationImportRow["referenceUrl
   return list.length ? list : undefined;
 }
 
-function rowFromObject(o: Record<string, string>): DestinationImportRow {
+function rowFromObject(
+  o: Record<string, string>,
+  provinces: ReadonlyArray<{ provinceCode: string; name: string; shortName: string }>,
+): DestinationImportRow {
   // Do uu tien 1-5 (1=cao nhat) — thay isFeatured cu (relations-plan §1.1). Gia tri
   // ngoai khoang hoac khong hop le -> undefined, server tu mac dinh 3.
   const priority = (s: string | undefined) => {
@@ -60,7 +67,7 @@ function rowFromObject(o: Record<string, string>): DestinationImportRow {
     name: (o.name ?? "").trim(),
     slug: emptyToUndef(o.slug),
     kind: kindRaw === "province" || kindRaw === "cluster" ? kindRaw : "poi",
-    provinceCode: emptyToUndef(o.provinceCode),
+    provinceCode: resolveProvinceCode(o.provinceCode, provinces),
     parentSlug: emptyToUndef(o.parentSlug),
     shortDescription: emptyToUndef(o.shortDescription),
     thumbnail: emptyToUndef(o.thumbnail),
@@ -90,9 +97,17 @@ export function ImportDestinationsModal({
   onClose: () => void;
   onImported: () => void;
 }) {
-  const [sheetUrl, setSheetUrl] = useState("");
+  const [sheetUrl, setSheetUrl] = useState(DEFAULT_SHEET_URL);
   const [preview, setPreview] = useState<DestinationImportRow[] | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
+
+  // Cung queryKey voi trang danh sach (page.tsx) nen React Query dung chung
+  // cache, khong goi API taxonomy them lan nao — chi de resolve ten tinh -> ma.
+  const taxonomyQuery = useQuery({
+    queryKey: ["dichoithoi-taxonomy"],
+    queryFn: () => apiGet("/destinations/taxonomy", destinationTaxonomySchema),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const fetchSheet = useMutation({
     mutationFn: async () =>
@@ -102,7 +117,8 @@ export function ImportDestinationsModal({
     onSuccess: (r) => {
       importMutation.reset();
       try {
-        const rows = parseRowsFromText(r.csv).map(rowFromObject);
+        const provinces = taxonomyQuery.data?.provinces ?? [];
+        const rows = parseRowsFromText(r.csv).map((o) => rowFromObject(o, provinces));
         const bad = rows.findIndex((x) => !x.name.trim());
         if (bad >= 0) throw new Error(`Dòng ${bad + 1}: thiếu tên điểm đến`);
         if (rows.length === 0) throw new Error("Không có dòng nào");
@@ -159,6 +175,10 @@ export function ImportDestinationsModal({
           </Button>
         </div>
         <p className="text-xs text-zinc-500">Cột hỗ trợ: {CSV_HEADERS.join(", ")}</p>
+        <p className="text-xs text-zinc-500">
+          <strong>provinceCode</strong>: có thể gõ mã số (vd 68) hoặc tên tỉnh/thành (vd "Lâm Đồng",
+          "lam-dong") — hệ thống tự tra ra mã tương ứng.
+        </p>
         {parseError && <p className="text-sm text-red-600 dark:text-red-400">⚠️ {parseError}</p>}
 
         {preview && !importMutation.data && (
@@ -175,6 +195,7 @@ export function ImportDestinationsModal({
                     <th className="px-2 py-1">Slug</th>
                     <th className="px-2 py-1">Tỉnh</th>
                     <th className="px-2 py-1">Loại</th>
+                    <th className="px-2 py-1">Cha (parentSlug)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -184,6 +205,7 @@ export function ImportDestinationsModal({
                       <td className="px-2 py-1 text-zinc-500">{r.slug || "(tự sinh)"}</td>
                       <td className="px-2 py-1 text-zinc-500">{r.provinceCode ?? "—"}</td>
                       <td className="px-2 py-1 text-zinc-500">{r.kind}</td>
+                      <td className="px-2 py-1 text-zinc-500">{r.parentSlug ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -202,7 +224,16 @@ export function ImportDestinationsModal({
 
         {importMutation.isError && (
           <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-            {importMutation.error instanceof ApiError ? importMutation.error.message : "Nhập thất bại"}
+            <p>
+              {importMutation.error instanceof ApiError ? importMutation.error.message : "Nhập thất bại"}
+            </p>
+            {importMutation.error instanceof ApiError && importMutation.error.details.length > 0 && (
+              <ul className="mt-1 list-inside list-disc">
+                {importMutation.error.details.map((d, i) => (
+                  <li key={i}>{formatValidationDetail(d, preview ?? [])}</li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 

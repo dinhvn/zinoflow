@@ -12,6 +12,10 @@ import {
   type ClusterDistanceRepository,
 } from "../ports/cluster-distance.repository";
 import {
+  POI_DISTANCE_REPOSITORY,
+  type PoiDistanceRepository,
+} from "../ports/poi-distance.repository";
+import {
   buildRelatedItems,
   clusterDistanceKey,
   type RelatedCandidate,
@@ -37,6 +41,8 @@ export class RecomputeRelatedService {
     @Inject(CACHE_PURGE) private readonly cachePurge: CachePurgePort,
     @Inject(CLUSTER_DISTANCE_REPOSITORY)
     private readonly clusterDistanceRepo: ClusterDistanceRepository,
+    @Inject(POI_DISTANCE_REPOSITORY)
+    private readonly poiDistanceRepo: PoiDistanceRepository,
   ) {}
 
   /** Tinh lai cho danh sach slug cu the. Tra ve so bai co RelatedJson THAY DOI. */
@@ -149,6 +155,10 @@ export class RecomputeRelatedService {
         p.distanceMeters,
       ]),
     );
+    const poiDistancePairs = await this.poiDistanceRepo.findAll();
+    const poiDistances = new Map(
+      poiDistancePairs.map((p) => [clusterDistanceKey(p.poiASlug, p.poiBSlug), p.distanceMeters]),
+    );
 
     let scanned = 0;
     let updated = 0;
@@ -168,6 +178,7 @@ export class RecomputeRelatedService {
         all: candidates,
         curatedRelatedSlugs: curated.map((r) => r.targetSlug),
         clusterDistances,
+        poiDistances,
         excludedSlugs: new Set(excluded),
       });
       const relatedChanged = await this.siteDb.updateRelatedJson(siteId, JSON.stringify(items));

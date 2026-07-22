@@ -18,7 +18,15 @@ import {
   type ContentJobRepository,
 } from "../../../ai-content/application/ports/content-job.repository";
 import { IMAGE_CHECKER, type ImageChecker } from "../ports/image-checker.port";
-import { computeNearby, type RelatedCandidate } from "../../domain/related-builder";
+import {
+  POI_DISTANCE_REPOSITORY,
+  type PoiDistanceRepository,
+} from "../ports/poi-distance.repository";
+import {
+  clusterDistanceKey,
+  computeNearby,
+  type RelatedCandidate,
+} from "../../domain/related-builder";
 import { deriveContentState, deriveProductionState } from "../../domain/destination-mirror";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
@@ -41,6 +49,8 @@ export class GetDestinationDetailUseCase {
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
+    @Inject(POI_DISTANCE_REPOSITORY)
+    private readonly poiDistanceRepo: PoiDistanceRepository,
   ) {}
 
   async execute(slug: string): Promise<DestinationDetail> {
@@ -76,12 +86,22 @@ export class GetDestinationDetailUseCase {
       .map((d) => this.toRef(d))
       .filter((r): r is RelatedDestinationRef => r !== null);
 
-    // Nearby: tinh on-the-fly tu toa do (cung logic builder RelatedJson)
+    // Nearby: tinh on-the-fly tu toa do (Haversine, cung logic builder RelatedJson),
+    // uu tien so THAT (dichoithoi_poi_distances, dichoithoi-poi-distance-plan.md)
+    // neu da tung tinh cho cap nay — tranh CMS hien Haversine trong khi RelatedJson
+    // that (website doc) da dung khoang cach duong bo (bug nguoi dung phat hien 07/2026).
     const candidates = all.map(toCandidate);
     const self = candidates.find((c) => c.slug === slug)!;
+    const poiDistancePairs = await this.poiDistanceRepo.findAll();
+    const poiDistances = new Map(
+      poiDistancePairs.map((p) => [clusterDistanceKey(p.poiASlug, p.poiBSlug), p.distanceMeters]),
+    );
     const nearby = computeNearby(self, candidates)
       .slice(0, NEARBY_PREVIEW_COUNT)
-      .map((n) => this.toRef(bySlug.get(n.slug), n.distanceMeters))
+      .map((n) => {
+        const realMeters = poiDistances.get(clusterDistanceKey(slug, n.slug));
+        return this.toRef(bySlug.get(n.slug), realMeters ?? n.distanceMeters);
+      })
       .filter((r): r is RelatedDestinationRef => r !== null);
 
     // Related curated (quan he type 2 nguoi dung them tay)

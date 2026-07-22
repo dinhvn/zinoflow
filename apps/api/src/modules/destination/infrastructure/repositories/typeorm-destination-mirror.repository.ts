@@ -135,6 +135,9 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     if (query.provinceCode) {
       qb.andWhere("d.province_code = :pc", { pc: query.provinceCode });
     }
+    if (query.parentSlug) {
+      qb.andWhere("d.parent_slug = :parentSlug", { parentSlug: query.parentSlug });
+    }
     if (query.kind) {
       qb.andWhere("d.kind = :kind", { kind: query.kind });
     }
@@ -253,6 +256,10 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
 
   async setThumbnail(slug: string, thumbnail: string | null): Promise<void> {
     await this.repo.update({ slug }, { thumbnail });
+  }
+
+  async setDistanceFromCenter(slug: string, distanceMeters: number): Promise<void> {
+    await this.repo.update({ slug }, { distanceFromCenter: String(distanceMeters) });
   }
 
   async renameSlug(oldSlug: string, newSlug: string): Promise<void> {

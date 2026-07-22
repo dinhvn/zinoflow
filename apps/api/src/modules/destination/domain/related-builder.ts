@@ -144,19 +144,24 @@ function proximityTierScore(self: RelatedCandidate, candidate: RelatedCandidate)
 
 /**
  * Khoang cach (met) dung de CHAM DIEM (mo hinh 2 tang, relations-plan §1.2) —
- * cung cum/cung tinh: haversine truc tiep tu toa do rieng. Khac cum: uoc luong
- * qua tam cum (DistanceFromCenter + khoang_cach_cum + DistanceFromCenter) —
- * theo bat dang thuc tam giac LUON >= that, CHI dung de xep hang, KHONG hien thi
- * (xem badgeDistanceMeters ben duoi cho so hien thi that).
+ * cung cum/cung tinh: uu tien tra `poiDistances` (duong bo that qua
+ * OpenRouteService, dichoithoi-poi-distance-plan.md), fallback haversine truc
+ * tiep tu toa do rieng neu chua tung tinh. Khac cum: uoc luong qua tam cum
+ * (DistanceFromCenter + khoang_cach_cum + DistanceFromCenter) — theo bat dang
+ * thuc tam giac LUON >= that, CHI dung de xep hang, KHONG hien thi (xem
+ * badgeDistanceMeters ben duoi cho so hien thi that).
  */
 function rankingDistanceMeters(
   self: RelatedCandidate,
   candidate: RelatedCandidate,
   clusterDistances: ReadonlyMap<string, number>,
+  poiDistances: ReadonlyMap<string, number>,
 ): number | null {
   const sameCluster = Boolean(candidate.parentSlug && candidate.parentSlug === self.parentSlug);
   const sameProvince = Boolean(candidate.provinceCode && candidate.provinceCode === self.provinceCode);
   if (sameCluster || sameProvince) {
+    const real = poiDistances.get(clusterDistanceKey(self.slug, candidate.slug));
+    if (real !== undefined) return real;
     if (self.lat !== null && self.lng !== null && candidate.lat !== null && candidate.lng !== null) {
       return haversineMeters(self.lat, self.lng, candidate.lat, candidate.lng);
     }
@@ -191,16 +196,21 @@ function tierScore(candidate: RelatedCandidate): number {
   return candidate.contentTier === "flagship" ? 10 : 0;
 }
 
-/** Cong thuc cham diem day du (relations-plan §1.3) — export de test tung phan. */
+/**
+ * Cong thuc cham diem day du (relations-plan §1.3) — export de test tung phan.
+ * `poiDistances` mac dinh rong (fallback Haversine toan bo) — cac test/caller
+ * cu khong truyen tham so nay van chay dung nhu truoc.
+ */
 export function scoreCandidate(
   self: RelatedCandidate,
   candidate: RelatedCandidate,
   clusterDistances: ReadonlyMap<string, number>,
+  poiDistances: ReadonlyMap<string, number> = new Map(),
 ): number {
   return (
     typeOverlapScore(self, candidate) +
     proximityTierScore(self, candidate) +
-    distanceScore(rankingDistanceMeters(self, candidate, clusterDistances)) +
+    distanceScore(rankingDistanceMeters(self, candidate, clusterDistances, poiDistances)) +
     priorityScore(candidate) +
     tierScore(candidate)
   );
@@ -231,6 +241,10 @@ export interface RelatedInput {
   /** Khoang cach cum/tinh cap cao (dichoithoi_cluster_distances, Giai doan A2) —
    * khoa chuan hoa qua clusterDistanceKey(). */
   clusterDistances: ReadonlyMap<string, number>;
+  /** Khoang cach duong bo that con->con cung cha/tinh (dichoithoi_poi_distances,
+   * dichoithoi-poi-distance-plan.md) — uu tien truoc Haversine khi co, khoa
+   * chuan hoa qua clusterDistanceKey(). Mac dinh rong = luon fallback Haversine. */
+  poiDistances?: ReadonlyMap<string, number>;
   /** Slug bi ADMIN LOAI TRU tay khoi goi y cua self (relations-plan §5.7 muc 3,
    * Giai doan C3) — loc TRUOC ca 2 bac cung lan scoring, bat ke le ra diem cao
    * the nao. Mac dinh rong neu khong truyen (khong loai gi). */
@@ -246,6 +260,7 @@ export interface RelatedInput {
  */
 export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
   const { self, curatedRelatedSlugs, clusterDistances } = input;
+  const poiDistances = input.poiDistances ?? new Map<string, number>();
   const excludedSlugs = input.excludedSlugs ?? new Set<string>();
   const all = input.all.filter((c) => !excludedSlugs.has(c.slug));
   const bySlug = new Map(all.map((c) => [c.slug, c]));
@@ -254,6 +269,8 @@ export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
   const pickedSlugs = new Set<string>([self.slug]);
 
   const badgeFor = (candidate: RelatedCandidate): string | null => {
+    const real = poiDistances.get(clusterDistanceKey(self.slug, candidate.slug));
+    if (real !== undefined) return formatDistanceBadge(real);
     if (self.lat === null || self.lng === null || candidate.lat === null || candidate.lng === null) {
       return null;
     }
@@ -279,7 +296,7 @@ export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
   if (picked.length < RELATED_ITEM_COUNT) {
     const scored = all
       .filter((c) => c.siteStatus === 1 && !pickedSlugs.has(c.slug))
-      .map((c) => ({ candidate: c, score: scoreCandidate(self, c, clusterDistances) }))
+      .map((c) => ({ candidate: c, score: scoreCandidate(self, c, clusterDistances, poiDistances) }))
       .filter((s) => s.score > 0)
       .sort((a, b) => b.score - a.score);
 

@@ -66,7 +66,7 @@ export class ExportDestinationsUseCase {
     fields: readonly DestinationBulkEditFieldKey[],
     filter: Pick<
       ListDestinationsQuery,
-      "q" | "provinceCode" | "kind" | "contentState" | "production"
+      "q" | "provinceCode" | "parentSlug" | "kind" | "contentState" | "production"
     >,
   ): Promise<string> {
     const entities = await this.mirrorRepo.listAllMatching({

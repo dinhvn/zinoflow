@@ -139,6 +139,19 @@ describe("scoreCandidate (relations-plan §1.3)", () => {
     // Chi con lai priority mac dinh (12) — hoan toan khong co diem gan/cung cum/cung loai
     expect(score).toBe((6 - other.priority) * 4);
   });
+
+  it("cung cum uu tien poiDistances (duong bo that) thay vi Haversine khi co du lieu", () => {
+    // Toa do rat gan nhau (~100m Haversine) nhung duong bo that xa hon nhieu (deo/vong)
+    const self = candidate({ slug: "self", parentSlug: "cum-a", lat: 21.0, lng: 105.8 });
+    const sibling = candidate({ slug: "anh-em", parentSlug: "cum-a", lat: 21.001, lng: 105.801 });
+    const poiDistances = new Map([[clusterDistanceKey("self", "anh-em"), 5_000]]);
+
+    const scoreWithReal = scoreCandidate(self, sibling, noClusterDistances, poiDistances);
+    const scoreHaversineOnly = scoreCandidate(self, sibling, noClusterDistances);
+
+    // 5km thuc te cho diem gan THAP hon nhieu so voi ~100m Haversine uoc luong sai
+    expect(scoreWithReal).toBeLessThan(scoreHaversineOnly);
+  });
 });
 
 describe("buildRelatedItems (relations-plan §1.3-§1.4, Giai doan C2)", () => {
@@ -242,6 +255,19 @@ describe("buildRelatedItems (relations-plan §1.3-§1.4, Giai doan C2)", () => {
     });
     expect(items.find((i) => i.slug === "rat-gan")!.badge).toMatch(/^cách \d+ m$/);
     expect(items.find((i) => i.slug === "khong-toa-do")!.badge).toBeNull();
+  });
+
+  it("badge uu tien poiDistances (duong bo that) thay vi Haversine khi co du lieu", () => {
+    const self = candidate({ slug: "self", lat: 21.0285, lng: 105.8542, provinceCode: "22" });
+    const all = [self, candidate({ slug: "rat-gan", provinceCode: "22", lat: 21.0286, lng: 105.8543 })];
+    const items = buildRelatedItems({
+      self,
+      all,
+      curatedRelatedSlugs: [],
+      clusterDistances: noClusterDistances,
+      poiDistances: new Map([[clusterDistanceKey("self", "rat-gan"), 4_200]]),
+    });
+    expect(items.find((i) => i.slug === "rat-gan")!.badge).toBe("cách 4,2 km");
   });
 
   it("gan dung criterion cho tung nguon (Giai doan D1)", () => {

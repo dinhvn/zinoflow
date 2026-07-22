@@ -17,6 +17,7 @@ import {
   listAiProvidersResponseSchema,
   publishDestinationResultSchema,
   renameDestinationSlugResponseSchema,
+  recomputeNearbyDistancesReportSchema,
   DESTINATION_BLOCK_LABELS,
   DESTINATION_LIST_BLOCK_KEYS,
   DESTINATION_SECTION_ORDER,
@@ -718,6 +719,20 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       ),
     onSuccess: (r) => {
       window.location.href = `/dichoithoi/${r.newSlug}`;
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+
+  // --- Tinh khoang cach duong bo that toi cac diem gan (dichoithoi-poi-distance-plan.md
+  // Giai doan 3) — tu lam moi RelatedJson cua chinh diem nay ngay sau khi tinh xong ---
+  const recomputeNearbyDistances = useMutation({
+    mutationFn: async () =>
+      recomputeNearbyDistancesReportSchema.parse(
+        await apiSend("POST", `/destinations/${slug}/recompute-nearby-distances`, {}),
+      ),
+    onSuccess: () => {
+      setActionError(null);
+      invalidate();
     },
     onError: (e) => setActionError(toActionError(e)),
   });
@@ -1465,6 +1480,29 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
 
       {/* Quan he (spec §7.3 tab 3) */}
       <Group title="Quan hệ">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Khoảng cách &quot;Gần đây&quot; mặc định tính theo đường chim bay (Haversine — nhanh, ước
+          lượng). Bấm nút để tính khoảng cách đường bộ thật (OpenRouteService) tới các điểm gần đó
+          — sau khi tính, cả khối &quot;Gần đây&quot; dưới đây lẫn gợi ý &quot;điểm đến liên
+          quan&quot; trên website đều tự đổi sang số đường bộ thật.
+        </p>
+        <Button
+          size="sm"
+          loading={recomputeNearbyDistances.isPending}
+          onClick={() => recomputeNearbyDistances.mutate()}
+        >
+          {recomputeNearbyDistances.isPending
+            ? "Đang tính..."
+            : "Tính khoảng cách đường bộ tới điểm gần đó"}
+        </Button>
+        {recomputeNearbyDistances.data && (
+          <p className="text-xs text-emerald-700 dark:text-emerald-400">
+            ✅ Đã tính {recomputeNearbyDistances.data.candidates} điểm gần đó
+            {recomputeNearbyDistances.data.relatedUpdated
+              ? " — gợi ý điểm liên quan đã cập nhật."
+              : " — gợi ý điểm liên quan không đổi."}
+          </p>
+        )}
         <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
           <RefList title={`Trực thuộc (${d.children.length})`} refs={d.children} />
           <RefList title={`Gần đây (${d.nearby.length})`} refs={d.nearby} showDistance />

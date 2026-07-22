@@ -13,6 +13,7 @@ import { Modal, buttonClasses } from "@/shared/ui";
 export interface DestinationListFilter {
   q?: string;
   provinceCode?: string;
+  parentSlug?: string;
   kind?: string;
   contentState?: string;
   production?: string;
@@ -50,6 +51,7 @@ export function ExportDestinationsModal({
     const params = new URLSearchParams({ fields: [...selected].join(",") });
     if (filter.q) params.set("q", filter.q);
     if (filter.provinceCode) params.set("provinceCode", filter.provinceCode);
+    if (filter.parentSlug) params.set("parentSlug", filter.parentSlug);
     if (filter.kind) params.set("kind", filter.kind);
     if (filter.contentState) params.set("contentState", filter.contentState);
     if (filter.production) params.set("production", filter.production);

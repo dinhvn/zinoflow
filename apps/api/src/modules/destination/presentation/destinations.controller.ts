@@ -70,6 +70,8 @@ import {
   type PublishDestinationResult,
   type RecomputeRelatedReport,
   type RecomputeClusterDistancesReport,
+  type RecomputeGroupDistancesReport,
+  type RecomputeNearbyDistancesReport,
   type RelinkAllRequest,
   type RelinkAllReport,
   type RenameDestinationSlugRequest,
@@ -148,6 +150,8 @@ import { AcceptDestinationAiExtractionFieldsUseCase } from "../application/use-c
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { RecomputeClusterDistancesUseCase } from "../application/use-cases/recompute-cluster-distances.usecase";
+import { RecomputeGroupDistancesUseCase } from "../application/use-cases/recompute-group-distances.usecase";
+import { RecomputeNearbyDistancesUseCase } from "../application/use-cases/recompute-nearby-distances.usecase";
 import { GetRelationsMapDataUseCase } from "../application/use-cases/get-relations-map-data.usecase";
 import { GetRelatedSpotlightUseCase } from "../application/use-cases/get-related-spotlight.usecase";
 import { ManageCuratedRelationUseCase } from "../application/use-cases/manage-curated-relation.usecase";
@@ -218,6 +222,8 @@ export class DestinationsController {
     private readonly acceptAiExtractionFields: AcceptDestinationAiExtractionFieldsUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     private readonly recomputeClusterDistancesUseCase: RecomputeClusterDistancesUseCase,
+    private readonly recomputeGroupDistances: RecomputeGroupDistancesUseCase,
+    private readonly recomputeNearbyDistances: RecomputeNearbyDistancesUseCase,
     private readonly getRelationsMapData: GetRelationsMapDataUseCase,
     private readonly getRelatedSpotlight: GetRelatedSpotlightUseCase,
     private readonly manageCuratedRelation: ManageCuratedRelationUseCase,
@@ -309,6 +315,7 @@ export class DestinationsController {
     const csv = await this.exportDestinations.execute(fields, {
       q: query.q,
       provinceCode: query.provinceCode,
+      parentSlug: query.parentSlug,
       kind: query.kind,
       contentState: query.contentState,
       production: query.production,
@@ -358,6 +365,19 @@ export class DestinationsController {
   @Get("map")
   getMap(): Promise<GetDestinationsMapResponse> {
     return this.getDestinationsMap.execute();
+  }
+
+  /**
+   * Tinh khoang cach duong bo that (OpenRouteService) cho 1 cum/tinh — ghi
+   * DistanceFromCenter (con->cha) + poi_distances (con<->con), full recompute
+   * (dichoithoi-poi-distance-plan.md Giai doan 2). "groups" la tien to LITERAL
+   * nen dat TRUOC ":slug" (dung quy uoc file nay — xem "map"/"taxonomy" o tren).
+   */
+  @Post("groups/:parentSlug/recompute-distances")
+  recomputeGroupDistancesFor(
+    @Param("parentSlug") parentSlug: string,
+  ): Promise<RecomputeGroupDistancesReport> {
+    return this.recomputeGroupDistances.execute(parentSlug);
   }
 
   /** Du lieu nen lop quan he tren ban do (relations-plan §5.3, Giai doan C4). Truoc ":slug". */
@@ -499,6 +519,19 @@ export class DestinationsController {
   @Get(":slug/related-spotlight")
   relatedSpotlight(@Param("slug") slug: string): Promise<GetRelatedSpotlightResponse> {
     return this.getRelatedSpotlight.execute(slug);
+  }
+
+  /**
+   * Tinh khoang cach duong bo that tu 1 diem toi cac diem GAN theo ban kinh
+   * vat ly (khong gioi han cung cha) + tu goi lai RelatedJson cua diem nay
+   * (dichoithoi-poi-distance-plan.md Giai doan 3) — nut o tab "Quan he & dong
+   * bo" cua trang chi tiet 1 diem den.
+   */
+  @Post(":slug/recompute-nearby-distances")
+  recomputeNearbyDistancesFor(
+    @Param("slug") slug: string,
+  ): Promise<RecomputeNearbyDistancesReport> {
+    return this.recomputeNearbyDistances.execute(slug);
   }
 
   /** Noi/xoa quan he curated tay tren ban do (§5.7 muc 1-2, Giai doan C4) */

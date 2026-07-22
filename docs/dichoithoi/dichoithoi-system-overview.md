@@ -72,6 +72,11 @@ lại tracking trạng thái.
     theo field (tick chọn + Chấp nhận). Nguyên tắc: không dùng kiến thức
     nền cho dữ liệu cứng, nguồn mâu thuẫn ghi rõ cả 2. Có kèm Claude Code
     skill `dichoithoi-extract-destination-info`.
+12g. `dichoithoi-poi-distance-plan.md` — plan CHƯA build (21/07/2026): thay/
+    bổ sung Haversine bằng khoảng cách đường bộ thật (OpenRouteService) cho
+    `DistanceFromCenter` + bảng mới `poi_distances` (con↔con cùng cụm), nút
+    theo cụm/tỉnh + nút riêng 1 điểm ở tab "Quan hệ" — đọc trước khi đụng
+    vào `related-builder.ts`/`RecomputeRelatedService`/tab quan hệ.
 13. `dichoithoi-system-design.md` — **đọc file này nếu chỉ có thời gian đọc 1
     file**: tổng hợp toàn bộ spec thành 1 bức tranh kỹ thuật đầy đủ (bảng dữ
     liệu 2 database, sơ đồ luồng, API surface, nguyên tắc xuyên suốt).

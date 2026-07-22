@@ -643,6 +643,18 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     });
   }
 
+  async updateDistanceFromCenter(siteId: number, distanceMeters: number): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("distanceMeters", distanceMeters);
+      return request.query(
+        `UPDATE v2.Destination SET DistanceFromCenter = @distanceMeters, UpdatedAt = SYSUTCDATETIME()
+         WHERE Id = @siteId`,
+      );
+    });
+  }
+
   async updateTicketLinks(siteId: number, ticketLinksJson: string): Promise<void> {
     await this.runWithRetry(async (pool) => {
       const request = pool.request();

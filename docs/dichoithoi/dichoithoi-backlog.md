@@ -228,6 +228,45 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- **Hiển thị nút "Xem trên Google Maps" (dùng link gốc, không tự dựng từ
+  lat/lng) ở trang chi tiết dichoithoi** (phát hiện 21/07/2026, làm SAU):
+  cột `GoogleMapsUrl` (`v2.Destination.GoogleMapsUrl`) đã được zinoflow ghi
+  đầy đủ khi lưu/publish (`mssql-site-db.adapter.ts`), nhưng website
+  dichoithoi hiện KHÔNG đọc/hiển thị ở đâu cả (grep toàn repo dichoithoi ra
+  0 kết quả; entity `Destination.cs` cũng chưa có property này) — dữ liệu
+  bị "chết". Lý do đáng làm: nếu chỉ tự dựng link từ lat/lng
+  (`?q=lat,lng`), Google Maps chỉ thả ghim toạ độ trần, MẤT tên địa
+  điểm/ảnh/review vì thiếu Place ID (phần `!1s0x...` trong link gốc) — dùng
+  lại `GoogleMapsUrl` gốc mới ra đúng thẻ địa điểm đầy đủ. Việc cần làm khi
+  triển khai: thêm property `GoogleMapsUrl` vào `Destination.cs` (site
+  repo), map từ cột DB, hiển thị nút link ở khu vực bản đồ/địa chỉ trên
+  `Detail.cshtml`.
+
+- **Bản đồ minh hoạ "điểm đến liên quan" trên website công khai** (ý tưởng
+  21/07/2026, TÍNH NĂNG NÂNG CAO — xem xét/phân tích/làm SAU, chưa lên plan):
+  ngoài danh sách text hiện tại, hiển thị thêm 1 khung bản đồ nhiều-điểm
+  (điểm đang xem + các điểm liên quan) trên trang chi tiết `dichoithoi.com`
+  để khách du lịch dễ lên lộ trình. Đã phân tích sơ bộ (chưa chốt hướng):
+  - Lợi ích thật: khác bản đồ 1-điểm đã CHỦ Ý bỏ trước đó (`content-seo-ux-
+    plan.md` — "GeoCoordinates đã có sẵn JSON-LD, iframe không thêm giá trị
+    SEO mà tốn Core Web Vitals"), bản đồ NHIỀU điểm phục vụ đúng nhu cầu
+    trip-planning (không chỉ "ở đâu") — không tự động áp lại kết luận cũ.
+  - Chi phí thật: `RelatedItem` (`packages/contracts/src/dichoithoi/
+    destination.ts`) hiện KHÔNG mang lat/lng (bị loại bỏ lúc build JSON,
+    xem `related-builder.ts` — `RelatedCandidate` nội bộ có toạ độ nhưng
+    `RelatedItem` cuối cùng thì không) — cần mở schema trước. Website hiện
+    tại 0 dependency ngoài (`Detail.cshtml` chỉ 1 file JS nội bộ) — thêm thư
+    viện bản đồ (Leaflet/Google Maps) sẽ là dependency ngoài ĐẦU TIÊN, đi
+    ngược cam kết "stack nhẹ" Phase 18. Cần chọn nhà cung cấp tile (Google
+    Maps JS cần billing; Leaflet+OSM free nhưng không khuyến khích dùng trực
+    tiếp cho traffic production).
+  - Hướng giảm chi phí nếu làm: lazy-load (chỉ tải khi cuộn tới/bấm xem) +
+    GIỮ NGUYÊN danh sách text (bản đồ chỉ bổ trợ, không thay thế — danh sách
+    vẫn cần cho crawlability/internal-link SEO).
+  - CMS nội bộ (`/dichoithoi/ban-do`) đã có bản đồ quan hệ dạng tương tự cho
+    admin từ trước (relations-plan Giai đoạn C4) — ý tưởng này chỉ mới cho
+    PHÍA WEBSITE CÔNG KHAI.
+
 - **SEO ảnh cho gallery hero (đánh giá 07/2026, sau khi build xong tính năng
   gallery ảnh — CMS quản lý nhiều ảnh + hero site thành carousel)**: đánh giá
   theo checklist SEO-owner (`dichoithoi-seo-principles.md`) phát hiện 5 lỗ
@@ -347,6 +386,18 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   - Đồng thời chốt (giữ nguyên từ phân tích gốc): KHÔNG dùng AI-detector
     (GPTZero/Originality.ai) làm tiêu chuẩn pass/fail — không phải cơ chế
     Google dùng, chỉ tham khảo phụ.
+
+- ✅ **Khoảng cách đường bộ thật (OpenRouteService) cho gợi ý liên quan —
+  Giai đoạn 1-3 ĐÃ XONG (21/07/2026)** — `dichoithoi-poi-distance-plan.md`.
+  Thay/bổ sung Haversine bằng ORS cho `DistanceFromCenter` (con→cha) + bảng
+  mới `dichoithoi_poi_distances` (con↔con) — verify thật với API key ORS thật
+  + dữ liệu Đà Lạt (45 con, 990 cặp = C(45,2), cascade Postgres+SQL Server
+  khớp nhau). Nút "Tính khoảng cách" theo cụm/tỉnh (Công cụ, chọn Select) +
+  nút riêng 1 điểm ở tab "Quan hệ" (bán kính vật lý, tự relink điểm đó ngay).
+  `related-builder.ts` ưu tiên đọc `poiDistances` trước Haversine (fallback
+  graceful). 64 suites/402 test jest sạch, `tsc --noEmit` sạch. **Còn lại
+  Giai đoạn 4 (TUỲ CHỌN, chưa chốt)**: nối khoảng cách vào `sourceContext` khi
+  tạo job AI viết bài — cần bạn xác nhận trước khi code.
 
 - **Sim du lịch — gợi ý/gắn link sản phẩm liên quan** (repo `dichoithoi`, ghi
   nhận 07/2026, CHƯA phân tích): mục đích gợi ý và gắn link sản phẩm liên quan

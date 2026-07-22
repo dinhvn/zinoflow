@@ -93,6 +93,13 @@ import { TaxonomySuggestionEntity } from "./infrastructure/entities/taxonomy-sug
 import { CLUSTER_DISTANCE_REPOSITORY } from "./application/ports/cluster-distance.repository";
 import { TypeOrmClusterDistanceRepository } from "./infrastructure/repositories/typeorm-cluster-distance.repository";
 import { ClusterDistanceEntity } from "./infrastructure/entities/cluster-distance.entity";
+import { POI_DISTANCE_REPOSITORY } from "./application/ports/poi-distance.repository";
+import { TypeOrmPoiDistanceRepository } from "./infrastructure/repositories/typeorm-poi-distance.repository";
+import { PoiDistanceEntity } from "./infrastructure/entities/poi-distance.entity";
+import { DISTANCE_MATRIX_PROVIDER } from "./application/ports/distance-matrix-provider.port";
+import { OpenRouteServiceMatrixAdapter } from "./infrastructure/routing/openrouteservice-matrix.adapter";
+import { RecomputeGroupDistancesUseCase } from "./application/use-cases/recompute-group-distances.usecase";
+import { RecomputeNearbyDistancesUseCase } from "./application/use-cases/recompute-nearby-distances.usecase";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
 import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
@@ -125,6 +132,7 @@ import {
       AdminWardMappingEntity,
       DestinationAiExtractionEntity,
       ClusterDistanceEntity,
+      PoiDistanceEntity,
       TaxonomySuggestionEntity,
     ]),
   ],
@@ -184,6 +192,8 @@ import {
     GetDestinationAiExtractionUseCase,
     AcceptDestinationAiExtractionFieldsUseCase,
     RecomputeClusterDistancesUseCase,
+    RecomputeGroupDistancesUseCase,
+    RecomputeNearbyDistancesUseCase,
     GetDestinationsMapUseCase,
     GetTaxonomyKanbanBoardUseCase,
     UpdateDestinationTypesUseCase,
@@ -206,6 +216,8 @@ import {
       useClass: TypeOrmDestinationAiExtractionRepository,
     },
     { provide: CLUSTER_DISTANCE_REPOSITORY, useClass: TypeOrmClusterDistanceRepository },
+    { provide: POI_DISTANCE_REPOSITORY, useClass: TypeOrmPoiDistanceRepository },
+    { provide: DISTANCE_MATRIX_PROVIDER, useClass: OpenRouteServiceMatrixAdapter },
     { provide: TAXONOMY_SUGGESTION_REPOSITORY, useClass: TypeOrmTaxonomySuggestionRepository },
   ],
   exports: [DICHOITHOI_SITE_DB, DESTINATION_MIRROR_REPOSITORY],

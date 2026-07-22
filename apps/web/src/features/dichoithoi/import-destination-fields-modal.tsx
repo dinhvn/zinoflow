@@ -12,7 +12,7 @@ import {
 } from "@zinoflow/contracts";
 import { apiSend, ApiError } from "@/shared/api-client";
 import { Button, Input, Modal } from "@/shared/ui";
-import { parseRowsFromText, emptyToUndef } from "./sheet-import-csv";
+import { parseRowsFromText, emptyToUndef, formatValidationDetail } from "./sheet-import-csv";
 
 const DEFAULT_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1dj2Zwb496l6rTJykOpMYLyP8syD13Bv4MFrIi9fgIpo/edit?gid=229521716#gid=229521716";
@@ -180,7 +180,16 @@ export function ImportDestinationFieldsModal({
 
         {updateMutation.isError && (
           <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-            {updateMutation.error instanceof ApiError ? updateMutation.error.message : "Cập nhật thất bại"}
+            <p>
+              {updateMutation.error instanceof ApiError ? updateMutation.error.message : "Cập nhật thất bại"}
+            </p>
+            {updateMutation.error instanceof ApiError && updateMutation.error.details.length > 0 && (
+              <ul className="mt-1 list-inside list-disc">
+                {updateMutation.error.details.map((d, i) => (
+                  <li key={i}>{formatValidationDetail(d, preview ?? [])}</li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
