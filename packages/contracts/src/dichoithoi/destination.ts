@@ -384,6 +384,25 @@ export const createDestinationJobResponseSchema = z.object({
 });
 export type CreateDestinationJobResponse = z.infer<typeof createDestinationJobResponseSchema>;
 
+/** Xem truoc prompt se gui AI cho 1 diem den (nut "Xem trước prompt" o tab AI ho tro) —
+ * dung y het CreateDestinationJobRequest, KHONG tao job/khong goi AI. */
+export const previewDestinationJobPromptRequestSchema = createDestinationJobRequestSchema;
+export type PreviewDestinationJobPromptRequest = z.infer<
+  typeof previewDestinationJobPromptRequestSchema
+>;
+
+/** Prompt buoc 1 (outline) se gui AI — dung nguyen system+prompt nhu luc job that chay.
+ * Buoc 2 (content) dung sourceContext nay + outline AI tra ve o buoc 1 nen chua the
+ * hien day du truoc (chua co outline) — chi ghi chu de nguoi dung biet. */
+export const previewDestinationJobPromptResponseSchema = z.object({
+  systemPrompt: z.string(),
+  outlinePrompt: z.string(),
+  sourceContext: z.string(),
+});
+export type PreviewDestinationJobPromptResponse = z.infer<
+  typeof previewDestinationJobPromptResponseSchema
+>;
+
 /** 1 link noi bo vua duoc chen vao bai (engine auto-link) */
 export const addedLinkSchema = z.object({
   targetSlug: z.string(),

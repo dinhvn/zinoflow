@@ -3,9 +3,12 @@ import {
   aiProviderKeySchema,
   type CreateDestinationJobRequest,
   type CreateDestinationJobResponse,
+  type PreviewDestinationJobPromptRequest,
+  type PreviewDestinationJobPromptResponse,
 } from "@zinoflow/contracts";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 import { CreateContentJobUseCase } from "../../../ai-content/application/use-cases/create-content-job.usecase";
+import { PromptBuilder, type PromptJobContext } from "../../../ai-content/application/services/prompt-builder";
 import {
   CONTENT_JOB_REPOSITORY,
   type ContentJobRepository,
@@ -43,6 +46,7 @@ export class CreateDestinationJobUseCase {
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
     @Inject(REFERENCE_FETCHER) private readonly referenceFetcher: ReferenceFetcher,
     private readonly createContentJob: CreateContentJobUseCase,
+    private readonly promptBuilder: PromptBuilder,
   ) {}
 
   /** Luu thong tin cung cap cho AI ma KHONG tao bai (nut "Luu thong tin"). */
@@ -116,6 +120,45 @@ export class CreateDestinationJobUseCase {
       `Tao job ${result.jobId} cho diem den ${destination.slug} (mode ${request.mode})`,
     );
     return { jobId: result.jobId, status: result.status };
+  }
+
+  /**
+   * Xem truoc prompt se gui AI (nut "Xem trước prompt" o tab AI ho tro, khong tao
+   * job/khong goi AI) — dung LAI dung logic buildSourceContext + PromptBuilder.buildOutline
+   * de nguoi dung thay CHINH XAC nhung gi AI se nhan cho buoc 1 (outline). Buoc 2
+   * (content) dung cung sourceContext nay + outline AI tra ve o buoc 1 nen chua preview
+   * duoc toan van (chua co outline that) — response chi tra outlinePrompt.
+   */
+  async previewPrompt(
+    slug: string,
+    request: PreviewDestinationJobPromptRequest,
+  ): Promise<PreviewDestinationJobPromptResponse> {
+    const all = await this.mirrorRepo.findAll();
+    const destination = all.find((d) => d.slug === slug);
+    if (!destination) {
+      throw new DomainRuleError(`Không tìm thấy điểm đến "${slug}" trong mirror`, [
+        "Bấm Đồng bộ từ website rồi thử lại",
+      ]);
+    }
+
+    const sourceContext = await this.buildSourceContext(destination, all, request);
+    const ctx: PromptJobContext = {
+      model: request.aiModel ?? "preview",
+      articleType: "guide-diem-den",
+      topic: destination.name,
+      siteCode: SITE_CODE,
+      keywordSeed: [destination.name],
+      toneProfile: null,
+      sourceContext,
+      contentTier: destination.contentTier,
+      products: [],
+    };
+    const outlineRequest = await this.promptBuilder.buildOutline(ctx);
+    return {
+      systemPrompt: outlineRequest.system,
+      outlinePrompt: outlineRequest.prompt,
+      sourceContext,
+    };
   }
 
   /**

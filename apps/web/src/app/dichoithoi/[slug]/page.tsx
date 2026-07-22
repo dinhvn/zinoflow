@@ -36,6 +36,7 @@ import {
   type DestinationMetaValues,
 } from "@/features/dichoithoi/destination-metadata-form";
 import { DestinationPasteContentModal } from "@/features/dichoithoi/destination-paste-content-modal";
+import { DestinationPromptPreviewModal } from "@/features/dichoithoi/destination-prompt-preview-modal";
 import { DestinationArticleEditor } from "@/features/dichoithoi/destination-article-editor/destination-article-editor";
 import { DestinationImageUploader } from "@/features/dichoithoi/destination-image-uploader";
 import { DestinationGalleryEditor } from "@/features/dichoithoi/destination-gallery-editor";
@@ -394,6 +395,7 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     onError: (e) => setActionError(toActionError(e)),
   });
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
+  const [promptPreviewOpen, setPromptPreviewOpen] = useState(false);
 
   // --- Ban nhap bai viet (draft_article) — pivot gop editor vao trang detail ---
   const [draftArticle, setDraftArticle] = useState<DestinationArticle | null>(null);
@@ -1163,6 +1165,9 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               <Button loading={saveInputs.isPending} onClick={() => saveInputs.mutate()}>
                 {saveInputs.isPending ? "Đang lưu..." : "Lưu thông tin (chưa tạo bài)"}
               </Button>
+              <Button variant="secondary" onClick={() => setPromptPreviewOpen(true)}>
+                👁️ Xem trước prompt
+              </Button>
               {inputsSaved && !saveInputs.isPending && (
                 <span className="text-xs text-emerald-600 dark:text-emerald-400">
                   ✅ Đã lưu — sẽ tự điền lại lần sau
@@ -1220,6 +1225,22 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           );
         })()}
       </Group>
+
+      {promptPreviewOpen && (
+        <DestinationPromptPreviewModal
+          slug={slug}
+          requestBody={{
+            mode: d?.contentState === "chua-co-bai" ? "create" : "update",
+            userNotes: aiInputsBody().userNotes,
+            referenceUrls: aiInputsBody().referenceUrls.length
+              ? aiInputsBody().referenceUrls
+              : undefined,
+            aiProvider: selectedProvider?.key,
+            aiModel: selectedModel?.id,
+          }}
+          onClose={() => setPromptPreviewOpen(false)}
+        />
+      )}
 
       {pasteModalOpen && (
         <DestinationPasteContentModal

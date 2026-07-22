@@ -54,6 +54,9 @@ import {
   type CheckImageResponse,
   type CreateDestinationJobRequest,
   type CreateDestinationJobResponse,
+  previewDestinationJobPromptRequestSchema,
+  type PreviewDestinationJobPromptRequest,
+  type PreviewDestinationJobPromptResponse,
   type DestinationDetail,
   type DestinationTaxonomy,
   type GetDestinationsMapResponse,
@@ -445,6 +448,20 @@ export class DestinationsController {
     request: CreateDestinationJobRequest,
   ): Promise<CreateDestinationJobResponse> {
     return this.createJob.execute(slug, request);
+  }
+
+  /**
+   * Xem truoc prompt (system + outline) se gui AI, KHONG tao job/khong goi AI —
+   * nut "Xem trước prompt" tab AI ho tro, de nguoi dung kiem tra thong tin truoc khi
+   * ton tien/thoi gian goi that.
+   */
+  @Post(":slug/jobs/preview")
+  previewDestinationJobPrompt(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(previewDestinationJobPromptRequestSchema))
+    request: PreviewDestinationJobPromptRequest,
+  ): Promise<PreviewDestinationJobPromptResponse> {
+    return this.createJob.previewPrompt(slug, request);
   }
 
   /** Luu thong tin cung cap cho AI (ghi chu + URL nguon) ma KHONG tao bai */
