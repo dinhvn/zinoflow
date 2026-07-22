@@ -25,7 +25,13 @@ export class PgBossService implements JobQueue, OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.boss = new PgBoss(databaseUrl);
+    this.boss = new PgBoss({
+      connectionString: databaseUrl,
+      // Khong set thi pg.Pool cua pg-boss cho connect vo thoi han khi Postgres
+      // cham/ket noi cu chua duoc don — gay treo im lang luc boot (khong log,
+      // khong crash). Co timeout de fail nhanh va bao loi ro rang.
+      connectionTimeoutMillis: 10_000,
+    });
     this.boss.on("error", (error) => this.logger.error(`pg-boss error: ${error.message}`));
     await this.boss.start();
     this.logger.log("pg-boss started (schema: pgboss)");
