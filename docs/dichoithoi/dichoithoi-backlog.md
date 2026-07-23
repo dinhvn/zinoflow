@@ -111,17 +111,18 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   `dichoithoi-destination-relations-plan.md`. Còn B4 (rà soát tay taxonomy
   qua Kanban `/dichoithoi/phan-loai`) là việc vận hành dài hơi người dùng
   tự làm dần, không chặn gì.
-- **Nâng cấp quy trình bài viết Article/Cẩm nang (15/07/2026, CHƯA BUILD)**
+- **Nâng cấp quy trình bài viết Article/Cẩm nang (15/07/2026, CHƯA BUILD hết)**
   — plan ở `dichoithoi-article-workflow-plan.md`: (1) thêm field tag thật
   cho bài viết, dùng CHUNG vocabulary `V2DestinationTag` với Destination
   (đã chốt hướng, chưa build) — kèm mở rộng trang `/chu-de/{slug}` hiện cả
   bài viết lẫn điểm đến, và fix phát hiện phụ: trang này hiện KHÔNG được
-  link từ đâu trên site (orphaned); (2) tách auto-link + chèn khối
-  sản phẩm ra 1 use-case Preview riêng (2 service liên quan đã xác nhận
-  thuần đọc, an toàn tái dùng) — hiện chỉ resolve lúc Publish, khác nguyên
-  tắc preview đã áp dụng cho Destination. Ngoài ra phát hiện `Tag`/
-  `TagController` (API `/api/tags`) là code chết, 0 nơi gọi — ứng viên dọn
-  dẹp sau này giống đợt xoá module Blog, chưa xử lý. (3) Audit SEO Article
+  link từ đâu trên site (orphaned). (2) ✅ **ĐÃ XONG (23/07/2026)** — tách
+  auto-link + chèn khối sản phẩm ra 1 use-case Preview riêng
+  (`PreviewArticleUseCase`, dry-run không ghi DB, cùng pattern preview của
+  Destination) — nút "Xem trước" ở `content/[id]/page.tsx`. Ngoài ra phát
+  hiện `Tag`/`TagController` (API `/api/tags`) là code chết, 0 nơi gọi —
+  ứng viên dọn dẹp sau này giống đợt xoá module Blog, chưa xử lý. (3) Audit
+  SEO Article
   — ✅ **3/4 mục ĐÃ XONG (20/07/2026)**, mục còn lại cố ý để sau (quyết định
   qua AskUserQuestion):
   - ✅ **Thumbnail null lúc publish** — thêm field `coverImageId` (nullable)
@@ -254,19 +255,13 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
     dụng cho cả bài điểm đến lẫn bài cẩm nang vì dùng chung 1 engine) — không
     để trống chỉ có ô số không giải thích.
 
-- **Hiển thị nút "Xem trên Google Maps" (dùng link gốc, không tự dựng từ
-  lat/lng) ở trang chi tiết dichoithoi** (phát hiện 21/07/2026, làm SAU):
-  cột `GoogleMapsUrl` (`v2.Destination.GoogleMapsUrl`) đã được zinoflow ghi
-  đầy đủ khi lưu/publish (`mssql-site-db.adapter.ts`), nhưng website
-  dichoithoi hiện KHÔNG đọc/hiển thị ở đâu cả (grep toàn repo dichoithoi ra
-  0 kết quả; entity `Destination.cs` cũng chưa có property này) — dữ liệu
-  bị "chết". Lý do đáng làm: nếu chỉ tự dựng link từ lat/lng
-  (`?q=lat,lng`), Google Maps chỉ thả ghim toạ độ trần, MẤT tên địa
-  điểm/ảnh/review vì thiếu Place ID (phần `!1s0x...` trong link gốc) — dùng
-  lại `GoogleMapsUrl` gốc mới ra đúng thẻ địa điểm đầy đủ. Việc cần làm khi
-  triển khai: thêm property `GoogleMapsUrl` vào `Destination.cs` (site
-  repo), map từ cột DB, hiển thị nút link ở khu vực bản đồ/địa chỉ trên
-  `Detail.cshtml`.
+- ✅ **Nút "Xem trên Google Maps" — ĐÃ XONG (23/07/2026, repo `dichoithoi`
+  commit `1ff637d`)**: thêm property `GoogleMapsUrl` vào `V2Destination.cs`
+  + `DestinationDetailModel`, hiện link gốc (giữ Place ID đầy đủ) cạnh link
+  "Chỉ đường" (chỉ Lat/Lng) ở cả `_QuickDecisionCard` (POI/cluster có
+  `HasOwnVisitInfo`) và khối "Vị trí" độc lập (cluster không có visit info).
+  Verify thật qua `dotnet run` trên `dichoithoi_dev`: POI có `GoogleMapsUrl`
+  hiện đúng link Place ID, POI/cluster không có ẩn đúng nút, không lỗi log.
 
 - **Bản đồ minh hoạ "điểm đến liên quan" trên website công khai** (ý tưởng
   21/07/2026, TÍNH NĂNG NÂNG CAO — xem xét/phân tích/làm SAU, chưa lên plan):
@@ -296,42 +291,30 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 - **SEO ảnh cho gallery hero (đánh giá 07/2026, sau khi build xong tính năng
   gallery ảnh — CMS quản lý nhiều ảnh + hero site thành carousel)**: đánh giá
   theo checklist SEO-owner (`dichoithoi-seo-principles.md`) phát hiện 5 lỗ
-  hổng, đã CHỐT hướng sửa nhưng CHƯA code, làm sau theo mức ưu tiên:
+  hổng, đã CHỐT hướng sửa. **#2/#3/#5 ĐÃ XONG (xác nhận qua code 23/07/2026,
+  dòng "chưa code" ở trên đã lỗi thời — làm ở `ff384d5`/`c2fa3b3` bên repo
+  `dichoithoi`, chỉ chưa cập nhật doc này lúc đó)**:
+  2. ✅ **Structured data đủ ảnh** — MỌI `<img>` server-render trong gallery
+     (carousel mobile, collage desktop, dải "Hình ảnh {tên}") đều đã có
+     `itemprop="image"` (`Detail.cshtml`), không chỉ hero gốc.
+  3. ✅ **Caption/credit hiện đủ** — caption hiện inline trên cả carousel
+     mobile (đè trên ảnh, giống hero) lẫn lightbox/collage desktop.
+  5. ✅ **Responsive `srcset`** — ảnh gallery mới có 3 size (`ThumbUrl`/
+     `MediumUrl`/`HeroUrl`) qua `srcset`, ảnh cũ (1 size, chưa backfill) vẫn
+     dùng `<img>` đơn, không lỗi.
+
+  Còn mở, **cần bàn UX/luồng nhập liệu trước khi code**:
   1. **Alt text sẽ gần như luôn trùng nhau** — CMS mặc định `altText: null`
      lúc upload (`destination-gallery-editor.tsx`), không ép nhập → mọi ảnh
      kể cả hero đều rơi về fallback `"Hình ảnh về {tên}"` giống hệt nhau nếu
      người dùng bỏ qua (khả năng cao vì không bắt buộc). Hướng sửa: chặn nút
      "Lưu thư viện ảnh" nếu còn ảnh thiếu alt riêng, hoặc gợi ý placeholder
-     theo ngữ cảnh thay vì để trống.
-  2. **Structured data chỉ thấy đúng 1 ảnh dù gallery có tới 10** —
-     `Detail.cshtml` chỉ gắn `itemprop="image"` cho slide hero gốc (dòng
-     ~104), các slide trong `@foreach (var photo in heroGalleryPhotos)`
-     không có itemprop. `schema.org/TouristAttraction.image` cho phép mảng
-     nhiều URL. Sửa: thêm `itemprop="image"` cho từng `<img>` trong vòng lặp
-     (rẻ, không đổi kiến trúc).
-  3. **Caption/credit nhập ở CMS nhưng không hiển thị ở hero-carousel** — 2
-     field này chỉ render ở khu "Hình ảnh {tên}" cuộn ngang dưới hero (dùng
-     `figcaption`), hero-carousel bỏ qua hoàn toàn → nửa số ảnh (slide hero)
-     không tận dụng được text ngữ cảnh người dùng đã nhập.
+     theo ngữ cảnh thay vì để trống. Rủi ro: ép nhập alt có thể gây khó chịu
+     nếu người dùng chỉ muốn upload nhanh nhiều ảnh — cần quyết định trước.
   4. **Tên file ảnh gallery không mang từ khoá** — `{slug}-{timestamp}.webp`
      (vd. `da-lat-1752345678901.webp`), Google có tính (yếu nhưng có thật) tên
-     file mô tả nội dung. Sửa: slug hoá từ alt text lúc lưu.
-  5. **Ảnh gallery không có responsive `srcset`** — `AddDestinationGalleryImageUseCase`
-     dùng `toWebp()` 1 size cố định 1400w, phục vụ y hệt cho mobile lẫn
-     desktop, trong khi thumbnail đã có sẵn `toWebpVariants` (3 size). Page
-     speed là ranking factor trực tiếp.
-
-  #2 và #3 rẻ, không đổi kiến trúc — có thể làm ngay khi rảnh. #1/#4/#5 cần
-  bàn thêm UX/luồng nhập liệu trước khi code (đặc biệt #1 — ép nhập alt có
-  thể gây khó chịu nếu người dùng chỉ muốn upload nhanh nhiều ảnh).
-
-  **Cập nhật 07/2026 (redesign hero + lightbox, cùng đợt sửa bug hero dùng
-  nhầm ảnh 400px)**: #3 đã cải thiện đáng kể — caption/credit giờ hiện được
-  trong lightbox toàn màn hình (mọi ảnh) và đè trên 2 ảnh phụ của collage
-  desktop, nhưng slide trong carousel mobile vẫn CHƯA hiện caption inline
-  (chỉ xem được khi bấm mở lightbox). #2 vẫn còn nguyên (chỉ slide hero gốc
-  có `itemprop="image"`, các slide/ảnh khác trong carousel/collage/lightbox
-  chưa gắn).
+     file mô tả nội dung. Sửa: slug hoá từ alt text lúc lưu — phụ thuộc #1
+     (cần có alt thật trước khi slug hoá được).
 
   ✅ **#2 và #3 ĐÃ XONG (20/07/2026, repo dichoithoi commit `ff384d5`)** —
   thuần `Detail.cshtml`, không đổi zinoflow/schema. `itemprop="image"` giờ
