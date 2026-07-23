@@ -45,6 +45,8 @@ function fieldValue(e: DestinationMirrorEntity, f: DestinationBulkEditFieldKey):
       return e.shortDescription ?? "";
     case "metaTitle":
       return e.metaTitle ?? "";
+    case "priority":
+      return String(e.priority);
   }
 }
 

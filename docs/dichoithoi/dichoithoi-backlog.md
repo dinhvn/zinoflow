@@ -398,6 +398,31 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   graceful). 64 suites/402 test jest sạch, `tsc --noEmit` sạch. **Còn lại
   Giai đoạn 4 (TUỲ CHỌN, chưa chốt)**: nối khoảng cách vào `sourceContext` khi
   tạo job AI viết bài — cần bạn xác nhận trước khi code.
+- ✅ **Giai đoạn 5 — Khoảng cách cụm↔cụm/tỉnh↔tỉnh sang ORS thật — ĐÃ XONG
+  (23/07/2026)** — cùng file `dichoithoi-poi-distance-plan.md`. Đổi
+  `RecomputeClusterDistancesUseCase` từ Haversine sang gọi
+  `IDistanceMatrixProvider` (adapter ORS có sẵn từ Giai đoạn 1), không đổi UI
+  (giữ nguyên nút "Tính lại khoảng cách cụm/tỉnh"). **Phát hiện + sửa 1 bug
+  thật lúc verify**: ORS trả `null` cho 47/300 cặp (2 node `lam-dong`/
+  `quang-binh` không tìm được tuyến đường bộ, có thể do toạ độ centroid rơi
+  vào vùng không có đường số hoá gần đó) — code cũ `Math.round(null)` ÂM THẦM
+  ghi `0m` sai (0m bị hiểu nhầm là 2 điểm trùng nhau, nghiêm trọng hơn không
+  có dữ liệu). Đã sửa: bỏ qua cặp lỗi (không ghi), thêm field `failedPairs`
+  vào report + cảnh báo vàng trên UI. Verify thật trên `dichoithoi_dev`:
+  `{"nodes":25,"pairs":253,"failedPairs":47,...}`, query Postgres xác nhận 0
+  dòng còn giá trị 0m. 5 test mới, 23 suites/130 test jest sạch.
+
+- ✅ **Chế độ xem theo cụm/tỉnh cụ thể trên `/dichoithoi/ban-do` — ĐÃ XONG
+  (23/07/2026)** — `dichoithoi-map-cluster-view-plan.md`, giai đoạn A→E đầy
+  đủ. Select "Xem cụm/tỉnh cụ thể" (A, tự fit bounds) + tắt marker clustering
+  (B) + tên điểm thường trực (C) khi đã chọn cụm; endpoint
+  `relations-map-data` trả thêm `poiDistances` + vẽ đường xanh lá con↔con
+  kèm range slider lọc ngưỡng km, mặc định vẽ hết (D); bảng liệt kê toàn bộ
+  cặp+km trong cụm, dùng `DataTable` có sẵn (E). Verify qua Playwright thật
+  trên `dichoithoi_dev`: chọn "Đà Lạt" → 72/300 điểm, marker riêng lẻ kèm
+  tên, kéo slider 308,5km→49,3km số cặp/đường giảm đúng (2485→2331), bảng
+  sort đúng tăng dần; bỏ chọn cụm → quay lại hành vi cũ (gộp cụm dạng số),
+  không lỗi console mới. `tsc --noEmit` sạch api+web+contracts.
 
 - **Sim du lịch — gợi ý/gắn link sản phẩm liên quan** (repo `dichoithoi`, ghi
   nhận 07/2026, CHƯA phân tích): mục đích gợi ý và gắn link sản phẩm liên quan
@@ -552,6 +577,19 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   Phát hiện lúc build: prompt mặc định cho `cam-nang.*` (bài cẩm nang, nơi
   chèn khối Product) chưa tồn tại trong `DEFAULT_PROMPTS` — thuộc khoảng trống
   Phase 8, chưa xử lý.
+
+- **Thiết kế lại trang chủ + footer (ghi nhận ý tưởng 23/07/2026, CHƯA PHÂN
+  TÍCH)** — người dùng dự tính làm sau, chỉ mới ghi lại ý định, chưa audit
+  code/chưa chạy checklist SEO-owner. Phạm vi nêu ra: nội dung, màu sắc,
+  trang chủ, footer. File liên quan (repo `dichoithoi`, chưa đọc kỹ, chỉ xác
+  định vị trí): `DiChoiThoi.Web/Views/Home/Index.cshtml` (trang chủ),
+  `DiChoiThoi.Web/Views/Shared/_Footer.cshtml` (footer),
+  `DiChoiThoi.Web/Views/Shared/_Layout.cshtml` (layout chung, màu sắc/theme
+  có thể nằm ở CSS dùng chung layout này). Khi bắt tay làm: chạy
+  `dichoithoi-seo-check` trước (trang chủ/footer có internal-link + JSON-LD
+  ảnh hưởng SEO), và tham khảo nguyên tắc "flat/modern UI" đã chốt cho UI
+  CMS zinoflow (`dichoithoi-flat-modern-ui`) — cân nhắc có áp dụng tinh thần
+  tương tự cho website công khai hay đây là gu riêng, cần hỏi lại.
 
 ## A) Quyết định CẦN BẠN CHỐT trước khi code (không phải việc kỹ thuật thuần)
 

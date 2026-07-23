@@ -70,7 +70,7 @@ export class BulkUpdateDestinationFieldsUseCase {
           contactPhone: nonEmpty(row.contactPhone) ?? existing.contactPhone,
           contactWebsite: nonEmpty(row.contactWebsite) ?? existing.contactWebsite,
           hotelGroupId: nonEmpty(row.hotelGroupId) ?? existing.hotelGroupId,
-          priority: existing.priority,
+          priority: parsePriority(row.priority, existing.priority),
           contentTier: existing.contentTier,
         };
 
@@ -140,6 +140,17 @@ function nonEmpty(s: string | undefined): string | null | undefined {
   if (s === undefined) return undefined;
   const trimmed = s.trim();
   return trimmed === "" ? undefined : trimmed;
+}
+
+/** "" / khoang trang = giu nguyen priority cu; co gia tri phai la so nguyen 1-5. */
+function parsePriority(raw: string | undefined, existing: number): number {
+  const trimmed = raw?.trim();
+  if (!trimmed) return existing;
+  const value = Number(trimmed);
+  if (!Number.isInteger(value) || value < 1 || value > 5) {
+    throw new Error(`Độ ưu tiên phải là số nguyên 1-5, nhận được "${trimmed}"`);
+  }
+  return value;
 }
 
 /**

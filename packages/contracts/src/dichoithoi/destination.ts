@@ -475,6 +475,10 @@ export const recomputeClusterDistancesReportSchema = z.object({
   nodes: z.number().int(),
   /** So cap khoang cach da ghi (toi da C(nodes,2)) */
   pairs: z.number().int(),
+  /** So cap ORS khong tra ve duoc khoang cach duong bo (null/khong tim thay
+   * tuyen) — CHU DINH KHONG ghi 0 cho cac cap nay (dichoithoi-poi-distance-plan.md
+   * Giai doan 5), bo qua thay vi ghi sai du lieu. */
+  failedPairs: z.number().int(),
   durationMs: z.number().int(),
 });
 export type RecomputeClusterDistancesReport = z.infer<
@@ -694,6 +698,7 @@ export const DESTINATION_BULK_EDIT_FIELD_KEYS = [
   "metaTitle",
   "facebookUrl",
   "tripadvisorUrl",
+  "priority",
 ] as const;
 export type DestinationBulkEditFieldKey = (typeof DESTINATION_BULK_EDIT_FIELD_KEYS)[number];
 
@@ -708,6 +713,7 @@ export const DESTINATION_BULK_EDIT_FIELD_LABELS: Record<DestinationBulkEditField
   metaTitle: "Meta Title (thẻ <title> SEO)",
   facebookUrl: "Link Facebook",
   tripadvisorUrl: "Link TripAdvisor",
+  priority: "Độ ưu tiên (1-5, 1=cao nhất)",
 };
 
 /** Nhan co dinh dung de khop/ghi entry trong externalReviewUrls khi bulk-edit facebookUrl/tripadvisorUrl. */
@@ -741,6 +747,9 @@ export const destinationBulkEditRowSchema = z.object({
   metaTitle: z.string().max(DESTINATION_FIELD_LIMITS.metaTitle).optional(),
   facebookUrl: z.string().max(1024).optional(),
   tripadvisorUrl: z.string().max(1024).optional(),
+  /** Chuoi tu CSV, phai la so nguyen 1-5 neu co gia tri — validate trong usecase
+   * (khong ep kieu o schema vi CSV luon la text, o rong = khong doi). */
+  priority: z.string().max(4).optional(),
 });
 export type DestinationBulkEditRow = z.infer<typeof destinationBulkEditRowSchema>;
 

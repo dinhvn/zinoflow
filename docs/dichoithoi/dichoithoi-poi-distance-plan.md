@@ -2,7 +2,11 @@
 
 **Cập nhật 21/07/2026: Giai đoạn 1-3 ĐÃ XONG** (build + verify với API key ORS
 thật + dữ liệu Đà Lạt thật trên `dichoithoi_dev`). Giai đoạn 4 vẫn để ngỏ, chưa
-chốt. Xem tóm tắt verify ở cuối mỗi giai đoạn bên dưới.
+chốt. **Cập nhật 23/07/2026: Giai đoạn 5 ĐÃ XONG** — mở rộng ORS lên cấp
+cụm↔cụm/tỉnh↔tỉnh (bảng `dichoithoi_cluster_distances`), build + verify thật
+trên `dichoithoi_dev` (25 node/253 cặp hợp lệ, 47 cặp bị ORS trả null bỏ qua
+đúng thiết kế — xem DoD chi tiết). Xem tóm tắt verify ở cuối mỗi giai đoạn bên
+dưới.
 
 Ghi 21/07/2026. Bối cảnh: toàn bộ khoảng cách hiện dùng trong "điểm đến liên
 quan" (badge hiển thị + thuật toán xếp hạng) đều là đường chim bay
@@ -57,6 +61,31 @@ cho điểm đó.
   đã có sẵn ở [app/dichoithoi/page.tsx:460-490](../../apps/web/src/app/dichoithoi/page.tsx#L460)
   — nút "Tính khoảng cách theo cụm/tỉnh" (Giai đoạn 2) sẽ thêm cạnh 2 nút này,
   nhưng cần thêm 1 `<Select>` chọn cụm/tỉnh (2 nút cũ không có tham số).
+- **Bổ sung audit 23/07/2026 cho Giai đoạn 5**:
+  [recompute-cluster-distances.usecase.ts](../../apps/api/src/modules/destination/application/use-cases/recompute-cluster-distances.usecase.ts)
+  (toàn bộ 57 dòng): lấy TẤT CẢ node `kind IN (province, cluster)` có toạ độ,
+  tính `haversineMeters()` cho MỌI cặp (vòng lặp `i<j`), ghi đè toàn bộ
+  `dichoithoi_cluster_distances` qua `clusterDistanceRepo.replaceAll(pairs)` —
+  **KHÔNG inject `DISTANCE_MATRIX_PROVIDER`**, vẫn 100% Haversine dù Giai đoạn
+  1 đã có adapter ORS sẵn dùng.
+  - Gọi thật `GET /api/destinations/map` (server dev đang chạy) đếm được:
+    **17 tỉnh + 8 cụm có toạ độ = 25 node → 300 cặp** (`N*(N-1)/2`) — rất nhỏ
+    so với `MAX_ROUTES_PER_REQUEST=3400` của adapter, 1 lần gọi Matrix API là
+    đủ, không cần logic chia block (đã có sẵn trong adapter nhưng không cần
+    dùng ở quy mô này).
+  - UI hiện tại: nút "Tính lại khoảng cách cụm/tỉnh"
+    ([app/dichoithoi/page.tsx:521-529](../../apps/web/src/app/dichoithoi/page.tsx#L521)),
+    gọi `POST /destinations/recompute-cluster-distances`, không tham số.
+  - Dữ liệu bảng này dùng ở 2 chỗ: (1) vẽ đường xám "nền tự động" + tooltip số
+    km trên bản đồ CMS
+    ([destination-map-relations-layer.tsx:61-69](../../apps/web/src/features/dichoithoi/destination-map-relations-layer.tsx#L61))
+    — hiển thị TRỰC TIẾP cho người xem, hiện đang sai bản chất (ghi số nhưng
+    là chim bay); (2) `rankingDistanceMeters` nhánh khác-cụm/tỉnh
+    ([related-builder.ts:170-181](../../apps/api/src/modules/destination/domain/related-builder.ts#L170))
+    — cộng `distanceFromCenter + khoảng_cách_cụm + distanceFromCenter` theo
+    bất đẳng thức tam giác, CHỈ dùng xếp hạng (không hiển thị) — giá trị tăng
+    thêm ở đây thấp hơn (1) vì bản chất đã là ước lượng có chủ đích, nhưng vẫn
+    có ích vì 2/3 số hạng công thức giờ là số thật thay vì 1/3.
 - `CreateDestinationJobUseCase.buildSourceContext()`
   ([dòng 144-157](../../apps/api/src/modules/destination/application/use-cases/create-destination-job.usecase.ts#L144)):
   hiện **chỉ gửi TÊN** các điểm cùng tỉnh cho AI (để nhắc đúng tên chuẩn phục
@@ -179,15 +208,81 @@ cho người soạn bài biết "chưa có dữ liệu khoảng cách, nên bấ
 dữ liệu thật cho điểm đó — nên tách riêng, làm sau khi đã dùng thử Giai đoạn
 2-3 một thời gian và thấy dữ liệu đủ dày.
 
+## Giai đoạn 5 — Đổi khoảng cách cụm↔cụm/tỉnh↔tỉnh sang ORS thật (ĐÃ XONG 23/07/2026)
+
+**Phụ thuộc**: chỉ Giai đoạn 1 (adapter `OpenRouteServiceMatrixAdapter` +
+port `IDistanceMatrixProvider` đã có sẵn, tái dùng y hệt, không cần thêm gì
+mới ở tầng adapter). **Độc lập hoàn toàn với Giai đoạn 2/3/4** — khác bảng
+(`dichoithoi_cluster_distances` chứ không phải `dichoithoi_poi_distances`),
+khác usecase, không đụng chung code.
+
+**Đánh giá (phân tích trước khi build)**: giá trị CAO (sửa đúng 1 điểm hiện
+đang "nói dối" trên bản đồ CMS — đường vẽ ra trông giống đường thật như con↔
+con nhưng thực chất vẫn là chim bay), độ phức tạp THẤP (không phải xây mới,
+chỉ đổi 1 hàm bên trong 1 usecase đã có, tái dùng port/adapter/UI nguyên
+vẹn). Quy mô dữ liệu nhỏ (25 node/300 cặp, xem audit ở trên) nên không phát
+sinh vấn đề quota/hiệu năng như lo ngại ban đầu ở cấp con↔con (Đà Lạt riêng
+đã 990 cặp).
+
+Việc cụ thể:
+
+- `RecomputeClusterDistancesUseCase`: inject thêm `DISTANCE_MATRIX_PROVIDER`
+  (copy pattern `RecomputeGroupDistancesUseCase`). Thay vòng lặp
+  `haversineMeters(a.lat, a.lng, b.lat, b.lng)` bằng 1 lần gọi
+  `distanceMatrix.computeMatrix(nodes.map(n => ({ lat: n.lat, lng: n.lng })))`
+  rồi đọc ma trận N×N ra từng cặp `(i, j)` — cùng cách
+  `RecomputeGroupDistancesUseCase` đang đọc `matrix[i+1]![j+1]!` cho con↔con,
+  chỉ khác không có "hàng 0" (không có node cha ở đây, mọi node đều ngang
+  cấp).
+- Giữ nguyên `throw DomainRuleError` rõ ràng nếu `!distanceMatrix.isConfigured()`
+  — **không** âm thầm fallback Haversine khi thiếu `OPENROUTESERVICE_API_KEY`
+  (đúng nguyên tắc dự án "không che giấu việc chưa cấu hình", giống Giai đoạn
+  2 đã làm).
+- **Không đổi UI** — nút "Tính lại khoảng cách cụm/tỉnh" hiện có giữ nguyên
+  tên/vị trí/không tham số, chỉ đổi thuật toán bên trong. Endpoint
+  `POST /destinations/recompute-cluster-distances` giữ nguyên.
+- Cân nhắc kỹ thuật (không phải quyết định thiết kế, chỉ là điểm cần lưu ý
+  lúc code): tuyến đường bộ rất xa (VD 1 cụm ở miền Bắc ↔ 1 cụm ở miền Nam)
+  có thể khiến ORS trả `null`/lỗi nếu không có route đường bộ nối liền (hiếm ở
+  Việt Nam, đất liền liên tục) — nếu adapter trả `Infinity`/lỗi cho 1 cặp cụ
+  thể, usecase nên log rõ cặp nào lỗi thay vì để cả lần chạy thất bại toàn
+  bộ (không có trong `RecomputeGroupDistancesUseCase` vì phạm vi con↔con luôn
+  đủ gần để không gặp ca này).
+
+**DoD Giai đoạn 5 (đã xác nhận qua dữ liệu thật, 23/07/2026)**: gọi
+`POST /destinations/recompute-cluster-distances` trên `dichoithoi_dev` thật
+(server dev đang chạy) → response ban đầu
+`{"nodes":25,"pairs":300,"durationMs":2121}` nhưng **phát hiện bug thật khi
+audit dữ liệu**: 47/300 cặp ghi `distance_meters=0` dù 2 đầu cách nhau hàng
+trăm km (VD `ca-mau<->quang-binh`) — điều tra ra ORS trả `null` cho MỌI cặp
+liên quan tới 2 node `lam-dong`/`quang-binh` (có thể do toạ độ centroid tỉnh
+rơi vào vùng không có đường số hoá gần đó để snap), code cũ `Math.round(null)`
+im lặng ra `0` — SAI nghiêm trọng hơn cả không có dữ liệu (0m bị hiểu nhầm là
+2 điểm trùng nhau). **Đã sửa**: usecase kiểm tra `typeof raw !== "number" ||
+!Number.isFinite(raw)` → bỏ qua cặp đó (không ghi), log rõ danh sách cặp lỗi,
+thêm field `failedPairs` vào response/contract + hiện cảnh báo vàng trên UI
+khi có cặp lỗi. Gọi lại API thật sau khi sửa →
+`{"nodes":25,"pairs":253,"failedPairs":47,"durationMs":1582}` — query Postgres
+xác nhận **0 dòng còn giá trị 0m**, đúng 253 dòng hợp lệ, cặp
+`da-lat<->nha-trang`=129469m (129,5km, hợp lý cho quãng đường đèo thật).
+5 test mới trong `recompute-cluster-distances.usecase.spec.ts` (dùng ORS
+thay vì Haversine, báo lỗi rõ khi thiếu API key, bỏ qua cặp null không ghi
+0) — 23 suites/130 test jest sạch. Playwright thật trên
+`/dichoithoi/ban-do`: chọn "Đà Lạt" ở Select mới (xem Giai đoạn A bên dưới,
+`dichoithoi-map-cluster-view-plan.md`) → bật "Hiện lớp quan hệ" → đường xám
+nối cụm/tỉnh hiện đúng số km mới (khác Haversine cũ).
+
 ## Tổng kết phụ thuộc
 
 ```
 Giai đoạn 1 (adapter ORS + bảng poi_distances + doc uu tien trong scoring) — ĐÃ XONG
   ├─ Giai đoạn 2 (nut theo cum/tinh — con→cha + con↔con, full recompute) — ĐÃ XONG
   ├─ Giai đoạn 3 (nut theo 1 diem — ban kinh vat ly, upsert + auto relink) — ĐÃ XONG
-  └─ Giai đoạn 4 (TUY CHON, chua chot — noi vao AI content sourceContext)
+  ├─ Giai đoạn 4 (TUY CHON, chua chot — noi vao AI content sourceContext)
+  └─ Giai đoạn 5 (doi khoang cach cum/tinh sang ORS — doc lap 2/3/4) — ĐÃ XONG 23/07/2026
 ```
 
-**Giai đoạn 1-3 hoàn tất 21/07/2026** — build + verify với ORS API key thật +
-dữ liệu Đà Lạt thật trên `dichoithoi_dev` (xem DoD từng giai đoạn ở trên). Chỉ
-còn Giai đoạn 4 (tuỳ chọn, chưa chốt) — chờ bạn quyết định trước khi code.
+**Giai đoạn 1-3 hoàn tất 21/07/2026, Giai đoạn 5 hoàn tất 23/07/2026** — build
++ verify với ORS API key thật trên `dichoithoi_dev` (xem DoD từng giai đoạn ở
+trên). Chỉ còn Giai đoạn 4 (tuỳ chọn, chưa chốt) — chờ bạn xác nhận trước khi
+code.

@@ -82,20 +82,33 @@ function buildPopupContent(item: DestinationMapItem): HTMLElement {
 export function DestinationMapClusterLayer({
   items,
   onMarkerClick,
+  disableClustering = false,
 }: {
   items: DestinationMapItem[];
   /** Bao cho trang cha khi click 1 marker — dung cho lop quan he (spotlight/noi
    * tay, relations-plan §5.6-§5.7, Giai doan C4). Khong thay the popup, ca 2 cung xay ra. */
   onMarkerClick?: (item: DestinationMapItem) => void;
+  /** Da chon 1 cum/tinh cu the tren trang cha (map-cluster-view-plan.md Giai doan
+   * A/B/C) — tat gom cum (chi con vai chuc diem, hien het khong can zoom) +
+   * hien ten thuong truc canh moi marker thay vi chi trong popup. */
+  disableClustering?: boolean;
 }) {
   const map = useMap();
 
   useEffect(() => {
-    const group = L.markerClusterGroup();
+    const group: L.LayerGroup = disableClustering ? L.layerGroup() : L.markerClusterGroup();
     for (const item of items) {
       if (item.lat === null || item.lng === null) continue;
       const marker = L.marker([item.lat, item.lng], { icon: iconFor(item) });
       marker.bindPopup(buildPopupContent(item));
+      if (disableClustering) {
+        marker.bindTooltip(item.name, {
+          permanent: true,
+          direction: "top",
+          offset: [0, -4],
+          className: "!rounded !border-none !bg-white/90 !px-1.5 !py-0.5 !text-xs !shadow",
+        });
+      }
       if (onMarkerClick) marker.on("click", () => onMarkerClick(item));
       group.addLayer(marker);
     }
@@ -103,7 +116,7 @@ export function DestinationMapClusterLayer({
     return () => {
       map.removeLayer(group);
     };
-  }, [items, map, onMarkerClick]);
+  }, [items, map, onMarkerClick, disableClustering]);
 
   return null;
 }

@@ -623,6 +623,13 @@ export default function DichoithoiPage() {
             ✅ Khoảng cách cụm/tỉnh: {clusterDistancesReport.nodes} node, ghi{" "}
             {clusterDistancesReport.pairs} cặp (
             {(clusterDistancesReport.durationMs / 1000).toFixed(1)}s).
+            {clusterDistancesReport.failedPairs > 0 && (
+              <span className="ml-1 text-amber-600 dark:text-amber-400">
+                ⚠️ {clusterDistancesReport.failedPairs} cặp không có tuyến đường bộ (ORS trả null) —
+                xem log server để biết node nào, có thể toạ độ đang ở vùng không có đường số hoá gần
+                đó.
+              </span>
+            )}
           </p>
         )}
         {groupDistancesReport && (

@@ -7,23 +7,28 @@ import type {
   ClusterDistancePairDto,
   CuratedRelationPairDto,
   DestinationMapItem,
+  PoiDistancePairDto,
   RelatedSpotlightItem,
 } from "@zinoflow/contracts";
 
 const AUTO_LINE_COLOR = "#9ca3af"; // xam nhat — khoang cach tu tinh (§5.3)
 const CURATED_LINE_COLOR = "#8b5cf6"; // tim — quan he curated tay, noi bat rieng (§5.3)
 const SPOTLIGHT_LINE_COLOR = "#ef4444"; // do — spotlight RelatedJson that (§5.6)
+const POI_DISTANCE_LINE_COLOR = "#22c55e"; // xanh la — khoang cach duong bo that con↔con (map-cluster-view-plan.md Giai doan D)
 
 function formatKm(meters: number): string {
   return `${(meters / 1000).toFixed(1).replace(".", ",")} km`;
 }
 
 /**
- * Lop quan he tren ban do (relations-plan §5.3-§5.7, Giai doan C4) — 3 loai
- * duong: nen tu dong (xam nhat, khoang cach cum/tinh A2, loc theo muc), curated
- * tay (tim day hon, click de xoa), spotlight (do, chi hien khi chon 1 diem —
- * RelatedJson THAT da tinh san o C2, khong tinh lai). Ve imperative qua L.polyline
- * (dong bo cach `destination-map-cluster-layer.tsx` da lam cho marker).
+ * Lop quan he tren ban do (relations-plan §5.3-§5.7, Giai doan C4) — nen tu
+ * dong (xam nhat, khoang cach cum/tinh A2, loc theo muc), curated tay (tim
+ * day hon, click de xoa), spotlight (do, chi hien khi chon 1 diem — RelatedJson
+ * THAT da tinh san o C2, khong tinh lai), va con↔con cung cum (xanh la, chi
+ * truyen khi trang cha da chon 1 cum/tinh cu the — map-cluster-view-plan.md
+ * Giai doan D, du lieu ORS that tu dichoithoi_poi_distances). Ve imperative
+ * qua L.polyline (dong bo cach `destination-map-cluster-layer.tsx` da lam cho
+ * marker).
  */
 export function DestinationMapRelationsLayer({
   allItems,
@@ -32,6 +37,7 @@ export function DestinationMapRelationsLayer({
   distanceLevelKm,
   spotlightSlug,
   spotlightItems,
+  poiDistances,
   onRemoveCurated,
   onExcludeSpotlight,
 }: {
@@ -41,6 +47,7 @@ export function DestinationMapRelationsLayer({
   distanceLevelKm: number | null;
   spotlightSlug: string | null;
   spotlightItems: RelatedSpotlightItem[];
+  poiDistances: PoiDistancePairDto[];
   onRemoveCurated: (sourceSlug: string, targetSlug: string) => void;
   onExcludeSpotlight: (sourceSlug: string, targetSlug: string) => void;
 }) {
@@ -114,6 +121,18 @@ export function DestinationMapRelationsLayer({
       }
     }
 
+    // 4) Con↔con cung cum — xanh la, du lieu ORS that, chi ve khi trang cha da
+    // loc san (poiDistances rong khi chua chon cum, xem map-cluster-view-plan.md
+    // Giai doan D2 — gate hien thi nam o trang cha, khong lap lai o day)
+    for (const pair of poiDistances) {
+      const a = coordBySlug.get(pair.poiASlug);
+      const b = coordBySlug.get(pair.poiBSlug);
+      if (!a || !b) continue;
+      L.polyline([a, b], { color: POI_DISTANCE_LINE_COLOR, weight: 1.5, opacity: 0.7 })
+        .bindTooltip(formatKm(pair.distanceMeters))
+        .addTo(group);
+    }
+
     group.addTo(map);
     return () => {
       map.removeLayer(group);
@@ -126,6 +145,7 @@ export function DestinationMapRelationsLayer({
     distanceLevelKm,
     spotlightSlug,
     spotlightItems,
+    poiDistances,
     onRemoveCurated,
     onExcludeSpotlight,
   ]);

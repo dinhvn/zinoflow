@@ -19,9 +19,20 @@ export const curatedRelationPairSchema = z.object({
 });
 export type CuratedRelationPairDto = z.infer<typeof curatedRelationPairSchema>;
 
+/** Khoang cach duong bo that con↔con cung cum/tinh (dichoithoi_poi_distances,
+ * dichoithoi-poi-distance-plan.md) — dung cho lop quan he "map-cluster-view-plan"
+ * Giai doan D, chi ve khi da chon 1 cum/tinh cu the (xem map-cluster-view-plan.md). */
+export const poiDistancePairSchema = z.object({
+  poiASlug: z.string(),
+  poiBSlug: z.string(),
+  distanceMeters: z.number().int(),
+});
+export type PoiDistancePairDto = z.infer<typeof poiDistancePairSchema>;
+
 export const getRelationsMapDataResponseSchema = z.object({
   clusterDistances: z.array(clusterDistancePairSchema),
   curatedRelations: z.array(curatedRelationPairSchema),
+  poiDistances: z.array(poiDistancePairSchema),
 });
 export type GetRelationsMapDataResponse = z.infer<typeof getRelationsMapDataResponseSchema>;
 
