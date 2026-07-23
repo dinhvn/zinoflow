@@ -102,8 +102,11 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   chốt: dùng danh sách hard-code trong C# util (`RegionUtil`) thay vì bảng DB
   `Region` + `Province.RegionId` FK như thiết kế — hoạt động đúng, chỉ lệch
   kỹ thuật, ghi nhận để biết khi cần mở rộng (thêm vùng mới phải sửa code).
-- **DestinationTag** — chưa có UI tạo/sửa chính cái tag (chỉ có UI gán tag
-  cho điểm đến) — tag mới phải seed thẳng SQL.
+- ✅ **DestinationTag — ĐÃ XONG (23/07/2026)**: trang `/dichoithoi/chu-de` nay
+  có form tạo tag mới + sửa tên inline + bật/tắt trạng thái + xoá (chặn xoá
+  nếu đang gán cho điểm đến) — không cần seed thẳng SQL nữa. Endpoint mới
+  `POST/PATCH/DELETE /destination-tags`, port `createTag`/`updateTag`/
+  `deleteTag`.
 - ✅ **Nâng cấp liên kết "Điểm đến liên quan" theo nhiều tiêu chí — ĐÃ BUILD +
   VERIFY XONG TOÀN BỘ 4 GIAI ĐOẠN A→B→C→D (17/07/2026)**. Thuật toán chấm
   điểm (type-overlap > cluster/tỉnh > khoảng cách 2 tầng > ưu tiên biên
