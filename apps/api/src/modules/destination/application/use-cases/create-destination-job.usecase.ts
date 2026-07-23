@@ -28,6 +28,17 @@ import { clusterDistanceKey, formatDistanceBadge } from "../../domain/related-bu
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
 const SITE_CODE = "dichoithoi";
+/**
+ * Mo ta loai diem den dua vao sourceContext — prompt flagship (tinh/cum) can
+ * biet dang viet cho TINH hay CUM de chon dung tam lich trinh + cach di chuyen
+ * (tinh: 2 chieu tu thanh pho lon; cum: tu trung tam toi cum + giua cac diem con).
+ */
+const KIND_LABELS: Record<string, string> = {
+  province: "Tỉnh/thành phố — bài tổng quan cả tỉnh, gồm nhiều điểm tham quan con",
+  cluster:
+    "Cụm du lịch — khu vực gồm nhiều điểm tham quan con gần nhau trong cùng tỉnh/thành",
+  poi: "Điểm tham quan đơn lẻ",
+};
 /** Gioi han content cu dua vao prompt (token budget) */
 const MAX_OLD_CONTENT_CHARS = 20_000;
 /** So diem lien quan cung tinh dua vao prompt de AI chu dong nhac ten (auto-link) */
@@ -182,6 +193,7 @@ export class CreateDestinationJobUseCase {
 
     parts.push("## Dữ liệu điểm đến (nguồn sự thật)");
     parts.push(`- Tên: ${destination.name}`);
+    parts.push(`- Loại điểm đến: ${KIND_LABELS[destination.kind] ?? destination.kind}`);
     parts.push(`- Slug hiện tại: ${destination.slug}`);
     if (destination.addressNew) parts.push(`- Địa chỉ mới (sau sáp nhập): ${destination.addressNew}`);
     if (destination.addressOld) parts.push(`- Địa chỉ cũ (trước sáp nhập): ${destination.addressOld}`);
