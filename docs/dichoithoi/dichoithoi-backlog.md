@@ -16,13 +16,23 @@ với code thật (không chỉ so doc-với-doc như đợt dọn dẹp trướ
 thành code**, và một số dòng còn ghi nhầm hẳn "✅ ĐÃ XONG" (đã sửa 3 chỗ khẩn
 cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng hơn nhiều).
 
-### 3 lỗ hổng gốc — cập nhật 23/07/2026: mục 1+2 ĐÃ ĐƯỢC BUILD, chỉ còn mục 3
+### 3 lỗ hổng gốc — cập nhật 23/07/2026: CẢ 3 MỤC ĐỀU ĐÃ ĐÓNG (2 build, 1 bị bác)
 
 Rà lại bằng code thật (không chỉ đọc doc) xác nhận mục 1 và 2 dưới đây **đã
-lỗi thời** — cả hai đã được build xong ở các Phase sau (25/26), chỉ có mục 3
-là vẫn còn đúng nguyên trạng. Giữ nguyên văn cũ (gạch ngang) để biết vì sao
-từng chặn, tránh lặp lại vòng lặp "chốt ≠ đã build" ngược lại (nghĩ việc đã
-xong lại tưởng chưa làm).
+lỗi thời** — cả hai đã được build xong ở các Phase sau (25/26). Mục 3 cũng
+đã lỗi thời theo hướng khác: **không phải "chưa build" mà là "đã cân nhắc và
+CHỦ Ý TỪ CHỐI"** — `implementation-plan.md` Phase 27 (07/2026, có code+test
+thật) ghi rõ khi thêm `SouvenirProductsJson`: "cùng pattern `HotelCardsJson`/
+`TourCardsJson` — đã cân nhắc và loại `DynamicBlocksJson` hợp nhất". Tham
+chiếu "xem mục Quyết định KHÔNG làm ở plan gốc" trong dòng đó trỏ tới 1 mục
+KHÔNG tồn tại ở bất kỳ doc nào (grep 0 kết quả toàn `docs/dichoithoi/`) — lý
+do gốc đã thất lạc, chỉ còn kết luận. Rủi ro kỹ thuật thấy rõ nếu gộp:
+Hotel/Tour/Product đổi giá/tag là 3 trigger ĐỘC LẬP có thể chạy đồng thời;
+nếu cùng ghi vào 1 cột JSON dùng chung mà không có read-modify-write chặt
+chẽ → key ghi sau đè mất key ghi trước (lost update) — pattern cột riêng
+hiện tại tránh hoàn toàn rủi ro này. Giữ nguyên văn cũ (gạch ngang) để biết
+vì sao từng chặn, tránh lặp lại vòng lặp "chốt ≠ đã build" ngược lại (nghĩ
+việc đã bị bác lại tưởng còn phải làm).
 
 1. ~~Cột `ContentTier` (Flagship/Standard) chưa từng tồn tại trong DB/code~~ —
    **✅ ĐÃ XONG (Phase 25, 07/2026)**: migration `1782010000000-DestinationContentTier.ts`
@@ -35,11 +45,14 @@ xong lại tưởng chưa làm).
 2. ~~Bảng `ArticleDestinationMap` chưa từng tồn tại~~ — **✅ ĐÃ XONG
    (Phase 26, 07/2026)**: `save/get-article-destination-map.usecase.ts` +
    UI `article-destination-map-panel.tsx` (`apps/web/src/app/content/[id]/page.tsx`).
-3. **`DynamicBlocksJson` (thiết kế gộp 1 cột JSON cho mọi khối động) vẫn CHƯA
-   build** — website thực tế vẫn dùng 2 cột cũ riêng biệt `HotelCardsJson`/
-   `TourCardsJson` (đúng chức năng nhưng KHÁC tên/thiết kế spec mô tả), không
-   có chỗ chứa cho khối vé máy bay/xe khách hay sản phẩm quà lưu niệm. Mục
-   duy nhất còn mở trong 3 mục gốc.
+3. ~~`DynamicBlocksJson` (thiết kế gộp 1 cột JSON cho mọi khối động) vẫn CHƯA
+   build~~ — **✅ ĐÃ ĐÓNG (23/07/2026) — KHÔNG PHẢI TODO, đã CHỦ Ý TỪ CHỐI ở
+   Phase 27**. Pattern thật đang dùng và sẽ tiếp tục dùng: 1 cột JSON RIÊNG
+   cho mỗi loại khối động — `HotelCardsJson`, `TourCardsJson`,
+   `SouvenirProductsJson` (Phase 27) — không phải cột gộp chung. Khi module
+   vé máy bay/xe khách thật sự được chốt xây (hiện `flight-spec`/`bus-spec`
+   vẫn ghi "chưa chốt"), thêm 1 cột riêng kiểu `TransportCardsJson` theo
+   ĐÚNG pattern này, KHÔNG gộp vào cột chung.
 
 ### Phát hiện nghiêm trọng khác (độc lập với 3 lỗ hổng trên)
 
