@@ -65,6 +65,9 @@ import { ApplyTagAssignmentsUseCase } from "./application/use-cases/apply-tag-as
 import { ReverseCheckTagAssignmentsUseCase } from "./application/use-cases/reverse-check-tag-assignments.usecase";
 import { GenerateTagDescriptionUseCase } from "./application/use-cases/generate-tag-description.usecase";
 import { UpdateTagDescriptionUseCase } from "./application/use-cases/update-tag-description.usecase";
+import { CreateDestinationTagUseCase } from "./application/use-cases/create-destination-tag.usecase";
+import { UpdateDestinationTagUseCase } from "./application/use-cases/update-destination-tag.usecase";
+import { DeleteDestinationTagUseCase } from "./application/use-cases/delete-destination-tag.usecase";
 import { GetCoverageScoresUseCase } from "./application/use-cases/get-coverage-scores.usecase";
 import { GetDichoithoiDashboardAlertsUseCase } from "./application/use-cases/get-dichoithoi-dashboard-alerts.usecase";
 import { UpdateDestinationDraftArticleUseCase } from "./application/use-cases/update-destination-draft-article.usecase";
@@ -149,6 +152,9 @@ import {
     ReverseCheckTagAssignmentsUseCase,
     GenerateTagDescriptionUseCase,
     UpdateTagDescriptionUseCase,
+    CreateDestinationTagUseCase,
+    UpdateDestinationTagUseCase,
+    DeleteDestinationTagUseCase,
     GetCoverageScoresUseCase,
     GetDichoithoiDashboardAlertsUseCase,
     ListDestinationsUseCase,

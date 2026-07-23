@@ -1,17 +1,21 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
 import {
   applyTagAssignmentsRequestSchema,
+  createDestinationTagRequestSchema,
   generateTagDescriptionRequestSchema,
   suggestTagAssignmentsRequestSchema,
+  updateDestinationTagRequestSchema,
   updateTagDescriptionRequestSchema,
   type ApplyTagAssignmentsRequest,
   type ApplyTagAssignmentsResponse,
+  type CreateDestinationTagRequest,
   type GenerateTagDescriptionRequest,
   type GenerateTagDescriptionResponse,
   type ListDestinationTagAssignmentsResponse,
   type ReverseCheckTagAssignmentsResponse,
   type SuggestTagAssignmentsRequest,
   type SuggestTagAssignmentsResponse,
+  type UpdateDestinationTagRequest,
   type UpdateTagDescriptionRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
@@ -21,6 +25,9 @@ import { ApplyTagAssignmentsUseCase } from "../application/use-cases/apply-tag-a
 import { ReverseCheckTagAssignmentsUseCase } from "../application/use-cases/reverse-check-tag-assignments.usecase";
 import { GenerateTagDescriptionUseCase } from "../application/use-cases/generate-tag-description.usecase";
 import { UpdateTagDescriptionUseCase } from "../application/use-cases/update-tag-description.usecase";
+import { CreateDestinationTagUseCase } from "../application/use-cases/create-destination-tag.usecase";
+import { UpdateDestinationTagUseCase } from "../application/use-cases/update-destination-tag.usecase";
+import { DeleteDestinationTagUseCase } from "../application/use-cases/delete-destination-tag.usecase";
 
 /** REST man "Chủ đề" (destination-spec §2.4) — AI gợi ý gán tag hàng loạt + duyệt */
 @Controller("destination-tags")
@@ -32,7 +39,32 @@ export class DestinationTagsController {
     private readonly reverseCheck: ReverseCheckTagAssignmentsUseCase,
     private readonly generateDescription: GenerateTagDescriptionUseCase,
     private readonly updateDescription: UpdateTagDescriptionUseCase,
+    private readonly createTag: CreateDestinationTagUseCase,
+    private readonly updateTag: UpdateDestinationTagUseCase,
+    private readonly deleteTag: DeleteDestinationTagUseCase,
   ) {}
+
+  @Post()
+  create(
+    @Body(new ZodValidationPipe(createDestinationTagRequestSchema))
+    request: CreateDestinationTagRequest,
+  ): Promise<{ ok: true }> {
+    return this.createTag.execute(request);
+  }
+
+  @Patch(":slug")
+  update(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(updateDestinationTagRequestSchema))
+    request: UpdateDestinationTagRequest,
+  ): Promise<{ ok: true }> {
+    return this.updateTag.execute(slug, request);
+  }
+
+  @Delete(":slug")
+  remove(@Param("slug") slug: string): Promise<{ ok: true }> {
+    return this.deleteTag.execute(slug);
+  }
 
   @Get()
   list(): Promise<ListDestinationTagAssignmentsResponse> {

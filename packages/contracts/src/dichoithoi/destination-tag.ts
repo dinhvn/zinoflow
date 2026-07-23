@@ -111,3 +111,23 @@ export const updateTagDescriptionRequestSchema = z.object({
   description: z.string().nullable(),
 });
 export type UpdateTagDescriptionRequest = z.infer<typeof updateTagDescriptionRequestSchema>;
+
+/** Tao tag moi (truoc day chi seed duoc qua SQL tay) — destination-spec §2.4 */
+export const createDestinationTagRequestSchema = z.object({
+  slug: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Slug chỉ gồm chữ thường/số, nối bằng dấu gạch ngang"),
+  name: z.string().min(1).max(128),
+  description: z.string().max(2000).nullable().optional(),
+});
+export type CreateDestinationTagRequest = z.infer<typeof createDestinationTagRequestSchema>;
+
+/** Sua ten/trang thai 1 tag — KHONG sua Slug (khoa on dinh dung trong URL/token) */
+export const updateDestinationTagRequestSchema = z.object({
+  name: z.string().min(1).max(128).optional(),
+  /** 1 = hoat dong (hien /chu-de/{slug} + AI goi y), 0 = an */
+  status: z.number().int().min(0).max(1).optional(),
+});
+export type UpdateDestinationTagRequest = z.infer<typeof updateDestinationTagRequestSchema>;

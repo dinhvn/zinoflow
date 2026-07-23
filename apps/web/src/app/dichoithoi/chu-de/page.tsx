@@ -12,7 +12,7 @@ import {
   type TagSuggestion,
 } from "@zinoflow/contracts";
 import { apiSend, apiGet, ApiError } from "@/shared/api-client";
-import { Badge, Button, Checkbox, ErrorBox, Textarea } from "@/shared/ui";
+import { Badge, Button, Checkbox, ErrorBox, Input, Textarea } from "@/shared/ui";
 
 const QUERY_KEY = ["destination-tag-assignments"];
 
@@ -61,14 +61,28 @@ function ChuDeSections({ data }: { data: ListDestinationTagAssignmentsResponse }
 function TagListSection({ data }: { data: ListDestinationTagAssignmentsResponse }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-        7 tag đã duyệt
-      </h3>
+      <div>
+        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          {data.tags.length} chủ đề đã tạo
+        </h3>
+        <p className="text-xs text-zinc-500">
+          Tạo chủ đề mới, đổi tên hoặc ẩn/hiện tại đây — không cần chạy SQL tay nữa. Ẩn một chủ đề
+          nghĩa là không còn dùng để AI gợi ý gán/rà soát, nhưng điểm đến đã gán vẫn giữ nguyên.
+        </p>
+      </div>
       <div className="divide-y divide-zinc-200 rounded border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
         {data.tags.map((tag) => (
-          <TagDescriptionRow key={tag.id} slug={tag.slug} name={tag.name} initialDescription={tag.description} />
+          <TagDescriptionRow
+            key={tag.id}
+            slug={tag.slug}
+            name={tag.name}
+            status={tag.status}
+            initialDescription={tag.description}
+            assignedCount={data.assignments.filter((a) => a.tagSlugs.includes(tag.slug)).length}
+          />
         ))}
       </div>
+      <CreateTagForm />
     </section>
   );
 }
@@ -76,14 +90,19 @@ function TagListSection({ data }: { data: ListDestinationTagAssignmentsResponse 
 function TagDescriptionRow({
   slug,
   name,
+  status,
   initialDescription,
+  assignedCount,
 }: {
   slug: string;
   name: string;
+  status: number;
   initialDescription: string | null;
+  assignedCount: number;
 }) {
   const queryClient = useQueryClient();
   const [value, setValue] = useState(initialDescription ?? "");
+  const [nameValue, setNameValue] = useState(name);
 
   const generate = useMutation({
     mutationFn: async () =>
@@ -101,13 +120,67 @@ function TagDescriptionRow({
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
   });
 
+  const saveName = useMutation({
+    mutationFn: () => apiSend("PATCH", `/destination-tags/${slug}`, { name: nameValue.trim() }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+
+  const toggleStatus = useMutation({
+    mutationFn: () =>
+      apiSend("PATCH", `/destination-tags/${slug}`, { status: status === 1 ? 0 : 1 }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => apiSend("DELETE", `/destination-tags/${slug}`, undefined),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+
   const dirty = value !== (initialDescription ?? "");
+  const nameDirty = nameValue.trim() !== name && nameValue.trim().length > 0;
 
   return (
-    <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-[180px_1fr_auto] sm:items-start">
-      <div>
-        <div className="text-sm font-medium">{name}</div>
+    <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-[200px_1fr_auto] sm:items-start">
+      <div className="space-y-1">
+        <div className="flex items-center gap-1.5">
+          <Input
+            value={nameValue}
+            onChange={(e) => setNameValue(e.target.value)}
+            className="w-full text-sm font-medium"
+          />
+          {nameDirty && (
+            <Button size="sm" onClick={() => saveName.mutate()} loading={saveName.isPending}>
+              Lưu tên
+            </Button>
+          )}
+        </div>
         <div className="text-xs text-zinc-500">/chu-de/{slug}</div>
+        <button
+          type="button"
+          onClick={() => toggleStatus.mutate()}
+          disabled={toggleStatus.isPending}
+          className="inline-block"
+          title={status === 1 ? "Bấm để ẩn chủ đề này" : "Bấm để bật lại chủ đề này"}
+        >
+          <Badge tone={status === 1 ? "emerald" : "gray"}>
+            {status === 1 ? "Đang hoạt động" : "Đã ẩn"}
+          </Badge>
+        </button>
+        <button
+          type="button"
+          disabled={assignedCount > 0 || remove.isPending}
+          title={
+            assignedCount > 0
+              ? `Đang gán cho ${assignedCount} điểm đến — gỡ gán hết trước khi xoá`
+              : "Xoá chủ đề này (không thể hoàn tác)"
+          }
+          onClick={() => {
+            if (window.confirm(`Xoá chủ đề "${name}"? Không thể hoàn tác.`)) remove.mutate();
+          }}
+          className="block text-xs text-red-600 hover:underline disabled:cursor-not-allowed disabled:text-zinc-400 disabled:no-underline dark:text-red-400"
+        >
+          Xoá
+        </button>
       </div>
       <Textarea
         rows={2}
@@ -125,14 +198,63 @@ function TagDescriptionRow({
             Lưu
           </Button>
         </div>
-        {(generate.isError || save.isError) && (
+        {(generate.isError || save.isError || saveName.isError || toggleStatus.isError || remove.isError) && (
           <span className="text-xs text-red-600 dark:text-red-400">
-            {(generate.error ?? save.error) instanceof ApiError
-              ? (generate.error ?? save.error)?.message
+            {(generate.error ?? save.error ?? saveName.error ?? toggleStatus.error ?? remove.error) instanceof ApiError
+              ? (generate.error ?? save.error ?? saveName.error ?? toggleStatus.error ?? remove.error)?.message
               : "Lỗi"}
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+function CreateTagForm() {
+  const queryClient = useQueryClient();
+  const [slug, setSlug] = useState("");
+  const [name, setName] = useState("");
+
+  const create = useMutation({
+    mutationFn: () => apiSend("POST", "/destination-tags", { slug: slug.trim(), name: name.trim() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      setSlug("");
+      setName("");
+    },
+  });
+
+  return (
+    <div className="flex flex-wrap items-end gap-2 rounded border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
+      <div>
+        <label className="mb-1 block text-xs text-zinc-500">Slug (vd biển-đảo)</label>
+        <Input
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          placeholder="bien-dao"
+          className="w-40"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-zinc-500">Tên hiển thị</label>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Biển đảo"
+          className="w-52"
+        />
+      </div>
+      <Button
+        size="sm"
+        onClick={() => create.mutate()}
+        disabled={!slug.trim() || !name.trim()}
+        loading={create.isPending}
+      >
+        + Thêm chủ đề
+      </Button>
+      {create.isError && (
+        <ErrorBox error={create.error} fallback="Lỗi tạo chủ đề" />
+      )}
     </div>
   );
 }

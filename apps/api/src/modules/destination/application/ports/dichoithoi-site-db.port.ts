@@ -285,6 +285,15 @@ export interface DichoithoiSiteDb {
   replaceTagAssignments(destinationSlug: string, tagSlugs: readonly string[]): Promise<void>;
   /** Ghi de Description cho 1 tag (buoc 3 — AI soan mo ta) */
   updateTagDescription(tagSlug: string, description: string | null): Promise<void>;
+  /**
+   * Tao 1 tag moi (truoc day chi seed duoc qua SQL tay — destination-spec §2.4).
+   * Nem loi ro rang neu slug da ton tai (UNIQUE constraint), khong am tham bo qua.
+   */
+  createTag(input: { slug: string; name: string; description: string | null }): Promise<void>;
+  /** Sua ten/trang thai 1 tag (KHONG doi Slug — slug la khoa on dinh dung trong URL/token) */
+  updateTag(tagSlug: string, fields: { name?: string; status?: number }): Promise<void>;
+  /** Xoa 1 tag CHUA duoc gan cho diem den nao (FK DestinationTagMap chan xoa neu dang dung) */
+  deleteTag(tagSlug: string): Promise<void>;
 
   /** Moi diem den (chi diem da published) kem slug cac Type dang gan — Kanban ra soat B2 */
   fetchTypeAssignments(): Promise<SiteTypeAssignmentRow[]>;

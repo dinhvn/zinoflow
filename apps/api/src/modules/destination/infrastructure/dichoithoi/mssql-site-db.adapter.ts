@@ -814,6 +814,41 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     });
   }
 
+  async createTag(input: { slug: string; name: string; description: string | null }): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("slug", input.slug);
+      request.input("name", input.name);
+      request.input("description", input.description);
+      return request.query(`
+        INSERT INTO v2.DestinationTag (Slug, Name, Description, Status)
+        VALUES (@slug, @name, @description, 1)
+      `);
+    });
+  }
+
+  async updateTag(tagSlug: string, fields: { name?: string; status?: number }): Promise<void> {
+    const sets: string[] = [];
+    if (fields.name !== undefined) sets.push("Name = @name");
+    if (fields.status !== undefined) sets.push("Status = @status");
+    if (sets.length === 0) return;
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("slug", tagSlug);
+      if (fields.name !== undefined) request.input("name", fields.name);
+      if (fields.status !== undefined) request.input("status", fields.status);
+      return request.query(`UPDATE v2.DestinationTag SET ${sets.join(", ")} WHERE Slug = @slug`);
+    });
+  }
+
+  async deleteTag(tagSlug: string): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("slug", tagSlug);
+      return request.query(`DELETE FROM v2.DestinationTag WHERE Slug = @slug`);
+    });
+  }
+
   async fetchTypeAssignments(): Promise<SiteTypeAssignmentRow[]> {
     const rows = await this.queryWithRetry<{
       Id: number;
