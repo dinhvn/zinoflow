@@ -66,11 +66,15 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   `v2.ArticleDestinationMap`) + ghi `v2.SlugRedirect`, recompute Ancestors/
   Children/Related, enqueue relink), UI panel cảnh báo riêng trên trang chi
   tiết. Xem chi tiết `dichoithoi-implementation-plan.md` Phase 24.
-- **Product "Quà mang về"** — sản phẩm gắn `tag=slug điểm đến` hoàn toàn
-  không hiện trên trang điểm đến (0% wiring, ngoài 3 lỗ hổng gốc ở trên).
-- **Bài loại `cam-nang` (Article) không thể tạo bằng AI** — chỉ tạo được qua
-  "Viết tay" (chưa có prompt pack AI riêng) → kéo theo ô "Tư liệu tham khảo"
-  cho Article (article-spec §1.2) cũng chưa có chỗ để nằm.
+- ✅ **Product "Quà mang về" — ĐÃ NỐI DÂY (Phase 27, 07/2026, dòng "0%
+  wiring" ở trên đã lỗi thời)**: `Detail.cshtml` render khối "Quà mang về từ
+  {tên}" (grid card ảnh/tên/giá/link affiliate) ở cuối mọi trang điểm đến khi
+  `extras.SouvenirProducts.Count > 0`, đọc từ `SouvenirProductsJson` — xem
+  Phase 27.
+- ✅ **Bài loại `cam-nang` tạo bằng AI — ĐÃ XONG (Phase 22, 07/2026, dòng
+  "không thể" ở trên đã lỗi thời)**: nút "🤖 Tạo bằng AI" ở form
+  `/dichoithoi/articles/new` (prompt pack `cam-nang.outline/section/frame.vi`)
+  + ô "Tư liệu tham khảo" — xem Phase 22.
 - ✅ **Auto-link — 2 rào an toàn ĐÃ XONG (xác nhận qua code 23/07/2026, dòng
   "thiếu" ở trên đã lỗi thời)**: `shared/text/auto-link.ts` — hằng số
   `MAX_AUTO_LINKS_PER_ARTICLE = 10` chặn spam link/bài, và
@@ -88,10 +92,10 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
   review khách THẬT" được chính doc ghi "chưa chốt, phân tích sau" — không
   phải việc bị bỏ sót, để nguyên chờ quyết định sản phẩm (thiết kế form +
   chống spam) trước khi build.
-- **Mục lục 2 lớp** (`content-seo-ux-plan.md` §10.6.4) — chip nav vuốt ngang
-  đã có, nhưng KHÔNG có nút "Mục lục ▾" nào, và chip hiện tại DÙNG CHUNG 1
-  danh sách cho mọi trang (không tách bộ chip riêng Flagship/POI như thiết
-  kế — vì các khối phụ thuộc chưa build).
+- ✅ **Mục lục 2 lớp — ĐÃ XONG (Phase 28.1, 07/2026, dòng ở trên đã lỗi
+  thời)**: nút "Mục lục ▾" (bottom-sheet mobile/`<nav>` sidebar desktop) +
+  chip nav 6 mục KHÁC nhau theo `ContentTier` (Flagship vs POI, tính động từ
+  section thực tế tồn tại) — xem Phase 28.1.
 - **Hệ thống card dùng chung** (§10.6.5) — không có partial `_CardItem`
   thống nhất; mỗi loại (Hotel/Tour/Destination/Article) vẫn 1 partial riêng.
 - **Trục vùng/miền** (`/vung/{slug}`) — ĐÃ build nhưng KHÁC kiến trúc đã
