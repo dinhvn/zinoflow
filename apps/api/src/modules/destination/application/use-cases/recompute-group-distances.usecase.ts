@@ -15,14 +15,16 @@ import {
   type PoiDistancePair,
   type PoiDistanceRepository,
 } from "../ports/poi-distance.repository";
+import { haversineMeters } from "../../domain/related-builder";
 
 /**
  * Tinh khoang cach duong bo that (OpenRouteService) cho 1 cum/tinh —
  * dichoithoi-poi-distance-plan.md Giai doan 2. Goi 1 LAN Matrix API voi
- * locations = [tam cum, ...con co toa do], lay ma tran day du (N+1)x(N+1):
- * hang 0 (tam -> tung con) ghi DistanceFromCenter (cascade mirror + SQL
- * Server); cac hang con lai (con<->con) ghi de TOAN BO poi_distances cua cum
- * nay — full recompute, KHONG incremental (xem plan ly do quyet dinh).
+ * locations = [tam cum, ...con co toa do (KE CA con chua publish)], lay ma
+ * tran day du (N+1)x(N+1): hang 0 (tam -> tung con) ghi DistanceFromCenter
+ * (cascade mirror + SQL Server, CHI day sang SQL Server voi con da co siteId);
+ * cac hang con lai (con<->con) ghi de TOAN BO poi_distances cua cum nay — full
+ * recompute, KHONG incremental (xem plan ly do quyet dinh).
  */
 @Injectable()
 export class RecomputeGroupDistancesUseCase {
@@ -60,8 +62,13 @@ export class RecomputeGroupDistancesUseCase {
       throw new DomainRuleError(`"${parentSlug}" chưa có toạ độ — không tính được khoảng cách`);
     }
 
+    // KHONG loc siteStatus === 1 nua — diem nhap AI tool chua publish (siteId=null)
+    // van can duoc tinh poi_distances de hien khoang cach that ngay tren trang
+    // rieng cua no (bug thuc te 22/07/2026: Delight Park Dalat bi bo sot khoi
+    // nut tinh ca cum vi chua publish, phai bam nut rieng tung diem moi co).
+    // DistanceFromCenter chi day sang SQL Server ben duoi khi child.siteId != null.
     const children = all.filter(
-      (d) => d.parentSlug === parentSlug && d.siteStatus === 1 && d.lat !== null && d.lng !== null,
+      (d) => d.parentSlug === parentSlug && d.lat !== null && d.lng !== null,
     );
     if (children.length === 0) {
       return { parentSlug, children: 0, pairs: 0, durationMs: Date.now() - startedAt };
@@ -99,8 +106,18 @@ export class RecomputeGroupDistancesUseCase {
       pairs,
     );
 
+    // Log doi chieu ORS vs Haversine cho 10 cap dau — de nguoi dung tu kiem tra
+    // trong terminal xem ORS co thuc su tra khoang cach duong bo (thuong > Haversine
+    // vi duong khong thang) hay dang vo tinh trung khop Haversine (dau hieu bug).
+    const sample = pairs.slice(0, 10).map((p) => {
+      const a = children.find((c) => c.slug === p.poiASlug)!;
+      const b = children.find((c) => c.slug === p.poiBSlug)!;
+      const hav = haversineMeters(Number(a.lat), Number(a.lng), Number(b.lat), Number(b.lng));
+      return `${p.poiASlug}<->${p.poiBSlug}: ORS=${p.distanceMeters}m Haversine=${hav}m`;
+    });
     this.logger.log(
-      `Tính khoảng cách cụm/tỉnh "${parentSlug}": ${children.length} con, ${pairs.length} cặp`,
+      `Tính khoảng cách cụm/tỉnh "${parentSlug}": ${children.length} con, ${pairs.length} cặp\n` +
+        sample.join("\n"),
     );
     return {
       parentSlug,

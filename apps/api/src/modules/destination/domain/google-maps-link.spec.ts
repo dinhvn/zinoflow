@@ -19,6 +19,12 @@ describe("parseGoogleMapsCoords", () => {
   it("tra ve null khi toa do vuot ngoai khoang hop le", () => {
     expect(parseGoogleMapsCoords("https://www.google.com/maps/@999,999,17z")).toBeNull();
   });
+
+  it("chon block !3d!4d gan viewport nhat khi URL co nhieu block (bug Delight Park Dalat 22/07/2026)", () => {
+    const url =
+      "https://www.google.com/maps/place/Delight+Park+Dalat/@11.9587554,108.4730686,17z/data=!4m14!1m7!3m6!1s0x3171133e5090ba29:0x2be50419c9e40550!2zS2h1IGR1IGzhu4tjaCBMw6EgUGhvbmc!8m2!3d11.9285753!4d108.4516514!16s%2Fg%2F11dzl_w7np!3m5!1s0x317113d56bc9cb83:0xc773b8352053e5e4!8m2!3d11.9582632!4d108.4744012!16s%2Fg%2F11lzt5jvbf?entry=ttu&g_ep=EgoyMDI2MDcxOS4wIKXMDSoASAFQAw%3D%3D";
+    expect(parseGoogleMapsCoords(url)).toEqual({ lat: 11.9582632, lng: 108.4744012 });
+  });
 });
 
 describe("isShortGoogleMapsLink", () => {

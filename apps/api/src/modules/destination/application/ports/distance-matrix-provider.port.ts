@@ -15,7 +15,9 @@ export interface DistanceMatrixProvider {
   isConfigured(): boolean;
   /**
    * Ma tran khoang cach duong bo (met) giua MOI CAP toa do trong `locations`
-   * (ket qua NxN, duong cheo = 0). Nem UpstreamApiError neu API loi/vuot gioi han.
+   * (ket qua NxN, duong cheo = 0). Implementation TU CHIA thanh nhieu request
+   * khi N lon (vuot gioi han "routes" cua provider) — caller khong can biet.
+   * Nem UpstreamApiError neu API loi.
    */
   computeMatrix(locations: readonly LatLng[]): Promise<number[][]>;
 }
