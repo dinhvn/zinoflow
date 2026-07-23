@@ -11,11 +11,13 @@ import {
   draftArticleSchema,
   listAiProvidersResponseSchema,
   listContentImagesResponseSchema,
+  previewArticleResultSchema,
   publishArticleResultSchema,
   publishDestinationResultSchema,
   refreshDynamicBlocksResultSchema,
   runQualityChecksResponseSchema,
   type DestinationArticle,
+  type PreviewArticleResult,
   type PublishArticleResult,
   type PublishDestinationResult,
   type RefreshDynamicBlocksResult,
@@ -396,6 +398,25 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     onError: (error) => setActionError(toActionError(error)),
   });
 
+  // Xem truoc HTML se ghi luc Publish (dry-run, resolve khoi dong + auto-link that —
+  // article-workflow-plan.md muc 2, khac htmlQuery ben duoi la sanitize thuan tuy).
+  const [previewArticleResult, setPreviewArticleResult] = useState<PreviewArticleResult | null>(
+    null,
+  );
+  const previewArticle = useMutation({
+    mutationFn: async () =>
+      previewArticleResultSchema.parse(await apiSend("POST", `/articles/${id}/preview`, {})),
+    onSuccess: (result) => {
+      setActionError(null);
+      setPreviewArticleResult(result);
+    },
+    onError: (error) => setActionError(toActionError(error)),
+  });
+  // Draft doi (luu version moi) -> preview cu khong con dung, an di cho toi khi xem lai
+  useEffect(() => {
+    setPreviewArticleResult(null);
+  }, [draft?.id]);
+
   const [refreshResult, setRefreshResult] = useState<RefreshDynamicBlocksResult | null>(null);
   const refreshBlocks = useMutation({
     mutationFn: async () =>
@@ -659,6 +680,15 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   onClick={() => refreshBlocks.mutate()}
                 >
                   {refreshBlocks.isPending ? "Đang làm mới..." : "Làm mới khối động"}
+                </Button>
+              )}
+              {job.articleType === "cam-nang" && hasDraft && (
+                <Button
+                  variant="secondary"
+                  loading={previewArticle.isPending}
+                  onClick={() => previewArticle.mutate()}
+                >
+                  👁️ Xem trước
                 </Button>
               )}
             </div>
@@ -1020,6 +1050,48 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {previewArticleResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">👁️ Xem trước bài viết</h3>
+              <Button size="sm" variant="ghost" onClick={() => setPreviewArticleResult(null)}>
+                Đóng
+              </Button>
+            </div>
+            {previewArticleResult.errors.length > 0 && (
+              <div className="mb-3 rounded border border-red-300 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                <p className="font-medium">Lỗi khối động — không dùng được nội dung dưới đây:</p>
+                <ul className="mt-1 list-inside list-disc">
+                  {previewArticleResult.errors.map((e, i) => (
+                    <li key={i}>{e.message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {previewArticleResult.warnings.length > 0 && (
+              <ul className="mb-3 list-inside list-disc rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                {previewArticleResult.warnings.map((w, i) => (
+                  <li key={i}>{w.message}</li>
+                ))}
+              </ul>
+            )}
+            {previewArticleResult.addedLinks.length > 0 && (
+              <p className="mb-3 rounded border border-violet-200 bg-violet-50 p-2 text-xs text-violet-700 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300">
+                Link nội bộ sẽ được tự động chèn:{" "}
+                {previewArticleResult.addedLinks.map((l) => l.targetName).join(", ")}
+              </p>
+            )}
+            <div
+              className="prose prose-zinc dark:prose-invert max-w-none text-sm
+                [&_a]:text-blue-600 [&_a]:underline [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold
+                [&_h3]:mt-3 [&_h3]:font-semibold [&_img]:rounded [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
+              dangerouslySetInnerHTML={{ __html: previewArticleResult.html }}
+            />
+          </div>
         </div>
       )}
     </div>

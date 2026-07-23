@@ -110,6 +110,21 @@ export const refreshDynamicBlocksResultSchema = z.object({
 });
 export type RefreshDynamicBlocksResult = z.infer<typeof refreshDynamicBlocksResultSchema>;
 
+/**
+ * Xem truoc HTML se ghi luc Publish (dry-run, KHONG ghi SQL Server) — resolve
+ * DUNG khoi dong + auto-link nhu Publish that, de nguoi duyet thay dung noi
+ * dung se len web TRUOC khi Approve/Publish (article-workflow-plan.md muc 2).
+ */
+export const previewArticleResultSchema = z.object({
+  jobId: z.string().uuid(),
+  html: z.string(),
+  blockCount: z.number().int(),
+  warnings: z.array(articleBlockWarningSchema),
+  errors: z.array(articleBlockErrorSchema),
+  addedLinks: z.array(articleAddedLinkSchema),
+});
+export type PreviewArticleResult = z.infer<typeof previewArticleResultSchema>;
+
 export const refreshAllDynamicBlocksReportSchema = z.object({
   totalChecked: z.number().int(),
   totalRefreshed: z.number().int(),

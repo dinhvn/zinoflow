@@ -3,6 +3,7 @@ import {
   saveArticleDestinationMapRequestSchema,
   setArticleCoverImageRequestSchema,
   type ArticleDestinationMapResponse,
+  type PreviewArticleResult,
   type PublishArticleResult,
   type RefreshAllDynamicBlocksReport,
   type RefreshDynamicBlocksResult,
@@ -11,6 +12,7 @@ import {
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { PublishArticleUseCase } from "../application/use-cases/publish-article.usecase";
+import { PreviewArticleUseCase } from "../application/use-cases/preview-article.usecase";
 import { RefreshDynamicBlocksUseCase } from "../application/use-cases/refresh-dynamic-blocks.usecase";
 import { RefreshAllDynamicBlocksUseCase } from "../application/use-cases/refresh-all-dynamic-blocks.usecase";
 import { GetArticleDestinationMapUseCase } from "../application/use-cases/get-article-destination-map.usecase";
@@ -22,6 +24,7 @@ import { SetArticleCoverImageUseCase } from "../application/use-cases/set-articl
 export class ArticlesController {
   constructor(
     private readonly publishArticle: PublishArticleUseCase,
+    private readonly previewArticle: PreviewArticleUseCase,
     private readonly refreshDynamicBlocks: RefreshDynamicBlocksUseCase,
     private readonly refreshAllDynamicBlocks: RefreshAllDynamicBlocksUseCase,
     private readonly getDestinationMap: GetArticleDestinationMapUseCase,
@@ -33,6 +36,15 @@ export class ArticlesController {
   @Post(":jobId/publish")
   publish(@Param("jobId") jobId: string): Promise<PublishArticleResult> {
     return this.publishArticle.execute(jobId);
+  }
+
+  /**
+   * Xem truoc HTML se ghi luc Publish (dry-run, khong ghi DB) — resolve dung
+   * khoi dong + auto-link nhu Publish that (article-workflow-plan.md muc 2).
+   */
+  @Post(":jobId/preview")
+  preview(@Param("jobId") jobId: string): Promise<PreviewArticleResult> {
+    return this.previewArticle.execute(jobId);
   }
 
   /** "Làm mới khối động" — khong AI, khong qua review lai (spec §7) */

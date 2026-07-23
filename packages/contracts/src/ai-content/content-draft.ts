@@ -3,6 +3,7 @@ import { articleSchema } from "./article";
 import { destinationArticleSchema } from "../dichoithoi/destination-article";
 import { articleCamNangSchema } from "../dichoithoi/article-content";
 import { cmsArticleSchema } from "../khuyenmai/cms-article";
+import { reviewActionSchema } from "./review-action";
 
 /**
  * Outline toi thieu chung cho moi loai bai (toplist/review co them plannedProducts,
@@ -41,10 +42,6 @@ export const contentDraftSchema = z.object({
   createdAt: z.string().datetime(),
 });
 export type ContentDraft = z.infer<typeof contentDraftSchema>;
-
-/** Hanh dong review — spec §4.1 ReviewRecord. */
-export const reviewActionSchema = z.enum(["Approve", "RequestChange", "Reject"]);
-export type ReviewAction = z.infer<typeof reviewActionSchema>;
 
 export const reviewRecordSchema = z.object({
   id: z.string().uuid(),

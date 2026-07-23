@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { reviewActionSchema } from "./content-draft";
+import { reviewActionSchema } from "./review-action";
 
 /**
  * Quality gates — spec §9 + §17.5. 4 gate bat buoc truoc khi Approve.

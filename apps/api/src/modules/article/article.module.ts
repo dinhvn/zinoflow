@@ -10,6 +10,7 @@ import { ArticlesController } from "./presentation/articles.controller";
 import { ArticleBlockCompiler } from "./application/services/article-block-compiler.service";
 import { ArticleAutoLinkService } from "./application/services/article-auto-link.service";
 import { PublishArticleUseCase } from "./application/use-cases/publish-article.usecase";
+import { PreviewArticleUseCase } from "./application/use-cases/preview-article.usecase";
 import { RefreshDynamicBlocksUseCase } from "./application/use-cases/refresh-dynamic-blocks.usecase";
 import { RefreshAllDynamicBlocksUseCase } from "./application/use-cases/refresh-all-dynamic-blocks.usecase";
 import { GetArticleDestinationMapUseCase } from "./application/use-cases/get-article-destination-map.usecase";
@@ -41,6 +42,7 @@ import { ArticlePublicationEntity } from "./infrastructure/entities/article-publ
     ArticleBlockCompiler,
     ArticleAutoLinkService,
     PublishArticleUseCase,
+    PreviewArticleUseCase,
     RefreshDynamicBlocksUseCase,
     RefreshAllDynamicBlocksUseCase,
     GetArticleDestinationMapUseCase,
