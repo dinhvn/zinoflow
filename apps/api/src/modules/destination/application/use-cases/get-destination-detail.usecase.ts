@@ -96,6 +96,11 @@ export class GetDestinationDetailUseCase {
     const poiDistances = new Map(
       poiDistancePairs.map((p) => [clusterDistanceKey(p.poiASlug, p.poiBSlug), p.distanceMeters]),
     );
+    // Da bam nut tinh khoang cach (Giai doan 2/3) chua? Dung de FE canh bao
+    // luc tao bai AI thieu so km thuc te (Giai doan 4).
+    const hasDistanceData =
+      entity.distanceFromCenter !== null ||
+      poiDistancePairs.some((p) => p.poiASlug === slug || p.poiBSlug === slug);
     const nearby = computeNearby(self, candidates)
       .slice(0, NEARBY_PREVIEW_COUNT)
       .map((n) => {
@@ -176,6 +181,7 @@ export class GetDestinationDetailUseCase {
       nearby,
       relatedCurated,
       mentionedBy,
+      hasDistanceData,
     };
   }
 

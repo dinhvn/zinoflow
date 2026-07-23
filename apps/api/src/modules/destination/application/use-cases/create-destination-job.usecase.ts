@@ -20,6 +20,11 @@ import {
   DESTINATION_MIRROR_REPOSITORY,
   type DestinationMirrorRepository,
 } from "../ports/destination-mirror.repository";
+import {
+  POI_DISTANCE_REPOSITORY,
+  type PoiDistanceRepository,
+} from "../ports/poi-distance.repository";
+import { clusterDistanceKey, formatDistanceBadge } from "../../domain/related-builder";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
 const SITE_CODE = "dichoithoi";
@@ -45,6 +50,8 @@ export class CreateDestinationJobUseCase {
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
     @Inject(REFERENCE_FETCHER) private readonly referenceFetcher: ReferenceFetcher,
+    @Inject(POI_DISTANCE_REPOSITORY)
+    private readonly poiDistanceRepo: PoiDistanceRepository,
     private readonly createContentJob: CreateContentJobUseCase,
     private readonly promptBuilder: PromptBuilder,
   ) {}
@@ -192,11 +199,25 @@ export class CreateDestinationJobUseCase {
           d.provinceCode === destination.provinceCode &&
           d.siteStatus === 1,
       )
-      .slice(0, MAX_RELATED_IN_PROMPT)
-      .map((d) => d.name);
+      .slice(0, MAX_RELATED_IN_PROMPT);
     if (related.length > 0) {
+      // Giai doan 4 (dichoithoi-poi-distance-plan.md): nhac them so km THAT
+      // (dichoithoi_poi_distances) khi da co du lieu — chi co gia tri neu diem
+      // nay da tung bam nut "Tinh khoang cach" (Giai doan 2/3), nen KHONG phai
+      // moi ten deu co so — bo qua im lang khi chua co, khong bia so.
+      const poiDistancePairs = await this.poiDistanceRepo.findAll();
+      const poiDistances = new Map(
+        poiDistancePairs.map((p) => [clusterDistanceKey(p.poiASlug, p.poiBSlug), p.distanceMeters]),
+      );
       parts.push("", "## Điểm đến liên quan cùng khu vực (dùng đúng TÊN CHUẨN khi nhắc tới)");
-      parts.push(related.map((name) => `- ${name}`).join("\n"));
+      parts.push(
+        related
+          .map((d) => {
+            const meters = poiDistances.get(clusterDistanceKey(destination.slug, d.slug));
+            return meters === undefined ? `- ${d.name}` : `- ${d.name} (${formatDistanceBadge(meters)})`;
+          })
+          .join("\n"),
+      );
     }
 
     if (request.mode === "update" && destination.siteId !== null) {

@@ -112,7 +112,7 @@ export function computeNearby(
     .slice(0, NEARBY_TOP_COUNT);
 }
 
-function formatDistanceBadge(meters: number): string {
+export function formatDistanceBadge(meters: number): string {
   if (meters < 1000) return `cách ${meters} m`;
   const km = (meters / 1000).toFixed(1).replace(".", ",").replace(/,0$/, "");
   return `cách ${km} km`;

@@ -994,6 +994,13 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       </Group>
 
       <Group title="✍️ Viết bài bằng AI">
+        {!d.hasDistanceData && (
+          <p className="mb-3 text-xs text-amber-600 dark:text-amber-400">
+            ⚠️ Điểm này chưa có dữ liệu khoảng cách thực tế (chưa bấm nút &quot;Tính khoảng
+            cách&quot; ở tab bản đồ) — AI sẽ chỉ nhắc TÊN các điểm liên quan, không kèm số km. Bấm
+            tính khoảng cách trước nếu muốn bài viết có số km chính xác.
+          </p>
+        )}
         {/* Trang thai job AI toan bai (neu co) — TACH RIENG khoi form nhap ben duoi:
             truoc day form nay bi AN HOAN TOAN mien co activeContentJobId (ke ca job
             da xong DraftReady), khien nguoi dung khong con thay lai ghi chu/link

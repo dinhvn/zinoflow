@@ -584,6 +584,13 @@ export const destinationDetailSchema = destinationMirrorSchema.extend({
   relatedCurated: z.array(relatedDestinationRefSchema),
   /** Cac bai NHAC toi diem nay (mentioned) — "duoc nhac trong bai nao" */
   mentionedBy: z.array(relatedDestinationRefSchema),
+  /**
+   * True neu diem nay da co it nhat 1 dong trong `dichoithoi_poi_distances`
+   * (da bam nut "Tinh khoang cach" o Giai doan 2 hoac 3) hoac da co
+   * `distanceFromCenter` — dung de FE canh bao khi tao bai AI ma chua co so
+   * km thuc te (dichoithoi-poi-distance-plan.md Giai doan 4).
+   */
+  hasDistanceData: z.boolean(),
 });
 export type DestinationDetail = z.infer<typeof destinationDetailSchema>;
 

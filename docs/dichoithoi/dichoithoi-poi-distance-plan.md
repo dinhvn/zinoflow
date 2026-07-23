@@ -1,11 +1,12 @@
 # Dichoithoi — Khoảng cách đường bộ thật (OpenRouteService) cho gợi ý liên quan
 
 **Cập nhật 21/07/2026: Giai đoạn 1-3 ĐÃ XONG** (build + verify với API key ORS
-thật + dữ liệu Đà Lạt thật trên `dichoithoi_dev`). Giai đoạn 4 vẫn để ngỏ, chưa
-chốt. **Cập nhật 23/07/2026: Giai đoạn 5 ĐÃ XONG** — mở rộng ORS lên cấp
+thật + dữ liệu Đà Lạt thật trên `dichoithoi_dev`). **Cập nhật 23/07/2026:
+Giai đoạn 4 và 5 ĐÃ XONG** — Giai đoạn 5 mở rộng ORS lên cấp
 cụm↔cụm/tỉnh↔tỉnh (bảng `dichoithoi_cluster_distances`), build + verify thật
 trên `dichoithoi_dev` (25 node/253 cặp hợp lệ, 47 cặp bị ORS trả null bỏ qua
-đúng thiết kế — xem DoD chi tiết). Xem tóm tắt verify ở cuối mỗi giai đoạn bên
+đúng thiết kế — xem DoD chi tiết); Giai đoạn 4 nối số km vào ngữ cảnh AI viết
+bài + cảnh báo CMS khi thiếu dữ liệu. Xem tóm tắt verify ở cuối mỗi giai đoạn bên
 dưới.
 
 Ghi 21/07/2026. Bối cảnh: toàn bộ khoảng cách hiện dùng trong "điểm đến liên
@@ -194,19 +195,33 @@ cùng cụm — đúng thiết kế thuật toán (type-overlap > khoảng cách
 đổi. `tsc --noEmit` sạch, `nest start` xác nhận DI graph + 2 route mới hoạt
 động thật (không chỉ compile).
 
-## Giai đoạn 4 (TUỲ CHỌN — cần bạn xác nhận trước khi code, chưa chốt)
+## Giai đoạn 4 (ĐÃ XONG 23/07/2026 — chốt: có cảnh báo khi thiếu dữ liệu)
 
 Nối khoảng cách vào ngữ cảnh AI khi viết bài (`buildSourceContext`) — thêm
 dòng "cách X km" cho từng điểm trong danh sách "Điểm đến liên quan cùng khu
-vực" (dòng 154-157), đọc từ `poi_distances`/`DistanceFromCenter` đã tính ở
-Giai đoạn 1-3. **Đánh đổi cần cân nhắc**: chỉ có giá trị nếu điểm đó đã được
-bấm 1 trong 2 nút tính khoảng cách trước — nếu chưa, danh sách vẫn hiện
-TÊN suông như hiện tại (không thêm được số) → cần quyết định có cảnh báo gì
-cho người soạn bài biết "chưa có dữ liệu khoảng cách, nên bấm nút Giai đoạn
-2/3 trước khi tạo bài" hay không. Việc nhỏ (thêm vài dòng trong
-`buildSourceContext`), nhưng phụ thuộc hoàn toàn vào Giai đoạn 1-3 đã chạy có
-dữ liệu thật cho điểm đó — nên tách riêng, làm sau khi đã dùng thử Giai đoạn
-2-3 một thời gian và thấy dữ liệu đủ dày.
+vực", đọc từ `poi_distances`/`DistanceFromCenter` đã tính ở Giai đoạn 1-3.
+Chốt: có cảnh báo cho người soạn bài khi điểm đến chưa có dữ liệu khoảng
+cách nào.
+
+- `create-destination-job.usecase.ts` `buildSourceContext()`: với mỗi điểm
+  trong danh sách liên quan, tra `dichoithoi_poi_distances` qua
+  `clusterDistanceKey(destination.slug, d.slug)` — có thì thêm
+  `formatDistanceBadge(meters)` (tái dùng từ `related-builder.ts`, đã export),
+  không có thì giữ TÊN suông (không bịa số).
+- `DestinationDetail.hasDistanceData` (contract + `get-destination-detail.usecase.ts`):
+  true nếu điểm có `distanceFromCenter` khác null HOẶC có ≥1 dòng trong
+  `poi_distances` chạm slug này. FE (`/dichoithoi/[slug]` tab "AI hỗ trợ",
+  khối "✍️ Viết bài bằng AI") hiện cảnh báo nhẹ màu amber khi `false`, nhắc
+  bấm nút "Tính khoảng cách" trước để bài AI có số km chính xác.
+
+Verify thật (không unit test riêng — 2 usecase này chưa có spec sẵn, theo
+đúng convention hiện có; verify qua API thật trên server dev đang chạy,
+`tsc --noEmit` api+web sạch, `npx jest` (module destination, 23 suites/130
+test) sạch): `kdl-rung-thong-nui-voi` (đã có `poi_distances`) →
+`hasDistanceData=true`, preview prompt hiện đúng "(cách 21,6 km)" cho các
+điểm đã có cặp, giữ tên suông cho điểm chưa có cặp (đúng cùng tỉnh nhưng
+chưa từng tính khoảng cách với điểm gốc); điểm không có dữ liệu nào →
+`hasDistanceData=false`, banner cảnh báo hiện đúng ở tab AI hỗ trợ.
 
 ## Giai đoạn 5 — Đổi khoảng cách cụm↔cụm/tỉnh↔tỉnh sang ORS thật (ĐÃ XONG 23/07/2026)
 
@@ -278,11 +293,9 @@ nối cụm/tỉnh hiện đúng số km mới (khác Haversine cũ).
 Giai đoạn 1 (adapter ORS + bảng poi_distances + doc uu tien trong scoring) — ĐÃ XONG
   ├─ Giai đoạn 2 (nut theo cum/tinh — con→cha + con↔con, full recompute) — ĐÃ XONG
   ├─ Giai đoạn 3 (nut theo 1 diem — ban kinh vat ly, upsert + auto relink) — ĐÃ XONG
-  ├─ Giai đoạn 4 (TUY CHON, chua chot — noi vao AI content sourceContext)
+  ├─ Giai đoạn 4 (noi vao AI content sourceContext + canh bao CMS) — ĐÃ XONG 23/07/2026
   └─ Giai đoạn 5 (doi khoang cach cum/tinh sang ORS — doc lap 2/3/4) — ĐÃ XONG 23/07/2026
 ```
 
-**Giai đoạn 1-3 hoàn tất 21/07/2026, Giai đoạn 5 hoàn tất 23/07/2026** — build
-+ verify với ORS API key thật trên `dichoithoi_dev` (xem DoD từng giai đoạn ở
-trên). Chỉ còn Giai đoạn 4 (tuỳ chọn, chưa chốt) — chờ bạn xác nhận trước khi
-code.
+**Toàn bộ Giai đoạn 1-5 đã hoàn tất (21+23/07/2026)** — build + verify với ORS
+API key thật trên `dichoithoi_dev` (xem DoD từng giai đoạn ở trên).

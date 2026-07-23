@@ -71,10 +71,14 @@ cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng 
 - **Bài loại `cam-nang` (Article) không thể tạo bằng AI** — chỉ tạo được qua
   "Viết tay" (chưa có prompt pack AI riêng) → kéo theo ô "Tư liệu tham khảo"
   cho Article (article-spec §1.2) cũng chưa có chỗ để nằm.
-- **Auto-link bài viết thiếu 2 rào an toàn** đã thiết kế: giới hạn ~10
-  link/bài (hiện không giới hạn), và phân biệt tên trùng theo tỉnh trước khi
-  auto-link (hiện không có bước này — rủi ro link sai điểm nếu 2 nơi trùng
-  tên khác tỉnh, vd "Bãi Dài" Phú Quốc vs Cam Ranh).
+- ✅ **Auto-link — 2 rào an toàn ĐÃ XONG (xác nhận qua code 23/07/2026, dòng
+  "thiếu" ở trên đã lỗi thời)**: `shared/text/auto-link.ts` — hằng số
+  `MAX_AUTO_LINKS_PER_ARTICLE = 10` chặn spam link/bài, và
+  `findAmbiguousNames()` bỏ qua hoàn toàn tên trùng giữa nhiều slug khác nhau
+  (vd "Bãi Dài" Phú Quốc vs Cam Ranh — không tự đoán bừa) trước khi chèn link.
+  Engine dùng chung cho cả bài điểm đến lẫn bài cẩm nang nên áp dụng cho cả
+  hai. Test: `auto-link.spec.ts` ("gioi han toi da 10 link...", "bo qua ten
+  trung giua nhieu diem khac nhau...").
 - ✅ **`DestinationReview` — ĐÃ ĐIỀU TRA (07/2026, Phase 21.4), KHÔNG PHẢI
   BUG.** Xác nhận grep cả 2 repo: không có write path nào (không endpoint
   public, không UI admin) — nhưng đây là quyết định đã ghi rõ ở
@@ -227,6 +231,28 @@ Danh sách trên CHƯA được sửa vào từng file spec riêng (chỉ mới 
 trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần.
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
+
+- **Cho phép chỉnh ngưỡng `MAX_AUTO_LINKS_PER_ARTICLE` (auto-link) qua trang
+  quản lý** (ghi nhận 23/07/2026, phân tích xong nhưng CHỦ Ý CHƯA làm): hiện
+  là hằng số cứng trong `shared/text/auto-link.ts` (=10) — không có bảng
+  cấu hình chung nào trong hệ thống, trang `/settings` hiện tại chỉ bật/tắt
+  AI provider qua cột `isEnabled` có sẵn. Quyết định: **chưa đủ giá trị để
+  làm ngay** — đây là ngưỡng chống spam link, không phải tham số cần chỉnh
+  qua lại thường xuyên như AI provider on/off; sửa hằng số + chạy lại vẫn
+  nhanh vì là tool nội bộ tự vận hành. Làm khi có nhu cầu thật (thấy 10 quá
+  chặt/lỏng nhiều lần).
+  - Khi bắt tay làm: cần (1) chỗ lưu cấu hình (bảng mới hoặc mở rộng), (2)
+    truyền giá trị xuyên qua 3 nơi gọi `autoLinkContent()`
+    (`publish-destination.usecase.ts`, `relink-all.usecase.ts`,
+    `article-auto-link.service.ts`) thay vì đọc hằng số trực tiếp, (3) ô
+    nhập số trên `/settings`.
+  - **Bắt buộc kèm theo** (quy tắc "Giải thích tính năng ngay tại chỗ dùng",
+    `.github/copilot-instructions.md`): ô nhập trên CMS phải có hướng dẫn cụ
+    thể ngay tại chỗ — giải thích ngưỡng này LÀM GÌ (chặn spam link nội bộ
+    khi bài nhắc nhiều tên điểm đến), DÙNG KHI NÀO (tăng nếu thấy bài dài bị
+    cắt bớt link hợp lệ, giảm nếu thấy link tràn lan), và ẢNH HƯỞNG gì (áp
+    dụng cho cả bài điểm đến lẫn bài cẩm nang vì dùng chung 1 engine) — không
+    để trống chỉ có ô số không giải thích.
 
 - **Hiển thị nút "Xem trên Google Maps" (dùng link gốc, không tự dựng từ
   lat/lng) ở trang chi tiết dichoithoi** (phát hiện 21/07/2026, làm SAU):
@@ -490,12 +516,15 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   theo mùa sau này), cần chốt lại riêng — không nằm trong phạm vi phân tích lần
   này.
 
-- **Nhập toạ độ qua link Google Maps** (`dichoithoi-destination-spec.md`
-  §2.1.1, **ĐÃ CHỐT SCOPE 07/2026 — sẵn sàng đưa vào code**): thêm ô "Dán link
-  Google Maps" cạnh 2 ô lat/lng, tự parse bằng regex (ưu tiên `!3d!4d`, fallback
-  `@lat,lng`, xử lý link rút gọn qua theo-redirect) — không gọi API, không tốn
-  phí. Các thông tin khác của điểm đến vẫn nhập tay như cũ, KHÔNG tự điền từ
-  Google Maps ở scope này.
+- ✅ **Nhập toạ độ qua link Google Maps — ĐÃ XONG (xác nhận qua code 23/07/2026,
+  dòng "sẵn sàng đưa vào code" ở trên đã lỗi thời)** (`dichoithoi-destination-spec.md`
+  §2.1.1): form sửa điểm đến (`destination-metadata-form.tsx`) đã có ô "Link
+  Google Maps" (lat/lng đổi thành read-only, chú thích "tự tính khi lưu"),
+  server parse bằng `ParseMapsLinkUseCase`/`google-maps-link.ts` (ưu tiên
+  `!3d!4d`, fallback `@lat,lng`, lấy match CUỐI khi link nhiều toạ độ — bugfix
+  23/07/2026), wire vào cả `upsert-destination`, `import-destinations`,
+  `bulk-update-destination-fields`. Các thông tin khác của điểm đến vẫn nhập
+  tay như cũ, KHÔNG tự điền từ Google Maps ở scope này.
 
   ⚠️ **Ý tưởng nâng cao — Google Places API** (destination-spec §2.1.2,
   **ƯU TIÊN THẤP, chỉ ghi lại mục đích, chưa làm**): tự điền field trống (giờ mở
