@@ -16,30 +16,30 @@ với code thật (không chỉ so doc-với-doc như đợt dọn dẹp trướ
 thành code**, và một số dòng còn ghi nhầm hẳn "✅ ĐÃ XONG" (đã sửa 3 chỗ khẩn
 cấp nhất — xem lịch sử git — nhưng danh sách dưới đây rộng hơn nhiều).
 
-### 3 lỗ hổng gốc (kéo theo hàng loạt tính năng khác bị chặn)
+### 3 lỗ hổng gốc — cập nhật 23/07/2026: mục 1+2 ĐÃ ĐƯỢC BUILD, chỉ còn mục 3
 
-1. **Cột `ContentTier` (Flagship/Standard) chưa từng tồn tại** trong DB/code
-   (grep 0 kết quả cả 2 repo, ngoài docs + 1 comment trong `coverage-score.ts`
-   tự nhận "chưa có"). Chặn toàn bộ:
-   - `content-seo-ux-plan.md` §10.6.2 — cấu trúc trang Flagship 8 khối (Đà
-     Lạt): lịch trình gợi ý, 2 lớp "Điểm tham quan" (nổi bật + nhóm khoảng
-     cách), "Quà mang về" dạng lưới mua sắm, card vé máy bay/xe khách.
-   - `content-seo-ux-plan.md` §10.6.3 — cấu trúc trang POI (Biệt Thự Hằng
-     Nga): banner "Về {node cha}", thứ tự khối khác Flagship.
-   - `content-seo-ux-plan.md` §5.1 — ưu tiên gallery ảnh theo tier.
-   - `destination-spec.md` §2.2 khối #10/#15 — "Đánh giá biên tập + Xem thêm
-     trên Google Maps/TripAdvisor" (field `ExternalReviewUrls` — 0% code).
-2. **Bảng `ArticleDestinationMap` chưa từng tồn tại** (grep 0 kết quả, chỉ
-   code tự nhận biết đúng qua comment). Chặn:
-   - `destination-spec.md` §2.2 — 5 khối phụ Flagship (3b lịch trình→bài,
-     5b/6b/6c/8b liên kết bài cẩm nang theo topic).
-   - `article-spec.md` §8.1 — toàn bộ cơ chế UI gợi ý gán destination+topic.
-   - Coverage Score — mục "độ phủ bài cẩm nang theo topic" (đã ghi rõ trong
-     code là chưa tính được).
-3. **`DynamicBlocksJson` (thiết kế gộp 1 cột JSON cho mọi khối động) chưa
+Rà lại bằng code thật (không chỉ đọc doc) xác nhận mục 1 và 2 dưới đây **đã
+lỗi thời** — cả hai đã được build xong ở các Phase sau (25/26), chỉ có mục 3
+là vẫn còn đúng nguyên trạng. Giữ nguyên văn cũ (gạch ngang) để biết vì sao
+từng chặn, tránh lặp lại vòng lặp "chốt ≠ đã build" ngược lại (nghĩ việc đã
+xong lại tưởng chưa làm).
+
+1. ~~Cột `ContentTier` (Flagship/Standard) chưa từng tồn tại trong DB/code~~ —
+   **✅ ĐÃ XONG (Phase 25, 07/2026)**: migration `1782010000000-DestinationContentTier.ts`
+   (cột `content_tier` trên `dichoithoi_destinations`), dùng thật trong
+   `coverage-score.ts`, `prompt-builder.ts` (chọn khung outline theo tier),
+   `destination-metadata-form.tsx`. Field `ExternalReviewUrls` cũng đã build
+   xong (`update-external-review-urls.usecase.ts` + editor UI
+   `destination-external-review-urls-editor.tsx`), không còn "0% code" như
+   ghi trước đây.
+2. ~~Bảng `ArticleDestinationMap` chưa từng tồn tại~~ — **✅ ĐÃ XONG
+   (Phase 26, 07/2026)**: `save/get-article-destination-map.usecase.ts` +
+   UI `article-destination-map-panel.tsx` (`apps/web/src/app/content/[id]/page.tsx`).
+3. **`DynamicBlocksJson` (thiết kế gộp 1 cột JSON cho mọi khối động) vẫn CHƯA
    build** — website thực tế vẫn dùng 2 cột cũ riêng biệt `HotelCardsJson`/
    `TourCardsJson` (đúng chức năng nhưng KHÁC tên/thiết kế spec mô tả), không
-   có chỗ chứa cho khối vé máy bay/xe khách hay sản phẩm quà lưu niệm.
+   có chỗ chứa cho khối vé máy bay/xe khách hay sản phẩm quà lưu niệm. Mục
+   duy nhất còn mở trong 3 mục gốc.
 
 ### Phát hiện nghiêm trọng khác (độc lập với 3 lỗ hổng trên)
 
@@ -948,14 +948,14 @@ code, không bịa schema mới):
 - Trang web `apps/web/.../dichoithoi/do-phu` (thêm mục sidebar "Độ phủ nội
   dung") — danh sách badge % (đỏ/vàng/xanh theo mức), bấm mở rộng xem
   checklist ✅/⚠️ từng mục.
-- **Phạm vi CHỦ Ý CẮT BỚT** (ghi rõ trong code/contracts, không giả vờ đã
-  đủ): tier Flagship/POI chưa có cột `ContentTier` thật (spec ghi "gán tay"
-  nhưng form chưa build) — tạm dùng `kind` làm proxy (poi↔poi,
-  province/cluster↔flagship). 2 mục checklist Flagship-only trong spec CHƯA
-  tính được vì thiếu hạ tầng: "lịch trình (khối B)" (không có field đánh dấu
-  riêng) và "độ phủ bài cẩm nang theo topic" (`ArticleDestinationMap` —
-  article-spec §8.1 — bảng quan hệ này chưa được xây, xây thêm sẽ là 1 tính
-  năng lớn riêng, không lẫn vào Coverage Score).
+- ✅ **Phạm vi trước đây "CHỦ Ý CẮT BỚT" — ĐÃ LẤP ĐỦ (Phase 28.6, 07/2026)**:
+  `coverage-score.ts` nay dùng cột `contentTier` THẬT (Phase 25) thay vì
+  proxy qua `kind`; 2 mục Flagship-only từng ghi "chưa tính được" nay đã có
+  hạ tầng: "độ phủ bài cẩm nang theo topic" tính từ `ArticleDestinationMap`
+  (Phase 26), "đánh giá biên tập + external review" tính từ Phase 28.0.
+  "Lịch trình gợi ý" không còn là mục checklist riêng — gộp vào
+  `blockKey: "lich-trinh"` trong `sections[]`, tính chung với "main-content"
+  như mọi khối khác thay vì cần 1 field JSON riêng.
 - Test: 44 suite/295 test + typecheck/lint API+web sạch.
 
 **❌ Flight/Bus — CHƯA làm (07/2026, quyết định có chủ ý, không phải quên):**
@@ -1052,11 +1052,25 @@ lại, build **gate "originality"** (mục 0 đầu tài liệu — so trùng l�
 giữa các bài cùng loại/tỉnh) — pilot 2 trang chưa cần, scale hàng trăm trang
 thì bắt buộc, đúng rủi ro "scaled content abuse" đã phân tích.
 
-**SEO/UX đi kèm** (`content-seo-ux-plan.md` §7, đã sắp ưu tiên):
-- Cao: bật lại Review/Rating + JSON-LD AggregateRating; render FAQ + JSON-LD
-  FAQPage; trang landing Loại+Tỉnh; SSR khối khách sạn/tour giữa bài (không AJAX).
-- Trung bình: gallery ảnh (`GalleryJson` + bảng `destination_images`); bản đồ
-  nhúng; `rel=sponsored` + disclosure; render `ticketLinks[]` thành nhiều nút.
+**SEO/UX đi kèm** (`content-seo-ux-plan.md` §7, đã sắp ưu tiên — cập nhật
+23/07/2026: đã bỏ 3 mục hoá ra đã xong/không còn áp dụng khỏi danh sách gốc,
+xem lý do ở trên): ~~bật lại Review/Rating + JSON-LD AggregateRating~~
+(KHÔNG áp dụng — Phase 9 đã CHỦ Ý gỡ vĩnh viễn theo chính sách Google, xem
+mục "`DestinationReview`" ở trên, không phải việc đang chờ làm); ~~render
+FAQ + JSON-LD FAQPage~~ (✅ đã có, `SchemaUtil.cs`/`Detail.cshtml`); ~~render
+`ticketLinks[]` thành nhiều nút~~ (✅ đã có, `_QuickDecisionCard.cshtml`).
+~~trang landing Loại+Tỉnh~~ (✅ đã có từ lâu — `DestinationTypeController`
+`/loai`, `/loai/{group}[/{type}]`; `ProvinceController` `/tinh/{slug}`);
+~~SSR khối khách sạn/tour giữa bài (không AJAX)~~ (✅ đã có —
+`Detail.cshtml` render thẳng `_HotelCardList.cshtml`/`_TourCardList.cshtml`
+qua `Html.PartialAsync`, không phải AJAX). → **Toàn bộ mục "Cao" của §7 đã
+xong, không còn gì mở ở mức ưu tiên này.**
+- Trung bình: ~~gallery ảnh (`GalleryJson` + bảng `destination_images`)~~
+  (✅ đã có, `Detail.cshtml` đọc `extras.Gallery` cho hero + lightbox);
+  ~~`rel=sponsored`~~ (✅ đã có trên mọi link affiliate — hotel/tour/vé/sản
+  phẩm). Còn mở thật: bản đồ nhúng (site hiện chỉ có nút "Xem trên Google
+  Maps"/"Chỉ đường" mở tab ngoài, KHÔNG có iframe nhúng tại chỗ); disclosure
+  (chưa xác nhận lại, giữ nguyên).
 - Sau: mini lịch trình; so sánh giá tại quầy vs online; sitemap.xml + Search
   Console; critical CSS cho LCP; phân trang `/diem-den` có URL riêng từng trang.
 - **Faceted search — hợp nhất `/diem-den` + `/search` thành trang Khám phá**
