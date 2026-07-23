@@ -2,7 +2,8 @@ import { z } from "zod/v4";
 
 /**
  * Chu de (tag) diem den — destination-spec §2.4. Nguon su that: v2.DestinationTag/
- * DestinationTagMap tren SQL Server (7 tag da duyet, seed qua phase-b-01-seed-tags.sql).
+ * DestinationTagMap tren SQL Server (7 tag dau seed qua phase-b-01-seed-tags.sql,
+ * tu 07/2026 tao/sua/xoa duoc ngay trong CMS /dichoithoi/chu-de).
  * Khong co mirror Postgres rieng (giong taxonomy group/type/province) — doc/ghi thang site DB.
  */
 export const destinationTagSchema = z.object({
@@ -127,7 +128,7 @@ export type CreateDestinationTagRequest = z.infer<typeof createDestinationTagReq
 /** Sua ten/trang thai 1 tag — KHONG sua Slug (khoa on dinh dung trong URL/token) */
 export const updateDestinationTagRequestSchema = z.object({
   name: z.string().min(1).max(128).optional(),
-  /** 1 = hoat dong (hien /chu-de/{slug} + AI goi y), 0 = an */
+  /** 1 = da mo trang public /chu-de/{slug}; 0 = chua mo (site tra 404). AI goi y/ra soat dung MOI tag bat ke status */
   status: z.number().int().min(0).max(1).optional(),
 });
 export type UpdateDestinationTagRequest = z.infer<typeof updateDestinationTagRequestSchema>;

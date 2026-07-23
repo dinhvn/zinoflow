@@ -66,8 +66,11 @@ function TagListSection({ data }: { data: ListDestinationTagAssignmentsResponse 
           {data.tags.length} chủ đề đã tạo
         </h3>
         <p className="text-xs text-zinc-500">
-          Tạo chủ đề mới, đổi tên hoặc ẩn/hiện tại đây — không cần chạy SQL tay nữa. Ẩn một chủ đề
-          nghĩa là không còn dùng để AI gợi ý gán/rà soát, nhưng điểm đến đã gán vẫn giữ nguyên.
+          Tạo chủ đề mới, đổi tên, mở/đóng trang public hoặc xoá tại đây — không cần chạy SQL tay
+          nữa. Trạng thái chỉ quyết định trang /chu-de/{"{slug}"} ngoài site: &quot;Đã mở trên
+          site&quot; = trang public hoạt động; &quot;Chưa mở&quot; = ngoài site trả 404. AI gợi ý
+          gán/rà soát vẫn dùng TẤT CẢ chủ đề kể cả chưa mở — đúng quy trình gán tag trước, đủ điểm
+          rồi mới mở trang.
         </p>
       </div>
       <div className="divide-y divide-zinc-200 rounded border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
@@ -160,10 +163,14 @@ function TagDescriptionRow({
           onClick={() => toggleStatus.mutate()}
           disabled={toggleStatus.isPending}
           className="inline-block"
-          title={status === 1 ? "Bấm để ẩn chủ đề này" : "Bấm để bật lại chủ đề này"}
+          title={
+            status === 1
+              ? "Bấm để đóng trang /chu-de ngoài site (trả 404) — AI vẫn dùng chủ đề này"
+              : "Bấm để mở trang /chu-de ngoài site cho chủ đề này"
+          }
         >
           <Badge tone={status === 1 ? "emerald" : "gray"}>
-            {status === 1 ? "Đang hoạt động" : "Đã ẩn"}
+            {status === 1 ? "Đã mở trên site" : "Chưa mở (404)"}
           </Badge>
         </button>
         <button
@@ -227,7 +234,9 @@ function CreateTagForm() {
   return (
     <div className="flex flex-wrap items-end gap-2 rounded border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
       <div>
-        <label className="mb-1 block text-xs text-zinc-500">Slug (vd biển-đảo)</label>
+        <label className="mb-1 block text-xs text-zinc-500">
+          Slug — chữ thường không dấu, nối gạch ngang (vd bien-dao)
+        </label>
         <Input
           value={slug}
           onChange={(e) => setSlug(e.target.value)}

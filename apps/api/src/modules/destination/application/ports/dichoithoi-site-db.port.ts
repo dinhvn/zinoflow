@@ -292,6 +292,12 @@ export interface DichoithoiSiteDb {
   createTag(input: { slug: string; name: string; description: string | null }): Promise<void>;
   /** Sua ten/trang thai 1 tag (KHONG doi Slug — slug la khoa on dinh dung trong URL/token) */
   updateTag(tagSlug: string, fields: { name?: string; status?: number }): Promise<void>;
+  /**
+   * Dem so dong DestinationTagMap cua 1 tag tren MOI diem den (ke ca chua published) —
+   * dung de chan xoa. KHONG dung fetchTagAssignments cho viec nay vi no chi lay
+   * diem den Status = 1, se dem thieu va de FK chan xoa voi loi kho hieu.
+   */
+  countTagUsage(tagSlug: string): Promise<number>;
   /** Xoa 1 tag CHUA duoc gan cho diem den nao (FK DestinationTagMap chan xoa neu dang dung) */
   deleteTag(tagSlug: string): Promise<void>;
 

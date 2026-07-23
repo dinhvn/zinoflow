@@ -679,7 +679,7 @@ ZinoFlow
 │   ├─ Khách sạn             /dichoithoi/hotels       (hotel-spec §6)
 │   ├─ Tour                  /dichoithoi/tours        (tour-spec §6)
 │   ├─ Sản phẩm              /dichoithoi/products     (product-spec §6)
-│   ├─ Chủ đề                /dichoithoi/tags         (tag — bộ từ vựng + mô tả, §2.4 + database-redesign §3.2.1)
+│   ├─ Chủ đề                /dichoithoi/chu-de       (tag — CRUD + gán AI + mô tả, §2.4 + database-redesign §3.2.1)
 │   ├─ Taxonomy              /dichoithoi/taxonomy     (Loại + Tỉnh — giai đoạn 2, ẩn ở MVP)
 │   ├─ Review khách          /dichoithoi/reviews      (duyệt review — giai đoạn 2, ẩn ở MVP)
 │   └─ Công cụ               /dichoithoi/tools        (re-link, recompute, đồng bộ, gán chủ đề hàng loạt, log job)

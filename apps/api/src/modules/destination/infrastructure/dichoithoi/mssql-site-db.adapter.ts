@@ -841,6 +841,20 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     });
   }
 
+  async countTagUsage(tagSlug: string): Promise<number> {
+    const result = await this.runWithRetry((pool) => {
+      const request = pool.request();
+      request.input("slug", tagSlug);
+      return request.query<{ UsedCount: number }>(`
+        SELECT COUNT(*) AS UsedCount
+        FROM v2.DestinationTagMap m
+        JOIN v2.DestinationTag t ON t.Id = m.TagId
+        WHERE t.Slug = @slug
+      `);
+    });
+    return Number(result.recordset[0]?.UsedCount ?? 0);
+  }
+
   async deleteTag(tagSlug: string): Promise<void> {
     await this.runWithRetry(async (pool) => {
       const request = pool.request();

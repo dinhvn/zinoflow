@@ -12,8 +12,9 @@ export class DeleteDestinationTagUseCase {
   constructor(@Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb) {}
 
   async execute(tagSlug: string): Promise<{ ok: true }> {
-    const assignments = await this.siteDb.fetchTagAssignments();
-    const usedCount = assignments.filter((a) => a.tagSlugs.includes(tagSlug)).length;
+    // countTagUsage dem tren MOI diem den (ke ca chua published) — fetchTagAssignments
+    // chi lay diem Status = 1 nen se dem thieu, de lot xuong FK voi loi kho hieu.
+    const usedCount = await this.siteDb.countTagUsage(tagSlug);
     if (usedCount > 0) {
       throw new DomainRuleError(
         `Chủ đề "${tagSlug}" đang được gán cho ${usedCount} điểm đến — gỡ gán hết trước khi xoá`,

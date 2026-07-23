@@ -902,6 +902,14 @@ taxonomy group/type/province).
 - `dichoithoi-site-db.port.ts` + `mssql-site-db.adapter.ts` thêm
   `fetchTags`/`fetchTagAssignments`/`replaceTagAssignments`/
   `updateTagDescription`.
+- **Bổ sung 23/07/2026 — CRUD tag ngay trong CMS**: form tạo tag mới (slug
+  kebab-case + tên), sửa tên inline, nút bật/tắt `Status`, xoá tag (use case
+  chặn xoá bằng `countTagUsage` đếm trên MỌI điểm đến kể cả chưa published —
+  KHÔNG dùng `fetchTagAssignments` vì nó chỉ lấy điểm Status=1, đếm thiếu).
+  Ý nghĩa `Status` đã chốt: 1 = trang public `/chu-de/{slug}` mở, 0 = site
+  trả 404 (TopicController); AI gợi ý/rà soát dùng MỌI tag bất kể Status —
+  đúng quy trình "gán tag trước, đủ điểm rồi mới mở trang". Unit test
+  create/delete đã có.
 - Buoc 1 — `SuggestTagAssignmentsUseCase`: AI (Haiku, đi qua
   `IContentAIProvider` như mọi call AI khác) gợi ý tag cho các điểm CHƯA có
   tag nào (hoặc danh sách chỉ định), kèm `reasoning` 1 câu; lọc bỏ mọi
