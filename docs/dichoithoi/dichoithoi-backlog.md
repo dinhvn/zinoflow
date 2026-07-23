@@ -128,7 +128,12 @@ xong lại tưởng chưa làm).
   (`PreviewArticleUseCase`, dry-run không ghi DB, cùng pattern preview của
   Destination) — nút "Xem trước" ở `content/[id]/page.tsx`. Ngoài ra phát
   hiện `Tag`/`TagController` (API `/api/tags`) là code chết, 0 nơi gọi —
-  ứng viên dọn dẹp sau này giống đợt xoá module Blog, chưa xử lý. (3) Audit
+  ✅ **ĐÃ XOÁ (23/07/2026, repo dichoithoi commit `432a36d`)**, cùng phạm vi
+  đợt xoá module Blog (`4e1a6de`): `TagController`, `ITagService`/
+  `TagService`, `ITagRepository`/`TagRepository`, entity `Tag`, `TagModel`,
+  `DbSet<Tag>` (2 DbContext) + DI registration trong `Program.cs`. Không
+  đụng `v2.DestinationTag`/`DestinationTagMap` (bảng khác, đang dùng thật
+  cho `/chu-de/{slug}`). Build `dotnet build` sạch. (3) Audit
   SEO Article
   — ✅ **3/4 mục ĐÃ XONG (20/07/2026)**, mục còn lại cố ý để sau (quyết định
   qua AskUserQuestion):
