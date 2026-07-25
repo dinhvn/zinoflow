@@ -793,6 +793,43 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               })()}
               <span className="font-mono text-zinc-400">{d.slug}</span>
             </div>
+            {/* Nhóm/Type/Tag — chỉ-đọc, sửa ở /dichoithoi/phan-loai (Type) và
+                /dichoithoi/chu-de (Tag) (phản hồi người dùng 24/07/2026: trang này
+                trước đây không hiện thông tin phân loại gì cả). */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              {d.assignedTypes.length === 0 && d.assignedTags.length === 0 ? (
+                <span className="text-zinc-400">
+                  Chưa phân loại — gán ở{" "}
+                  <a href="/dichoithoi/phan-loai" className="underline hover:text-zinc-600">
+                    Loại hình
+                  </a>{" "}
+                  /{" "}
+                  <a href="/dichoithoi/chu-de" className="underline hover:text-zinc-600">
+                    Chủ đề
+                  </a>
+                </span>
+              ) : (
+                <>
+                  {d.assignedTypes.map((t) => (
+                    <span
+                      key={t.slug}
+                      title={t.groupName}
+                      className="rounded bg-indigo-100 px-2 py-0.5 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                    >
+                      {t.name}
+                    </span>
+                  ))}
+                  {d.assignedTags.map((t) => (
+                    <span
+                      key={t.slug}
+                      className="rounded bg-teal-100 px-2 py-0.5 text-teal-700 dark:bg-teal-950 dark:text-teal-300"
+                    >
+                      #{t.name}
+                    </span>
+                  ))}
+                </>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

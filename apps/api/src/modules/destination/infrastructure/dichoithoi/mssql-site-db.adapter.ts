@@ -18,6 +18,7 @@ function loadMssqlDriver(host: string): typeof sql {
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
 import type { RelatedItem } from "../../domain/related-builder";
 import type {
+  AutoLinkTargetRow,
   DestinationCardFilter,
   DestinationCardRow,
   DichoithoiSiteDb,
@@ -498,8 +499,14 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
   /** Phase 18.2 — noi dung /loai, /tinh cho trang admin sua Description danh muc */
   async fetchTaxonomyContent(): Promise<TaxonomyContentRows> {
     const [groups, types, provinces] = await Promise.all([
-      this.queryWithRetry<{ Id: number; Slug: string; Name: string; Description: string | null }>(
-        `SELECT Id, Slug, Name, Description FROM v2.DestinationTypeGroup ORDER BY [Order], Name`,
+      this.queryWithRetry<{
+        Id: number;
+        Slug: string;
+        Name: string;
+        Description: string | null;
+        MetaDescription: string | null;
+      }>(
+        `SELECT Id, Slug, Name, Description, MetaDescription FROM v2.DestinationTypeGroup ORDER BY [Order], Name`,
       ),
       this.queryWithRetry<{
         Id: number;
@@ -507,14 +514,18 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         Slug: string;
         Name: string;
         Description: string | null;
-      }>(`SELECT Id, GroupId, Slug, Name, Description FROM v2.DestinationType ORDER BY [Order], Name`),
+        MetaDescription: string | null;
+      }>(
+        `SELECT Id, GroupId, Slug, Name, Description, MetaDescription FROM v2.DestinationType ORDER BY [Order], Name`,
+      ),
       this.queryWithRetry<{
         Id: number;
         Slug: string;
         Code: string;
         Name: string;
         Description: string | null;
-      }>(`SELECT Id, Slug, Code, Name, Description FROM v2.Province ORDER BY Name`),
+        MetaDescription: string | null;
+      }>(`SELECT Id, Slug, Code, Name, Description, MetaDescription FROM v2.Province ORDER BY Name`),
     ]);
     return {
       groups: groups.map((r) => ({
@@ -522,6 +533,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         slug: r.Slug,
         name: r.Name,
         description: r.Description ?? null,
+        metaDescription: r.MetaDescription ?? null,
       })),
       types: types.map((r) => ({
         id: Number(r.Id),
@@ -529,6 +541,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         slug: r.Slug,
         name: r.Name,
         description: r.Description ?? null,
+        metaDescription: r.MetaDescription ?? null,
       })),
       provinces: provinces.map((r) => ({
         id: Number(r.Id),
@@ -536,23 +549,54 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         code: r.Code,
         name: r.Name,
         description: r.Description ?? null,
+        metaDescription: r.MetaDescription ?? null,
       })),
     };
   }
 
-  /** Phase 18.2 — sua doan gioi thieu 1 group/type/province (content-seo-ux-plan §10.3) */
+  /** Phase 18.2 — sua doan gioi thieu 1 group/type/province (content-seo-ux-plan §10.3).
+   * descriptionHtml chi ghi thuc su khi target="type" (co cot DescriptionHtml) — group/province
+   * khong co cot nay, tham so bi bo qua (khong loi neu truyen null). */
   async updateTaxonomyDescription(
     target: "group" | "type" | "province",
     id: number,
     description: string | null,
+    metaDescription: string | null,
+    descriptionHtml: string | null,
   ): Promise<void> {
     const table = TAXONOMY_TABLE_BY_TARGET[target];
     await this.runWithRetry(async (pool) => {
       const request = pool.request();
       request.input("id", id);
       request.input("description", description);
-      return request.query(`UPDATE ${table} SET Description = @description WHERE Id = @id`);
+      request.input("metaDescription", metaDescription);
+      if (target === "type") {
+        request.input("descriptionHtml", descriptionHtml);
+        return request.query(`
+          UPDATE ${table}
+          SET Description = @description, MetaDescription = @metaDescription, DescriptionHtml = @descriptionHtml
+          WHERE Id = @id
+        `);
+      }
+      return request.query(`
+        UPDATE ${table} SET Description = @description, MetaDescription = @metaDescription WHERE Id = @id
+      `);
     });
+  }
+
+  /** Diem den (published) dang gan 1 Type — target cho auto-link mo ta Type. */
+  async fetchDestinationsForType(typeId: number): Promise<AutoLinkTargetRow[]> {
+    const rows = await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("typeId", typeId);
+      return request.query<{ Slug: string; Name: string }>(`
+        SELECT DISTINCT d.Slug, d.Name
+        FROM v2.DestinationTypeMap m
+        JOIN v2.Destination d ON d.Id = m.DestinationId
+        WHERE m.TypeId = @typeId AND d.Status = 1
+      `);
+    });
+    return rows.recordset.map((r) => ({ slug: r.Slug, name: r.Name }));
   }
 
   async updateAncestorsChildren(
@@ -742,15 +786,33 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       Slug: string;
       Name: string;
       Description: string | null;
+      MetaDescription: string | null;
       Status: number;
-    }>(`SELECT Id, Slug, Name, Description, Status FROM v2.DestinationTag ORDER BY Name`);
+    }>(`SELECT Id, Slug, Name, Description, MetaDescription, Status FROM v2.DestinationTag ORDER BY Name`);
     return rows.map((r) => ({
       id: Number(r.Id),
       slug: r.Slug,
       name: r.Name,
       description: r.Description ?? null,
+      metaDescription: r.MetaDescription ?? null,
       status: Number(r.Status),
     }));
+  }
+
+  /** Diem den (published) dang gan 1 Tag — target cho auto-link mo ta Tag. */
+  async fetchDestinationsForTag(tagSlug: string): Promise<AutoLinkTargetRow[]> {
+    const rows = await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("tagSlug", tagSlug);
+      return request.query<{ Slug: string; Name: string }>(`
+        SELECT DISTINCT d.Slug, d.Name
+        FROM v2.DestinationTagMap m
+        JOIN v2.DestinationTag t ON t.Id = m.TagId
+        JOIN v2.Destination d ON d.Id = m.DestinationId
+        WHERE t.Slug = @tagSlug AND d.Status = 1
+      `);
+    });
+    return rows.recordset.map((r) => ({ slug: r.Slug, name: r.Name }));
   }
 
   async fetchTagAssignments(): Promise<SiteTagAssignmentRow[]> {
@@ -803,14 +865,23 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     });
   }
 
-  async updateTagDescription(tagSlug: string, description: string | null): Promise<void> {
+  async updateTagDescription(
+    tagSlug: string,
+    description: string | null,
+    metaDescription: string | null,
+    descriptionHtml: string | null,
+  ): Promise<void> {
     await this.runWithRetry(async (pool) => {
       const request = pool.request();
       request.input("slug", tagSlug);
       request.input("description", description);
-      return request.query(
-        `UPDATE v2.DestinationTag SET Description = @description WHERE Slug = @slug`,
-      );
+      request.input("metaDescription", metaDescription);
+      request.input("descriptionHtml", descriptionHtml);
+      return request.query(`
+        UPDATE v2.DestinationTag
+        SET Description = @description, MetaDescription = @metaDescription, DescriptionHtml = @descriptionHtml
+        WHERE Slug = @slug
+      `);
     });
   }
 
@@ -898,6 +969,11 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       const insertValues = typeSlugs
         .map((_, i) => `SELECT @destinationId, Id FROM v2.DestinationType WHERE Slug = @type${i}`)
         .join("\nUNION ALL\n");
+      // PrimaryTypeId (dung hien badge/breadcrumb khong can join map) phai luon dong
+      // bo voi TypeMap — bug phat hien 24/07/2026: gan Type qua Kanban/AI truoc day
+      // chi ghi TypeMap, de PrimaryTypeId NULL vinh vien du da co Type. Slug DAU TIEN
+      // trong mang duoc coi la "chinh" (thu tu nguoi goi truyen vao — Kanban toggle
+      // hoac AI suggest deu giu nguyen thu tu nay).
       await request.query(`
         DECLARE @destinationId int = (SELECT Id FROM v2.Destination WHERE Slug = @slug);
         IF @destinationId IS NOT NULL
@@ -908,6 +984,9 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
               ? `INSERT INTO v2.DestinationTypeMap (DestinationId, TypeId)\n${insertValues}`
               : ""
           }
+          UPDATE v2.Destination
+          SET PrimaryTypeId = ${typeSlugs.length > 0 ? "(SELECT Id FROM v2.DestinationType WHERE Slug = @type0)" : "NULL"}
+          WHERE Id = @destinationId;
         END
       `);
     });

@@ -3,6 +3,7 @@ import {
   suggestTaxonomyTypesRequestSchema,
   updateDestinationTypesRequestSchema,
   type GetTaxonomyKanbanBoardResponse,
+  type PreviewPromptResponse,
   type SuggestTaxonomyTypesRequest,
   type SuggestTaxonomyTypesResponse,
   type UpdateDestinationTypesRequest,
@@ -10,6 +11,7 @@ import {
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { GetTaxonomyKanbanBoardUseCase } from "../application/use-cases/get-taxonomy-kanban-board.usecase";
 import { SuggestTaxonomyTypesUseCase } from "../application/use-cases/suggest-taxonomy-types.usecase";
+import { PreviewTaxonomyTypeSuggestPromptUseCase } from "../application/use-cases/preview-taxonomy-type-suggest-prompt.usecase";
 import { UpdateDestinationTypesUseCase } from "../application/use-cases/update-destination-types.usecase";
 
 /** REST cho ban Kanban ra soat taxonomy Type (relations-plan §6.1-6.3, Giai doan B2-B3) */
@@ -19,6 +21,7 @@ export class DestinationTypesController {
     private readonly getBoard: GetTaxonomyKanbanBoardUseCase,
     private readonly updateTypes: UpdateDestinationTypesUseCase,
     private readonly suggestTypes: SuggestTaxonomyTypesUseCase,
+    private readonly previewSuggestPrompt: PreviewTaxonomyTypeSuggestPromptUseCase,
   ) {}
 
   @Get("kanban-board")
@@ -32,6 +35,14 @@ export class DestinationTypesController {
     request: SuggestTaxonomyTypesRequest,
   ): Promise<SuggestTaxonomyTypesResponse> {
     return this.suggestTypes.execute(request);
+  }
+
+  @Post("suggest/preview")
+  previewSuggest(
+    @Body(new ZodValidationPipe(suggestTaxonomyTypesRequestSchema.pick({ clusterSlug: true })))
+    request: Pick<SuggestTaxonomyTypesRequest, "clusterSlug">,
+  ): Promise<PreviewPromptResponse> {
+    return this.previewSuggestPrompt.execute(request.clusterSlug);
   }
 
   @Patch(":slug/types")

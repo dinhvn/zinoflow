@@ -14,8 +14,8 @@ import type {
 import type { AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
 
 const TAGS: SiteTagRow[] = [
-  { id: 1, slug: "hoang-so", name: "Hoang so", description: null, status: 0 },
-  { id: 2, slug: "lang-man", name: "Lang man", description: null, status: 0 },
+  { id: 1, slug: "hoang-so", name: "Hoang so", description: null, metaDescription: null, status: 0 },
+  { id: 2, slug: "lang-man", name: "Lang man", description: null, metaDescription: null, status: 0 },
 ];
 
 function fakeProvider(output: unknown): ContentAiProvider {

@@ -416,8 +416,8 @@ không copy nguyên văn (rủi ro hiện tại nếu prompt không ép rõ).
 |---|---|---|
 | Trang chủ | `Organization`, `WebSite` (+ `SearchAction` cho sitelinks searchbox) | Đã có Organization/WebSite (audit); SearchAction — MỚI, đề xuất thêm |
 | Điểm đến | `TouristAttraction`/`Place` (geo, address), `BreadcrumbList`, `FAQPage`, `Offer`/`AggregateOffer` (từ `TicketPriceFrom`), `ImageObject[]` (từ `GalleryJson`) | TouristAttraction/Breadcrumb đã có; FAQPage/Offer/ImageObject — cần làm khi viết lại (§4.2). **`AggregateRating`/`Review` ĐÃ GỠ 07/2026** (dữ liệu tự nhập, không phải review thật — chỉ thêm lại khi có review khách thật, xem §1) |
-| Danh sách/Loại/Tỉnh | `ItemList`, `BreadcrumbList` | ItemList đã có cho `/diem-den`/`/search`; cần thêm cho `/loai/...`, `/tinh/...` mới |
-| Chủ đề `/chu-de/{slug}` (tag — §10.3) | `CollectionPage` + `ItemList`, `BreadcrumbList` | MỚI 07/2026 — chỉ index khi đủ điều kiện (mô tả đã duyệt + ≥5 điểm, database-redesign §3.2.1); dưới ngưỡng → `noindex` |
+| Danh sách/Loại/Tỉnh | `ItemList`, `BreadcrumbList` | ✅ XONG 24/07/2026 — ItemList đã thêm cho `/loai/{group}`, `/loai/{group}/{type}`, `/tinh/{slug}` (trước đó chỉ có ở `/diem-den`/`/search`). Cùng đợt: meta title theo intent + số lượng thật, meta description cắt từ Description thật (SeoTextUtil), `/tinh` 0 điểm → noindex + loại khỏi sitemap. **Đợt 2 (24/07/2026)**: auto-link + cột `MetaDescription` riêng — xem §10.3a |
+| Chủ đề `/chu-de/{slug}` (tag — §10.3) | `CollectionPage` + `ItemList`, `BreadcrumbList` | ✅ CODE XONG 24/07/2026 (CollectionPage+ItemList chỉ render khi trang đủ điều kiện index; sitemap chỉ nộp tag indexable) — còn chờ NỘI DUNG: mô tả 300-500 từ đã duyệt + publish tag (hiện 17 tag đều draft); dưới ngưỡng → `noindex`. CMS `/dichoithoi/danh-muc` và `/dichoithoi/chu-de` đã có `FeatureIntro` giải thích ngay tại chỗ vì sao 2 trang có độ dài mô tả khác nhau (xem giải thích ở §10.3 ngay dưới) |
 | Tỉnh/cụm **Chủ lực** (`ContentTier=Chủ lực` — xem §10.6.1) | **CẢ 2**: `TouristAttraction`/`Place` (vì node này TỰ NÓ là 1 điểm đến) **+** `ItemList` (vì cũng liệt kê con bên trong) | MỚI 07/2026 — trang `/tinh/{slug}` của tỉnh chủ lực (vd TP.HCM) không còn là "trang danh mục thuần", phải có cả 2 schema cùng lúc |
 | Cẩm nang (Article) | `Article`/`BlogPosting`, `ItemList` LỒNG bên trong nếu bài dạng liệt kê (Google hỗ trợ rich result cho listicle), `BreadcrumbList` | MỚI — chưa có trang, làm cùng lúc build `dichoithoi-article-spec.md` |
 
@@ -718,6 +718,55 @@ thiệu ngắn; (b) chỉ published + index khi có mô tả đã duyệt và �
 (database-redesign §3.2.1), dưới ngưỡng → `noindex`; (c) danh sách sắp xếp ưu
 tiên `ContentTier=Chủ lực`/`IsFeatured` trước. Trang điểm đến hiện dãy chip
 chủ đề link về đây (internal link 2 chiều).
+
+### 10.3a Auto-link + MetaDescription riêng cho Type/Tag (chốt 24/07/2026)
+
+**Kiến trúc 3 field** cho `Description` của Nhóm/Loại/Tỉnh/Tag — tránh xung đột
+giữa 3 vai trò khác nhau (admin sửa trong CMS / hiển thị công khai / làm
+`<meta description>`) từng dồn hết vào 1 field:
+
+- `Description` (giữ nguyên) — nguồn **sạch, plain text**, admin luôn sửa field
+  này trong CMS. KHÔNG BAO GIỜ bị server ghi đè bằng HTML — tránh lặp lại lỗi đã
+  gặp với bullet/bold (view cũ chỉ render `<p>@Description</p>` phẳng).
+- `DescriptionHtml` (cột mới, **chỉ Type + Tag**) — bản đã auto-link, do server
+  (zinoflow API) **tự sinh lại mỗi lần `Description` được lưu**, dùng
+  `autoLinkContent()` có sẵn (`apps/api/.../shared/text/auto-link.ts`, cùng
+  engine dùng cho bài điểm đến/cẩm nang — không viết engine mới). Target link =
+  CHỈ những điểm đến đã gán cho đúng Type/Tag đó (không phải toàn site) — khớp
+  nguyên tắc "chỉ nêu tên có thật trong lưới hiển thị". Web render
+  `Html.Raw(DescriptionHtml ?? Description)` với class `rich-content` (CSS sẵn
+  có `a{color:#015b93}`). Group/Tỉnh CHƯA có auto-link (ngoài phạm vi đợt này).
+- `MetaDescription` (cột mới, **cả 4 cấp**) — tách hẳn khỏi `Description`, đúng
+  tiền lệ `Destination.MetaDescription` tách khỏi `ShortDescription`
+  (database-redesign §4.3). Fallback: `MetaDescription ?? SeoTextUtil(Description)
+  ?? template` — **không bao giờ đọc `DescriptionHtml`** để tránh markup `<a>`
+  lọt vào thẻ `<meta>`.
+
+An toàn XSS: text nguồn được `escapeHtml()` trước khi đưa qua `autoLinkContent`
+(`apps/api/.../shared/text/escape-html.ts`) — mọi `<`/`>` người dùng gõ nhầm bị
+escape thành entity, chỉ còn đúng các thẻ `<a>` do chính server tạo là HTML thật.
+
+**Bug phát hiện + đã sửa cùng đợt**: route `PATCH /destinations/:slug` (sửa
+metadata điểm đến) đăng ký TRƯỚC route `PATCH /destinations/taxonomy-content`
+trong `destinations.controller.ts` — Nest/Express khớp route theo thứ tự đăng
+ký (không tự ưu tiên route tĩnh hơn route có param), nên mọi lệnh gọi PATCH
+taxonomy-content qua HTTP thật đều bị nuốt nhầm thành `slug="taxonomy-content"`
+và validate lỗi. Bug có từ trước, chỉ lộ ra khi test bằng HTTP request thật
+(trước đó mọi đợt sửa Description đều ghi thẳng qua sqlcmd, không qua API).
+Đã sửa: chuyển route tĩnh lên trước route `:slug`.
+
+**Vì sao ngưỡng độ dài khác nhau giữa Nhóm/Loại/Tỉnh (2-4 câu) và Tag
+(300-500 từ)** (làm rõ 24/07/2026, đã đưa vào `FeatureIntro` trên CMS
+`/dichoithoi/danh-muc` và `/dichoithoi/chu-de`): Nhóm/Loại/Tỉnh là trục phân
+loại khách quan — bản thân lưới điểm đến hiển thị dưới đoạn giới thiệu đã
+khớp đúng search intent ("thác nước đẹp", "du lịch Ninh Bình"), đoạn văn chỉ
+cần đủ ngữ cảnh. Tag là góc nhìn cắt ngang tự đặt ra — cùng điểm đến đã có
+"nhà" ở trang Loại/Tỉnh rồi, nên nếu mô tả ngắn thì trang Tag chỉ là xếp lại
+đúng card đã có sẵn nơi khác, đúng mô hình "tag archive" mà Google coi là
+duplicate content nội bộ. Ngưỡng 300-500 từ ép trang phải có phần biên tập
+riêng (tiêu chí chọn, gợi ý dùng danh sách) để có lý do tồn tại độc lập —
+đây cũng là lý do gate `noindex` chỉ áp cho `/chu-de`, không áp cho
+Nhóm/Loại/Tỉnh.
 
 **Mobile:**
 ```

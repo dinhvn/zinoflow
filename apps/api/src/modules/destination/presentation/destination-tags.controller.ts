@@ -3,6 +3,7 @@ import {
   applyTagAssignmentsRequestSchema,
   createDestinationTagRequestSchema,
   generateTagDescriptionRequestSchema,
+  previewTagDescriptionRequestSchema,
   suggestTagAssignmentsRequestSchema,
   updateDestinationTagRequestSchema,
   updateTagDescriptionRequestSchema,
@@ -11,7 +12,11 @@ import {
   type CreateDestinationTagRequest,
   type GenerateTagDescriptionRequest,
   type GenerateTagDescriptionResponse,
+  type GetTagKanbanBoardResponse,
   type ListDestinationTagAssignmentsResponse,
+  type PreviewPromptResponse,
+  type PreviewTagDescriptionRequest,
+  type PreviewTagDescriptionResponse,
   type ReverseCheckTagAssignmentsResponse,
   type SuggestTagAssignmentsRequest,
   type SuggestTagAssignmentsResponse,
@@ -28,6 +33,9 @@ import { UpdateTagDescriptionUseCase } from "../application/use-cases/update-tag
 import { CreateDestinationTagUseCase } from "../application/use-cases/create-destination-tag.usecase";
 import { UpdateDestinationTagUseCase } from "../application/use-cases/update-destination-tag.usecase";
 import { DeleteDestinationTagUseCase } from "../application/use-cases/delete-destination-tag.usecase";
+import { GetTagKanbanBoardUseCase } from "../application/use-cases/get-tag-kanban-board.usecase";
+import { PreviewTagSuggestPromptUseCase } from "../application/use-cases/preview-tag-suggest-prompt.usecase";
+import { PreviewTagDescriptionUseCase } from "../application/use-cases/preview-tag-description.usecase";
 
 /** REST man "Chủ đề" (destination-spec §2.4) — AI gợi ý gán tag hàng loạt + duyệt */
 @Controller("destination-tags")
@@ -42,7 +50,23 @@ export class DestinationTagsController {
     private readonly createTag: CreateDestinationTagUseCase,
     private readonly updateTag: UpdateDestinationTagUseCase,
     private readonly deleteTag: DeleteDestinationTagUseCase,
+    private readonly kanbanBoard: GetTagKanbanBoardUseCase,
+    private readonly previewSuggestPrompt: PreviewTagSuggestPromptUseCase,
+    private readonly previewDescription: PreviewTagDescriptionUseCase,
   ) {}
+
+  @Get("kanban-board")
+  getKanbanBoard(): Promise<GetTagKanbanBoardResponse> {
+    return this.kanbanBoard.execute();
+  }
+
+  @Post("suggest/preview")
+  previewSuggest(
+    @Body(new ZodValidationPipe(suggestTagAssignmentsRequestSchema.pick({ destinationSlugs: true })))
+    request: Pick<SuggestTagAssignmentsRequest, "destinationSlugs">,
+  ): Promise<PreviewPromptResponse> {
+    return this.previewSuggestPrompt.execute(request);
+  }
 
   @Post()
   create(
@@ -107,6 +131,15 @@ export class DestinationTagsController {
     @Body(new ZodValidationPipe(updateTagDescriptionRequestSchema))
     request: UpdateTagDescriptionRequest,
   ): Promise<{ ok: true }> {
-    return this.updateDescription.execute(slug, request.description);
+    return this.updateDescription.execute(slug, request.description, request.metaDescription);
+  }
+
+  @Post(":slug/description/preview")
+  previewTagDescription(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(previewTagDescriptionRequestSchema))
+    request: PreviewTagDescriptionRequest,
+  ): Promise<PreviewTagDescriptionResponse> {
+    return this.previewDescription.execute(slug, request.description);
   }
 }

@@ -591,6 +591,10 @@ export const destinationDetailSchema = destinationMirrorSchema.extend({
    * km thuc te (dichoithoi-poi-distance-plan.md Giai doan 4).
    */
   hasDistanceData: z.boolean(),
+  /** Type (loại hình) đã gán — đọc trực tiếp từ SQL Server, không qua mirror (chưa mirror hoá). Rỗng nếu site DB chưa cấu hình/chưa gán. */
+  assignedTypes: z.array(z.object({ slug: z.string(), name: z.string(), groupName: z.string() })),
+  /** Tag (chủ đề) đã gán — tương tự assignedTypes, đọc trực tiếp SQL Server. */
+  assignedTags: z.array(z.object({ slug: z.string(), name: z.string() })),
 });
 export type DestinationDetail = z.infer<typeof destinationDetailSchema>;
 
@@ -924,6 +928,10 @@ export const taxonomyContentGroupSchema = z.object({
   slug: z.string(),
   name: z.string(),
   description: z.string().nullable(),
+  /** Rieng cho <meta name="description"> — tach khoi description hien thi tren trang
+   * (giong Destination.metaDescription, database-redesign §4.3). Null = web tu fallback
+   * ve description qua SeoTextUtil. */
+  metaDescription: z.string().nullable(),
 });
 export type TaxonomyContentGroup = z.infer<typeof taxonomyContentGroupSchema>;
 
@@ -933,6 +941,7 @@ export const taxonomyContentTypeSchema = z.object({
   slug: z.string(),
   name: z.string(),
   description: z.string().nullable(),
+  metaDescription: z.string().nullable(),
 });
 export type TaxonomyContentType = z.infer<typeof taxonomyContentTypeSchema>;
 
@@ -942,6 +951,7 @@ export const taxonomyContentProvinceSchema = z.object({
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
+  metaDescription: z.string().nullable(),
 });
 export type TaxonomyContentProvince = z.infer<typeof taxonomyContentProvinceSchema>;
 
@@ -956,6 +966,10 @@ export const updateTaxonomyDescriptionRequestSchema = z.object({
   target: z.enum(["group", "type", "province"]),
   id: z.number().int(),
   description: z.string().max(2000).nullable(),
+  /** Luon gui kem description (khong optional) — CMS co 2 o nhap rieng, luu 1 lan.
+   * Rieng "type": server con tu sinh lai DescriptionHtml (auto-link) tu description
+   * moi nay — xem manage-taxonomy-content.usecase.ts. */
+  metaDescription: z.string().max(160).nullable(),
 });
 export type UpdateTaxonomyDescriptionRequest = z.infer<typeof updateTaxonomyDescriptionRequestSchema>;
 

@@ -3,7 +3,7 @@ import { DomainRuleError } from "../../../shared/errors/app-error";
 import type { DichoithoiSiteDb, SiteTagRow } from "../ports/dichoithoi-site-db.port";
 
 const TAGS: SiteTagRow[] = [
-  { id: 1, slug: "hoang-so", name: "Hoang so", description: null, status: 0 },
+  { id: 1, slug: "hoang-so", name: "Hoang so", description: null, metaDescription: null, status: 0 },
 ];
 
 function fakeSiteDb(created: Array<{ slug: string; name: string; description: string | null }>) {

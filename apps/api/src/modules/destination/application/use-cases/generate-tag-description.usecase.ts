@@ -23,7 +23,10 @@ const DEFAULT_MODELS: Record<string, string> = {
 const SYSTEM = [
   "Bạn là biên tập viên SEO du lịch Việt Nam.",
   "Luôn trả lời bằng tiếng Việt có dấu đầy đủ.",
-  "TUYỆT ĐỐI KHÔNG bịa số liệu cứng (số lượng điểm đến, địa danh cụ thể).",
+  "TUYỆT ĐỐI KHÔNG bịa tên điểm đến, số liệu cứng hay chi tiết cụ thể không chắc chắn.",
+  "Được dùng Markdown nhẹ: đoạn văn cách nhau 1 dòng trống, gạch đầu dòng (\"- \") khi",
+  "liệt kê tiêu chí, in đậm (\"**...**\") cho từ khoá quan trọng. KHÔNG dùng heading",
+  "(##), ảnh, bảng, hay tự chèn link — trang sẽ tự động link tên điểm đến sau.",
 ].join(" ");
 
 /**
@@ -46,14 +49,23 @@ export class GenerateTagDescriptionUseCase {
       throw new DomainRuleError(`Không tìm thấy tag "${request.tagSlug}"`);
     }
 
+    const assignedDestinations = await this.siteDb.fetchDestinationsForTag(request.tagSlug);
+
     const providerKey = aiProviderKeySchema.parse(request.aiProvider ?? DEFAULT_PROVIDER);
     const model = request.aiModel ?? DEFAULT_MODELS[providerKey] ?? DEFAULT_MODELS[DEFAULT_PROVIDER]!;
     const provider = this.registry.resolve(providerKey);
 
     const prompt = [
       `Chủ đề: "${tag.name}" (trang /chu-de/${tag.slug}).`,
-      "Soạn 1 đoạn giới thiệu ngắn (2-4 câu) cho trang danh mục này, giúp người đọc hiểu",
-      "đây là nhóm điểm đến như thế nào — hấp dẫn, tự nhiên, phù hợp SEO, KHÔNG liệt kê tên điểm đến cụ thể.",
+      "Soạn 1 đoạn giới thiệu 300-500 từ cho trang danh mục này — đủ dài để trang có lý",
+      "do tồn tại độc lập, không chỉ là tag archive trùng lặp trang Loại/Tỉnh. Giải thích",
+      "tiêu chí chọn lọc chủ đề này (dùng gạch đầu dòng nếu có nhiều tiêu chí), gợi ý cách",
+      "dùng danh sách, có thể thêm 1-2 câu kinh nghiệm thực tế chung chung (không bịa số",
+      "liệu). CHỈ được nhắc tên điểm đến trong danh sách dưới đây (đã thực sự gán chủ đề",
+      "này) — không bịa thêm tên khác, không bắt buộc nhắc hết:",
+      assignedDestinations.length > 0
+        ? assignedDestinations.map((d) => `- ${d.name}`).join("\n")
+        : "(chưa có điểm đến nào gán chủ đề này — chỉ mô tả tiêu chí chọn lọc, không nhắc tên)",
     ].join("\n");
 
     const { output, usage } = await provider.generateStructured(
@@ -62,7 +74,7 @@ export class GenerateTagDescriptionUseCase {
         operation: "generate-tag-description",
         system: SYSTEM,
         prompt,
-        maxTokens: 500,
+        maxTokens: 1500,
         vars: { topic: tag.name, articleType: "guide-diem-den-suggest" },
       },
       generateTagDescriptionResponseSchema,

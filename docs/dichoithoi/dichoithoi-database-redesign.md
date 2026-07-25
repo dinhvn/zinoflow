@@ -151,6 +151,50 @@ Luật vận hành (chống tag sprawl kiểu WordPress — thin page/index bloa
   duyệt **và** gắn đủ ≥5 điểm đến; chưa đủ → `noindex`/chưa mở.
 - Quy trình AI gán tag + soạn mô tả: `destination-spec.md` §2.4.
 
+> **Redesign 24/07/2026 — ĐÃ MIGRATE + ĐÃ GÁN DỮ LIỆU THẬT.** Nhóm/Type/Tag ở
+> §3.2/§3.2.1 phía trên **ĐÃ LỖI THỜI** (còn mô tả 3 nhóm/16 type/9 tag cũ) —
+> schema thật trên `dichoithoi_dev` giờ là **4 Nhóm/18 Type/17 Tag**, xem đầy
+> đủ định nghĩa + luật phân định ở `phan-tich/dichoithoi-taxonomy-chuan-hoa.md`.
+> Script wipe+reseed: `scripts/dichoithoi-sqlserver/03-taxonomy-redesign-reseed.sql`.
+> Đã chạy AI (Gemini, do `ANTHROPIC_API_KEY` chưa cấu hình ở dev) gán lại cho
+> toàn bộ 247 POI: **238/247 có Type, 244/247 có Tag** (không qua bước duyệt
+> tay từng dòng như quy trình chuẩn §2.4 — người dùng yêu cầu áp dụng thẳng).
+> Mọi Type/Tag đều có ≥1 điểm; 2 mục dưới ngưỡng publish (≥5 điểm): Type
+> `khoang-nong-onsen-spa` (1 điểm), Tag `nhom-ban-teambuilding` (1 điểm) —
+> vẫn `noindex` cho tới khi có thêm dữ liệu.
+>
+> **Bug phát hiện + đã sửa cùng đợt**: `replaceTypeAssignments`
+> (`mssql-site-db.adapter.ts`) trước đây chỉ ghi `DestinationTypeMap`, không
+> bao giờ set `Destination.PrimaryTypeId` — badge/breadcrumb trên website
+> (đọc thẳng `PrimaryTypeId`, không join map) sẽ trống dù đã có Type. Đã sửa
+> để tự set `PrimaryTypeId` = Type đầu tiên trong mảng mỗi lần gán qua
+> Kanban/AI. 238 điểm gán đợt này dùng UPDATE 1 lần chọn tạm theo `TypeId`
+> nhỏ nhất (KHÔNG phải suy luận "loại chính đúng nghĩa" — chỉ để không NULL);
+> có thể cần rà lại tay sau nếu badge hiện sai loại.
+>
+> **Còn thiếu, đọc trước khi coi taxonomy là "hoàn tất"**: đã thêm luật §2.1
+> (xếp hạng di tích chính thức) vào SYSTEM prompt của `suggest-taxonomy-
+> types.usecase.ts` và chạy lại AI cho cả 25 cụm (24/07/2026, lần 2) —
+> **nhưng luật KHÔNG được tuân thủ đáng tin cậy**. Đọc trực tiếp cột
+> `reason` trong bảng nháp `dichoithoi_taxonomy_suggestions` (Postgres) sau
+> khi chạy: điểm `bai-da-co-sapa` được AI tự ghi rõ "tuy chưa có thông tin
+> xếp hạng chính thức" nhưng **vẫn gán `di-tich-lich-su`** — vi phạm thẳng
+> luật vừa thêm. Nhiều điểm khác (`cau-long-bien-ha-noi`, `buu-dien-trung-
+> tam-sai-gon`, `cho-ben-thanh`...) đoán đúng nhưng lý do ghi lại không hề
+> trích dẫn xếp hạng, chỉ là tường thuật lịch sử chung chung — tức đoán
+> đúng ngẫu nhiên/cảm tính, không phải vì tuân luật. **Nguyên nhân gốc**: AI
+> chỉ được cấp tối đa 500 ký tự nội dung mô tả (nhiều điểm chưa có nội
+> dung), hoàn toàn không có nguồn dữ liệu thật nào về quyết định xếp hạng để
+> tra cứu — sửa câu chữ prompt không đủ, cần cấp THÊM dữ liệu thật (căn cứ
+> xếp hạng) làm input mới giải quyết được triệt để (đúng như lo ngại đã ghi
+> ở mục 3 phần "Việc còn mở" của `dichoithoi-taxonomy-chuan-hoa.md`).
+> Overlap 2 Type này sau lần chạy 2 là 33/247 (tăng từ 18, nhưng không tự
+> động là xấu hơn vì luật cho phép gán cả 2 khi đủ điều kiện — chỉ là CHƯA
+> XÁC MINH được bao nhiêu trong 33 là đúng luật). Coi toàn bộ kết quả AI gán
+> Type (đợt 1 lẫn đợt 2) là **dữ liệu khởi tạo thô, chưa đáng tin để coi là
+> xong** — cần rà tay qua `/dichoithoi/phan-loai`, ưu tiên các điểm có
+> `di-tich-lich-su`/`cong-trinh-kiet-tac`.
+
 ### 3.3 Quan hệ tường minh — bảng `DestinationRelation`
 Chỉ 3 loại KHÔNG suy ra được từ cây/loại:
 

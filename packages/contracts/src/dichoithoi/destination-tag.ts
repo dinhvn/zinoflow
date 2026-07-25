@@ -11,6 +11,10 @@ export const destinationTagSchema = z.object({
   slug: z.string(),
   name: z.string(),
   description: z.string().nullable(),
+  /** Rieng cho <meta name="description"> — tach khoi description hien thi (giong
+   * Destination.metaDescription, database-redesign §4.3). Null = web tu fallback ve
+   * description qua SeoTextUtil (KHONG doc DescriptionHtml — tranh markup lot vao meta). */
+  metaDescription: z.string().nullable(),
   status: z.number().int(),
 });
 export type DestinationTag = z.infer<typeof destinationTagSchema>;
@@ -110,8 +114,22 @@ export type GenerateTagDescriptionResponse = z.infer<typeof generateTagDescripti
 
 export const updateTagDescriptionRequestSchema = z.object({
   description: z.string().nullable(),
+  /** Luon gui kem description (khong optional) — CMS co 2 o nhap rieng, luu 1 lan.
+   * Server tu sinh lai DescriptionHtml (auto-link toi diem den cung tag) tu description
+   * moi nay — xem update-destination-tag-description.usecase (hoac usecase tuong duong). */
+  metaDescription: z.string().max(160).nullable(),
 });
 export type UpdateTagDescriptionRequest = z.infer<typeof updateTagDescriptionRequestSchema>;
+
+/** Xem truoc HTML auto-link cua mo ta TRUOC khi luu (nguoi dung yeu cau 25/07/2026) —
+ * dung noi dung dang go trong textarea, khong doi hoi da luu. */
+export const previewTagDescriptionRequestSchema = z.object({
+  description: z.string().nullable(),
+});
+export type PreviewTagDescriptionRequest = z.infer<typeof previewTagDescriptionRequestSchema>;
+
+export const previewTagDescriptionResponseSchema = z.object({ html: z.string().nullable() });
+export type PreviewTagDescriptionResponse = z.infer<typeof previewTagDescriptionResponseSchema>;
 
 /** Tao tag moi (truoc day chi seed duoc qua SQL tay) — destination-spec §2.4 */
 export const createDestinationTagRequestSchema = z.object({
@@ -132,3 +150,32 @@ export const updateDestinationTagRequestSchema = z.object({
   status: z.number().int().min(0).max(1).optional(),
 });
 export type UpdateDestinationTagRequest = z.infer<typeof updateDestinationTagRequestSchema>;
+
+/**
+ * Ban Kanban gan tay Tag theo cum/tinh (phan hoi nguoi dung 24/07/2026 — muon gan tay
+ * "giong nhu cum", tuc cung trai nghiem voi /dichoithoi/phan-loai cua Type). Khac Type:
+ * KHONG co bang nhap Postgres rieng cho goi y AI (suggestedTagSlugs chi ephemeral tren
+ * client sau khi bam "Goi y AI cho cum nay", khong luu lai qua reload).
+ */
+export const tagKanbanBoardDestinationSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  parentSlug: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  tagSlugs: z.array(z.string()),
+});
+export type TagKanbanBoardDestination = z.infer<typeof tagKanbanBoardDestinationSchema>;
+
+export const tagKanbanClusterOptionSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  kind: z.enum(["province", "cluster"]),
+});
+export type TagKanbanClusterOption = z.infer<typeof tagKanbanClusterOptionSchema>;
+
+export const getTagKanbanBoardResponseSchema = z.object({
+  tags: z.array(destinationTagSchema),
+  clusters: z.array(tagKanbanClusterOptionSchema),
+  destinations: z.array(tagKanbanBoardDestinationSchema),
+});
+export type GetTagKanbanBoardResponse = z.infer<typeof getTagKanbanBoardResponseSchema>;

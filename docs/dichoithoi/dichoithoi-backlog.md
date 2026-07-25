@@ -258,6 +258,110 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- ✅ **Redesign toàn bộ Nhóm/Type/Tag điểm đến — ĐÃ MIGRATE + ĐÃ GÁN DỮ LIỆU
+  THẬT (24/07/2026)**: audit dữ liệu thật trên `dichoithoi_dev` phát hiện
+  overlap nặng `cong-trinh-kien-truc`/`di-tich-lich-su` (18/49 và 18/32 điểm
+  trùng). Nhờ Gemini phân tích lại + Claude review/sửa lỗi (chính tả, cột
+  `SecondaryTypeId` không có thật trong schema, thêm luật cứng phân định
+  dựa trên xếp hạng di tích chính thức) → bản chốt 4 Nhóm/18 Type/17 Tag ở
+  `phan-tich/dichoithoi-taxonomy-chuan-hoa.md`. Đã chạy script
+  `scripts/dichoithoi-sqlserver/03-taxonomy-redesign-reseed.sql` xoá sạch
+  taxonomy cũ + seed lại, sau đó gọi AI (Gemini — `ANTHROPIC_API_KEY` chưa
+  cấu hình ở dev) gán Type/Tag hàng loạt cho toàn bộ 247 POI qua chính API
+  `/destination-types/suggest`+`/destination-tags/suggest` đã có sẵn:
+  **238/247 có Type, 244/247 có Tag** (áp dụng thẳng theo yêu cầu người
+  dùng, không qua bước duyệt tay từng dòng như quy trình chuẩn destination-
+  spec §2.4). Mọi Type/Tag đều có ≥1 điểm; 2 mục dưới ngưỡng ≥5 (vẫn
+  `noindex`): Type `khoang-nong-onsen-spa` (1), Tag `nhom-ban-teambuilding` (1).
+  **Bug phát hiện + đã sửa cùng đợt**: `replaceTypeAssignments`
+  (`mssql-site-db.adapter.ts`) chưa bao giờ set `Destination.PrimaryTypeId`
+  khi gán qua Kanban/AI — badge/breadcrumb web đọc thẳng cột này sẽ trống dù
+  đã có Type. Đã sửa để tự set từ nay; 238 điểm gán đợt này được set tạm qua
+  UPDATE 1 lần (chọn `TypeId` nhỏ nhất, không phải suy luận "loại chính"
+  thật sự — có thể cần rà tay lại sau).
+  ✅ **Đã đồng bộ mirror Postgres (24/07/2026)** — bấm "Đồng bộ từ website",
+  cột `types` dùng cho `related-builder.ts` hết stale, verify qua
+  `GET /destinations/dalat-fairytale-land` (`assignedTypes`/`assignedTags`
+  đúng dữ liệu mới).
+
+  ⚠️ **Đã THỬ vá luật cứng §2.1 vào prompt AI — KHÔNG đáng tin, còn mở**
+  (24/07/2026, lần 2): thêm đoạn luật "chỉ gán `di-tich-lich-su` khi có xếp
+  hạng chính thức" vào SYSTEM prompt (`suggest-taxonomy-types.usecase.ts`),
+  xoá bảng nháp `dichoithoi_taxonomy_suggestions` (Postgres) để re-eval lại
+  toàn bộ 25 cụm. Kết quả: overlap `di-tich-lich-su`/`cong-trinh-kiet-tac`
+  đổi 18→33/247 — nhưng đọc trực tiếp cột `reason` AI ghi lại thì **luật
+  KHÔNG được tuân thủ đáng tin**: điểm `bai-da-co-sapa` được AI tự viết rõ
+  "tuy chưa có thông tin xếp hạng chính thức" nhưng vẫn gán
+  `di-tich-lich-su` — vi phạm thẳng luật vừa thêm; nhiều điểm khác
+  (`cau-long-bien-ha-noi`, `buu-dien-trung-tam-sai-gon`, `cho-ben-thanh`...)
+  đoán đúng nhưng lý do không hề trích dẫn xếp hạng, chỉ tường thuật lịch sử
+  chung chung — đoán đúng cảm tính, không phải do tuân luật.
+  **Nguyên nhân gốc, chưa giải quyết được**: AI chỉ có tối đa 500 ký tự nội
+  dung mô tả (nhiều điểm còn trống), hoàn toàn không có nguồn dữ liệu thật
+  về quyết định xếp hạng để tra — sửa câu chữ prompt là không đủ, phải cấp
+  THÊM dữ liệu xếp hạng thật làm input (đúng lo ngại đã ghi ở
+  `dichoithoi-taxonomy-chuan-hoa.md` mục 4 phần "căn cứ xếp hạng"). Coi
+  toàn bộ Type AI gán (cả đợt 1 lẫn đợt 2) là **dữ liệu khởi tạo thô, CHƯA
+  đáng tin để coi là xong** — ưu tiên rà tay qua `/dichoithoi/phan-loai` cho
+  các điểm có `di-tich-lich-su`/`cong-trinh-kiet-tac` trước, việc còn lại
+  làm dần.
+
+- ✅ **Soạn + ghi mô tả 300-450 từ cho 17 Tag — ĐÃ XONG NỘI DUNG, CÒN CHỜ
+  PUBLISH TỪNG TAG** (24/07/2026): bản đầu bị phát hiện bịa hàng loạt địa
+  danh không có trong dữ liệu gán thật (vd "Thảo Cầm Viên", "Yoko Onsen",
+  "Hẻm Tu Sản" — không tồn tại trong `dichoithoi_dev`) + dùng markdown
+  bullet/bold không tương thích view hiện tại (`Topic/Detail.cshtml` chỉ
+  render 1 thẻ `<p>` phẳng). Đã viết lại toàn bộ 17 mô tả thành văn xuôi
+  thuần, mọi địa danh đối chiếu lại với danh sách gán tag thật, và **ghi
+  `Description` vào DB** (script `update-tag-descriptions.sql`, verify dấu
+  tiếng Việt nguyên vẹn qua CMS `/dichoithoi/chu-de`). Nội dung Nhóm (4/4) +
+  Type (18/18) + Tỉnh có dữ liệu (19/34) cũng đã ghi trước đó — meta
+  description các trang `/loai`, `/tinh` tự cắt từ các đoạn này (SeoTextUtil).
+  **Việc còn mở**: CHƯA đổi `Status` tag nào (vẫn draft) — bấm "mở trên
+  site" từng tag qua CMS sau khi bạn duyệt xong nội dung; tag
+  `nhom-ban-teambuilding` chỉ có 1 điểm gán (dưới ngưỡng ≥5) nên dù mở site
+  vẫn `noindex`, cần gán thêm điểm trước khi có ý nghĩa publish.
+
+- ✅ **Auto-link + cột `MetaDescription` riêng cho Type + Tag — XONG 24/07/2026**
+  (content-seo-ux-plan §10.3a): `Description` (nguồn sạch, CMS sửa) tách khỏi
+  `DescriptionHtml` (bản đã auto-link, server tự sinh lại mỗi lần lưu, chỉ link
+  tới điểm đến đã gán cho đúng Type/Tag đó) và `MetaDescription` (field riêng
+  cho `<meta>`, không bao giờ dính markup — đúng tiền lệ `Destination.
+  MetaDescription`). Verify end-to-end qua HTTP thật: PATCH type `bien-dao` và
+  tag `phu-hop-gia-dinh` → 6/6 và 2/2 tên điểm đến tự thành `<a href="/diem-den/
+  ...">`, meta description trên trang live đọc đúng `MetaDescription` riêng
+  (không đọc `DescriptionHtml`). CMS `/dichoithoi/danh-muc` (dòng Loại) và
+  `/dichoithoi/chu-de` đều có thêm ô nhập Meta description + ghi chú auto-link.
+  Cùng đợt phát hiện + sửa 1 bug route có từ trước: `PATCH /destinations/:slug`
+  đăng ký trước `PATCH /destinations/taxonomy-content` khiến mọi PATCH
+  taxonomy-content qua HTTP thật bị nuốt nhầm (chỉ lộ ra khi test bằng HTTP
+  thật — trước đó toàn ghi thẳng qua sqlcmd).
+  **Việc còn mở**: Group + Tỉnh mới có `MetaDescription`, CHƯA có auto-link
+  (`DescriptionHtml`) — làm sau nếu thấy giá trị, cùng cách đã làm cho Type/Tag
+  (không cần thiết kế lại, chỉ thêm cột `DescriptionHtml` + gọi lại
+  `buildTaxonomyDescriptionHtml` với target đổi thành group/province).
+
+- **Tạo node gốc `Kind=1` cho Lào Cai + Khánh Hoà rồi gán `Province.DestinationId`**
+  (phát hiện 24/07/2026 khi làm SEO trang danh mục): 2 tỉnh này có POI thật
+  (Lào Cai 18, Khánh Hoà 12) nhưng `v2.Province.DestinationId` NULL vì chưa
+  từng có node tỉnh trong cây `v2.Destination` — nội dung đang treo dưới
+  cluster nằm ở root (`sapa` id 218, `mu-cang-chai` id 171, `nha-trang` id
+  187) + 7 POI Yên Bái cũ mồ côi (`ParentId` NULL: Hồ Thác Bà, La Pán Tẩn,
+  Tú Lệ, Mường Lò, Lìm Mông, Suối Giàng, Thác Pú Nhu). Hệ quả: trang
+  `/tinh/lao-cai`, `/tinh/khanh-hoa` rỗng (đang noindex đúng), mất 2 landing
+  tỉnh giá trị cao. Việc cần làm: INSERT 2 node `Kind=1` (chú ý ChildrenJson/
+  AncestorsJson/ChildCount nếu có), reparent các cluster + POI mồ côi vào,
+  UPDATE `Province.DestinationId`, rồi POST `/api/destinations/sync`.
+  KÈM bug đã sửa cùng ngày (`DestinationTaxonomyRepository`): tỉnh
+  `DestinationId` NULL trước đây match `ParentId IS NULL` → 15 trang tỉnh
+  rỗng hiển thị nhầm toàn bộ 29 node gốc cả nước (duplicate content) — giờ
+  trả danh sách rỗng + noindex.
+
+- **Sửa 2 tên điểm đến sai chính tả trong DB** (phát hiện 24/07/2026):
+  `Bảo tàng chiến tích chiến tranh` → đúng là "Bảo tàng **Chứng tích** Chiến
+  tranh"; `Khu di tích Pác Pó` → đúng là "Pác **Bó**". Sửa `v2.Destination.Name`
+  (cân nhắc giữ slug cũ + redirect nếu đổi slug) rồi sync mirror.
+
 - **Cho phép chỉnh ngưỡng `MAX_AUTO_LINKS_PER_ARTICLE` (auto-link) qua trang
   quản lý** (ghi nhận 23/07/2026, phân tích xong nhưng CHỦ Ý CHƯA làm): hiện
   là hằng số cứng trong `shared/text/auto-link.ts` (=10) — không có bảng
@@ -1184,6 +1288,45 @@ xong, không còn gì mở ở mức ưu tiên này.**
 - ~~Hotel render theo HotelGroupId hay bảng map riêng~~ → `HotelDestinationMap`
   (thay `HotelGroupId`, nhất quán với `TourDestinationMap` của Tour) —
   hotel-spec.md §4, sửa 07/2026 (mâu thuẫn với bản đầu đã phát hiện + sửa khi rà lại).
+- ✅ **Bug ảnh thumbnail vỡ toàn site (25/07/2026)** → phát hiện khi kiểm tra
+  `/chu-de/phu-hop-gia-dinh`: cột `Destination.Thumbnail` trong DB là dữ liệu
+  cũ dạng `{slug}/{slug}-thumb.webp` (271/272 điểm đã publish bị sai), trong
+  khi file thật trên đĩa (`contents/diem-den/thumbnail/`) nằm phẳng, đặt tên
+  `{slug}.webp`. Các view/JS build URL từ cột `Thumbnail` (không phải từ
+  `Slug`) nên vỡ ảnh: `_DestinationCardList.cshtml` (dùng ở /loại, /tỉnh,
+  /chu-de), `Destination/Index.cshtml` (trang /diem-den), `destination.ts`
+  (facet AJAX), `nav.ts` (gợi ý tìm kiếm header). Đã sửa cả 4 chỗ để build
+  URL từ `Slug` thay vì cột `Thumbnail` (khớp quy ước đã đúng sẵn ở
+  `_DestinationGroup.cshtml`/`_ChildDestination.cshtml`). Cột `Thumbnail`
+  trong DB coi như bỏ (không xoá, chỉ không dùng để render nữa).
+- ✅ **Markdown-lite cho Description Type/Tag (25/07/2026)** → phân tích 3
+  hướng (văn xuôi thuần / markdown-lite / markdown đầy đủ), chốt markdown-lite
+  — tái dùng đúng pipeline `marked` + `sanitize-html` đã có sẵn cho bài điểm
+  đến (`destination-publish-html.renderer.ts`), KHÔNG thêm dependency mới.
+  `taxonomy-description-autolink.util.ts`: parse markdown → sanitize allowlist
+  hẹp (`p,br,strong,em,ul,ol,li` — chặn heading/ảnh/bảng/link thủ công, các
+  the đó bị bóc bỏ giữ lại text) → auto-link chạy sau cùng, đúng thứ tự pipeline
+  bài điểm đến. CMS `/chu-de` + `/danh-muc` (dòng Loại) cập nhật placeholder/
+  FeatureIntro ghi rõ cú pháp (dòng trống = đoạn mới, `- ` = gạch đầu dòng,
+  `**chữ**` = in đậm). Tiện thể sửa `generate-tag-description.usecase.ts` —
+  phát hiện prompt AI cũ sai lệch hoàn toàn so với spec hiện tại (đòi "2-4
+  câu, KHÔNG liệt kê tên điểm đến" trong khi Tag cần 300-500 từ VÀ auto-link
+  cần tên điểm đến thật) — sửa lại đúng yêu cầu + truyền kèm danh sách điểm
+  đến đã gán tag (fetchDestinationsForTag) để AI không bịa tên.
+- .cshtml wrapper ngoài của `DescriptionHtml` đổi từ `<p>` sang `<div
+  class="rich-content">` (Type: `TypeList.cshtml`, Tag: `Topic/Detail.cshtml`)
+  — nội dung giờ tự chứa nhiều `<p>`/`<ul>` riêng, lồng trong `<p>` ngoài là
+  sai HTML. CSS `.rich-content > * + * { margin-top }` đã có sẵn, không cần
+  thêm CSS mới cho khoảng cách đoạn/list.
+
+- ✅ **Format lại 17 mô tả Tag bằng Markdown (25/07/2026)** → sau khi có pipeline
+  markdown đầy đủ, rà lại toàn bộ 17 tag (đang là văn xuôi thuần từ đợt sửa
+  fabrication trước đó) — thêm gạch đầu dòng cho phần liệt kê điểm đến theo
+  vùng/nhóm + in đậm từ khoá quan trọng (khung giờ, nguyên tắc an toàn...),
+  KHÔNG đổi/thêm/bớt bất kỳ tên điểm đến hay fact nào đã verify. Ghi qua API
+  thật (`PATCH /destination-tags/{slug}/description`, không sqlcmd tay) nên
+  DescriptionHtml tự sinh lại đúng qua auto-link. Đồng bộ lại
+  `docs/dichoithoi/phan-tich/dichoithoi-nhom-type-tag-desc.md` PHẦN 3 khớp DB.
 
 ## Việc CŨ hơn — đã lỗi thời, cần rà lại khi đụng tới
 

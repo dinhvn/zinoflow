@@ -16,13 +16,20 @@ export interface SiteTypeRow {
 
 /** Noi dung mo ta rieng cho trang danh muc (Phase 18.2, content-seo-ux-plan §10.3) */
 export interface TaxonomyContentRows {
-  groups: Array<{ id: number; slug: string; name: string; description: string | null }>;
+  groups: Array<{
+    id: number;
+    slug: string;
+    name: string;
+    description: string | null;
+    metaDescription: string | null;
+  }>;
   types: Array<{
     id: number;
     groupId: number;
     slug: string;
     name: string;
     description: string | null;
+    metaDescription: string | null;
   }>;
   provinces: Array<{
     id: number;
@@ -30,6 +37,7 @@ export interface TaxonomyContentRows {
     code: string;
     name: string;
     description: string | null;
+    metaDescription: string | null;
   }>;
 }
 
@@ -135,7 +143,14 @@ export interface SiteTagRow {
   slug: string;
   name: string;
   description: string | null;
+  metaDescription: string | null;
   status: number;
+}
+
+/** 1 diem den toi thieu (slug+name) — dung lam target cho auto-link engine (auto-link.ts) */
+export interface AutoLinkTargetRow {
+  slug: string;
+  name: string;
 }
 
 /** 1 diem den + slug cac tag dang gan (v2.DestinationTagMap join) */
@@ -267,12 +282,20 @@ export interface DichoithoiSiteDb {
   findDestinationCardBySlug(slug: string): Promise<DestinationCardRow | null>;
   /** Toan bo group/type/province kem Description — trang admin sua noi dung danh muc (Phase 18.2) */
   fetchTaxonomyContent(): Promise<TaxonomyContentRows>;
-  /** Ghi de Description cho 1 group/type/province (Phase 18.2, content-seo-ux-plan §10.3) */
+  /**
+   * Ghi de Description + MetaDescription cho 1 group/type/province (Phase 18.2,
+   * content-seo-ux-plan §10.3). descriptionHtml CHI ap dung cho target="type" (auto-link,
+   * xem manage-taxonomy-content.usecase.ts) — bo qua (khong co cot) voi group/province.
+   */
   updateTaxonomyDescription(
     target: "group" | "type" | "province",
     id: number,
     description: string | null,
+    metaDescription: string | null,
+    descriptionHtml: string | null,
   ): Promise<void>;
+  /** Diem den (da published) dang gan 1 Type — dung lam target cho auto-link mo ta Type */
+  fetchDestinationsForType(typeId: number): Promise<AutoLinkTargetRow[]>;
 
   /** Toan bo tag da duyet (destination-spec §2.4 buoc 0 — 7 tag seed san) */
   fetchTags(): Promise<SiteTagRow[]>;
@@ -283,8 +306,19 @@ export interface DichoithoiSiteDb {
    * theo tagSlugs moi. Bo qua slug diem/tag khong ton tai (khong throw ca batch).
    */
   replaceTagAssignments(destinationSlug: string, tagSlugs: readonly string[]): Promise<void>;
-  /** Ghi de Description cho 1 tag (buoc 3 — AI soan mo ta) */
-  updateTagDescription(tagSlug: string, description: string | null): Promise<void>;
+  /**
+   * Ghi de Description + MetaDescription cho 1 tag (buoc 3 — AI soan mo ta). descriptionHtml =
+   * ban da auto-link (tinh o usecase, xem update-tag-description.usecase.ts) — null neu
+   * description rong (khong con gi de link).
+   */
+  updateTagDescription(
+    tagSlug: string,
+    description: string | null,
+    metaDescription: string | null,
+    descriptionHtml: string | null,
+  ): Promise<void>;
+  /** Diem den (da published) dang gan 1 Tag — dung lam target cho auto-link mo ta Tag */
+  fetchDestinationsForTag(tagSlug: string): Promise<AutoLinkTargetRow[]>;
   /**
    * Tao 1 tag moi (truoc day chi seed duoc qua SQL tay — destination-spec §2.4).
    * Nem loi ro rang neu slug da ton tai (UNIQUE constraint), khong am tham bo qua.

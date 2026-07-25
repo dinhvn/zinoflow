@@ -11,6 +11,7 @@ import {
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
 import { DomainRuleError } from "../../../shared/errors/app-error";
+import { TAG_SUGGEST_SYSTEM, buildTagSuggestPrompt } from "../../domain/tag-suggest-prompt";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 
 const DEFAULT_PROVIDER = "anthropic";
@@ -19,13 +20,6 @@ const DEFAULT_MODELS: Record<string, string> = {
   gemini: "gemini-2.5-flash-lite",
   openai: "gpt-4o-mini",
 };
-
-const SYSTEM = [
-  "Bạn là biên tập viên du lịch Việt Nam, đang gán chủ đề (tag) cho các điểm đến.",
-  "Luôn trả lời bằng tiếng Việt có dấu đầy đủ.",
-  "Mỗi điểm đến có thể nhận 0, 1 hoặc nhiều tag — CHỈ gán khi thực sự phù hợp, không gán ép.",
-  "reasoning phải ngắn gọn (1 câu), nêu rõ vì sao điểm đến khớp tag đó.",
-].join(" ");
 
 /**
  * Buoc 1 (destination-spec §2.4) — AI goi y gan tag hang loat cho cac diem den
@@ -63,27 +57,13 @@ export class SuggestTagAssignmentsUseCase {
     const model = request.aiModel ?? DEFAULT_MODELS[providerKey] ?? DEFAULT_MODELS[DEFAULT_PROVIDER]!;
     const provider = this.registry.resolve(providerKey);
 
-    const tagList = tags
-      .map((t) => `- ${t.slug}: "${t.name}"${t.description ? ` — ${t.description}` : ""}`)
-      .join("\n");
-    const destinationList = candidates
-      .map((c) => `- ${c.destinationSlug}: "${c.destinationName}"`)
-      .join("\n");
-    const prompt = [
-      "Danh sách tag hiện có (slug: tên — mô tả):",
-      tagList,
-      "",
-      "Danh sách điểm đến cần gán tag (slug: tên):",
-      destinationList,
-      "",
-      "Với MỖI điểm đến, gợi ý 0 hoặc nhiều tagSlugs phù hợp (chỉ dùng slug có trong danh sách trên) kèm reasoning ngắn.",
-    ].join("\n");
+    const prompt = buildTagSuggestPrompt(tags, candidates);
 
     const { output, usage } = await provider.generateStructured(
       {
         model,
         operation: "suggest-destination-tags",
-        system: SYSTEM,
+        system: TAG_SUGGEST_SYSTEM,
         prompt,
         maxTokens: 4_000,
         vars: { topic: "destination-tag-suggestion", articleType: "guide-diem-den-suggest" },
@@ -97,7 +77,7 @@ export class SuggestTagAssignmentsUseCase {
       model,
       operation: "suggest-destination-tags",
       ...usage,
-      promptText: `${SYSTEM}\n\n${prompt}`,
+      promptText: `${TAG_SUGGEST_SYSTEM}\n\n${prompt}`,
       responseText: JSON.stringify(output),
     });
 

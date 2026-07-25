@@ -83,6 +83,15 @@ lại tracking trạng thái.
     chọn cụm + tự fit bounds, tắt marker clustering, hiện tên marker thường
     trực, vẽ đường quan hệ con↔con từ `poi_distances`, bảng liệt kê cặp+km) —
     đọc trước khi đụng vào `ban-do/page.tsx`/`destination-map-*.tsx`.
+12i. `phan-tich/dichoithoi-taxonomy-chuan-hoa.md` — Nhóm/Type/Tag điểm đến
+    ĐÃ MIGRATE 24/07/2026 (4 Nhóm/18 Type/17 Tag, thay hoàn toàn bộ cũ 3
+    nhóm/16 type/9 tag mô tả trong `database-redesign.md` §3.2/§3.2.1, còn
+    đó chỉ để tham khảo lịch sử). Đã chạy AI gán cho 247 POI thật
+    (238 có Type/244 có Tag) — CHƯA rà theo luật cứng phân định `di-tich-
+    lich-su`/`cong-trinh-kiet-tac`, coi là dữ liệu khởi tạo cần rà dần qua
+    `/dichoithoi/phan-loai`. `dichoithoi-taxonomy-overview.md` (hiện trạng
+    TRƯỚC redesign, 23/07/2026) chỉ còn giá trị lịch sử/baseline map slug
+    cũ→mới. Đọc trước khi đụng seed taxonomy hoặc prompt AI gán Type/Tag.
 13. `dichoithoi-system-design.md` — **đọc file này nếu chỉ có thời gian đọc 1
     file**: tổng hợp toàn bộ spec thành 1 bức tranh kỹ thuật đầy đủ (bảng dữ
     liệu 2 database, sơ đồ luồng, API surface, nguyên tắc xuyên suốt).

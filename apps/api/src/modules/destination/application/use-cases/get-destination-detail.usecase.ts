@@ -124,6 +124,12 @@ export class GetDestinationDetailUseCase {
     // SQL Server co the chua cau hinh hoac diem chua co bai -> content = null.
     const content = await this.fetchSiteContent(entity.siteId);
 
+    // Type/Tag da gan (§7.3, hien badge chi-doc tren trang detail) — doc thang tu
+    // SQL Server (KHONG qua Postgres mirror, "types" tren mirror chi dung rieng cho
+    // related-builder va co the stale sau khi seed lai taxonomy). Best-effort nhu
+    // fetchSiteContent: site DB co the chua cau hinh.
+    const { assignedTypes, assignedTags } = await this.fetchTaxonomyAssignments(entity.siteId);
+
     return {
       siteId: entity.siteId,
       slug: entity.slug,
@@ -182,6 +188,8 @@ export class GetDestinationDetailUseCase {
       relatedCurated,
       mentionedBy,
       hasDistanceData,
+      assignedTypes,
+      assignedTags,
     };
   }
 
@@ -225,6 +233,52 @@ export class GetDestinationDetailUseCase {
         `Khong doc duoc noi dung site cho siteId=${siteId}: ${err instanceof Error ? err.message : err}`,
       );
       return null;
+    }
+  }
+
+  /** Type/Tag da gan cho 1 diem den — rong neu site DB chua cau hinh hoac loi (khong chan trang detail). */
+  private async fetchTaxonomyAssignments(
+    siteId: number | null,
+  ): Promise<Pick<DestinationDetail, "assignedTypes" | "assignedTags">> {
+    const empty = { assignedTypes: [], assignedTags: [] };
+    if (siteId === null || !this.siteDb.isConfigured()) return empty;
+    try {
+      const [taxonomyContent, typeAssignments, tags, tagAssignments] = await Promise.all([
+        this.siteDb.fetchTaxonomyContent(),
+        this.siteDb.fetchTypeAssignments(),
+        this.siteDb.fetchTags(),
+        this.siteDb.fetchTagAssignments(),
+      ]);
+      const groupNameById = new Map(taxonomyContent.groups.map((g) => [g.id, g.name]));
+      const typeBySlug = new Map(
+        taxonomyContent.types.map((t) => [
+          t.slug,
+          { name: t.name, groupName: groupNameById.get(t.groupId) ?? "" },
+        ]),
+      );
+      const typeSlugs = typeAssignments.find((a) => a.destinationId === siteId)?.typeSlugs ?? [];
+      const assignedTypes = typeSlugs
+        .map((slug) => {
+          const t = typeBySlug.get(slug);
+          return t ? { slug, name: t.name, groupName: t.groupName } : null;
+        })
+        .filter((t): t is { slug: string; name: string; groupName: string } => t !== null);
+
+      const tagNameBySlug = new Map(tags.map((t) => [t.slug, t.name]));
+      const tagSlugs = tagAssignments.find((a) => a.destinationId === siteId)?.tagSlugs ?? [];
+      const assignedTags = tagSlugs
+        .map((slug) => {
+          const name = tagNameBySlug.get(slug);
+          return name ? { slug, name } : null;
+        })
+        .filter((t): t is { slug: string; name: string } => t !== null);
+
+      return { assignedTypes, assignedTags };
+    } catch (err) {
+      this.logger.warn(
+        `Khong doc duoc Type/Tag da gan cho siteId=${siteId}: ${err instanceof Error ? err.message : err}`,
+      );
+      return empty;
     }
   }
 }

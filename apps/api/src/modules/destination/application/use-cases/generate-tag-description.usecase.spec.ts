@@ -11,7 +11,7 @@ import type { AiUsageRecorder } from "../../../ai-content/application/ports/ai-u
 import { DomainRuleError } from "../../../shared/errors/app-error";
 
 const TAGS: SiteTagRow[] = [
-  { id: 1, slug: "lang-man", name: "Lang man — Check-in cap doi", description: null, status: 0 },
+  { id: 1, slug: "lang-man", name: "Lang man — Check-in cap doi", description: null, metaDescription: null, status: 0 },
 ];
 
 function fakeProvider(output: unknown): ContentAiProvider {
@@ -30,7 +30,10 @@ function fakeProvider(output: unknown): ContentAiProvider {
 
 describe("GenerateTagDescriptionUseCase (destination-spec §2.4 buoc 3)", () => {
   it("tra ve mo ta AI goi y, ghi usage", async () => {
-    const siteDb = { fetchTags: async () => TAGS } as unknown as DichoithoiSiteDb;
+    const siteDb = {
+      fetchTags: async () => TAGS,
+      fetchDestinationsForTag: async () => [],
+    } as unknown as DichoithoiSiteDb;
     const usageRecords: string[] = [];
     const usecase = new GenerateTagDescriptionUseCase(
       siteDb,
@@ -45,7 +48,10 @@ describe("GenerateTagDescriptionUseCase (destination-spec §2.4 buoc 3)", () => 
   });
 
   it("nem loi khi tag khong ton tai", async () => {
-    const siteDb = { fetchTags: async () => TAGS } as unknown as DichoithoiSiteDb;
+    const siteDb = {
+      fetchTags: async () => TAGS,
+      fetchDestinationsForTag: async () => [],
+    } as unknown as DichoithoiSiteDb;
     const usecase = new GenerateTagDescriptionUseCase(
       siteDb,
       { resolve: () => fakeProvider({ description: "x" }) } as AiProviderRegistry,

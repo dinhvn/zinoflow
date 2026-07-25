@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getTaxonomyKanbanBoardResponseSchema,
+  previewPromptResponseSchema,
   suggestTaxonomyTypesResponseSchema,
   type GetTaxonomyKanbanBoardResponse,
   type TaxonomyBoardDestination,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend } from "@/shared/api-client";
 import { Badge, Button, Checkbox, ErrorBox, Modal, PageHeader, Select } from "@/shared/ui";
+import { AiInvocationBar } from "@/features/dichoithoi/ai-invocation-bar";
 
 const QUERY_KEY = ["taxonomy-kanban-board"];
 const UNCLASSIFIED_COLUMN = "__unclassified__";
@@ -59,11 +61,13 @@ function KanbanBoard({
 }) {
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const [aiProvider, setAiProvider] = useState("");
+  const [aiModel, setAiModel] = useState("");
 
   const suggest = useMutation({
     mutationFn: async () =>
       suggestTaxonomyTypesResponseSchema.parse(
-        await apiSend("POST", "/destination-types/suggest", { clusterSlug }),
+        await apiSend("POST", "/destination-types/suggest", { clusterSlug, aiProvider, aiModel }),
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
   });
@@ -108,16 +112,30 @@ function KanbanBoard({
           ))}
         </Select>
         {clusterSlug && (
-          <>
-            <span className="text-sm text-zinc-500">
-              {classifiedCount}/{destinationsInCluster.length} điểm trong cụm đã phân loại
-            </span>
-            <Button size="sm" variant="secondary" onClick={() => suggest.mutate()} loading={suggest.isPending}>
-              Gợi ý AI cho cụm này
-            </Button>
-          </>
+          <span className="text-sm text-zinc-500">
+            {classifiedCount}/{destinationsInCluster.length} điểm trong cụm đã phân loại
+          </span>
         )}
       </div>
+
+      {clusterSlug && (
+        <div className="flex flex-wrap items-center gap-2">
+          <AiInvocationBar
+            onSelectionChange={(p, m) => {
+              setAiProvider(p);
+              setAiModel(m);
+            }}
+            fetchPreview={async () =>
+              previewPromptResponseSchema.parse(
+                await apiSend("POST", "/destination-types/suggest/preview", { clusterSlug }),
+              ).sections
+            }
+          />
+          <Button size="sm" variant="secondary" onClick={() => suggest.mutate()} loading={suggest.isPending}>
+            Gợi ý AI cho cụm này
+          </Button>
+        </div>
+      )}
 
       {suggest.isError && <ErrorBox error={suggest.error} fallback="Lỗi gợi ý AI" />}
       {suggest.isSuccess && (
@@ -227,20 +245,24 @@ function EditTypesModal({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const hasSuggestion = destination.suggestionStatus === "pending" && (destination.suggestedTypeSlugs?.length ?? 0) > 0;
-  // Diem CHUA co Type that -> tick san theo goi y AI cho nguoi dung duyet nhanh (§6.3);
-  // diem DA co Type that -> giu nguyen, khong ghi de am tham theo goi y AI.
-  const initialSelected =
-    destination.typeSlugs.length === 0 && hasSuggestion
-      ? (destination.suggestedTypeSlugs ?? [])
-      : destination.typeSlugs;
-  const [selected, setSelected] = useState<Set<string>>(new Set(initialSelected));
+  // "selected" luon phan anh trang thai HIEN TAI da luu (khong am tham tick san theo
+  // AI) — nguoi dung phan hoi 24/07/2026: chinh chu yeu bang tay, muon xem popup
+  // cu/moi ro rang truoc khi ap dung goi y AI, khong muon bi tick san "im lang".
+  const [selected, setSelected] = useState<Set<string>>(new Set(destination.typeSlugs));
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+
+  const suggestedTypeSlugs = destination.suggestedTypeSlugs ?? [];
+  const currentTypeSlugsKey = [...destination.typeSlugs].sort().join(",");
+  const suggestedTypeSlugsKey = [...suggestedTypeSlugs].sort().join(",");
+  const hasSuggestion =
+    !suggestionDismissed &&
+    destination.suggestionStatus === "pending" &&
+    suggestedTypeSlugs.length > 0 &&
+    suggestedTypeSlugsKey !== currentTypeSlugsKey;
 
   const save = useMutation({
-    mutationFn: () =>
-      apiSend("PATCH", `/destination-types/${destination.slug}/types`, {
-        typeSlugs: [...selected],
-      }),
+    mutationFn: (typeSlugs: string[]) =>
+      apiSend("PATCH", `/destination-types/${destination.slug}/types`, { typeSlugs }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
   });
 
@@ -249,18 +271,47 @@ function EditTypesModal({
       const next = new Set(prev);
       if (next.has(typeSlug)) next.delete(typeSlug);
       else next.add(typeSlug);
+      save.mutate([...next]);
       return next;
     });
-    save.mutate();
+  }
+
+  function applySuggestion() {
+    setSelected(new Set(suggestedTypeSlugs));
+    save.mutate(suggestedTypeSlugs);
+  }
+
+  function nameOf(slug: string): string {
+    return types.find((t) => t.slug === slug)?.name ?? slug;
   }
 
   return (
     <Modal open onClose={onClose} title={destination.name}>
       <div className="space-y-4">
         {hasSuggestion && (
-          <div className="rounded border border-indigo-200 bg-indigo-50 p-2 text-xs text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-300">
-            <span className="font-semibold">Gợi ý AI</span>{" "}
-            ({destination.suggestedTypeSlugs?.join(", ")}): {destination.suggestionReason}
+          <div className="space-y-2 rounded border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-200">
+            <p className="font-semibold">🤖 AI gợi ý đổi loại hình — xem trước khi áp dụng</p>
+            <div className="grid grid-cols-[auto_1fr] items-start gap-x-2 gap-y-1">
+              <span className="text-zinc-500 dark:text-zinc-400">Hiện tại:</span>
+              <span>
+                {destination.typeSlugs.length === 0
+                  ? "(chưa có loại hình)"
+                  : destination.typeSlugs.map(nameOf).join(", ")}
+              </span>
+              <span className="text-zinc-500 dark:text-zinc-400">AI gợi ý:</span>
+              <span className="font-medium">{suggestedTypeSlugs.map(nameOf).join(", ")}</span>
+            </div>
+            <p className="italic text-indigo-700 dark:text-indigo-300">
+              Lý do: {destination.suggestionReason}
+            </p>
+            <div className="flex gap-2 pt-1">
+              <Button size="sm" onClick={applySuggestion} loading={save.isPending}>
+                Áp dụng gợi ý AI
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setSuggestionDismissed(true)}>
+                Bỏ qua, tự chọn tay
+              </Button>
+            </div>
           </div>
         )}
         {groups.map((g) => (

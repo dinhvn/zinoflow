@@ -65,6 +65,7 @@ import { ApplyTagAssignmentsUseCase } from "./application/use-cases/apply-tag-as
 import { ReverseCheckTagAssignmentsUseCase } from "./application/use-cases/reverse-check-tag-assignments.usecase";
 import { GenerateTagDescriptionUseCase } from "./application/use-cases/generate-tag-description.usecase";
 import { UpdateTagDescriptionUseCase } from "./application/use-cases/update-tag-description.usecase";
+import { PreviewTagDescriptionUseCase } from "./application/use-cases/preview-tag-description.usecase";
 import { CreateDestinationTagUseCase } from "./application/use-cases/create-destination-tag.usecase";
 import { UpdateDestinationTagUseCase } from "./application/use-cases/update-destination-tag.usecase";
 import { DeleteDestinationTagUseCase } from "./application/use-cases/delete-destination-tag.usecase";
@@ -84,6 +85,9 @@ import { DestinationAiExtractionEntity } from "./infrastructure/entities/destina
 import { RecomputeClusterDistancesUseCase } from "./application/use-cases/recompute-cluster-distances.usecase";
 import { GetDestinationsMapUseCase } from "./application/use-cases/get-destinations-map.usecase";
 import { GetTaxonomyKanbanBoardUseCase } from "./application/use-cases/get-taxonomy-kanban-board.usecase";
+import { GetTagKanbanBoardUseCase } from "./application/use-cases/get-tag-kanban-board.usecase";
+import { PreviewTaxonomyTypeSuggestPromptUseCase } from "./application/use-cases/preview-taxonomy-type-suggest-prompt.usecase";
+import { PreviewTagSuggestPromptUseCase } from "./application/use-cases/preview-tag-suggest-prompt.usecase";
 import { UpdateDestinationTypesUseCase } from "./application/use-cases/update-destination-types.usecase";
 import { SuggestTaxonomyTypesUseCase } from "./application/use-cases/suggest-taxonomy-types.usecase";
 import { GetRelationsMapDataUseCase } from "./application/use-cases/get-relations-map-data.usecase";
@@ -152,6 +156,7 @@ import {
     ReverseCheckTagAssignmentsUseCase,
     GenerateTagDescriptionUseCase,
     UpdateTagDescriptionUseCase,
+    PreviewTagDescriptionUseCase,
     CreateDestinationTagUseCase,
     UpdateDestinationTagUseCase,
     DeleteDestinationTagUseCase,
@@ -202,6 +207,9 @@ import {
     RecomputeNearbyDistancesUseCase,
     GetDestinationsMapUseCase,
     GetTaxonomyKanbanBoardUseCase,
+    GetTagKanbanBoardUseCase,
+    PreviewTaxonomyTypeSuggestPromptUseCase,
+    PreviewTagSuggestPromptUseCase,
     UpdateDestinationTypesUseCase,
     SuggestTaxonomyTypesUseCase,
     GetRelationsMapDataUseCase,

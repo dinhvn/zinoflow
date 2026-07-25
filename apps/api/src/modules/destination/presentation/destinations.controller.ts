@@ -336,6 +336,21 @@ export class DestinationsController {
     return this.bulkUpdateFields.execute(request.items);
   }
 
+  /**
+   * Sua doan gioi thieu 1 group/type/province (content-seo-ux-plan §10.3). PHAI dung TRUOC
+   * @Patch(":slug") ben duoi — Nest/Express khop PATCH theo THU TU DANG KY (khong tu uu tien
+   * route tinh hon route co param), route ":slug" se "nuot" mat "taxonomy-content" thanh
+   * slug="taxonomy-content" neu dang ky sau. Bug thuc te da gap 24/07/2026 khi goi PATCH
+   * qua HTTP that (truoc do chi test bang ghi SQL truc tiep nen khong lo ra).
+   */
+  @Patch("taxonomy-content")
+  updateTaxonomyContent(
+    @Body(new ZodValidationPipe(updateTaxonomyDescriptionRequestSchema))
+    request: UpdateTaxonomyDescriptionRequest,
+  ): Promise<{ ok: true }> {
+    return this.manageTaxonomyContent.updateDescription(request);
+  }
+
   /** Sua metadata diem den (mirror; neu da co tren web thi ghi luon SQL Server) */
   @Patch(":slug")
   updateMeta(
@@ -408,15 +423,6 @@ export class DestinationsController {
   @Get("taxonomy-content")
   taxonomyContent(): Promise<TaxonomyContent> {
     return this.manageTaxonomyContent.getContent();
-  }
-
-  /** Sua doan gioi thieu 1 group/type/province (content-seo-ux-plan §10.3). Truoc ":slug". */
-  @Patch("taxonomy-content")
-  updateTaxonomyContent(
-    @Body(new ZodValidationPipe(updateTaxonomyDescriptionRequestSchema))
-    request: UpdateTaxonomyDescriptionRequest,
-  ): Promise<{ ok: true }> {
-    return this.manageTaxonomyContent.updateDescription(request);
   }
 
   /** Coverage Score toan bo diem da published, diem thap truoc (spec §2.2.2). Truoc ":slug". */

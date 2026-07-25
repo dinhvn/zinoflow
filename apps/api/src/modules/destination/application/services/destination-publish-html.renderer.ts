@@ -1,6 +1,5 @@
-import { marked } from "marked";
-import sanitizeHtml from "sanitize-html";
 import type { DestinationArticle } from "@zinoflow/contracts";
+import { renderMarkdownToSafeHtml } from "./rich-markdown.renderer";
 
 /**
  * Render THAN BAI publish cho v2.DestinationContent.ContentHtml (Phase C).
@@ -29,25 +28,7 @@ export async function renderDestinationBodyHtml(article: DestinationArticle): Pr
     }
   }
 
-  const rawHtml = await marked.parse(lines.join("\n"), { async: true });
-  return sanitizeHtml(rawHtml, {
-    allowedTags: [
-      "h2", "h3", "h4", "p", "br", "hr",
-      "strong", "em", "b", "i", "u", "s", "blockquote",
-      "ul", "ol", "li", "a", "img",
-      "table", "thead", "tbody", "tr", "th", "td",
-    ],
-    allowedAttributes: {
-      a: ["href", "title", "rel", "target"],
-      img: ["src", "alt", "title"],
-    },
-    allowedSchemes: ["http", "https"],
-    transformTags: {
-      // Link ngoai do AI sinh: nofollow + tab moi. Link noi bo /diem-den/ duoc
-      // engine auto-link chen SAU sanitize nen khong bi gan nofollow.
-      a: sanitizeHtml.simpleTransform("a", { rel: "nofollow noopener", target: "_blank" }),
-    },
-  });
+  return renderMarkdownToSafeHtml(lines.join("\n"));
 }
 
 /** FAQ -> JSON [{q,a}] cho cot FaqJson (website render FAQ + JSON-LD FAQPage) */
