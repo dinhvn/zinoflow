@@ -89,7 +89,13 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
           FROM v2.DestinationTypeMap m
           JOIN v2.DestinationType t ON t.Id = m.TypeId
           WHERE m.DestinationId = d.Id
-        ) AS TypesCsv
+        ) AS TypesCsv,
+        (
+          SELECT STRING_AGG(tg.Slug, ',')
+          FROM v2.DestinationTagMap tm
+          JOIN v2.DestinationTag tg ON tg.Id = tm.TagId
+          WHERE tm.DestinationId = d.Id
+        ) AS TagsCsv
       FROM v2.Destination d
       LEFT JOIN v2.Destination par ON par.Id = d.ParentId
       LEFT JOIN v2.Province p ON p.Id = d.ProvinceId
@@ -122,6 +128,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       siteUpdatedAt: r.UpdatedAt ? new Date(r.UpdatedAt as string) : null,
       ticketPrice: (r.TicketPrice as string | null) ?? null,
       types: r.TypesCsv ? String(r.TypesCsv).split(",") : [],
+      tags: r.TagsCsv ? String(r.TagsCsv).split(",") : [],
     }));
   }
 

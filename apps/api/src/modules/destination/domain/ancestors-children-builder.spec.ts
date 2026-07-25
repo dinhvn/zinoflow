@@ -16,6 +16,7 @@ function candidate(overrides: Partial<RelatedCandidate> & { slug: string }): Rel
     order: overrides.order ?? 0,
     distanceFromCenter: overrides.distanceFromCenter ?? null,
     types: overrides.types ?? [],
+    tags: overrides.tags ?? [],
     contentTier: overrides.contentTier ?? null,
   };
 }

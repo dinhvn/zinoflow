@@ -24,15 +24,50 @@ import {
   POI_DISTANCE_REPOSITORY,
   type PoiDistanceRepository,
 } from "../ports/poi-distance.repository";
-import { clusterDistanceKey, formatDistanceBadge } from "../../domain/related-builder";
+import {
+  clusterDistanceKey,
+  computeNearby,
+  formatDistanceBadge,
+  type RelatedCandidate,
+} from "../../domain/related-builder";
 import { KIND_LABELS } from "../../domain/destination-mirror";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
 const SITE_CODE = "dichoithoi";
 /** Gioi han content cu dua vao prompt (token budget) */
 const MAX_OLD_CONTENT_CHARS = 20_000;
-/** So diem lien quan cung tinh dua vao prompt de AI chu dong nhac ten (auto-link) */
+/** Tran so diem lien quan dua vao prompt cho nhanh FALLBACK (cung tinh, xem
+ * buildSourceContext) — nhanh chinh dung RelatedJson da tu gioi han (toi da
+ * RELATED_MAX_COUNT = 12, xem related-builder.ts). */
 const MAX_RELATED_IN_PROMPT = 15;
+/** So diem GAN NHAT (thuan khoang cach vat ly, khong loc theo Tag/Type) dua
+ * vao prompt (25/07/2026) — bo sung cho khoi "lien quan" o tren, vi cong
+ * thuc RelatedJson gio Tag chi phoi nen 1 diem rat gan nhung khac tag/type
+ * co the KHONG con lot vao 12 muc RelatedJson, mat tin hieu khoang cach that
+ * huu ich cho doan "lich trinh goi y"/"di chuyen" trong bai. */
+const MAX_NEARBY_IN_PROMPT = 8;
+
+/** Map DestinationMirrorEntity -> RelatedCandidate cho computeNearby() (cung
+ * pattern voi get-destination-detail.usecase.ts, recompute-related.service.ts). */
+function toCandidate(d: DestinationMirrorEntity): RelatedCandidate {
+  return {
+    slug: d.slug,
+    name: d.name,
+    thumbnail: d.thumbnail,
+    kind: d.kind as RelatedCandidate["kind"],
+    parentSlug: d.parentSlug,
+    provinceCode: d.provinceCode,
+    lat: d.lat === null ? null : Number(d.lat),
+    lng: d.lng === null ? null : Number(d.lng),
+    siteStatus: d.siteStatus,
+    priority: d.priority,
+    order: d.order,
+    distanceFromCenter: d.distanceFromCenter === null ? null : Number(d.distanceFromCenter),
+    types: d.types,
+    tags: d.tags,
+    contentTier: d.contentTier,
+  };
+}
 
 /**
  * Tao content job AI cho 1 diem den (spec dichoithoi-destination-spec §5, §7.4).
@@ -170,9 +205,19 @@ export class CreateDestinationJobUseCase {
   }
 
   /**
-   * Ghep nguon su that cho prompt: facts tu mirror + diem lien quan cung tinh
-   * (de AI nhac ten chuan -> auto-link) + content hien tai khi mode update
-   * + ghi chu nguoi dung. AI bi cam bia so lieu ngoai khoi nay.
+   * Ghep nguon su that cho prompt: facts tu mirror + diem lien quan (de AI nhac
+   * ten chuan -> auto-link) + content hien tai khi mode update + ghi chu nguoi
+   * dung. AI bi cam bia so lieu ngoai khoi nay.
+   *
+   * Diem lien quan (25/07/2026, sua sau khi phat hien prompt dang dung bo loc
+   * "cung tinh" tho rieng, khong lien quan gi thuat toan RelatedJson da nang
+   * cap Tag-chi-phoi + rao 100km): UU TIEN dung thang RelatedJson da precompute
+   * (fetchRelatedJson) — nhat quan voi khoi "Diem den lien quan" cong khai
+   * tren website, dung dung Tag/Type/khoang cach that thay vi "cung tinh" tho
+   * (tinh lon nhu Lam Dong co the goi y diem cach hang chuc km khong lien
+   * quan). FALLBACK ve loc "cung tinh" cu CHI khi RelatedJson rong (diem MOI
+   * chua tung publish/recompute tren site — van can co goi y cho lan viet
+   * dau, khong de trong).
    */
   private async buildSourceContext(
     destination: DestinationMirrorEntity,
@@ -193,33 +238,66 @@ export class CreateDestinationJobUseCase {
     if (destination.contactPhone) parts.push(`- Điện thoại: ${destination.contactPhone}`);
     if (destination.contactWebsite) parts.push(`- Website chính thức: ${destination.contactWebsite}`);
 
-    const related = all
-      .filter(
-        (d) =>
-          d.slug !== destination.slug &&
-          d.provinceCode !== null &&
-          d.provinceCode === destination.provinceCode &&
-          d.siteStatus === 1,
-      )
-      .slice(0, MAX_RELATED_IN_PROMPT);
-    if (related.length > 0) {
-      // Giai doan 4 (dichoithoi-poi-distance-plan.md): nhac them so km THAT
-      // (dichoithoi_poi_distances) khi da co du lieu — chi co gia tri neu diem
-      // nay da tung bam nut "Tinh khoang cach" (Giai doan 2/3), nen KHONG phai
-      // moi ten deu co so — bo qua im lang khi chua co, khong bia so.
-      const poiDistancePairs = await this.poiDistanceRepo.findAll();
-      const poiDistances = new Map(
-        poiDistancePairs.map((p) => [clusterDistanceKey(p.poiASlug, p.poiBSlug), p.distanceMeters]),
-      );
+    // Tai 1 lan, dung chung cho ca khoi "lien quan" (fallback) lan khoi "gan nhat" ben duoi.
+    const poiDistancePairs = await this.poiDistanceRepo.findAll();
+    const poiDistances = new Map(
+      poiDistancePairs.map((p) => [clusterDistanceKey(p.poiASlug, p.poiBSlug), p.distanceMeters]),
+    );
+
+    const relatedJson = await this.siteDb.fetchRelatedJson(destination.slug);
+    const includedSlugs = new Set<string>([destination.slug]);
+    let relatedLines: string[];
+    if (relatedJson.length > 0) {
+      relatedLines = relatedJson.map((r) => {
+        includedSlugs.add(r.slug);
+        return r.badge ? `- ${r.name} (${r.badge})` : `- ${r.name}`;
+      });
+    } else {
+      // Fallback: diem MOI chua tung publish/recompute -> loc tho cung tinh
+      // tu mirror (hanh vi cu, dam bao van co goi y cho lan viet dau tien).
+      const fallbackCandidates = all
+        .filter(
+          (d) =>
+            d.slug !== destination.slug &&
+            d.provinceCode !== null &&
+            d.provinceCode === destination.provinceCode &&
+            d.siteStatus === 1,
+        )
+        .slice(0, MAX_RELATED_IN_PROMPT);
+      relatedLines = fallbackCandidates.map((d) => {
+        includedSlugs.add(d.slug);
+        // nhac them so km THAT (dichoithoi_poi_distances) khi da co du lieu —
+        // chi co gia tri neu diem nay da tung bam nut "Tinh khoang cach", nen
+        // KHONG phai moi ten deu co so — bo qua im lang khi chua co, khong bia so.
+        const meters = poiDistances.get(clusterDistanceKey(destination.slug, d.slug));
+        return meters === undefined ? `- ${d.name}` : `- ${d.name} (${formatDistanceBadge(meters)})`;
+      });
+    }
+    if (relatedLines.length > 0) {
       parts.push("", "## Điểm đến liên quan cùng khu vực (dùng đúng TÊN CHUẨN khi nhắc tới)");
+      parts.push(relatedLines.join("\n"));
+    }
+
+    // Diem GAN NHAT thuan khoang cach vat ly (khong loc theo Tag/Type, xem
+    // MAX_NEARBY_IN_PROMPT) — loai nhung ten da co o khoi "lien quan" tren de
+    // khong lap. Huu ich cho doan "lich trinh goi y"/"di chuyen" (co the ke
+    // ten 1 diem sat ben du khac han chu de).
+    const bySlug = new Map(all.map((d) => [d.slug, d]));
+    const nearbyLines = computeNearby(toCandidate(destination), all.map(toCandidate))
+      .filter((n) => !includedSlugs.has(n.slug))
+      .slice(0, MAX_NEARBY_IN_PROMPT)
+      .map((n) => {
+        const meters = poiDistances.get(clusterDistanceKey(destination.slug, n.slug)) ?? n.distanceMeters;
+        const name = bySlug.get(n.slug)?.name ?? n.slug;
+        return `- ${name} (${formatDistanceBadge(meters)})`;
+      });
+    if (nearbyLines.length > 0) {
       parts.push(
-        related
-          .map((d) => {
-            const meters = poiDistances.get(clusterDistanceKey(destination.slug, d.slug));
-            return meters === undefined ? `- ${d.name}` : `- ${d.name} (${formatDistanceBadge(meters)})`;
-          })
-          .join("\n"),
+        "",
+        "## Điểm đến GẦN NHẤT (khoảng cách vật lý, KHÔNG nhất thiết cùng chủ đề — chỉ dùng khi " +
+          "cần gợi ý kết hợp lịch trình/di chuyển, không dùng để so sánh trải nghiệm)",
       );
+      parts.push(nearbyLines.join("\n"));
     }
 
     if (request.mode === "update" && destination.siteId !== null) {

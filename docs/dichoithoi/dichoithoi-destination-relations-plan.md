@@ -130,6 +130,14 @@ dataset — tốn kém khi dữ liệu lớn dần):
 
 ### 1.3 Công thức chấm điểm
 
+> ⚠️ **Đã lỗi thời một phần (25/07/2026)** — công thức dưới đây là bản gốc
+> (17/07/2026, chỉ có Type). Đã bổ sung `tagOverlapScore` (Tag), bỏ ngưỡng
+> cứng 8 mục, và thêm rào cứng 100km cho ứng viên khác cụm/khác tỉnh (fix bug
+> thật: Bà Nà Hill cách 452km lọt vào related của Dalat Fairytale Land chỉ vì
+> trùng Type+Tag). Bản đầy đủ + lý do là **nguồn sự thật**:
+> `dichoithoi-destination-spec.md` §12.3 "CẬP NHẬT 25/07/2026". Giữ nguyên
+> phần dưới để tham khảo lịch sử thiết kế, không sửa lại theo bản mới.
+
 ```
 typeOverlapScore(self, candidate) =
     1000 * |self.types ∩ candidate.types| / max(|self.types|, 1)
@@ -200,7 +208,8 @@ kết"), không chỉ 1 danh sách phẳng không giải thích.
 Việc cần làm:
 1. `RelatedItem` (`related-builder.ts`) đã có field `badge` — mở rộng thêm 1
    field mới `criterion: "child" | "curated" | "same-type-cluster" |
-   "same-type" | "nearby" | "same-province"`, suy ra từ **2 thành phần điểm
+   "same-type" | "nearby" | "same-province"` (⚠️ 25/07/2026: có thêm
+   `"same-tag"` — xem spec §12.3), suy ra từ **2 thành phần điểm
    cao nhất** trong công thức §1.3 (vd. cùng-loại-hình + cùng-cụm cao nhất →
    `same-type-cluster`; chỉ cùng-loại-hình cao → `same-type`; chỉ điểm
    khoảng cách cao → `nearby`) — không phải nhãn theo NGUỒN như thiết kế cũ,

@@ -36,11 +36,15 @@ export const getRelationsMapDataResponseSchema = z.object({
 });
 export type GetRelationsMapDataResponse = z.infer<typeof getRelationsMapDataResponseSchema>;
 
-/** 1 muc trong RelatedJson that da tinh san (khong tinh lai) — cho lop spotlight */
+/** 1 muc trong RelatedJson that da tinh san (khong tinh lai) — cho lop spotlight.
+ * `criterion` la ly do goi y ("child"|"curated"|"same-type-cluster"|"same-type"|
+ * "same-tag"|"nearby"|"same-province", xem related-builder.ts) — de string tu
+ * do (khong import type domain tu apps/api vao contracts, giu layering). */
 export const relatedSpotlightItemSchema = z.object({
   slug: z.string(),
   name: z.string(),
   badge: z.string().nullable(),
+  criterion: z.string(),
 });
 export type RelatedSpotlightItem = z.infer<typeof relatedSpotlightItemSchema>;
 

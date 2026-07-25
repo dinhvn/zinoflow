@@ -878,35 +878,108 @@ NGUỒN: con → curated → nearby → anh em → cùng tỉnh) bằng thuật 
 kế gốc) — bản dưới đây là bản rút gọn, giữ nguyên khi hai tài liệu lệch nhau
 tài liệu này (spec) là nguồn sự thật lâu dài.
 
-Thuật toán (mỗi điểm), thực thi tại `apps/api/.../domain/related-builder.ts`
+**CẬP NHẬT 25/07/2026** (3 thay đổi, xuất phát từ audit trang
+`/dalat-fairytale-land?tab=relations` chỉ hiện đúng 8 mục và phát hiện lỗi
+Bà Nà Hill cách 452km vẫn lọt vào gợi ý):
+
+1. **Số lượng mục KHÔNG còn cố định 8** — trần trên đổi thành
+   `RELATED_MAX_COUNT = 12` (KHÔNG phải mục tiêu, chỉ là trần), số lượng thực
+   tế hiển thị bằng số ứng viên đạt `hasGenuineRelevance()` (mục 3d dưới),
+   có thể ít hơn 12 nếu điểm đến hẻo lánh không đủ ứng viên liên quan thật —
+   không còn độn thêm ứng viên vô can chỉ để "đủ số".
+2. **Thêm `tagOverlapScore`** — tín hiệu THỨ 2 độc lập với `typeOverlapScore`.
+   Tag = "phù hợp trải nghiệm gì" (đối tượng/trải nghiệm/bối cảnh/giá trị, xem
+   `docs/dichoithoi/phan-tich/dichoithoi-taxonomy-chuan-hoa.md` §0) — cắt ngang
+   Type. Mirror từ `v2.DestinationTagMap` sang Postgres `dichoithoi_destinations.tags`.
+   ⚠️ Trọng số ban đầu (trần 500, dưới Type) đã bị **thay thế** bởi bản
+   "CẬP NHẬT 25/07/2026 (lần 2)" ngay dưới đây — xem đó, không dùng số liệu ở
+   mục này nữa.
+3. **Rào cứng 100km cho ứng viên KHÁC cụm/tỉnh** — Type/Tag trùng khớp NHIỀU
+   ĐẾN ĐÂU cũng không được dùng để vượt qua rào này. Cụ thể: 1 ứng viên khác
+   cụm VÀ khác tỉnh với self chỉ được vào danh sách nếu có dữ liệu khoảng
+   cách xếp hạng thật (mô hình 2 tầng mục 3 dưới) VÀ khoảng cách đó
+   **≤ 100.000 mét** — nếu không có dữ liệu khoảng cách, hoặc khoảng cách
+   vượt 100km, ứng viên bị loại NGAY CẢ KHI trùng cả Type lẫn toàn bộ Tag
+   với self (case thật đã sửa: Bà Nà Hill trùng Type `khu-vui-choi-cong-vien`
+   + cả 3 Tag với Dalat Fairytale Land nhưng cách 452km — vô dụng cho người
+   lên lịch trình 1 chuyến đi, dù đúng chủ đề nội dung). Cùng cụm/cùng tỉnh
+   thì không bị rào này (luôn hợp lệ, Type/Tag chỉ quyết định THỨ TỰ).
+
+**CẬP NHẬT 25/07/2026 (lần 2)** — đảo NGƯỢC vai trò chi phối, theo yêu cầu
+người dùng sau khi audit thực tế Dalat Fairytale Land: cả 12/12 gợi ý đều lên
+nhãn "Cùng loại hình" vì `sinh-thai-dong-que`/`khu-vui-choi-cong-vien` được
+gán tràn lan cho hầu hết điểm quanh Đà Lạt (Type quá rộng ở khu vực này), át
+hết tín hiệu Tag đi kèm. Quyết định: **Tag mới là yếu tố CHI PHỐI chính,
+Type giáng xuống thành tiebreaker phụ** (ngược hoàn toàn bản #2 ở trên):
+
+- `tagOverlapScore` — **TIERED theo SỐ LƯỢNG tag khớp tuyệt đối** (không còn
+  tỉ lệ liên tục): khớp **TOÀN BỘ** tag của self → **3000**; khớp **≥ 2** tag
+  (chưa toàn bộ) → **2000**; khớp **1** tag → **1000**; không khớp → 0.
+  Khoảng cách GIỮA các bậc (1000) LỚN HƠN TỔNG mọi thành phần phụ khác cộng
+  lại (xem dưới, tối đa 380) — đảm bảo thứ tự theo SỐ TAG KHỚP không bao giờ
+  bị Type/khoảng cách/ưu tiên tay đảo ngược. Đúng ý người dùng: "1 điểm có
+  nhiều tag, khớp tất cả ưu tiên nhất, khớp 2 tag, khoảng cách ngắn, cùng
+  cụm" — kể cả khớp chỉ 1 tag (1000) vẫn thắng 1 ứng viên khớp 0 tag dù
+  trùng cả Type lẫn cùng cụm (tối đa ~262, xem dưới) — "Type đứng sau Tag".
+- `typeOverlapScore` — **demote xuống tiebreaker phụ**, trần **50** (từ 1000
+  trước đó), vẫn tỉ lệ giao nhau như cũ. Tổng mọi thành phần phụ (type 50 +
+  cùng cụm/tỉnh 200/100 + khoảng cách 100 + ưu tiên tay 20 + flagship 10) tối
+  đa 380, luôn nhỏ hơn 1 bậc tag (1000) — không bao giờ đủ để vượt qua chênh
+  lệch số tag khớp.
+- Nhãn `criterion` đảo thứ tự tương ứng: kiểm tra khớp Tag TRƯỚC khớp Type
+  (`same-tag`/`same-type-tag` ưu tiên hơn `same-type-cluster`/`same-type`) —
+  nếu không sẽ tiếp tục hiện "Cùng loại hình" dù Tag mới là lý do thật khiến
+  ứng viên được xếp hạng cao.
+
+Thuật toán hiện hành (mỗi điểm), thực thi tại `apps/api/.../domain/related-builder.ts`
 hàm `buildRelatedItems()`:
 
 1. **2 bậc cứng đứng TRƯỚC scoring** (quyết định cây/biên tập, không qua chấm
-   điểm): con trực tiếp (nếu là tỉnh/cụm, tối đa 4) → `related` curated
-   (type 2, theo Weight — bao gồm cả quan hệ tạo tay qua trang bản đồ
-   `/dichoithoi/ban-do`, xem §5.7 relations-plan).
+   điểm, KHÔNG bị rào 100km): con trực tiếp (nếu là tỉnh/cụm, tối đa 4) →
+   `related` curated (type 2, theo Weight — bao gồm cả quan hệ tạo tay qua
+   trang bản đồ `/dichoithoi/ban-do`, xem §5.7 relations-plan).
 2. **Lọc `excluded`** (type 4, mới thêm Giai đoạn C3) — loại bỏ mọi ứng viên
    admin đã đánh dấu "gợi ý sai" cho điểm này, TRƯỚC khi chấm điểm, bất kể
    điểm đó lẽ ra được điểm cao thế nào.
-3. **Chấm điểm** toàn bộ ứng viên còn lại, cộng:
-   - `typeOverlapScore` = `1000 * |giao tập loại hình| / |tập loại hình của
-     self|` — yếu tố CHI PHỐI, cùng-loại-ở-xa vẫn thắng khác-loại-ở-gần
-     (loại hình mirror từ `v2.DestinationTypeMap` sang Postgres
-     `dichoithoi_destinations.types`, Giai đoạn C1).
+3. **Lọc `hasGenuineRelevance()`** trước khi chấm điểm — ứng viên cùng cụm/cùng
+   tỉnh với self luôn hợp lệ; ứng viên KHÁC cụm VÀ khác tỉnh chỉ hợp lệ nếu có
+   khoảng cách xếp hạng thật ≤ 100km (mục "CẬP NHẬT 25/07/2026" #3 ở trên).
+4. **Chấm điểm** toàn bộ ứng viên còn lại (đã qua bước 3), cộng:
+   - `tagOverlapScore` — **yếu tố CHI PHỐI chính** (từ "CẬP NHẬT 25/07/2026
+     lần 2"): khớp toàn bộ tag của self → 3000; khớp ≥2 tag → 2000; khớp 1
+     tag → 1000; không khớp → 0 (tag mirror từ `v2.DestinationTagMap` sang
+     Postgres `dichoithoi_destinations.tags`).
+   - `typeOverlapScore` = `50 * |giao tập loại hình| / |tập loại hình của
+     self|` — tiebreaker phụ (demote từ chi phối chính, xem "CẬP NHẬT
+     25/07/2026 lần 2"), loại hình mirror từ `v2.DestinationTypeMap` sang
+     Postgres `dichoithoi_destinations.types`, Giai đoạn C1.
    - `+200` cùng cụm/cha, hoặc `+100` cùng tỉnh (loại trừ nhau).
    - Điểm gần: `100 / (1 + khoảngCáchMét/1000)` — cùng cụm/tỉnh dùng
      haversine trực tiếp từ toạ độ riêng; khác cụm dùng mô hình khoảng cách
      2 tầng (`DistanceFromCenter` + bảng `dichoithoi_cluster_distances`,
      Giai đoạn A2) CHỈ để xếp hạng (luôn ≥ thật do bất đẳng thức tam giác) —
-     badge hiển thị công khai luôn tính lại bằng haversine thật cho ≤8 mục
+     badge hiển thị công khai luôn tính lại bằng haversine thật cho các mục
      đã chọn, không dùng số ước lượng.
    - `(6 - Priority) * 4` — Priority 1 (cao nhất) +20, Priority 5 +4, không
      bao giờ 0/âm (không loại điểm ít được đánh giá).
    - `+10` nếu `ContentTier = flagship`.
-   Xếp hạng giảm dần, điền cho tới đủ 8 mục.
-4. Dedupe, loại chính nó, chỉ lấy Status=published.
-   Mỗi mục: `{slug, name, thumbnail, badge}` (badge = "cách 2,5 km" nếu biết
-   toạ độ thật cả 2 bên, null nếu không).
+   Xếp hạng giảm dần, điền cho tới khi đủ `RELATED_MAX_COUNT` (12) mục HOẶC
+   hết ứng viên qua được bước 3 — số lượng hiển thị vì vậy BIẾN THIÊN theo
+   từng điểm đến, không còn cố định.
+5. Dedupe, loại chính nó, chỉ lấy Status=published.
+   Mỗi mục: `{slug, name, thumbnail, badge, criterion}` (badge = "cách 2,5 km"
+   nếu biết toạ độ thật cả 2 bên, null nếu không; `criterion` — lý do gợi ý,
+   xem §2 relations-plan, nay có thêm `"same-tag"` khi Tag là thành phần điểm
+   cao nhất mà không trùng Type, và `"same-type-tag"` khi trùng CẢ Type LẪN
+   Tag nhưng không cùng cụm — thêm 25/07/2026 vì phát hiện thực tế nhãn
+   `"same-type"` cũ luôn thắng tuyệt đối kể cả khi Tag cũng trùng, làm nhãn
+   "Cùng loại hình" áp đảo mọi gợi ý ở khu vực có Type quá rộng/phổ biến
+   (vd Đà Lạt: `sinh-thai-dong-que`/`khu-vui-choi-cong-vien` được gán cho gần
+   như mọi điểm quanh đó — 12/12 gợi ý của Dalat Fairytale Land đều trùng
+   Type), che mất tín hiệu Tag đi kèm. Sau "CẬP NHẬT 25/07/2026 lần 2" thứ tự
+   kiểm tra nhãn cũng đảo theo: khớp Tag được kiểm tra TRƯỚC khớp Type —
+   `same-tag`/`same-type-tag` ưu tiên hơn `same-type-cluster`/`same-type`,
+   `same-type-cluster` giờ chỉ còn là fallback khi KHÔNG có tag nào khớp).
 - So sánh JSON mới với cũ — **khác mới UPDATE** (tránh write + invalidate cache vô ích).
 - `mentioned` (type 3) KHÔNG vào RelatedJson — nó phục vụ thống kê + re-link,
   link đã nằm trong thân bài rồi, lặp lại ở khối liên quan là thừa.

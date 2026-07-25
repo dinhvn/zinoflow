@@ -160,6 +160,11 @@ export class DestinationMirrorEntity {
   @Column({ name: "types", type: "jsonb", default: () => "'[]'" })
   types!: string[];
 
+  /** Slug cac tag da gan (v2.DestinationTagMap, nhieu-nhieu, chi kind=poi) — mirror
+   * tin hieu doc lap voi types trong thuat toan cham diem quan he (relations-plan §1.3). */
+  @Column({ name: "tags", type: "jsonb", default: () => "'[]'" })
+  tags!: string[];
+
   /** Mirror co thay doi local chua publish (chan sync de khi dong bo) */
   @Column({ name: "has_local_changes", type: "boolean", default: false })
   hasLocalChanges!: boolean;

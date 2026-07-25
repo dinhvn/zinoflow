@@ -2,12 +2,18 @@
  * Builder khoi "diem den lien quan" (RelatedJson) — destination-relations-plan
  * §1.3, Giai doan C2. 2 bac CUNG (quyet dinh nguoi/cay, dung truoc scoring):
  * con truc tiep -> related curated. Sau do CHAM DIEM toan bo ung vien con lai
- * theo cong thuc §1.3 (cung loai hinh la yeu to chi phoi, khoang cach/uu tien/
- * tier chi la trong so phu), xep hang giam dan, dien cho toi khi du 8 muc.
+ * theo cong thuc §1.3 (SUA 25/07/2026 lan 2: cung TAG la yeu to CHI PHOI —
+ * tiered theo so tag khop tuyet doi, khop toan bo > khop >=2 > khop 1 > 0;
+ * Type/khoang cach/uu tien/tier chi la tiebreaker phu, xem tagOverlapScore),
+ * xep hang giam dan, dien cho toi khi du
+ * RELATED_MAX_COUNT muc HOAC het ung vien co tin hieu lien quan that su (khong
+ * ep du so luong bang cach nhoi ung vien chi co priorityScore — moi luon > 0).
  * Pure TS + unit tests.
  */
 
-export const RELATED_ITEM_COUNT = 8;
+/** Tran tren so muc hien thi — KHONG phai muc tieu co dinh (so luong thuc te
+ * bien thien tuy so ung vien co tin hieu lien quan that, xem hasGenuineRelevance). */
+export const RELATED_MAX_COUNT = 12;
 export const NEARBY_RADIUS_METERS = 30_000;
 export const NEARBY_TOP_COUNT = 10;
 const MAX_CHILDREN_IN_RELATED = 4;
@@ -34,6 +40,11 @@ export interface RelatedCandidate {
   /** Slug cac loai hinh da gan (v2.DestinationTypeMap, nhieu-nhieu) — mirror Giai doan C1.
    * Rong voi kind != poi. Yeu to chi phoi thuat toan cham diem (relations-plan §1.3). */
   types: string[];
+  /** Slug cac tag da gan (v2.DestinationTagMap, nhieu-nhieu) — mirror doc lap voi types.
+   * Type = "la gi" (ban chat vat ly), Tag = "phu hop trai nghiem gi" (cat ngang doi tuong/
+   * trai nghiem/boi canh/gia tri) — tin hieu THU 2 trong cham diem, khong thay the Type
+   * (dichoithoi-taxonomy-chuan-hoa.md §0, relations-plan §1.3). */
+  tags: string[];
   /** Phan loai do sau noi dung — trong so phu trong cham diem (relations-plan §1.3) */
   contentTier: "flagship" | "standard" | null;
 }
@@ -48,7 +59,9 @@ export type RelatedCriterion =
   | "child"
   | "curated"
   | "same-type-cluster"
+  | "same-type-tag"
   | "same-type"
+  | "same-tag"
   | "nearby"
   | "same-province";
 
@@ -125,15 +138,40 @@ export function clusterDistanceKey(a: string, b: string): string {
 }
 
 /**
- * Diem "cung loai hinh" (relations-plan §1.3) — so khop theo TI LE giao nhau
- * giua 2 tap (khong phai 1 gia tri don), trung cang nhieu loai cang thang.
- * self chua co loai nao (25/272 diem thuc te) -> luon 0, khong loi.
+ * Diem "cung tag" (quyet dinh nguoi dung 25/07/2026, thay ban Type-chi-phoi
+ * truoc do) — yeu to CHI PHOI CHINH cua cong thuc, TIERED theo SO LUONG tag
+ * khop tuyet doi (khong phai ti le lien tuc nhu Type cu): khop TOAN BO tag
+ * cua self > khop >=2 tag > khop 1 tag > khong khop (0). Khoang cach GIUA cac
+ * bac (1000) LON HON TONG moi thanh phan phu khac cong lai (proximityTier 200
+ * + distance 100 + typeOverlap 50 + priority 20 + tier 10 = 380) — dam bao
+ * thu tu theo SO TAG KHOP LUON duoc giu nguyen, khong bao gio bi Type/khoang
+ * cach/uu tien vuot qua (vd 1 diem chi khop 1/3 tag (1000) VAN thang 1 diem
+ * khop 0 tag nhung trung ca Type lan cung cum (toi da ~380) — dung y do nguoi
+ * dung: "khop tat ca uu tien nhat, khop 2 tag, khoang cach ngan, cung cum",
+ * Type chi con la tiebreaker cuoi cung).
+ */
+function tagOverlapScore(self: RelatedCandidate, candidate: RelatedCandidate): number {
+  if (self.tags.length === 0) return 0;
+  const selfTags = new Set(self.tags);
+  const matched = candidate.tags.filter((t) => selfTags.has(t)).length;
+  if (matched === 0) return 0;
+  if (matched === self.tags.length) return 3000; // khop TOAN BO tag cua self
+  if (matched >= 2) return 2000;
+  return 1000; // matched === 1
+}
+
+/**
+ * Diem "cung loai hinh" — DA DEMOTE thanh tiebreaker PHU (25/07/2026, truoc
+ * la yeu to chi phoi 1000 diem) vi Tag gio la tin hieu chinh. Tran 50 — cong
+ * voi proximityTier(200)+distance(100)+priority(20)+tier(10) = 380, VAN nho
+ * hon khoang cach 1 bac tag (1000) nen khong bao gio lam dao nguoc thu tu
+ * theo so tag khop. So khop van theo TI LE giao nhau giua 2 tap.
  */
 function typeOverlapScore(self: RelatedCandidate, candidate: RelatedCandidate): number {
   if (self.types.length === 0) return 0;
   const selfTypes = new Set(self.types);
   const overlap = candidate.types.filter((t) => selfTypes.has(t)).length;
-  return (1000 * overlap) / self.types.length;
+  return (50 * overlap) / self.types.length;
 }
 
 function proximityTierScore(self: RelatedCandidate, candidate: RelatedCandidate): number {
@@ -209,6 +247,7 @@ export function scoreCandidate(
 ): number {
   return (
     typeOverlapScore(self, candidate) +
+    tagOverlapScore(self, candidate) +
     proximityTierScore(self, candidate) +
     distanceScore(rankingDistanceMeters(self, candidate, clusterDistances, poiDistances)) +
     priorityScore(candidate) +
@@ -216,17 +255,54 @@ export function scoreCandidate(
   );
 }
 
+/** Ngưỡng chặn CỨNG cho ứng viên KHÁC cụm/tỉnh (quyết định người dùng 25/07/2026) —
+ * phát hiện thực tế: Bà Nà Hill (Đà Nẵng, cách 452km) lọt vào related của Dalat
+ * Fairytale Land (Lâm Đồng) chỉ vì trùng Type+Tag, dù vô dụng cho người lên lịch
+ * trình 1 chuyến đi. Type/Tag trùng bao nhiêu CŨNG KHÔNG được vượt rào khoảng cách
+ * này khi khác khu vực địa lý — chỉ có ý nghĩa XẾP HẠNG trong 1 khu vực hợp lý. */
+const MAX_CROSS_REGION_METERS = 100_000;
+
+/**
+ * True neu candidate DUOC PHEP xuat hien trong goi y (khong chi la co diem > 0):
+ * - Cung cum/cung tinh (proximityTierScore > 0): luon hop le — Type/Tag quyet dinh
+ *   THU TU trong nhom nay, khong quyet dinh co duoc vao hay khong.
+ * - KHAC cum/tinh: BAT BUOC co du lieu khoang cach xep hang THAT va <=
+ *   MAX_CROSS_REGION_METERS — Type/Tag trung nhieu CACH MAY cung khong duoc dung de
+ *   vuot qua rao nay (tranh goi y dung ve noi dung nhung vo ly ve dia ly du lich).
+ * priorityScore/tierScore KHONG duoc tinh la tin hieu rieng vi luon > 0 voi moi
+ * candidate, se lam ung vien khong lien quan gi van lot vao danh sach chi de "du
+ * so luong".
+ */
+function hasGenuineRelevance(
+  self: RelatedCandidate,
+  candidate: RelatedCandidate,
+  clusterDistances: ReadonlyMap<string, number>,
+  poiDistances: ReadonlyMap<string, number>,
+): boolean {
+  if (proximityTierScore(self, candidate) > 0) return true;
+  const distance = rankingDistanceMeters(self, candidate, clusterDistances, poiDistances);
+  return distance !== null && distance <= MAX_CROSS_REGION_METERS;
+}
+
 /**
  * Suy criterion cho 1 muc duoc chon qua CHAM DIEM (khong ap dung cho con/curated,
- * 2 nguon do da co criterion co dinh) — dua tren 2 thanh phan diem cao nhat
- * (relations-plan mục 2): co diem cung-loai-hinh la yeu to chinh (>0) thi uu
- * tien nhan "same-type*", cong them tier cum/tinh neu co; khong co diem loai
- * hinh thi xet cum/tinh/khoang cach.
+ * 2 nguon do da co criterion co dinh) — dua tren cac thanh phan diem co gia tri.
+ *
+ * SUA 25/07/2026 (lan 2) — dao thu tu uu tien theo cong thuc moi (Tag chi
+ * phoi, xem tagOverlapScore): kiem tra hasTagMatch TRUOC hasTypeMatch (nguoc
+ * lai ban truoc). Ly do: khi Tag da la yeu to quyet dinh diem so, nhan hien
+ * thi cung phai theo dung logic do — neu van uu tien nhan "same-type*" truoc
+ * se gay nham lan (nhan noi "cung loai hinh" trong khi thuc ra Tag moi la ly
+ * do khien ung vien duoc chon/xep hang cao). "same-type-cluster" chi con la
+ * fallback khi KHONG co tag khop nao ca.
  */
 function classifyCriterion(self: RelatedCandidate, candidate: RelatedCandidate): RelatedCriterion {
   const hasTypeMatch = typeOverlapScore(self, candidate) > 0;
+  const hasTagMatch = tagOverlapScore(self, candidate) > 0;
   const sameCluster = Boolean(candidate.parentSlug && candidate.parentSlug === self.parentSlug);
   const sameProvince = Boolean(candidate.provinceCode && candidate.provinceCode === self.provinceCode);
+  if (hasTagMatch && hasTypeMatch) return "same-type-tag";
+  if (hasTagMatch) return "same-tag";
   if (hasTypeMatch && sameCluster) return "same-type-cluster";
   if (hasTypeMatch) return "same-type";
   if (sameCluster || sameProvince) return "same-province";
@@ -254,9 +330,12 @@ export interface RelatedInput {
 /**
  * Build RelatedJson cho 1 diem (relations-plan §1.3-§1.4, Giai doan C2-C3). 2 bac
  * CUNG truoc (quyet dinh nguoi/cay, KHONG qua scoring): con truc tiep (toi da
- * 4) -> related curated. Con lai CHAM DIEM toan bo ung vien, xep hang giam
- * dan, dien cho toi 8 muc. Dedupe + loai chinh no + chi published + loai
- * excludedSlugs (neu co) TRUOC moi buoc.
+ * 4) -> related curated. Con lai CHAM DIEM CHI cac ung vien co tin hieu lien
+ * quan that (hasGenuineRelevance), xep hang giam dan, dien cho toi
+ * RELATED_MAX_COUNT muc HOAC het ung vien dat chuan — so luong ket qua vi vay
+ * bien thien theo diem den (it ung vien lien quan thi hien it hon
+ * RELATED_MAX_COUNT, khong ep du). Dedupe + loai chinh no + chi published +
+ * loai excludedSlugs (neu co) TRUOC moi buoc.
  */
 export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
   const { self, curatedRelatedSlugs, clusterDistances } = input;
@@ -278,7 +357,7 @@ export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
   };
 
   const pick = (slug: string, badge: string | null, criterion: RelatedCriterion): void => {
-    if (picked.length >= RELATED_ITEM_COUNT || pickedSlugs.has(slug)) return;
+    if (picked.length >= RELATED_MAX_COUNT || pickedSlugs.has(slug)) return;
     const c = bySlug.get(slug);
     if (!c || c.siteStatus !== 1) return;
     pickedSlugs.add(slug);
@@ -292,12 +371,12 @@ export function buildRelatedItems(input: RelatedInput): RelatedItem[] {
   // Bac 2: related curated (quyet dinh bien tap, override thuat toan)
   for (const slug of curatedRelatedSlugs) pick(slug, null, "curated");
 
-  // Bac 3: cham diem toan bo ung vien con lai, xep hang giam dan
-  if (picked.length < RELATED_ITEM_COUNT) {
+  // Bac 3: cham diem CHI ung vien co tin hieu lien quan that, xep hang giam dan
+  if (picked.length < RELATED_MAX_COUNT) {
     const scored = all
       .filter((c) => c.siteStatus === 1 && !pickedSlugs.has(c.slug))
+      .filter((c) => hasGenuineRelevance(self, c, clusterDistances, poiDistances))
       .map((c) => ({ candidate: c, score: scoreCandidate(self, c, clusterDistances, poiDistances) }))
-      .filter((s) => s.score > 0)
       .sort((a, b) => b.score - a.score);
 
     for (const { candidate } of scored) {

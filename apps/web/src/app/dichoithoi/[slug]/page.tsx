@@ -18,6 +18,7 @@ import {
   publishDestinationResultSchema,
   renameDestinationSlugResponseSchema,
   recomputeNearbyDistancesReportSchema,
+  getRelatedSpotlightResponseSchema,
   DESTINATION_BLOCK_LABELS,
   DESTINATION_LIST_BLOCK_KEYS,
   DESTINATION_SECTION_ORDER,
@@ -29,6 +30,7 @@ import {
   type DestinationDetail,
   type DestinationKind,
   type RelatedDestinationRef,
+  type RelatedSpotlightItem,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import {
@@ -59,6 +61,7 @@ import { DestinationTourPanel } from "@/features/dichoithoi/destination-tour-pan
 import { Button, buttonClasses } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
+import { FeatureIntro } from "@/shared/ui/feature-intro";
 
 /** Draft response tu GET /content/jobs/:id/draft — article de lay goi y AI toan bai, id de tu choi job khi "Lam lai tu dau". */
 const jobDraftSchema = z.object({
@@ -255,6 +258,30 @@ function formatDistance(meters: number | null): string {
   return `${(meters / 1000).toFixed(1).replace(".", ",")} km`;
 }
 
+/** Nhan tieng Viet cho ly do goi y (RelatedCriterion, related-builder.ts) — khop
+ * nhan hien tren website that (_RelatedDestinationList.cshtml, repo dichoithoi). */
+function relatedCriterionLabel(criterion: string): string {
+  switch (criterion) {
+    case "child":
+      return "Trực thuộc";
+    case "curated":
+      return "Gán tay";
+    case "same-type-cluster":
+    case "same-type":
+      return "Cùng loại hình";
+    case "same-type-tag":
+      return "Cùng loại hình & chủ đề";
+    case "same-tag":
+      return "Cùng chủ đề";
+    case "same-province":
+      return "Trong khu vực";
+    case "nearby":
+      return "Gần đây";
+    default:
+      return criterion;
+  }
+}
+
 /** Detail (API) -> gia tri khoi tao form metadata (string hoa, null -> "") */
 function detailToFormValues(d: DestinationDetail): DestinationMetaValues {
   return {
@@ -291,6 +318,16 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     queryFn: () => apiGet(`/destinations/${slug}`, destinationDetailSchema),
   });
   const d = detailQuery.data;
+
+  // Xem truoc RelatedJson THAT da precompute (doc thang, khong tinh lai) — cung
+  // endpoint spotlight dang dung o trang ban-do, hien trong tab "Quan he" de
+  // admin thay dung ket qua se render tren website, tranh nham voi panel "Gan
+  // day" (tinh nang khac, chi de goi y gan curated tay).
+  const relatedSpotlightQuery = useQuery({
+    queryKey: ["related-spotlight", slug],
+    queryFn: () =>
+      apiGet(`/destinations/${slug}/related-spotlight`, getRelatedSpotlightResponseSchema),
+  });
 
   function toActionError(error: unknown) {
     return error instanceof ApiError
@@ -1542,6 +1579,103 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
 
           <div className={activeTab === "relations" ? "space-y-4" : "hidden"}>
             <PanelHead title="🧭 Quan hệ & đồng bộ" hint="Liên kết với điểm đến khác và trạng thái đồng bộ mirror ↔ site." />
+
+      <FeatureIntro
+        summary={
+          <>
+            Khối &quot;Điểm đến liên quan&quot; trên trang công khai (website) được{" "}
+            <strong>tự động tính sẵn</strong> theo thuật toán chấm điểm — không phải danh sách
+            cố định. Số lượng hiển thị biến thiên (tối đa 12), tuỳ điểm đến này có bao nhiêu ứng
+            viên thực sự liên quan.
+          </>
+        }
+        details={
+          <div className="space-y-2">
+            <p>
+              <strong>Thứ tự ưu tiên chọn</strong> (từ cứng → theo điểm số):
+            </p>
+            <ol className="list-decimal space-y-1 pl-4">
+              <li>
+                <strong>Con trực tiếp</strong> (nếu đây là tỉnh/cụm) — tối đa 4 mục, luôn đứng đầu.
+              </li>
+              <li>
+                <strong>Liên quan (curated)</strong> — quan hệ bạn tự gán tay ở khối &quot;Quan
+                hệ&quot; bên dưới hoặc trên trang bản đồ, override thuật toán.
+              </li>
+              <li>
+                <strong>Chấm điểm tự động</strong> — toàn bộ điểm đến còn lại, cộng:
+                <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                  <li>
+                    <strong>Cùng Tag (chủ đề/trải nghiệm phù hợp) — yếu tố chi phối chính:</strong>{" "}
+                    khớp <em>toàn bộ</em> tag của điểm này → 3000 điểm; khớp ≥2 tag → 2000; khớp
+                    1 tag → 1000; không khớp → 0. Khoảng cách giữa các mức này rất lớn nên số tag
+                    khớp gần như luôn quyết định thứ hạng, các yếu tố dưới đây chỉ để phân định
+                    khi số tag khớp bằng nhau.
+                  </li>
+                  <li>Cùng Loại hình (Type): tối đa 50 điểm — chỉ còn là yếu tố phụ.</li>
+                  <li>Cùng cụm/tỉnh cha: +200 (cùng cụm) hoặc +100 (cùng tỉnh).</li>
+                  <li>Càng gần càng nhiều điểm (tối đa 100, giảm dần theo khoảng cách thật).</li>
+                  <li>Độ ưu tiên tay (Priority 1–5): +4 đến +20.</li>
+                  <li>Điểm đến hạng Flagship: +10.</li>
+                </ul>
+              </li>
+            </ol>
+            <p>
+              <strong>Rào chặn khoảng cách (100km)</strong>: nếu 1 điểm đến KHÁC cụm VÀ khác tỉnh,
+              nó chỉ được gợi ý khi biết chắc khoảng cách thật ≤ 100km — dù khớp Tag/Loại hình
+              nhiều đến đâu cũng không vượt qua được rào này (tránh gợi ý sai kiểu &quot;cùng loại
+              công viên nhưng cách nhau 400km&quot;, vô dụng cho người lên lịch trình 1 chuyến đi).
+            </p>
+            <p>
+              Bạn có thể <strong>loại trừ</strong> 1 gợi ý sai hoặc <strong>gán curated</strong> tay
+              từ trang bản đồ <code>/dichoithoi/ban-do</code> — 2 việc này luôn thắng thuật toán.
+            </p>
+          </div>
+        }
+      />
+
+      <Group
+        title={`Xem trước: Điểm đến liên quan trên website${
+          relatedSpotlightQuery.data ? ` (${relatedSpotlightQuery.data.items.length})` : ""
+        }`}
+      >
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Đọc thẳng kết quả thuật toán đã tính sẵn (không tính lại) — đúng y hệt khối &quot;Điểm
+          đến liên quan&quot; sẽ hiện trên trang công khai. Khác với &quot;Gần đây&quot;/&quot;Liên
+          quan (curated)&quot; bên dưới (2 khối đó chỉ phục vụ gán quan hệ tay).
+        </p>
+        {relatedSpotlightQuery.isLoading && (
+          <p className="text-xs text-zinc-400">Đang tải...</p>
+        )}
+        {relatedSpotlightQuery.data && relatedSpotlightQuery.data.items.length === 0 && (
+          <p className="text-xs text-zinc-400">
+            Chưa có gợi ý nào — có thể do chưa recompute, hoặc không đủ ứng viên liên quan thật.
+          </p>
+        )}
+        {relatedSpotlightQuery.data && relatedSpotlightQuery.data.items.length > 0 && (
+          <ul className="grid grid-cols-1 gap-1.5 text-sm md:grid-cols-2">
+            {relatedSpotlightQuery.data.items.map((item) => (
+              <li
+                key={item.slug}
+                className="flex items-center justify-between gap-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-800"
+              >
+                <Link
+                  href={`/dichoithoi/${item.slug}`}
+                  className="truncate text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  {item.name}
+                </Link>
+                <span className="flex shrink-0 items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  {item.badge && <span>{item.badge}</span>}
+                  <span className="rounded bg-zinc-100 px-1.5 py-0.5 dark:bg-zinc-800">
+                    {relatedCriterionLabel(item.criterion)}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Group>
 
       {/* Quan he (spec §7.3 tab 3) */}
       <Group title="Quan hệ">

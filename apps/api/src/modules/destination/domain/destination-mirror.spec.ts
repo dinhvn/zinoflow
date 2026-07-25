@@ -36,6 +36,7 @@ function siteRow(overrides: Partial<SiteDestinationRow> = {}): SiteDestinationRo
     siteUpdatedAt: null,
     ticketPrice: null,
     types: [],
+    tags: [],
     ...overrides,
   };
 }

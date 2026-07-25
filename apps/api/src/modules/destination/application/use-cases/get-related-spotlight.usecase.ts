@@ -13,6 +13,8 @@ export class GetRelatedSpotlightUseCase {
 
   async execute(slug: string): Promise<GetRelatedSpotlightResponse> {
     const items = await this.siteDb.fetchRelatedJson(slug);
-    return { items: items.map((i) => ({ slug: i.slug, name: i.name, badge: i.badge })) };
+    return {
+      items: items.map((i) => ({ slug: i.slug, name: i.name, badge: i.badge, criterion: i.criterion })),
+    };
   }
 }

@@ -45,6 +45,10 @@ export interface SiteDestinationRow {
    * voi kind=poi (province/cluster luon rong). Mirror tu Giai doan B tro di, dung cho
    * thuat toan cham diem quan he (relations-plan §1.3, §1.4 muc 1). */
   types: string[];
+  /** Slug cac tag da gan (v2.DestinationTagMap, nhieu-nhieu) — chi co y nghia voi
+   * kind=poi. Tin hieu doc lap voi types trong thuat toan cham diem quan he (Type =
+   * "la gi", Tag = "phu hop trai nghiem gi" — xem dichoithoi-taxonomy-chuan-hoa.md §0). */
+  tags: string[];
 }
 
 /** Trang thai mirror toi thieu de ra quyet dinh sync */
