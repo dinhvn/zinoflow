@@ -10,6 +10,7 @@ import {
   type AiProviderRegistry,
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
+import { buildPromptLogText } from "../../../ai-content/application/services/prompt-log-text";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 import { TAG_SUGGEST_SYSTEM, buildTagSuggestPrompt } from "../../domain/tag-suggest-prompt";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
@@ -77,7 +78,7 @@ export class SuggestTagAssignmentsUseCase {
       model,
       operation: "suggest-destination-tags",
       ...usage,
-      promptText: `${TAG_SUGGEST_SYSTEM}\n\n${prompt}`,
+      promptText: buildPromptLogText(TAG_SUGGEST_SYSTEM, prompt, aiTagSuggestionBatchSchema),
       responseText: JSON.stringify(output),
     });
 

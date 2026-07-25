@@ -9,6 +9,7 @@ import {
   type AiProviderRegistry,
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
+import { buildPromptLogText } from "../../../ai-content/application/services/prompt-log-text";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 
 /** So diem den toi thieu 1 tag can co de khong bi coi la "duoi nguong" (destination-spec §2.4 buoc 2) */
@@ -106,7 +107,7 @@ export class ReverseCheckTagAssignmentsUseCase {
       model: MODEL,
       operation: "reverse-check-destination-tags",
       ...usage,
-      promptText: `${SYSTEM}\n\n${prompt}`,
+      promptText: buildPromptLogText(SYSTEM, prompt, aiTagReverseCheckBatchSchema),
       responseText: JSON.stringify(output),
     });
 

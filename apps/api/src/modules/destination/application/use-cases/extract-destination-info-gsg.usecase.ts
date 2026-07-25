@@ -23,6 +23,7 @@ import {
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
 import { dedupeExtractionFields } from "../services/dedupe-extraction-fields";
+import { buildPromptLogText } from "../../../ai-content/application/services/prompt-log-text";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 import { KIND_LABELS } from "../../domain/destination-mirror";
 
@@ -198,7 +199,7 @@ export class ExtractDestinationInfoGsgUseCase {
       model: GSG_MODEL,
       operation: "extract-destination-gsg",
       ...usage,
-      promptText: `${promptRequest.system}\n\n${promptRequest.prompt}`,
+      promptText: buildPromptLogText(promptRequest.system, promptRequest.prompt, gsgResponseSchema),
       responseText: JSON.stringify(output),
     });
 

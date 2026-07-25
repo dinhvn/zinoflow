@@ -10,6 +10,7 @@ import {
   type AiProviderRegistry,
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
+import { buildPromptLogText } from "../../../ai-content/application/services/prompt-log-text";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 
@@ -86,7 +87,7 @@ export class GenerateTagDescriptionUseCase {
       model,
       operation: "generate-tag-description",
       ...usage,
-      promptText: `${SYSTEM}\n\n${prompt}`,
+      promptText: buildPromptLogText(SYSTEM, prompt, generateTagDescriptionResponseSchema),
       responseText: JSON.stringify(output),
     });
     return output;

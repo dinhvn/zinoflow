@@ -15,6 +15,7 @@ import {
 } from "@zinoflow/contracts";
 import { AI_PROVIDER_REGISTRY, type AiProviderRegistry } from "../ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../ports/ai-usage-recorder.port";
+import { buildPromptLogText } from "../services/prompt-log-text";
 import { slugifyVietnamese } from "../../../shared/text/vietnamese";
 
 /** Tac vu tach lai text co san — nhe, dung Haiku (coding rules §5). */
@@ -126,7 +127,7 @@ export class RestructurePastedContentUseCase {
       model,
       operation: "restructure-paste",
       ...usage,
-      promptText: `${SYSTEM}\n\n${prompt}`,
+      promptText: buildPromptLogText(SYSTEM, prompt, looseRestructureSchema),
       responseText: JSON.stringify(output),
     });
 

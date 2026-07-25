@@ -24,7 +24,9 @@ import {
   type ContentGenerationCheckpointRepository,
 } from "../ports/content-generation-checkpoint.repository";
 import { PromptBuilder, type PromptJobContext } from "../services/prompt-builder";
+import { buildPromptLogText } from "../services/prompt-log-text";
 import type { OutlineLike } from "../services/article-type-profiles";
+import type { ZodType } from "zod/v4";
 
 /**
  * Use case: generate noi dung cho 1 content job (chay trong pg-boss worker) —
@@ -137,7 +139,16 @@ export class GenerateContentUseCase {
           outlineRequest,
           profile.outlineSchema,
         );
-        await this.recordUsage(job.id, provider, snapshot.aiModel, "outline", outlineUsage, outlineRequest, rawOutline);
+        await this.recordUsage(
+          job.id,
+          provider,
+          snapshot.aiModel,
+          "outline",
+          outlineUsage,
+          outlineRequest,
+          profile.outlineSchema,
+          rawOutline,
+        );
         // Ep cung sectionHeadings/blockKey theo dung 7 chu de co dinh cho bai diem den
         // (destinationProfile.normalizeOutline) — khong tin AI tu dat dung tieu de/thu
         // tu, tranh lac de (bug 07/2026, xem ghi chu o ArticleTypeProfile.normalizeOutline).
@@ -152,8 +163,13 @@ export class GenerateContentUseCase {
 
       // Buoc 2 — TOAN BO noi dung (7 khoi + frame) trong 1 lan goi AI (Option 3).
       const contentRequest = await this.prompts.buildContent(ctx, outline);
-      const rawArticle = await this.generateContentWithRetry(provider, job.id, snapshot.aiModel, contentRequest, () =>
-        provider.generateStructured(contentRequest, profile.contentSchema),
+      const rawArticle = await this.generateContentWithRetry(
+        provider,
+        job.id,
+        snapshot.aiModel,
+        contentRequest,
+        profile.contentSchema,
+        () => provider.generateStructured(contentRequest, profile.contentSchema),
       );
 
       // Ep cung blockKey theo DUNG VI TRI trong DESTINATION_SECTION_ORDER (bai diem
@@ -207,6 +223,7 @@ export class GenerateContentUseCase {
     jobId: string,
     model: string,
     request: StructuredGenerationRequest,
+    schema: ZodType,
     call: () => Promise<{ output: AnyArticle; usage: AiCallUsage }>,
   ): Promise<AnyArticle> {
     let lastError: unknown;
@@ -214,7 +231,7 @@ export class GenerateContentUseCase {
     for (let attempt = 1; attempt <= GenerateContentUseCase.CONTENT_MAX_ATTEMPTS; attempt++) {
       try {
         const { output, usage } = await call();
-        await this.recordUsage(jobId, provider, model, "content", usage, request, output);
+        await this.recordUsage(jobId, provider, model, "content", usage, request, schema, output);
         return output;
       } catch (error) {
         lastError = error;
@@ -237,6 +254,7 @@ export class GenerateContentUseCase {
     operation: string,
     usage: { inputTokens: number; outputTokens: number; costUsd: number; latencyMs: number },
     request: StructuredGenerationRequest,
+    schema: ZodType,
     output: unknown,
   ): Promise<void> {
     await this.usage.record({
@@ -245,7 +263,7 @@ export class GenerateContentUseCase {
       provider: provider.key,
       model,
       operation,
-      promptText: `${request.system}\n\n${request.prompt}`,
+      promptText: buildPromptLogText(request.system, request.prompt, schema),
       responseText: JSON.stringify(output),
     });
   }

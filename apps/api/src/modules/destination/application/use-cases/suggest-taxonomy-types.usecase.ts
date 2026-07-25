@@ -10,6 +10,7 @@ import {
   type AiProviderRegistry,
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
+import { buildPromptLogText } from "../../../ai-content/application/services/prompt-log-text";
 import {
   TAXONOMY_TYPE_SUGGEST_SYSTEM,
   buildTaxonomyTypeSuggestPrompt,
@@ -90,7 +91,7 @@ export class SuggestTaxonomyTypesUseCase {
       model,
       operation: "suggest-taxonomy-types",
       ...usage,
-      promptText: `${TAXONOMY_TYPE_SUGGEST_SYSTEM}\n\n${prompt}`,
+      promptText: buildPromptLogText(TAXONOMY_TYPE_SUGGEST_SYSTEM, prompt, aiTaxonomyTypeSuggestionBatchSchema),
       responseText: JSON.stringify(output),
     });
 

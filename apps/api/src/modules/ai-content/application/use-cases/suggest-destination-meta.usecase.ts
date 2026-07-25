@@ -10,6 +10,7 @@ import {
   type AiProviderRegistry,
 } from "../ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../ports/ai-usage-recorder.port";
+import { buildPromptLogText } from "../services/prompt-log-text";
 
 /** Provider/model mac dinh — Anthropic la primary; chua co key thi registry fallback stub. */
 const DEFAULT_PROVIDER = "anthropic";
@@ -69,7 +70,7 @@ export class SuggestDestinationMetaUseCase {
       model,
       operation: "suggest-meta",
       ...usage,
-      promptText: `${SYSTEM}\n\n${prompt}`,
+      promptText: buildPromptLogText(SYSTEM, prompt, destinationMetaSuggestionSchema),
       responseText: JSON.stringify(output),
     });
     return output;

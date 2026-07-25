@@ -11,6 +11,7 @@ import {
   type AiProviderRegistry,
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
+import { buildPromptLogText } from "../../../ai-content/application/services/prompt-log-text";
 
 const DEFAULT_PROVIDER = "anthropic";
 const DEFAULT_MODEL = "claude-haiku-4-5"; // tac vu nhe -> Haiku (spec §5)
@@ -87,7 +88,7 @@ export class SuggestEditorialReviewUseCase {
       model: DEFAULT_MODEL,
       operation: "suggest-editorial-review",
       ...usage,
-      promptText: `${SYSTEM}\n\n${prompt}`,
+      promptText: buildPromptLogText(SYSTEM, prompt, suggestEditorialReviewResponseSchema),
       responseText: JSON.stringify(output),
     });
     return output;

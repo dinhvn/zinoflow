@@ -17,6 +17,7 @@ import {
   AI_USAGE_RECORDER,
   type AiUsageRecorder,
 } from "../../../ai-content/application/ports/ai-usage-recorder.port";
+import { buildPromptLogText } from "../../../ai-content/application/services/prompt-log-text";
 import {
   CMS_POST_MIRROR_REPOSITORY,
   type CmsPostMirrorRepository,
@@ -104,7 +105,7 @@ export class SuggestCmsSeoUseCase {
       model,
       operation: "cms-seo-description",
       ...usage,
-      promptText: `${SYSTEM}\n\n${prompt}`,
+      promptText: buildPromptLogText(SYSTEM, prompt, cmsSeoSuggestionSchema),
       responseText: JSON.stringify(output),
     });
     return output;

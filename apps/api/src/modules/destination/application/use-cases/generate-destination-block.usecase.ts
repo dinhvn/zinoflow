@@ -20,6 +20,7 @@ import {
   type AiProviderRegistry,
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
+import { buildPromptLogText } from "../../../ai-content/application/services/prompt-log-text";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 import { POI_DISTANCE_REPOSITORY, type PoiDistanceRepository } from "../ports/poi-distance.repository";
 import { clusterDistanceKey, formatDistanceBadge } from "../../domain/related-builder";
@@ -109,7 +110,7 @@ export class GenerateDestinationBlockUseCase {
       model,
       operation: `generate-block-${blockKey}`,
       ...usage,
-      promptText: `${promptRequest.system}\n\n${promptRequest.prompt}`,
+      promptText: buildPromptLogText(promptRequest.system, promptRequest.prompt, contentSectionSchema),
       responseText: JSON.stringify(output),
     });
     this.logger.log(`Tao goi y AI cho block "${blockKey}" cua ${slug}`);
