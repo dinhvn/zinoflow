@@ -1327,6 +1327,15 @@ xong, không còn gì mở ở mức ưu tiên này.**
   thật (`PATCH /destination-tags/{slug}/description`, không sqlcmd tay) nên
   DescriptionHtml tự sinh lại đúng qua auto-link. Đồng bộ lại
   `docs/dichoithoi/phan-tich/dichoithoi-nhom-type-tag-desc.md` PHẦN 3 khớp DB.
+- ✅ **Sửa 2 tên điểm đến sai chính tả (25/07/2026)** → "Khu di tích Pác Pó"
+  → "Pác Bó", "Bảo tàng chiến tích chiến tranh" → "Bảo tàng Chứng tích Chiến
+  tranh" — lỗi đã biết từ trước nhưng chưa sửa trong DB (chỉ dùng tên đúng khi
+  soạn văn bản), giờ mới lộ hậu quả cụ thể: tag "Lịch sử chiến tranh" nhắc 2
+  tên này bằng chính tả đúng nên auto-link KHÔNG khớp được tên sai trong DB
+  (regex so khớp chính xác `Destination.Name`) — verify trước/sau bằng
+  `DescriptionHtml LIKE '%{slug}%'`: 0/0 → 1/1 sau khi sửa Name + lưu lại tag.
+  Sửa `Name` gốc lan tự động ra mọi nơi hiển thị (H1 trang điểm đến,
+  breadcrumb, JSON-LD), không cần sửa nơi khác.
 
 ## Việc CŨ hơn — đã lỗi thời, cần rà lại khi đụng tới
 
