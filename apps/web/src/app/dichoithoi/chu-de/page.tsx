@@ -103,7 +103,7 @@ function ChuDeSections({ data }: { data: ListDestinationTagAssignmentsResponse }
       <SuggestSection assignedSlugs={new Set(data.assignments.filter((a) => a.tagSlugs.length > 0).map((a) => a.destinationSlug))} />
       <ReverseCheckSection />
       <TagKanbanSection />
-      <CurrentAssignmentsSection data={data} />
+      <CurrentAssignmentsSection />
     </div>
   );
 }
@@ -907,28 +907,83 @@ function EditTagsModal({
 
 /* --- Bang gan tag hien tai (tham khao) --- */
 
-function CurrentAssignmentsSection({ data }: { data: ListDestinationTagAssignmentsResponse }) {
+function CurrentAssignmentsSection() {
+  // Dung chung TAG_KANBAN_QUERY_KEY voi TagKanbanSection ben tren — cung 1 API
+  // /destination-tags/kanban-board nen react-query chi goi mang 1 lan, khong
+  // can them endpoint rieng cho filter cum + popup sua tag o day (phan hoi
+  // nguoi dung 26/07/2026: list phang cung can filter theo cum + bam ten de sua).
+  const [clusterSlug, setClusterSlug] = useState("");
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: TAG_KANBAN_QUERY_KEY,
+    queryFn: () => apiGet("/destination-tags/kanban-board", getTagKanbanBoardResponseSchema),
+  });
+
+  const data = query.data;
+  const tagBySlug = useMemo(() => new Map((data?.tags ?? []).map((t) => [t.slug, t.name])), [data]);
+  const destinations = useMemo(() => {
+    if (!data) return [];
+    if (!clusterSlug) return data.destinations;
+    return data.destinations.filter((d) => d.parentSlug === clusterSlug);
+  }, [data, clusterSlug]);
+  const editingDestination = data?.destinations.find((d) => d.slug === editingSlug) ?? null;
+
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-        Tag đang gán ({data.assignments.length} điểm đến)
-      </h3>
-      <div className="max-h-96 divide-y divide-zinc-200 overflow-y-auto rounded border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
-        {data.assignments.map((a) => (
-          <div key={a.destinationSlug} className="flex flex-wrap items-center gap-2 p-2.5">
-            <span className="w-48 shrink-0 text-sm">{a.destinationName}</span>
-            {a.tagSlugs.length === 0 ? (
-              <span className="text-xs text-zinc-400">Chưa gán tag</span>
-            ) : (
-              a.tagSlugs.map((tag) => (
-                <Badge key={tag} tone="indigo">
-                  {tag}
-                </Badge>
-              ))
-            )}
-          </div>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          Tag đang gán ({destinations.length} điểm đến)
+        </h3>
+        {data && (
+          <Select value={clusterSlug} onChange={(e) => setClusterSlug(e.target.value)}>
+            <option value="">Tất cả cụm/tỉnh</option>
+            {data.clusters.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.name} ({c.kind === "province" ? "Tỉnh" : "Cụm"})
+              </option>
+            ))}
+          </Select>
+        )}
       </div>
+
+      {query.isLoading && <p className="text-sm text-zinc-500">Đang tải...</p>}
+      {query.isError && <ErrorBox error={query.error} fallback="Lỗi tải danh sách tag đang gán" />}
+
+      {data && (
+        <div className="max-h-96 divide-y divide-zinc-200 overflow-y-auto rounded border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          {destinations.map((d) => (
+            <div key={d.slug} className="flex flex-wrap items-center gap-2 p-2.5">
+              <button
+                type="button"
+                onClick={() => setEditingSlug(d.slug)}
+                className="w-48 shrink-0 text-left text-sm text-primary hover:underline"
+              >
+                {d.name}
+              </button>
+              {d.tagSlugs.length === 0 ? (
+                <span className="text-xs text-zinc-400">Chưa gán tag</span>
+              ) : (
+                d.tagSlugs.map((tagSlug) => (
+                  <Badge key={tagSlug} tone="indigo">
+                    {tagBySlug.get(tagSlug) ?? tagSlug}
+                  </Badge>
+                ))
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {data && editingDestination && (
+        <EditTagsModal
+          destination={editingDestination}
+          allTags={data.tags}
+          suggestion={null}
+          onClose={() => setEditingSlug(null)}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: TAG_KANBAN_QUERY_KEY })}
+        />
+      )}
     </section>
   );
 }
