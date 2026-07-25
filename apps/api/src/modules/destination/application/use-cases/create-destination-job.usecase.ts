@@ -25,20 +25,10 @@ import {
   type PoiDistanceRepository,
 } from "../ports/poi-distance.repository";
 import { clusterDistanceKey, formatDistanceBadge } from "../../domain/related-builder";
+import { KIND_LABELS } from "../../domain/destination-mirror";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
 const SITE_CODE = "dichoithoi";
-/**
- * Mo ta loai diem den dua vao sourceContext — prompt flagship (tinh/cum) can
- * biet dang viet cho TINH hay CUM de chon dung tam lich trinh + cach di chuyen
- * (tinh: 2 chieu tu thanh pho lon; cum: tu trung tam toi cum + giua cac diem con).
- */
-const KIND_LABELS: Record<string, string> = {
-  province: "Tỉnh/thành phố — bài tổng quan cả tỉnh, gồm nhiều điểm tham quan con",
-  cluster:
-    "Cụm du lịch — khu vực gồm nhiều điểm tham quan con gần nhau trong cùng tỉnh/thành",
-  poi: "Điểm tham quan đơn lẻ",
-};
 /** Gioi han content cu dua vao prompt (token budget) */
 const MAX_OLD_CONTENT_CHARS = 20_000;
 /** So diem lien quan cung tinh dua vao prompt de AI chu dong nhac ten (auto-link) */

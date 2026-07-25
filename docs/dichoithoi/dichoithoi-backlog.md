@@ -1342,6 +1342,62 @@ xong, không còn gì mở ở mức ưu tiên này.**
   Description đã format, 129-159 ký tự (≤160 chuẩn Google), nêu 3-4 điểm tiêu
   biểu + lý do bấm vào — không đụng `Description` gốc. Ghi qua API thật.
 
+- ✅ **Sửa "AI hỗ trợ từng khối" bỏ sót dữ liệu đã trích xuất (25/07/2026)** →
+  người dùng yêu cầu rà lại chất lượng skill trích xuất
+  (`dichoithoi-extract-destination-info`) cho "dalat-fairytale-land" — nội
+  dung trích xuất (`aiReferenceSummary`/`editorialReview`/giá vé/giờ mở cửa)
+  bản thân RẤT TỐT (facts cụ thể: hồ Ước Nguyện, hầm rượu Vĩnh Tiến, mẹo giờ
+  chụp ảnh...), nhưng phát hiện `GenerateDestinationBlockUseCase` (nút "AI gợi
+  ý" cho RIÊNG 1 khối ở tab Nội dung) có `buildSourceContext()` THIẾU hẳn
+  `aiReferenceSummary`, khoảng cách POI thật, giá vé, giờ mở cửa — lệch hẳn so
+  với `CreateDestinationJobUseCase` (sinh cả bài) vốn có đủ. Nghĩa là bấm "AI
+  gợi ý" cho 1 khối lẻ (vd sau khi đã có bài, muốn viết lại riêng "Trải
+  nghiệm") sẽ KHÔNG thấy dữ liệu đã trích xuất công phu qua skill — lãng phí
+  công trích xuất. Đã sửa để 2 use-case dùng chung logic
+  (`poiDistanceRepo`/`aiReferenceSummary`/`editorialReview`/giá vé/giờ mở cửa).
+  Verify qua log `ai_usage_logs.promptText` thật (không chỉ đọc code): prompt
+  gửi AI nay có đủ "Giờ mở cửa", "Giá vé", "Tóm tắt nguồn tham khảo" (đúng nội
+  dung hồ Ước Nguyện/hầm rượu), khoảng cách km thật tới các điểm liên quan.
+
+- ✅ **Audit toàn site + sửa 7 bug ưu tiên cao (25/07/2026)** → theo yêu cầu rà
+  soát toàn bộ code liên quan dichoithoi (zinoflow + web .NET), chạy 3 agent
+  song song audit SEO + bug zinoflow + bug .NET, tổng hợp báo cáo phân loại
+  BUG/RISK/CLEANUP. Đã sửa nhóm bug xác nhận thật, ưu tiên cao:
+  1. Ảnh grid "điểm tham quan/khu vực con" trang chi tiết dùng cột `Thumbnail`
+     cũ, dùng như đường dẫn TƯƠNG ĐỐI (sai) — `Detail.cshtml:685,727,755`,
+     `_RelatedDestinationGrid.cshtml:10`. Sửa dùng `Slug` + đường dẫn tuyệt đối
+     `/diem-den/thumbnail/{slug}.webp`, khớp quy ước đã đúng nơi khác.
+  2. Gợi ý tìm kiếm header (`nav.ts`) quyết định ẩn/hiện ảnh dựa vào
+     `item.thumbnail` cũ dù URL đã sửa đúng trước đó — bỏ điều kiện, luôn hiện.
+  3. Ảnh hero 404 khi cột `Thumbnail` claim quy ước "-thumb.webp" nhưng file
+     "-hero.webp" chưa từng được tạo (`DestinationDetailModel.cs`) — thêm
+     `File.Exists` check that + fallback 3 tầng: hero → `{slug}.webp` phẳng →
+     giá trị gốc. Verify sống: `chua-linh-an-dalat` từ 404 → 200; điểm có hero
+     thật (`dalat-fairytale-land`) vẫn dùng đúng bản 1600px (không regress).
+  4. `<title>` trang chi tiết không giới hạn độ dài (có case 102-106 ký tự) —
+     thêm `TextUtil.Truncate(title, 70)`, verify sống title dài bị cắt còn "...".
+  5. AI gợi ý riêng 1 khối (`GenerateDestinationBlockUseCase`) thiếu dòng "Loại
+     điểm đến" mà AI sinh cả bài đã có (thêm ở commit f2bed13 nhưng sibling
+     use-case không được cập nhật theo — CÙNG LỚP BUG với vụ thiếu
+     aiReferenceSummary/distance đã sửa trước đó) — chuyển `KIND_LABELS` vào
+     domain layer (`destination-mirror.ts`) dùng CHUNG giữa 2 use-case, tránh
+     drift lần 3. Verify qua log prompt thật.
+  6. Trang facet lọc `noindex` (`/diem-den?tinh=...`) vẫn phát `<link
+     rel="canonical">` trỏ về `/diem-den` (không filter) — tín hiệu mâu thuẫn.
+     Sửa `_Layout.cshtml`: trang noindex không tự đặt Canonical thì BỎ HẲN thẻ
+     canonical thay vì tự fallback về URL hiện tại.
+  7. `robots.txt` thiếu dòng `Sitemap:` (tiện thể bỏ luôn BOM đầu file).
+  Việc còn mở (chưa làm, mức độ thấp hơn): mật khẩu DB production bị commit
+  plaintext trong `appsettings.Release.json` (cần bạn tự đổi mật khẩu, không
+  phải việc code sửa được), thiếu sanitize-HTML cho `Html.Raw`, OutputCache
+  thiếu `VaryByQuery`, SEO nhỏ (Twitter Card, sitemap lastmod, /map/vung thiếu
+  JSON-LD, Article og:image thiếu host prefix — chưa verify sống).
+  ⚠️ **Sự cố phụ khi sửa**: 2 lần vô tình làm gián đoạn `dotnet watch` của
+  DiChoiThoi.Web (lần 1: kill nhầm process cũ không tự restart; lần 2: 2 lần
+  sửa liên tiếp cùng `_Layout.cshtml` làm hot-reload corrupt state, phải
+  restart cứng) — cả 2 lần đã tự phát hiện + khôi phục qua `run-watch.ps1`,
+  không mất code, chỉ gián đoạn tạm thời quá trình verify.
+
 ## Việc CŨ hơn — đã lỗi thời, cần rà lại khi đụng tới
 
 - destination-spec §10 nhắc "Viết bài Post/Phượt/Tour của dichoithoi (chỉ làm

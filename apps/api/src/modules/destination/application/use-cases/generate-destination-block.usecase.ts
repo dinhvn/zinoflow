@@ -21,6 +21,9 @@ import {
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
+import { POI_DISTANCE_REPOSITORY, type PoiDistanceRepository } from "../ports/poi-distance.repository";
+import { clusterDistanceKey, formatDistanceBadge } from "../../domain/related-builder";
+import { KIND_LABELS } from "../../domain/destination-mirror";
 
 const SITE_CODE = "dichoithoi";
 const DEFAULT_PROVIDER = "anthropic";
@@ -48,6 +51,7 @@ export class GenerateDestinationBlockUseCase {
     private readonly promptBuilder: PromptBuilder,
     @Inject(AI_PROVIDER_REGISTRY) private readonly registry: AiProviderRegistry,
     @Inject(AI_USAGE_RECORDER) private readonly usage: AiUsageRecorder,
+    @Inject(POI_DISTANCE_REPOSITORY) private readonly poiDistanceRepo: PoiDistanceRepository,
   ) {}
 
   async execute(
@@ -86,7 +90,7 @@ export class GenerateDestinationBlockUseCase {
         siteCode: SITE_CODE,
         keywordSeed: [destination.name],
         toneProfile: null,
-        sourceContext: this.buildSourceContext(destination, all),
+        sourceContext: await this.buildSourceContext(destination, all),
         products: [],
         contentTier: destination.contentTier,
       },
@@ -112,15 +116,31 @@ export class GenerateDestinationBlockUseCase {
     return section;
   }
 
-  /** Ngu canh rut gon (khong fetch lai referenceUrls) — du de sinh 1 block mach lac. */
-  private buildSourceContext(
+  /**
+   * Ngu canh rut gon (khong fetch lai referenceUrls) — du de sinh 1 block mach lac.
+   * Truoc 25/07/2026 THIEU aiReferenceSummary/khoang cach that/gio mo cua/gia ve —
+   * lech han so voi CreateDestinationJobUseCase.buildSourceContext (sinh ca bai),
+   * khien AI ho tro tung block khong thay duoc du lieu da trich xuat qua skill
+   * dichoithoi-extract-destination-info (vd dalat-fairytale-land) khi nguoi dung
+   * chi bam "AI goi y" cho rieng 1 khoi — bo sung cho khop.
+   */
+  private async buildSourceContext(
     destination: DestinationMirrorEntity,
     all: DestinationMirrorEntity[],
-  ): string {
+  ): Promise<string> {
     const parts: string[] = ["## Dữ liệu điểm đến (nguồn sự thật)"];
     parts.push(`- Tên: ${destination.name}`);
+    parts.push(`- Loại điểm đến: ${KIND_LABELS[destination.kind] ?? destination.kind}`);
     if (destination.addressNew) parts.push(`- Địa chỉ mới (sau sáp nhập): ${destination.addressNew}`);
     if (destination.addressOld) parts.push(`- Địa chỉ cũ (trước sáp nhập): ${destination.addressOld}`);
+    if (destination.openingHours?.note) parts.push(`- Giờ mở cửa: ${destination.openingHours.note}`);
+    if (destination.priceBreakdown?.length) {
+      parts.push(
+        `- Giá vé: ${destination.priceBreakdown
+          .map((p) => `${p.audience} ${p.price.toLocaleString("vi-VN")}đ${p.note ? ` (${p.note})` : ""}`)
+          .join("; ")}`,
+      );
+    }
 
     const related = all
       .filter(
@@ -130,11 +150,23 @@ export class GenerateDestinationBlockUseCase {
           d.provinceCode === destination.provinceCode &&
           d.siteStatus === 1,
       )
-      .slice(0, MAX_RELATED_IN_PROMPT)
-      .map((d) => d.name);
+      .slice(0, MAX_RELATED_IN_PROMPT);
     if (related.length > 0) {
+      // Cung logic voi CreateDestinationJobUseCase — nhac so km THAT (dichoithoi_poi_distances)
+      // khi da co, khong bia so cho diem chua tinh khoang cach.
+      const poiDistancePairs = await this.poiDistanceRepo.findAll();
+      const poiDistances = new Map(
+        poiDistancePairs.map((p) => [clusterDistanceKey(p.poiASlug, p.poiBSlug), p.distanceMeters]),
+      );
       parts.push("", "## Điểm đến liên quan cùng khu vực (dùng đúng TÊN CHUẨN khi nhắc tới)");
-      parts.push(related.map((name) => `- ${name}`).join("\n"));
+      parts.push(
+        related
+          .map((d) => {
+            const meters = poiDistances.get(clusterDistanceKey(destination.slug, d.slug));
+            return meters === undefined ? `- ${d.name}` : `- ${d.name} (${formatDistanceBadge(meters)})`;
+          })
+          .join("\n"),
+      );
     }
 
     const draft = destination.draftArticle as Partial<DestinationArticle> | null;
@@ -144,6 +176,18 @@ export class GenerateDestinationBlockUseCase {
       for (const s of otherSections) {
         parts.push(`### ${s.heading}`, s.content);
       }
+    }
+
+    if (destination.aiReferenceSummary) {
+      // Da co tom tat tu skill trich xuat AI (dichoithoi-destination-ai-extraction-plan
+      // §2.2) — dung truc tiep, cung nguon voi CreateDestinationJobUseCase.
+      parts.push("", "## Tóm tắt nguồn tham khảo (đã trích xuất, đã duyệt)");
+      parts.push(destination.aiReferenceSummary);
+    }
+
+    if (destination.editorialReview?.trim()) {
+      parts.push("", "## Đánh giá biên tập (giọng văn tham khảo, không copy nguyên văn)");
+      parts.push(destination.editorialReview.trim());
     }
 
     if (destination.aiNotes?.trim()) {

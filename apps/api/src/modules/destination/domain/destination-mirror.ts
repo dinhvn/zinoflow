@@ -168,6 +168,22 @@ const KIND_RANK: Record<DestinationSortRow["kind"], number> = {
   cluster: 1,
   poi: 2,
 };
+
+/**
+ * Nhan tieng Viet cho AI biet dang viet cho TINH/CUM/POI de chon dung tam lich
+ * trinh + cach di chuyen (tinh: 2 chieu tu thanh pho lon; cum: tu trung tam toi
+ * cum + giua cac diem con) — dung CHUNG giua CreateDestinationJobUseCase (sinh
+ * ca bai) va GenerateDestinationBlockUseCase (sinh rieng 1 khoi). Truoc day dinh
+ * nghia rieng o create-destination-job.usecase.ts, roi them vao (commit f2bed13,
+ * 23/07/2026) nhung sibling generate-destination-block khong duoc cap nhat theo —
+ * chuyen ve domain layer dung chung de tranh drift lan nua.
+ */
+export const KIND_LABELS: Record<string, string> = {
+  province: "Tỉnh/thành phố — bài tổng quan cả tỉnh, gồm nhiều điểm tham quan con",
+  cluster:
+    "Cụm du lịch — khu vực gồm nhiều điểm tham quan con gần nhau trong cùng tỉnh/thành",
+  poi: "Điểm tham quan đơn lẻ",
+};
 const CONTENT_STATE_RANK: Record<DestinationContentState, number> = {
   "chua-co-bai": 0,
   "bai-tay": 1,
