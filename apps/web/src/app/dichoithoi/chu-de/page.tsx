@@ -17,10 +17,15 @@ import {
   type TagSuggestion,
 } from "@zinoflow/contracts";
 import { apiSend, apiGet, ApiError } from "@/shared/api-client";
-import { Badge, Button, Checkbox, ErrorBox, FeatureIntro, Input, Modal, Select, Textarea } from "@/shared/ui";
+import { Badge, Button, buttonClasses, Checkbox, ErrorBox, FeatureIntro, Input, Modal, Select, Textarea } from "@/shared/ui";
 import { AiInvocationBar } from "@/features/dichoithoi/ai-invocation-bar";
 
 const QUERY_KEY = ["destination-tag-assignments"];
+
+/** Cung constant voi apps/web/src/app/dichoithoi/[slug]/page.tsx — DiChoiThoi.Web
+ * chay local qua `dotnet run` (profile http, Properties/launchSettings.json). */
+const LOCAL_SITE_BASE_URL = "http://localhost:5176";
+const SITE_BASE_URL = "https://dichoithoi.com";
 
 /**
  * Man "Chủ đề" (destination-spec §2.4) — 3 buoc: (1) AI goi y gan tag hang loat
@@ -221,7 +226,25 @@ function TagDescriptionRow({
             </Button>
           )}
         </div>
-        <div className="text-xs text-zinc-500">/chu-de/{slug}</div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-xs text-zinc-500">/chu-de/{slug}</span>
+          <a
+            href={`${LOCAL_SITE_BASE_URL}/chu-de/${slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            Xem local ↗
+          </a>
+          <a
+            href={`${SITE_BASE_URL}/chu-de/${slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            Xem production ↗
+          </a>
+        </div>
         <button
           type="button"
           onClick={() => toggleStatus.mutate()}

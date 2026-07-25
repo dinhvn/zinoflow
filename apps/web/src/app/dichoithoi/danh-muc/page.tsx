@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { taxonomyContentSchema, type TaxonomyContent } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
-import { Button, ErrorBox, FeatureIntro, Input, Textarea } from "@/shared/ui";
+import { Button, buttonClasses, ErrorBox, FeatureIntro, Input, Textarea } from "@/shared/ui";
+
+/** Cung constant voi apps/web/src/app/dichoithoi/[slug]/page.tsx — DiChoiThoi.Web
+ * chay local qua `dotnet run` (profile http, Properties/launchSettings.json). */
+const LOCAL_SITE_BASE_URL = "http://localhost:5176";
+const SITE_BASE_URL = "https://dichoithoi.com";
 
 /**
  * Sua doan gioi thieu (Description) cho group/type/province — hien thi tren
@@ -174,7 +179,25 @@ function DescriptionRow({
     <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-[200px_1fr_auto] sm:items-start">
       <div>
         <div className="text-sm font-medium">{name}</div>
-        <div className="text-xs text-zinc-500">{path}</div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-xs text-zinc-500">{path}</span>
+          <a
+            href={`${LOCAL_SITE_BASE_URL}${path}`}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            Xem local ↗
+          </a>
+          <a
+            href={`${SITE_BASE_URL}${path}`}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            Xem production ↗
+          </a>
+        </div>
       </div>
       <div className="space-y-1.5">
         <Textarea

@@ -1336,6 +1336,11 @@ xong, không còn gì mở ở mức ưu tiên này.**
   `DescriptionHtml LIKE '%{slug}%'`: 0/0 → 1/1 sau khi sửa Name + lưu lại tag.
   Sửa `Name` gốc lan tự động ra mọi nơi hiển thị (H1 trang điểm đến,
   breadcrumb, JSON-LD), không cần sửa nơi khác.
+- ✅ **Soạn MetaDescription cho 17 Tag (25/07/2026)** → trước đó đều `NULL`
+  (trang lấy fallback tự động từ Description qua `SeoTextUtil`, không phải nội
+  dung biên tập riêng cho kết quả tìm kiếm). Soạn tay dựa trên nội dung
+  Description đã format, 129-159 ký tự (≤160 chuẩn Google), nêu 3-4 điểm tiêu
+  biểu + lý do bấm vào — không đụng `Description` gốc. Ghi qua API thật.
 
 ## Việc CŨ hơn — đã lỗi thời, cần rà lại khi đụng tới
 
