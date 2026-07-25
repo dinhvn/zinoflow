@@ -1408,16 +1408,55 @@ xong, không còn gì mở ở mức ưu tiên này.**
      Sửa `_Layout.cshtml`: trang noindex không tự đặt Canonical thì BỎ HẲN thẻ
      canonical thay vì tự fallback về URL hiện tại.
   7. `robots.txt` thiếu dòng `Sitemap:` (tiện thể bỏ luôn BOM đầu file).
-  Việc còn mở (chưa làm, mức độ thấp hơn): mật khẩu DB production bị commit
-  plaintext trong `appsettings.Release.json` (cần bạn tự đổi mật khẩu, không
-  phải việc code sửa được), thiếu sanitize-HTML cho `Html.Raw`, OutputCache
-  thiếu `VaryByQuery`, SEO nhỏ (Twitter Card, sitemap lastmod, /map/vung thiếu
-  JSON-LD, Article og:image thiếu host prefix — chưa verify sống).
   ⚠️ **Sự cố phụ khi sửa**: 2 lần vô tình làm gián đoạn `dotnet watch` của
   DiChoiThoi.Web (lần 1: kill nhầm process cũ không tự restart; lần 2: 2 lần
   sửa liên tiếp cùng `_Layout.cshtml` làm hot-reload corrupt state, phải
   restart cứng) — cả 2 lần đã tự phát hiện + khôi phục qua `run-watch.ps1`,
   không mất code, chỉ gián đoạn tạm thời quá trình verify.
+
+- ✅ **6 việc SEO/security nhỏ còn treo — ĐÃ BUILD + verify sống 25/07/2026**
+  (repo dichoithoi, tiếp nối đợt audit ở trên):
+  1. **Twitter Card** — `MetaTagUtil.ConvertOpenGraphToTwitterCardList` (tái
+     dùng data từ `OpenGraphMetaTag`) + render trong `_Layout.cshtml`.
+  2. **Article og:image thiếu host prefix** — thêm `CommonUtils.ToAbsoluteImageUrl`
+     (giữ nguyên nếu đã là URL tuyệt đối, tránh double-prefix — Thumbnail hiện
+     tại thực ra ĐÃ tuyệt đối qua `resolveImageUrl` bên zinoflow, fix này chỉ
+     là phòng hờ dữ liệu cũ/nguồn khác).
+  3. **Sitemap lastmod thật** — trước đây MỌI URL dùng `DateTime.Now` (sai lệch
+     hoàn toàn ý nghĩa lastmod). Article: đổi `PublishedAt` → `UpdatedAt`
+     (phản ánh đúng lần sửa gần nhất). Destination: thêm
+     `IDestinationTaxonomyService.GetUpdatedAtBySlugAsync()` (tra cứu
+     `v2.Destination.UpdatedAt`, KHÔNG đổi nguồn danh sách URL hiện tại để
+     tránh rủi ro thiếu/thừa URL) — verify sống: `lastmod` của
+     `dalat-fairytale-land` ra đúng `2026-07-22` (ngày sửa thật), không phải
+     ngày chạy sitemap. Hotel/Type/Group/Province: KHÔNG có cột `UpdatedAt`
+     trong schema — không sửa được nếu không thêm migration DB (ghi nhận,
+     chưa làm).
+  4. **`/vung/{slug}` thiếu JSON-LD** — thêm `BreadcrumbUtils.CreateRegionBreadcrumb`
+     + `SchemaUtil.CreateDestinationListJsonLD` (tái dùng đúng pattern
+     `ProvinceController`). Verify sống: có cả `BreadcrumbList` lẫn `ItemList`.
+  5. **Sanitize HTML cho `Html.Raw`** — thêm package `HtmlSanitizer` 9.0.967
+     (bản mới nhất, tránh bản 8.1.870 có CVE mức trung bình) + util
+     `HtmlContentSanitizer.Sanitize()` (cấu hình mặc định — chặn
+     script/event-handler/`javascript:`-url, giữ định dạng cơ bản). Áp dụng
+     tại 5 controller trước `return View(...)`: `ArticleController.ContentHtml`,
+     `DestinationController.Content/Food/Transport/Tip/Hotel`,
+     `DestinationTypeController.Type.DescriptionHtml`,
+     `TopicController.Tag.DescriptionHtml`, `SimController.TopContent/
+     TopGoiCuocContent/GoiCuocs[].Content/NhaMangs[].Content`. Tiện thể phát
+     hiện + sửa thêm: `_Layout.cshtml` dùng `Html.Raw` cho `<title>`/meta
+     description (field text thuần, không nên bypass encode) — đổi về Razor
+     encode bình thường. Verify sống: nội dung rich-content vẫn hiển thị
+     nguyên vẹn sau sanitize (không mất định dạng), title/description hiện
+     đúng tiếng Việt có dấu.
+  6. **OutputCache thiếu VaryByQuery** — `DestinationDetailCachePolicy` thêm
+     `CacheVaryByRules.QueryKeys = Array.Empty<string>()` tường minh (trang
+     chi tiết không đọc query param nào, tránh phân mảnh cache vì link có
+     UTM/tracking param).
+  Build sạch 0 lỗi (`dotnet build`), verify qua trang chạy `dotnet watch`
+  thật (không chỉ đọc code) cho cả 6 mục. Mật khẩu DB production bị commit
+  plaintext trong `appsettings.Release.json` VẪN CÒN MỞ — cần người dùng tự
+  đổi, không phải việc code sửa được.
 
 - ✅ **Trang `/content` — bỏ tạo bài trực tiếp, thêm filter — ĐÃ BUILD
   (25/07/2026)**:
