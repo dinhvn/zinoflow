@@ -117,6 +117,10 @@ export class GenerateContentUseCase {
         sourceContext: snapshot.sourceContext,
         contentTier: snapshot.contentTier,
         products,
+        // Chi bai diem den (dichoithoi) — KHONG dat 1 gia tri chung cho ca site
+        // laruki/dochoi3s (Muc B, dichoithoi-destination-ai-extraction-plan §6 D3).
+        // 0.5: cau tu mem mai/giau cam xuc hon nhung van bam sat sourceContext that.
+        temperature: snapshot.articleType === "guide-diem-den" ? 0.5 : undefined,
       };
 
       // Resume: doc checkpoint truoc — co outline da xong thi khong goi lai AI cho buoc do.

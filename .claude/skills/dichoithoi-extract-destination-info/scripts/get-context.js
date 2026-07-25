@@ -70,16 +70,25 @@ function printDetail(d) {
   );
   console.log(`editorialReview: ${d.editorialReview ?? "null"}`);
 
-  const staged = d._extraction;
+  // API tra ve MANG (toi da 2 dong: source="skill"/"gsg") tu 25/07/2026 —
+  // script nay chi quan tam dong "skill" (chinh no ghi vao).
+  const staged = d._extractions === undefined ? undefined : d._extractions.find((e) => e.source === "skill") ?? null;
+  const gsg = d._extractions?.find((e) => e.source === "gsg") ?? null;
   if (staged === undefined) return;
   if (staged === null) {
-    console.log(`\n-- Bảng staging trích xuất AI --\n(chưa từng chạy skill cho điểm này)`);
+    console.log(`\n-- Bảng staging trích xuất AI (nguồn Skill) --\n(chưa từng chạy skill cho điểm này)`);
   } else {
     console.log(
-      `\n-- Bảng staging trích xuất AI (lần trước: ${staged.extractedAt}) --\n` +
+      `\n-- Bảng staging trích xuất AI (nguồn Skill, lần trước: ${staged.extractedAt}) --\n` +
         staged.fields
           .map((f) => `  - ${f.key} [${f.status}${f.found ? "" : ", not found"}]`)
           .join("\n"),
+    );
+  }
+  if (gsg) {
+    console.log(
+      `\n-- Bảng staging trích xuất AI (nguồn Google Search Grounding, lần trước: ${gsg.extractedAt}) --\n` +
+        `(tham khảo — không phải nguồn của skill này, xem trong CMS nếu cần so sánh)`,
     );
   }
 }
@@ -126,7 +135,7 @@ async function main() {
   }
 
   const extraction = await fetchJson(`/destinations/${detail.data.slug}/ai-extraction`);
-  detail.data._extraction = extraction.ok ? extraction.data.extraction : undefined;
+  detail.data._extractions = extraction.ok ? extraction.data.extractions : undefined;
 
   printDetail(detail.data);
   process.exit(0); // undici/fetch tren Windows co the treo/assertion-fail khi thoat tu nhien

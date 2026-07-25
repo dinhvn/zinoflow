@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import type {
   DestinationAiExtraction,
   DestinationAiExtractionFieldItem,
+  DestinationAiExtractionSource,
   DestinationOpeningHours,
   ExternalReviewUrlItem,
   PriceBreakdownItem,
@@ -40,10 +41,14 @@ export class AcceptDestinationAiExtractionFieldsUseCase {
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
   ) {}
 
-  async execute(slug: string, acceptedIndexes: number[]): Promise<DestinationAiExtraction> {
-    const extraction = await this.extractionRepo.findBySlug(slug);
+  async execute(
+    slug: string,
+    source: DestinationAiExtractionSource,
+    acceptedIndexes: number[],
+  ): Promise<DestinationAiExtraction> {
+    const extraction = await this.extractionRepo.findBySlugAndSource(slug, source);
     if (!extraction) {
-      throw new DomainRuleError(`Chưa có dữ liệu trích xuất AI cho "${slug}"`);
+      throw new DomainRuleError(`Chưa có dữ liệu trích xuất AI (nguồn "${source}") cho "${slug}"`);
     }
     const destination = await this.mirrorRepo.findBySlug(slug);
     if (!destination) {
@@ -187,7 +192,12 @@ export class AcceptDestinationAiExtractionFieldsUseCase {
       await this.mirrorRepo.setOpeningHours(slug, openingHours);
     }
     if (aiReferenceSummaryChanged) {
-      await this.mirrorRepo.setAiReferenceSummary(slug, aiReferenceSummary);
+      // Ghi dung cot theo nguon — Skill va GSG TACH BIET, khong ghi de nhau (§6 A2).
+      if (source === "gsg") {
+        await this.mirrorRepo.setAiReferenceSummaryGsg(slug, aiReferenceSummary);
+      } else {
+        await this.mirrorRepo.setAiReferenceSummary(slug, aiReferenceSummary);
+      }
     }
     if (reviewUrlsChanged) {
       await this.mirrorRepo.setExternalReviewUrls(slug, reviewUrls);
@@ -211,13 +221,14 @@ export class AcceptDestinationAiExtractionFieldsUseCase {
     const updatedFields: DestinationAiExtractionFieldItem[] = fields.map((f, i) =>
       appliedIndexes.includes(i) ? { ...f, status: "accepted" } : f,
     );
-    await this.extractionRepo.updateFields(slug, updatedFields);
+    await this.extractionRepo.updateFields(slug, source, updatedFields);
 
     this.logger.log(
-      `Chấp nhận ${appliedIndexes.length} trường trích xuất AI cho ${slug}`,
+      `Chấp nhận ${appliedIndexes.length} trường trích xuất AI (nguồn "${source}") cho ${slug}`,
     );
     return {
       destinationSlug: extraction.destinationSlug,
+      source: extraction.source,
       sourceUrls: extraction.sourceUrls,
       extractedAt: extraction.extractedAt.toISOString(),
       fields: updatedFields,

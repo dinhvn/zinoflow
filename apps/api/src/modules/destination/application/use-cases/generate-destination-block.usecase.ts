@@ -30,7 +30,7 @@ const DEFAULT_PROVIDER = "anthropic";
 /** Cung tam voi job AI toan bai — sinh 1 block van can chat luong Opus, khong ha xuong Haiku. */
 const DEFAULT_MODELS: Record<string, string> = {
   anthropic: "claude-opus-4-8",
-  gemini: "gemini-2.5-pro",
+  gemini: "gemini-3.1-pro-preview",
   openai: "gpt-default",
 };
 const MAX_RELATED_IN_PROMPT = 15;

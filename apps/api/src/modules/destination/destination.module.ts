@@ -79,6 +79,7 @@ import { AddDestinationGalleryImageUseCase } from "./application/use-cases/add-d
 import { UpdateDestinationGalleryUseCase } from "./application/use-cases/update-destination-gallery.usecase";
 import { GetDestinationAiExtractionUseCase } from "./application/use-cases/get-destination-ai-extraction.usecase";
 import { AcceptDestinationAiExtractionFieldsUseCase } from "./application/use-cases/accept-destination-ai-extraction-fields.usecase";
+import { ExtractDestinationInfoGsgUseCase } from "./application/use-cases/extract-destination-info-gsg.usecase";
 import { DESTINATION_AI_EXTRACTION_REPOSITORY } from "./application/ports/destination-ai-extraction.repository";
 import { TypeOrmDestinationAiExtractionRepository } from "./infrastructure/repositories/typeorm-destination-ai-extraction.repository";
 import { DestinationAiExtractionEntity } from "./infrastructure/entities/destination-ai-extraction.entity";
@@ -202,6 +203,7 @@ import {
     UpdateDestinationGalleryUseCase,
     GetDestinationAiExtractionUseCase,
     AcceptDestinationAiExtractionFieldsUseCase,
+    ExtractDestinationInfoGsgUseCase,
     RecomputeClusterDistancesUseCase,
     RecomputeGroupDistancesUseCase,
     RecomputeNearbyDistancesUseCase,

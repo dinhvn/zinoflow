@@ -1088,6 +1088,10 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               )}
               🤖 AI đang xử lý bài cho điểm này — trạng thái:{" "}
               <span className="font-medium">{jobStatus ?? d.activeJobStatus ?? "..."}</span>
+              {" · "}
+              <a href={`/content/${d.activeContentJobId}`} className="text-violet-600 hover:underline dark:text-violet-400">
+                Xem chi tiết job →
+              </a>
             </p>
             {jobStatus && !["Created", "GeneratingOutline"].includes(jobStatus) && (
               <p className="mt-1 text-emerald-700 dark:text-emerald-400">
@@ -1110,10 +1114,12 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               dữ liệu bạn cung cấp.
             </p>
 
+            {/* 2 khoi TACH RIENG (Skill/GSG), khong gop — dung 3 nguon song song
+                dua vao prompt viet bai (dichoithoi-destination-ai-extraction-plan §6 D1/C4). */}
             {d.aiReferenceSummary && (
               <div className="rounded border border-violet-200 bg-violet-50 p-3 dark:border-violet-900 dark:bg-violet-950/40">
                 <p className="mb-1 text-sm font-medium text-violet-700 dark:text-violet-300">
-                  Tóm tắt nguồn tham khảo (từ khung &quot;Trích xuất AI&quot; phía trên)
+                  Tóm tắt nguồn tham khảo — Skill (từ khung &quot;Trích xuất AI&quot; phía trên)
                 </p>
                 <p className="mb-1 text-xs text-zinc-500">
                   Tự động đưa vào ngữ cảnh khi tạo bài, KHÔNG cần nhập lại ở ô bên dưới. Muốn sửa/làm
@@ -1123,6 +1129,22 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                 </p>
                 <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
                   {d.aiReferenceSummary}
+                </p>
+              </div>
+            )}
+            {d.aiReferenceSummaryGsg && (
+              <div className="rounded border border-sky-200 bg-sky-50 p-3 dark:border-sky-900 dark:bg-sky-950/40">
+                <p className="mb-1 text-sm font-medium text-sky-700 dark:text-sky-300">
+                  Tóm tắt nguồn tham khảo — Google Search (tự động, chưa xác minh theo từng URL cụ thể)
+                </p>
+                <p className="mb-1 text-xs text-zinc-500">
+                  Tự động đưa vào ngữ cảnh khi tạo bài, TÁCH BIỆT với tóm tắt Skill ở trên. Muốn làm mới,
+                  bấm &quot;Chạy trích xuất GSG&quot; rồi chấp nhận lại ở khung &quot;Trích xuất AI&quot; phía trên.
+                  {d.aiReferenceSummaryGsgUpdatedAt &&
+                    ` Cập nhật lúc ${new Date(d.aiReferenceSummaryGsgUpdatedAt).toLocaleString("vi-VN")}.`}
+                </p>
+                <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
+                  {d.aiReferenceSummaryGsg}
                 </p>
               </div>
             )}
@@ -1195,6 +1217,28 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
 
             <div>
               <label className="mb-1 block text-sm font-medium">AI Provider / Model</label>
+              <details className="mb-2 rounded border border-zinc-200 text-xs dark:border-zinc-800">
+                <summary className="cursor-pointer select-none bg-zinc-50 px-2 py-1 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+                  💡 Chọn model Gemini nào cho phù hợp?
+                </summary>
+                <div className="space-y-1 px-2 py-2 text-zinc-500 dark:text-zinc-400">
+                  <p>
+                    <strong>Gemini 3.6 Flash / 3.5 Flash</strong> — dùng làm mô hình chính khi tạo
+                    hàng loạt bài điểm đến: tốc độ nhanh, chi phí rẻ, xuất dữ liệu có cấu trúc
+                    (JSON/Markdown) chuẩn để đưa thẳng vào database.
+                  </p>
+                  <p>
+                    <strong>Gemini 3.1 Pro</strong> — chỉ dùng cho bài "Key/Featured" cần văn
+                    phong mượt, sâu (vd tổng quan Đà Lạt, TP.HCM, Hạ Long); chi phí cao hơn Flash.
+                  </p>
+                  <p>
+                    <strong>Nhiệt độ (temperature)</strong> khác nhau theo thao tác, không chỉnh
+                    tay được: <strong>trích xuất thông tin</strong> dùng 0.1 (ưu tiên chính xác/
+                    nhất quán, không "sáng tạo" số liệu) — <strong>viết bài</strong> dùng 0.5 (câu
+                    từ mềm mại, giàu cảm xúc hơn nhưng vẫn bám sát dữ liệu nguồn).
+                  </p>
+                </div>
+              </details>
               {usableProviders.length === 0 ? (
                 <p className="text-xs text-amber-600 dark:text-amber-400">
                   Chưa có AI provider khả dụng — kiểm tra API key và bật provider trong trang

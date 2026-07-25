@@ -84,6 +84,12 @@ export class GeminiContentAiProvider implements ContentAiProvider {
             responseMimeType: "application/json",
             // JSON Schema sinh tu chinh Zod schema trong contracts — 1 nguon su that
             responseJsonSchema: z.toJSONSchema(schema),
+            // Tuong minh theo tac vu (khong ngam dinh 1 gia tri chung) — vd 0.1 cho
+            // trich xuat GSG, 0.5-0.6 cho viet bai (§6 A5). Khong set -> SDK tu default.
+            ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
+            // Gemini 3.x cho ket hop duoc google_search + structured output cung luc
+            // (Gemini 2.x truoc day khong the) — dung cho nhanh trich xuat GSG (§6 B2).
+            ...(request.useGoogleSearch ? { tools: [{ googleSearch: {} }] } : {}),
             // KHONG set maxOutputTokens: Gemini 2.5 tinh ca thinking tokens vao limit
             // -> de SDK default, request.maxTokens chi ap dung cho Anthropic
           },

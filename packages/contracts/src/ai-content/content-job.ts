@@ -87,6 +87,18 @@ export const updateContentJobRequestSchema = z
   .partial();
 export type UpdateContentJobRequest = z.infer<typeof updateContentJobRequestSchema>;
 
+/**
+ * Filter cho GET /content/jobs (trang /content — quan ly, KHONG con tao job tai
+ * day nua, moi site da co trang rieng: /laruki/new, /dochoi3s/new,
+ * /dichoithoi/articles/new + [slug]?tab=ai-tools). Backlog 25/07/2026.
+ */
+export const listContentJobsQuerySchema = z.object({
+  siteCode: z.string().optional(),
+  articleType: z.string().optional(),
+  aiProvider: aiProviderKeySchema.optional(),
+});
+export type ListContentJobsQuery = z.infer<typeof listContentJobsQuerySchema>;
+
 export const contentJobSchema = z.object({
   id: z.string().uuid(),
   siteCode: z.string(),

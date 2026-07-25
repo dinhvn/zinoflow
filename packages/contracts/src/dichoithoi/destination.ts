@@ -573,9 +573,12 @@ export const destinationDetailSchema = destinationMirrorSchema.extend({
   aiReferenceUrls: z.array(referenceUrlSchema),
   /** Gio mo cua chuan hoa — chi ghi qua buoc "Chap nhan" trich xuat AI (§2.2) */
   openingHours: destinationOpeningHoursSchema.nullable(),
-  /** Tom tat nguon tham khao — dung thay fetch tung URL khi tao job (§2.2) */
+  /** Tom tat nguon tham khao — nguon Skill (Claude thu cong), dung thay fetch tung URL khi tao job (§2.2) */
   aiReferenceSummary: z.string().nullable(),
   aiReferenceSummaryUpdatedAt: z.string().nullable(),
+  /** Tom tat nguon tham khao — nguon GSG (Gemini + Google Search Grounding), TACH BIET voi ban Skill (§6 A2) */
+  aiReferenceSummaryGsg: z.string().nullable(),
+  aiReferenceSummaryGsgUpdatedAt: z.string().nullable(),
   /** Cay: cha truc tiep + con truc tiep */
   parent: relatedDestinationRefSchema.nullable(),
   children: z.array(relatedDestinationRefSchema),

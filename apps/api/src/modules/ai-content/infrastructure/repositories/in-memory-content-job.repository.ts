@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { ContentJobStatus } from "@zinoflow/contracts";
 import { ContentJob } from "../../domain/content-job";
-import type { ContentJobRepository } from "../../application/ports/content-job.repository";
+import type { ContentJobFilters, ContentJobRepository } from "../../application/ports/content-job.repository";
 
 /**
  * Repo tam cho Day 2 (mat data khi restart). Day 3 thay bang TypeORM repo —
@@ -19,8 +19,14 @@ export class InMemoryContentJobRepository implements ContentJobRepository {
     return this.jobs.get(id) ?? null;
   }
 
-  async findAll(): Promise<ContentJob[]> {
-    return [...this.jobs.values()];
+  async findAll(filters?: ContentJobFilters): Promise<ContentJob[]> {
+    return [...this.jobs.values()].filter((j) => {
+      const s = j.toSnapshot();
+      if (filters?.siteCode && s.siteCode !== filters.siteCode) return false;
+      if (filters?.articleType && s.articleType !== filters.articleType) return false;
+      if (filters?.aiProvider && s.aiProvider !== filters.aiProvider) return false;
+      return true;
+    });
   }
 
   async findStatusesByIds(ids: string[]): Promise<Map<string, ContentJobStatus>> {

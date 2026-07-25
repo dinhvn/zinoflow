@@ -150,6 +150,7 @@ import { AddDestinationGalleryImageUseCase } from "../application/use-cases/add-
 import { UpdateDestinationGalleryUseCase } from "../application/use-cases/update-destination-gallery.usecase";
 import { GetDestinationAiExtractionUseCase } from "../application/use-cases/get-destination-ai-extraction.usecase";
 import { AcceptDestinationAiExtractionFieldsUseCase } from "../application/use-cases/accept-destination-ai-extraction-fields.usecase";
+import { ExtractDestinationInfoGsgUseCase } from "../application/use-cases/extract-destination-info-gsg.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { RecomputeClusterDistancesUseCase } from "../application/use-cases/recompute-cluster-distances.usecase";
@@ -223,6 +224,7 @@ export class DestinationsController {
     private readonly updateGalleryUseCase: UpdateDestinationGalleryUseCase,
     private readonly getAiExtraction: GetDestinationAiExtractionUseCase,
     private readonly acceptAiExtractionFields: AcceptDestinationAiExtractionFieldsUseCase,
+    private readonly extractDestinationInfoGsg: ExtractDestinationInfoGsgUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     private readonly recomputeClusterDistancesUseCase: RecomputeClusterDistancesUseCase,
     private readonly recomputeGroupDistances: RecomputeGroupDistancesUseCase,
@@ -481,22 +483,33 @@ export class DestinationsController {
   }
 
   /**
-   * Doc dong staging trich xuat AI (skill dichoithoi-extract-destination-info ghi vao) —
-   * null khi chua tung chay skill cho diem nay (dichoithoi-destination-ai-extraction-plan §2.1).
+   * Doc TOAN BO dong staging trich xuat AI (toi da 2: source="skill" tu VS Code,
+   * source="gsg" tu Gemini+Google Search Grounding tu dong) — mang rong khi chua
+   * tung trich xuat nguon nao cho diem nay (dichoithoi-destination-ai-extraction-plan §6 A3/C1).
    */
   @Get(":slug/ai-extraction")
   getAiExtractionForSlug(@Param("slug") slug: string): Promise<GetDestinationAiExtractionResponse> {
     return this.getAiExtraction.execute(slug);
   }
 
-  /** Chap nhan cac truong da tick trong bang so sanh trich xuat AI (§2.3) */
+  /** Chap nhan cac truong da tick trong bang so sanh trich xuat AI cua 1 nguon cu the (§2.3, §6 C2) */
   @Post(":slug/ai-extraction/accept")
   acceptAiExtraction(
     @Param("slug") slug: string,
     @Body(new ZodValidationPipe(acceptDestinationAiExtractionFieldsRequestSchema))
     request: AcceptDestinationAiExtractionFieldsRequest,
   ): Promise<DestinationAiExtraction> {
-    return this.acceptAiExtractionFields.execute(slug, request.acceptedIndexes);
+    return this.acceptAiExtractionFields.execute(slug, request.source, request.acceptedIndexes);
+  }
+
+  /**
+   * Chay trich xuat GSG (Gemini + Google Search Grounding) ngay trong app —
+   * KHONG can Claude Code nhu skill thu cong, day la ly do chinh lam nhanh nay
+   * (dichoithoi-destination-ai-extraction-plan §6 B3).
+   */
+  @Post(":slug/ai-extraction/gsg")
+  runGsgExtraction(@Param("slug") slug: string): Promise<DestinationAiExtraction> {
+    return this.extractDestinationInfoGsg.execute(slug);
   }
 
   /**

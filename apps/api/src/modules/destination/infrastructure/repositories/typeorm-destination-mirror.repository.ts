@@ -376,6 +376,16 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     );
   }
 
+  async setAiReferenceSummaryGsg(slug: string, summary: string | null): Promise<void> {
+    await this.repo.update(
+      { slug },
+      {
+        aiReferenceSummaryGsg: summary,
+        aiReferenceSummaryGsgUpdatedAt: summary ? new Date() : null,
+      },
+    );
+  }
+
   async listProvinces(): Promise<ProvinceOption[]> {
     const provinces = await this.provinceRepo.find({ order: { name: "ASC" } });
     return provinces.map((p) => ({

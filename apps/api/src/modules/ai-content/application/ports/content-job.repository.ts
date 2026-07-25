@@ -1,4 +1,4 @@
-import type { ContentJobStatus } from "@zinoflow/contracts";
+import type { AiProviderKey, ArticleType, ContentJobStatus } from "@zinoflow/contracts";
 import type { ContentJob } from "../../domain/content-job";
 
 /**
@@ -7,10 +7,17 @@ import type { ContentJob } from "../../domain/content-job";
  */
 export const CONTENT_JOB_REPOSITORY = Symbol("CONTENT_JOB_REPOSITORY");
 
+/** Filter cho man /content quan ly — trang nay khong con tao job (§ backlog 25/07/2026). */
+export interface ContentJobFilters {
+  siteCode?: string;
+  articleType?: ArticleType;
+  aiProvider?: AiProviderKey;
+}
+
 export interface ContentJobRepository {
   save(job: ContentJob): Promise<void>;
   findById(id: string): Promise<ContentJob | null>;
-  findAll(): Promise<ContentJob[]>;
+  findAll(filters?: ContentJobFilters): Promise<ContentJob[]>;
   /**
    * Lay status cua nhieu job trong 1 query (tranh N+1 khi list diem den can suy
    * trang thai bai). Chi tra status — khong nan ca domain object cho nhe.

@@ -116,8 +116,10 @@ export interface DestinationMirrorRepository {
   setDraftArticle(slug: string, draftArticle: Record<string, unknown>): Promise<void>;
   /** Ghi de gio mo cua chuan hoa (dichoithoi-destination-ai-extraction-plan §2.2) */
   setOpeningHours(slug: string, openingHours: DestinationOpeningHours | null): Promise<void>;
-  /** Ghi de tom tat nguon tham khao + cap nhat thoi diem (dichoithoi-destination-ai-extraction-plan §2.2) */
+  /** Ghi de tom tat nguon tham khao (nguon Skill) + cap nhat thoi diem (dichoithoi-destination-ai-extraction-plan §2.2) */
   setAiReferenceSummary(slug: string, summary: string | null): Promise<void>;
+  /** Ban GSG cua tom tat — TACH BIET voi ban Skill, khong ghi de nhau (§6 A2) */
+  setAiReferenceSummaryGsg(slug: string, summary: string | null): Promise<void>;
   /** 34 tinh tu admin_provinces (seed dvhcvn) cho form/filter */
   listProvinces(): Promise<ProvinceOption[]>;
   /** Tra cuu dia chi cu->moi (admin_ward_mappings) — phan trang + loc */

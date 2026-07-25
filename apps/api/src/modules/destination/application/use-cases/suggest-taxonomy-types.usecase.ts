@@ -23,7 +23,7 @@ import {
 const DEFAULT_PROVIDER = "anthropic";
 const DEFAULT_MODELS: Record<string, string> = {
   anthropic: "claude-haiku-4-5", // tac vu phan loai hang loat -> Haiku
-  gemini: "gemini-2.5-flash-lite",
+  gemini: "gemini-3.1-flash-lite",
   openai: "gpt-4o-mini",
 };
 

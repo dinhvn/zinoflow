@@ -64,14 +64,18 @@ lại tracking trạng thái.
     tự động tìm/tải ảnh minh hoạ qua API có giấy phép (Pexels), luôn ở
     trạng thái chờ duyệt — phụ thuộc 12d Mức A xong trước. Có kèm Claude
     Code skill `dichoithoi-find-content-images`.
-12f. `dichoithoi-destination-ai-extraction-plan.md` — plan CHƯA build
-    (16/07/2026, đã GỘP + thay thế `dichoithoi-reference-summary-plan.md`):
-    Claude đọc Google Maps + website tham khảo, trích xuất tên/địa chỉ/SĐT/
-    website/giờ mở cửa/mô tả ngắn/link đánh giá ngoài/tóm tắt cho AI viết
-    bài, lưu vào bảng staging riêng; CMS hiện bảng so sánh cũ/mới để duyệt
-    theo field (tick chọn + Chấp nhận). Nguyên tắc: không dùng kiến thức
-    nền cho dữ liệu cứng, nguồn mâu thuẫn ghi rõ cả 2. Có kèm Claude Code
-    skill `dichoithoi-extract-destination-info`.
+12f. `dichoithoi-destination-ai-extraction-plan.md` — Giai đoạn 1-3 ĐÃ BUILD
+    (16/07/2026): Claude đọc Google Maps + website tham khảo, trích xuất
+    11 field (tên/địa chỉ/SĐT/website/giờ mở cửa/mô tả ngắn/meta title/link
+    đánh giá ngoài/tóm tắt cho AI viết bài/giá vé/đánh giá biên tập), lưu
+    vào bảng staging riêng; CMS hiện bảng so sánh cũ/mới để duyệt theo field
+    (tick chọn + Chấp nhận). Nguyên tắc: không dùng kiến thức nền cho dữ
+    liệu cứng; nguồn mâu thuẫn — Claude TỰ CHỌN 1 giá trị hợp lý nhất (đổi
+    16/07, không còn ghi cả 2). Có kèm Claude Code skill
+    `dichoithoi-extract-destination-info`. **§5-6 (25/07/2026, CHƯA build)**:
+    mở rộng thêm nhánh trích xuất TỰ ĐỘNG qua Gemini 3.x + Google Search
+    Grounding chạy trong app (không cần Claude Code), song song với skill
+    thủ công — đã lên plan triển khai theo giai đoạn A-E ở §6.
 12g. `dichoithoi-poi-distance-plan.md` — Giai đoạn 1-3 ĐÃ XONG (21/07/2026):
     thay/bổ sung Haversine bằng khoảng cách đường bộ thật (OpenRouteService)
     cho `DistanceFromCenter` + bảng `poi_distances` (con↔con cùng cụm), nút

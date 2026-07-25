@@ -15,7 +15,7 @@ import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../ports/ai-usage-recor
 const DEFAULT_PROVIDER = "anthropic";
 const DEFAULT_MODELS: Record<string, string> = {
   anthropic: "claude-haiku-4-5", // tac vu nhe -> Haiku (spec §5)
-  gemini: "gemini-2.5-flash-lite",
+  gemini: "gemini-3.1-flash-lite",
   openai: "gpt-4o-mini",
 };
 

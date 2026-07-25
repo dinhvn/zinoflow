@@ -229,6 +229,27 @@ việc đã bị bác lại tưởng còn phải làm).
   Giờ mở cửa lưu dạng JSON có cấu trúc (không phải HTML) để sau này build
   được JSON-LD `openingHoursSpecification` chuẩn SEO — **Giai đoạn 4, cross-
   repo, CHƯA làm, không phải ưu tiên hiện tại**.
+- ✅ **MỞ RỘNG — trích xuất tự động qua Gemini 3.x + Google Search Grounding
+  — Giai đoạn A-D ĐÃ BUILD + test thật 25/07/2026** (Giai đoạn E rollout
+  hàng loạt còn mở, không phải ưu tiên) — cùng file
+  `dichoithoi-destination-ai-extraction-plan.md` §5-6. Bối cảnh: chỉ
+  87/275 POI có sẵn `google_maps_url` và 1/275 có `ai_reference_urls` —
+  phần lớn điểm đến không đủ input để chạy skill thủ công; GSG tự tìm
+  nguồn chỉ cần tên điểm đến. Chạy SONG SONG skill thủ công (không thay
+  thế) — mỗi điểm đến sẽ có 2 dòng staging phân biệt theo cột `source`
+  ("skill"/"gsg"), CMS có 3 nút (Xem Skill/Xem GSG/So sánh 4 cột — chọn
+  nguồn để ghi), `aiReferenceSummary` tách 2 cột riêng (Skill/GSG) cùng
+  đưa vào prompt viết bài (khác `userNotes` — 3 nguồn song song, không
+  gộp). Temperature khác nhau theo tác vụ: trích xuất GSG `0.1`, viết bài
+  nâng từ `0.3` lên `0.5-0.6` (cần quyết định áp dụng toàn site hay chỉ
+  dichoithoi — xem §6 Giai đoạn D3). Rủi ro đã xác định: grounding +
+  structured output làm rỗng `grounding_chunks` nên nhánh GSG không xác
+  minh được nguồn cụ thể như Skill — gắn nhãn độ tin cậy thấp hơn trong
+  UI/prompt. Kế hoạch triển khai theo giai đoạn A (schema+hạ tầng dùng
+  chung) → B (use case Gemini+GSG) song song D (sửa prompt viết bài) → C
+  (UI 3 nút) → E (rollout hàng loạt, sau) — đọc §6 trước khi bắt đầu code,
+  có 2 quyết định cần người dùng chốt trước (model Flash vs Pro cho B —
+  đã có cơ sở chọn Flash; scope temperature D3 — còn mở).
 - ✅ **DDL lệch — ĐÃ SỬA (07/2026, Phase 21.5)**: xoá cột chết `BookingUrl`
   khỏi `v2.Destination` (SQL Server + entity `V2Destination.cs` — đã xác nhận
   0 nơi đọc/ghi trước khi xoá) + thêm cột `ContactFacebook varchar(256)` còn
@@ -1397,6 +1418,25 @@ xong, không còn gì mở ở mức ưu tiên này.**
   sửa liên tiếp cùng `_Layout.cshtml` làm hot-reload corrupt state, phải
   restart cứng) — cả 2 lần đã tự phát hiện + khôi phục qua `run-watch.ps1`,
   không mất code, chỉ gián đoạn tạm thời quá trình verify.
+
+- ✅ **Trang `/content` — bỏ tạo bài trực tiếp, thêm filter — ĐÃ BUILD
+  (25/07/2026)**:
+  1. Bỏ form tạo job AI ở `/content` (laruki/dochoi3s đã có trang riêng
+     `/laruki/new`, `/dochoi3s/new` tạo cùng loại `ContentJob` qua
+     `CreateCmsContentJobUseCase` → `CreateContentJobUseCase`).
+  2. Form "Tạo draft VIẾT TAY" **GIỮ LẠI** (thu gọn trong `<details>`) — chưa
+     có nơi khác thay thế cho laruki/dochoi3s, tự quyết theo hướng an toàn
+     (không xoá tính năng chưa có thay thế).
+  3. Filter thật (Website/Loại bài viết/AI Provider) — thêm
+     `listContentJobsQuerySchema` (contracts), `ContentJobFilters` (port),
+     sửa `findAll()` cả TypeORM lẫn in-memory repo, `GET /content/jobs` nhận
+     query param thật. Verify trên data thật: 39 job → lọc `siteCode=dichoithoi`
+     còn 28 (100% đúng site), lọc `aiProvider=gemini` còn 19 (100% đúng
+     provider).
+- ✅ **Link nhanh tab "AI hỗ trợ" (dichoithoi) → trang Content job — ĐÃ BUILD
+  (25/07/2026)**: thêm link `/content/{activeContentJobId}` cạnh dòng trạng
+  thái (`[slug]/page.tsx`). Verify: trang `/content/[id]` load 200 cho job
+  thật của `dalat-fairytale-land`.
 
 ## Việc CŨ hơn — đã lỗi thời, cần rà lại khi đụng tới
 

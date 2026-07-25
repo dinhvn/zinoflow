@@ -53,9 +53,19 @@ export type DestinationAiExtractionFieldItem = z.infer<
   typeof destinationAiExtractionFieldItemSchema
 >;
 
+/**
+ * Nguon tao ra 1 dong trich xuat — "skill" (Claude doc thu cong qua VS Code)
+ * hoac "gsg" (Gemini + Google Search Grounding, tu dong trong app). 2 nguon
+ * ton tai SONG SONG cho cung 1 diem den, khong ghi de nhau (PK composite
+ * destination_slug+source). dichoithoi-destination-ai-extraction-plan.md §6 A1.
+ */
+export const destinationAiExtractionSourceSchema = z.enum(["skill", "gsg"]);
+export type DestinationAiExtractionSource = z.infer<typeof destinationAiExtractionSourceSchema>;
+
 /** 1 dong staging */
 export const destinationAiExtractionSchema = z.object({
   destinationSlug: z.string().min(1).max(64),
+  source: destinationAiExtractionSourceSchema,
   sourceUrls: z.array(z.string()),
   extractedAt: z.string(),
   fields: z.array(destinationAiExtractionFieldItemSchema),
@@ -63,23 +73,27 @@ export const destinationAiExtractionSchema = z.object({
 export type DestinationAiExtraction = z.infer<typeof destinationAiExtractionSchema>;
 
 /**
- * GET /destinations/:slug/ai-extraction — boc trong object (khong tra ve `null` o
- * top-level) vi NestJS/Express gui BODY RONG (khong phai literal "null") khi handler
- * tra ve null truc tiep, lam client .json() nem SyntaxError. extraction=null = chua
- * tung chay skill trich xuat cho diem nay.
+ * GET /destinations/:slug/ai-extraction — tra ve MANG 0-2 phan tu (toi da 1 dong
+ * "skill" + 1 dong "gsg" cho cung diem den, §6 A3/C1). Rong = chua tung trich
+ * xuat nguon nao. Boc trong object (khong tra mang tran o top-level) — quy uoc
+ * chung cua API nay de FE luon parse duoc ket qua nhu nhau.
  */
 export const getDestinationAiExtractionResponseSchema = z.object({
-  extraction: destinationAiExtractionSchema.nullable(),
+  extractions: z.array(destinationAiExtractionSchema),
 });
 export type GetDestinationAiExtractionResponse = z.infer<
   typeof getDestinationAiExtractionResponseSchema
 >;
 
 /**
- * Chap nhan cac truong da tick (§2.3) — chi index trong mang `fields` (vi
- * externalReviewUrl co the lap key nhieu lan, khong the khop theo key don thuan).
+ * Chap nhan cac truong da tick (§2.3) — chi index trong mang `fields` CUA DUNG 1
+ * NGUON (`source`, vi externalReviewUrl co the lap key nhieu lan trong 1 nguon,
+ * khong the khop theo key don thuan). §6 C2: bang so sanh 4 cot cho phep chon
+ * nguon nao (skill/gsg) de ghi cho tung field — request phai noi ro dang chap
+ * nhan tu nguon nao.
  */
 export const acceptDestinationAiExtractionFieldsRequestSchema = z.object({
+  source: destinationAiExtractionSourceSchema,
   acceptedIndexes: z.array(z.number().int().min(0)).min(1),
 });
 export type AcceptDestinationAiExtractionFieldsRequest = z.infer<

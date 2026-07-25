@@ -54,7 +54,7 @@ pnpm --filter @zinoflow/api test          # unit tests
 pnpm migration:run        # chay migrations moi
 pnpm migration:generate src/migrations/TenMigration   # sinh migration tu entity diff (review SQL truoc khi chay!)
 node scripts/smoke.mjs                    # smoke flow (stub - mien phi)
-node scripts/smoke.mjs gemini gemini-2.5-flash-lite   # smoke voi AI that (~$0.003)
+node scripts/smoke.mjs gemini gemini-3.1-flash-lite   # smoke voi AI that (~$0.003)
 ```
 
 ## 5) Loi thuong gap
@@ -121,4 +121,4 @@ chi bai AI that moi du dieu kien duyet.
 4. Click vao bai -> draft markdown tieng Viet co dau, du cac block
 5. Kiem tra cost: bang `ai_usage_logs` co 2 record (outline + article)
 
-Hoac chay tu dong: `node scripts/smoke.mjs gemini gemini-2.5-flash-lite`
+Hoac chay tu dong: `node scripts/smoke.mjs gemini gemini-3.1-flash-lite`

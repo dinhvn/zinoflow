@@ -23,9 +23,11 @@ import {
   type CreateContentJobRequest,
   type CreateContentJobResponse,
   type CreateManualDraftRequest,
+  listContentJobsQuerySchema,
   type ListAiProvidersResponse,
   type ListAiUsageLogsQuery,
   type ListAiUsageLogsResponse,
+  type ListContentJobsQuery,
   type PromptTemplateDetail,
   type PromptTemplateListResponse,
   type ReviewDraftRequest,
@@ -100,9 +102,9 @@ const PROVIDER_CATALOG: Array<Omit<AiProviderInfo, "isConfigured" | "isEnabled">
     displayName: "Google (Gemini)",
     envKey: "GEMINI_API_KEY",
     models: [
-      { id: "gemini-2.5-pro", displayName: "Gemini 2.5 Pro", tier: "quality", costNote: "$1.25/$10 per 1M tokens" },
-      { id: "gemini-2.5-flash", displayName: "Gemini 2.5 Flash", tier: "balanced", costNote: "$0.30/$2.50 per 1M tokens" },
-      { id: "gemini-2.5-flash-lite", displayName: "Gemini 2.5 Flash Lite", tier: "light", costNote: "$0.10/$0.40 per 1M tokens" },
+      { id: "gemini-3.1-pro-preview", displayName: "Gemini 3.1 Pro", tier: "quality", costNote: "$2/$12 per 1M tokens" },
+      { id: "gemini-3.6-flash", displayName: "Gemini 3.6 Flash", tier: "balanced", costNote: "$1.50/$7.50 per 1M tokens" },
+      { id: "gemini-3.1-flash-lite", displayName: "Gemini 3.1 Flash Lite", tier: "light", costNote: "$0.25/$1.50 per 1M tokens" },
     ],
   },
 ];
@@ -180,9 +182,12 @@ export class ContentController {
     return this.toDto(job);
   }
 
+  /** Filter that o backend (khong loc phia client) — dung cho man /content quan ly (backlog 25/07/2026). */
   @Get("jobs")
-  async list(): Promise<ContentJobDto[]> {
-    const jobs = await this.repository.findAll();
+  async list(
+    @Query(new ZodValidationPipe(listContentJobsQuerySchema)) query: ListContentJobsQuery,
+  ): Promise<ContentJobDto[]> {
+    const jobs = await this.repository.findAll(query);
     return jobs.map((job) => this.toDto(job));
   }
 

@@ -3,7 +3,7 @@
  *
  * Cach chay (tu root repo, API phai dang chay):
  *   node scripts/smoke.mjs                          # provider mac dinh: anthropic
- *   node scripts/smoke.mjs gemini gemini-2.5-flash-lite   # chi dinh provider/model
+ *   node scripts/smoke.mjs gemini gemini-3.1-flash-lite   # chi dinh provider/model
  *
  * Luu y chi phi: provider chua co API key se fallback ve stub (mien phi).
  * Voi provider that, dung model "lite/haiku" de smoke cho re.

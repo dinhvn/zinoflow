@@ -300,6 +300,14 @@ export class CreateDestinationJobUseCase {
       parts.push(nearbyLines.join("\n"));
     }
 
+    // Da co it nhat 1 tom tat trich xuat (Skill hoac GSG, da qua duyet tay) —
+    // dang tin cay hon than bai cu tren site (co the loi thoi, chinh la ly do
+    // pipeline trich xuat ra doi). §6 D2: bo han khoi than bai dai khi da co,
+    // chi giu 4 dong quick-fact (re, luon huu ich de doi chieu).
+    const hasExtractedSummary = Boolean(
+      destination.aiReferenceSummary || destination.aiReferenceSummaryGsg,
+    );
+
     if (request.mode === "update" && destination.siteId !== null) {
       const current = await this.siteDb.fetchDestinationContent(destination.siteId);
       if (current) {
@@ -308,8 +316,10 @@ export class CreateDestinationJobUseCase {
         if (current.ticketPrice) parts.push(`- Giá vé hiện ghi: ${current.ticketPrice}`);
         if (current.transport) parts.push(`- Di chuyển hiện ghi: ${stripHtml(current.transport)}`);
         if (current.tip) parts.push(`- Mẹo hiện ghi: ${stripHtml(current.tip)}`);
-        parts.push("", "### Thân bài hiện tại (đã bỏ HTML):");
-        parts.push(stripHtml(current.contentHtml).slice(0, MAX_OLD_CONTENT_CHARS));
+        if (!hasExtractedSummary) {
+          parts.push("", "### Thân bài hiện tại (đã bỏ HTML):");
+          parts.push(stripHtml(current.contentHtml).slice(0, MAX_OLD_CONTENT_CHARS));
+        }
       }
     }
 
@@ -318,14 +328,23 @@ export class CreateDestinationJobUseCase {
       parts.push(request.userNotes.trim());
     }
 
+    // 3 nguon TACH RIENG, khong gop — AI can biet do tin cay khac nhau giua cac
+    // nguon de tu can nhac (dichoithoi-destination-ai-extraction-plan §6 D1).
     if (destination.aiReferenceSummary) {
-      // Da co tom tat tu skill trich xuat AI (dichoithoi-destination-ai-extraction-plan
-      // §2.2) — dung truc tiep, KHONG fetch lai tung URL (tiet kiem, tranh trung lap).
-      parts.push("", "## Tóm tắt nguồn tham khảo (đã trích xuất, đã duyệt)");
+      parts.push("", "## Tóm tắt nguồn tham khảo — Skill đọc kỹ (đã duyệt)");
       parts.push(destination.aiReferenceSummary);
-    } else {
-      // Chua co tom tat san: fetch text tung URL + ghi ro nguon de AI chu thich (spec
-      // §3.6). 1 nguon loi khong lam chet job — ghi chu de nguoi duyet biet.
+    }
+    if (destination.aiReferenceSummaryGsg) {
+      parts.push(
+        "",
+        "## Tóm tắt nguồn tham khảo — Google Search tự động (đã duyệt, CHƯA xác minh theo từng URL cụ thể)",
+      );
+      parts.push(destination.aiReferenceSummaryGsg);
+    }
+    if (!hasExtractedSummary) {
+      // Chua co tom tat san tu bat ky nguon nao: fetch text tung URL + ghi ro
+      // nguon de AI chu thich (spec §3.6). 1 nguon loi khong lam chet job — ghi
+      // chu de nguoi duyet biet.
       for (const ref of request.referenceUrls ?? []) {
         try {
           const text = await this.referenceFetcher.fetchText(ref.url);

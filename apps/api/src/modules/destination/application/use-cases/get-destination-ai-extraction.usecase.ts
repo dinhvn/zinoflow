@@ -6,8 +6,9 @@ import {
 } from "../ports/destination-ai-extraction.repository";
 
 /**
- * Doc dong staging trich xuat AI cho 1 diem den (dichoithoi-destination-ai-
- * extraction-plan §2.1) — extraction=null khi chua tung chay skill cho diem nay.
+ * Doc TOAN BO dong staging trich xuat AI cho 1 diem den (dichoithoi-destination-ai-
+ * extraction-plan §2.1, §6 A3/C1) — toi da 2 dong (source="skill"/"gsg"). Mang rong
+ * = chua tung trich xuat nguon nao cho diem nay.
  */
 @Injectable()
 export class GetDestinationAiExtractionUseCase {
@@ -17,15 +18,15 @@ export class GetDestinationAiExtractionUseCase {
   ) {}
 
   async execute(slug: string): Promise<GetDestinationAiExtractionResponse> {
-    const record = await this.extractionRepo.findBySlug(slug);
-    if (!record) return { extraction: null };
+    const records = await this.extractionRepo.findAllBySlug(slug);
     return {
-      extraction: {
+      extractions: records.map((record) => ({
         destinationSlug: record.destinationSlug,
+        source: record.source,
         sourceUrls: record.sourceUrls,
         extractedAt: record.extractedAt.toISOString(),
         fields: record.fields,
-      },
+      })),
     };
   }
 }

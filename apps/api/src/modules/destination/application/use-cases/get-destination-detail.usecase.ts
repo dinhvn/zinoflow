@@ -182,6 +182,8 @@ export class GetDestinationDetailUseCase {
       openingHours: entity.openingHours,
       aiReferenceSummary: entity.aiReferenceSummary,
       aiReferenceSummaryUpdatedAt: entity.aiReferenceSummaryUpdatedAt?.toISOString() ?? null,
+      aiReferenceSummaryGsg: entity.aiReferenceSummaryGsg,
+      aiReferenceSummaryGsgUpdatedAt: entity.aiReferenceSummaryGsgUpdatedAt?.toISOString() ?? null,
       parent,
       children,
       nearby,

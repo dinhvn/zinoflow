@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  destinationAiExtractionSchema,
   getDestinationAiExtractionResponseSchema,
+  destinationAiExtractionSchema,
+  type DestinationAiExtraction,
   type DestinationAiExtractionFieldItem,
   type DestinationAiExtractionFieldKey,
+  type DestinationAiExtractionSource,
   type DestinationOpeningHours,
   type PriceBreakdownItem,
 } from "@zinoflow/contracts";
@@ -31,6 +33,11 @@ const FIELD_LABELS: Record<DestinationAiExtractionFieldKey, string> = {
   editorialReview: "Đánh giá biên tập",
 };
 
+const SOURCE_LABELS: Record<DestinationAiExtractionSource, string> = {
+  skill: "Skill (Claude đọc thủ công)",
+  gsg: "Google Search Grounding (tự động)",
+};
+
 function isOpeningHours(v: unknown): v is DestinationOpeningHours {
   return Boolean(v) && typeof v === "object" && "note" in (v as object);
 }
@@ -40,13 +47,14 @@ function isReviewUrl(v: unknown): v is { label: string; url: string } {
 function isPriceBreakdown(v: unknown): v is PriceBreakdownItem[] {
   return Array.isArray(v) && v.every((i) => i && typeof i === "object" && "audience" in i);
 }
+function labelOf(v: unknown): string | null {
+  return isReviewUrl(v) ? v.label.trim().toLowerCase() : null;
+}
 
 /** Hien thi 1 gia tri field (string/openingHours/externalReviewUrl/priceBreakdown) — "—" khi rong. */
 function formatFieldValue(v: unknown): string {
   if (v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0)) return "—";
   if (isOpeningHours(v)) {
-    // Chi hien chi tiet periods khi co gio KHAC NHAU theo ngay (>1 period) — lich
-    // deu deu hang ngay thi note da du, khong lap lai thong tin.
     if (v.periods.length <= 1) return v.note;
     const periods = v.periods.map((p) => `${p.days.join(",")} ${p.opens}-${p.closes}`).join("; ");
     return `${v.note} (${periods})`;
@@ -61,11 +69,110 @@ function formatFieldValue(v: unknown): string {
   return JSON.stringify(v);
 }
 
+const ORDERED_SINGLE_KEYS: DestinationAiExtractionFieldKey[] = [
+  "name",
+  "addressNew",
+  "contactPhone",
+  "contactWebsite",
+  "shortDescription",
+  "metaTitle",
+  "openingHours",
+  "aiReferenceSummary",
+  "priceBreakdown",
+  "editorialReview",
+];
+
+interface CompareRow {
+  rowId: string;
+  key: DestinationAiExtractionFieldKey;
+  label: string;
+  currentValue: unknown;
+  isMultiInstance: boolean;
+  skillIndex: number | null;
+  skillValue: unknown;
+  skillFound: boolean;
+  gsgIndex: number | null;
+  gsgValue: unknown;
+  gsgFound: boolean;
+}
+
+/** Ghep field cua 2 nguon theo key (rieng externalReviewUrl ghep theo label vi co the lap nhieu lan). */
+function buildCompareRows(
+  skillFields: DestinationAiExtractionFieldItem[],
+  gsgFields: DestinationAiExtractionFieldItem[],
+): CompareRow[] {
+  const rows: CompareRow[] = [];
+
+  for (const key of ORDERED_SINGLE_KEYS) {
+    const si = skillFields.findIndex((f) => f.key === key);
+    const gi = gsgFields.findIndex((f) => f.key === key);
+    if (si === -1 && gi === -1) continue;
+    rows.push({
+      rowId: key,
+      key,
+      label: FIELD_LABELS[key],
+      currentValue: si >= 0 ? skillFields[si]!.currentValue : gi >= 0 ? gsgFields[gi]!.currentValue : null,
+      isMultiInstance: false,
+      skillIndex: si >= 0 ? si : null,
+      skillValue: si >= 0 ? skillFields[si]!.newValue : null,
+      skillFound: si >= 0 ? skillFields[si]!.found : false,
+      gsgIndex: gi >= 0 ? gi : null,
+      gsgValue: gi >= 0 ? gsgFields[gi]!.newValue : null,
+      gsgFound: gi >= 0 ? gsgFields[gi]!.found : false,
+    });
+  }
+
+  const skillReviews = skillFields.map((f, i) => ({ f, i })).filter((x) => x.f.key === "externalReviewUrl");
+  const gsgReviews = gsgFields.map((f, i) => ({ f, i })).filter((x) => x.f.key === "externalReviewUrl");
+  const usedGsg = new Set<number>();
+
+  for (const { f: sf, i: si } of skillReviews) {
+    const label = labelOf(sf.newValue);
+    const match = gsgReviews.find((x) => !usedGsg.has(x.i) && labelOf(x.f.newValue) === label);
+    if (match) usedGsg.add(match.i);
+    rows.push({
+      rowId: `externalReviewUrl-${si}`,
+      key: "externalReviewUrl",
+      label: `${FIELD_LABELS.externalReviewUrl} (${label ?? "?"})`,
+      currentValue: null,
+      isMultiInstance: true,
+      skillIndex: si,
+      skillValue: sf.newValue,
+      skillFound: sf.found,
+      gsgIndex: match ? match.i : null,
+      gsgValue: match ? match.f.newValue : null,
+      gsgFound: match ? match.f.found : false,
+    });
+  }
+  for (const { f: gf, i: gi } of gsgReviews) {
+    if (usedGsg.has(gi)) continue;
+    rows.push({
+      rowId: `externalReviewUrl-gsg-${gi}`,
+      key: "externalReviewUrl",
+      label: `${FIELD_LABELS.externalReviewUrl} (${labelOf(gf.newValue) ?? "?"})`,
+      currentValue: null,
+      isMultiInstance: true,
+      skillIndex: null,
+      skillValue: null,
+      skillFound: false,
+      gsgIndex: gi,
+      gsgValue: gf.newValue,
+      gsgFound: gf.found,
+    });
+  }
+
+  return rows;
+}
+
 /**
- * Bang so sanh du lieu cu/moi tu skill "dichoithoi-extract-destination-info" (Claude
- * doc Google Maps + web tham khao, luu vao bang staging). Nguoi dung tick truong dung
- * roi bam "Chap nhan" de ghi de vao du lieu that — truong bo tick khong bi dong.
- * dichoithoi-destination-ai-extraction-plan.md §2.3.
+ * Trich xuat AI cho diem den — 2 nguon SONG SONG: Skill (Claude doc thu cong qua
+ * VS Code) va GSG (Gemini + Google Search Grounding, chay tu dong ngay trong app).
+ * 3 nut: xem rieng tung nguon, hoac so sanh ca 2 trong 1 bang 4 cot de chon nguon
+ * nao ghi cho tung truong (dichoithoi-destination-ai-extraction-plan.md §6 C2).
+ *
+ * Nguon GSG CHUA xac minh duoc theo tung URL cu the (gioi han ky thuat cua Google
+ * Search Grounding ket hop structured output) — do tin cay THAP HON Skill, luon
+ * hien canh bao rieng, KHONG doi xu ngang hang.
  */
 export function DestinationAiExtractionPanel({
   slug,
@@ -75,8 +182,9 @@ export function DestinationAiExtractionPanel({
   onAccepted: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"skill" | "gsg" | "compare" | null>(null);
   const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [compareSelection, setCompareSelection] = useState<Map<string, "current" | "skill" | "gsg">>(new Map());
   const [error, setError] = useState<unknown>(null);
 
   const queryKey = ["destination-ai-extraction", slug];
@@ -87,22 +195,44 @@ export function DestinationAiExtractionPanel({
         `/destinations/${slug}/ai-extraction`,
         getDestinationAiExtractionResponseSchema,
       );
-      return res.extraction;
+      return res.extractions;
     },
   });
-  const extraction = extractionQuery.data;
+  const extractions = extractionQuery.data ?? [];
+  const skillExtraction = extractions.find((e) => e.source === "skill") ?? null;
+  const gsgExtraction = extractions.find((e) => e.source === "gsg") ?? null;
 
-  const pendingCheckableIndexes = useMemo(() => {
-    if (!extraction) return [];
-    return extraction.fields
-      .map((f, i) => ({ f, i }))
-      .filter(({ f }) => f.found && f.status === "pending")
-      .map(({ i }) => i);
-  }, [extraction]);
+  const runGsg = useMutation({
+    mutationFn: () => apiSend("POST", `/destinations/${slug}/ai-extraction/gsg`, {}),
+    onSuccess: () => {
+      setError(null);
+      void queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (e) => setError(e),
+  });
 
-  function openTable() {
-    setChecked(new Set(pendingCheckableIndexes));
-    setOpen(true);
+  const accept = useMutation({
+    mutationFn: ({ source, acceptedIndexes }: { source: DestinationAiExtractionSource; acceptedIndexes: number[] }) =>
+      apiSend("POST", `/destinations/${slug}/ai-extraction/accept`, { source, acceptedIndexes }),
+  });
+
+  function openSingle(mode: "skill" | "gsg") {
+    const extraction = mode === "skill" ? skillExtraction : gsgExtraction;
+    if (!extraction) return;
+    setChecked(
+      new Set(
+        extraction.fields
+          .map((f, i) => ({ f, i }))
+          .filter(({ f }) => f.found && f.status === "pending")
+          .map(({ i }) => i),
+      ),
+    );
+    setViewMode(mode);
+  }
+
+  function openCompare() {
+    setCompareSelection(new Map());
+    setViewMode("compare");
   }
 
   function toggle(i: number) {
@@ -114,139 +244,298 @@ export function DestinationAiExtractionPanel({
     });
   }
 
-  const accept = useMutation({
-    mutationFn: () =>
-      apiSend("POST", `/destinations/${slug}/ai-extraction/accept`, {
-        acceptedIndexes: [...checked],
-      }),
-    onSuccess: (data) => {
+  async function submitSingle(source: "skill" | "gsg") {
+    try {
+      const data = await accept.mutateAsync({ source, acceptedIndexes: [...checked] });
       setError(null);
       const parsed = destinationAiExtractionSchema.parse(data);
-      queryClient.setQueryData(queryKey, parsed);
+      queryClient.setQueryData<DestinationAiExtraction[]>(queryKey, (prev) => {
+        const others = (prev ?? []).filter((e) => e.source !== source);
+        return [...others, parsed];
+      });
       setChecked(new Set());
       onAccepted();
-    },
-    onError: (e) => setError(e),
-  });
+    } catch (e) {
+      setError(e);
+    }
+  }
+
+  async function submitCompare(rows: CompareRow[]) {
+    const skillIndexes: number[] = [];
+    const gsgIndexes: number[] = [];
+    for (const row of rows) {
+      const pick = compareSelection.get(row.rowId);
+      if (pick === "skill" && row.skillIndex !== null) skillIndexes.push(row.skillIndex);
+      if (pick === "gsg" && row.gsgIndex !== null) gsgIndexes.push(row.gsgIndex);
+    }
+    try {
+      if (skillIndexes.length > 0) await accept.mutateAsync({ source: "skill", acceptedIndexes: skillIndexes });
+      if (gsgIndexes.length > 0) await accept.mutateAsync({ source: "gsg", acceptedIndexes: gsgIndexes });
+      setError(null);
+      void queryClient.invalidateQueries({ queryKey });
+      setViewMode(null);
+      onAccepted();
+    } catch (e) {
+      setError(e);
+    }
+  }
+
+  if (extractionQuery.isLoading) {
+    return <p className="text-sm text-zinc-500">Đang tải...</p>;
+  }
 
   return (
     <div className="space-y-3">
       <div className="rounded bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-900">
-        <p>
-          Trang này <strong>chỉ xem và duyệt</strong> kết quả — KHÔNG có nút chạy trích xuất trong
-          web CMS. Muốn trích xuất mới/lại, phải mở{" "}
-          <strong>Claude Code (VS Code)</strong> ở thư mục dự án <code>zinoflow</code>
-          (API zinoflow phải đang chạy local), rồi yêu cầu Claude — vd:
-        </p>
-        <p className="my-1 rounded bg-zinc-100 px-2 py-1 font-mono dark:bg-zinc-800">
-          Trích xuất thông tin cho điểm đến {"<tên điểm đến>"}, Google Maps: {"<link>"}, web tham
-          khảo: {"<link 1>"}, {"<link 2>"}...
-        </p>
-        <p>
-          Claude sẽ tự nhận skill{" "}
-          <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
-            dichoithoi-extract-destination-info
-          </code>{" "}
-          và đọc từng nguồn rồi lưu kết quả vào đây — dữ liệu CỨNG (SĐT/giờ mở cửa/địa chỉ) chỉ điền
-          khi tìm thấy trong nguồn, không đoán. Chạy xong quay lại trang này, bấm &quot;Xem thông tin
-          AI trích xuất&quot;, tick trường đúng rồi bấm &quot;Chấp nhận&quot; để ghi đè; trường bỏ
-          tick giữ nguyên dữ liệu hiện tại. Trường đã chấp nhận trước đó vẫn tick lại được bình
-          thường (vd nếu dữ liệu thật bị mất/sửa nhầm sau này) — nhãn &quot;Đã chấp nhận/Đã bỏ
-          qua&quot; chỉ là gợi ý lần trước, không khoá.
+        <p className="mb-1">
+          2 nguồn trích xuất SONG SONG, không thay thế nhau: <strong>Skill</strong> — Claude đọc kỹ Google
+          Maps/web tham khảo qua VS Code (chính xác hơn, cần chạy tay); <strong>Google Search Grounding</strong> —
+          Gemini tự tìm nguồn ngay trong app (nhanh, không cần link có sẵn, nhưng CHƯA xác minh theo từng URL
+          cụ thể). Chạy Skill: mở Claude Code, yêu cầu "Trích xuất thông tin cho điểm đến {"<tên>"}".
         </p>
       </div>
 
       {error !== null && <ErrorBox error={error} />}
       {extractionQuery.isError && <ErrorBox error={extractionQuery.error} />}
 
-      {extractionQuery.isLoading && <p className="text-sm text-zinc-500">Đang tải...</p>}
-
-      {!extractionQuery.isLoading && !extractionQuery.isError && !extraction && (
-        <p className="text-sm text-zinc-500">
-          Chưa có dữ liệu trích xuất AI cho điểm đến này — chạy skill trích xuất trước.
-        </p>
-      )}
-
-      {extraction && (
-        <div className="flex items-center gap-3">
-          <Button size="sm" onClick={openTable}>
-            Xem thông tin AI trích xuất
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="secondary" disabled={!skillExtraction} onClick={() => openSingle("skill")}>
+          Xem trích xuất Skill{skillExtraction ? "" : " (chưa có)"}
+        </Button>
+        <Button size="sm" variant="secondary" disabled={!gsgExtraction} onClick={() => openSingle("gsg")}>
+          Xem trích xuất Google Search{gsgExtraction ? "" : " (chưa có)"}
+        </Button>
+        <Button size="sm" loading={runGsg.isPending} onClick={() => runGsg.mutate()}>
+          {runGsg.isPending ? "Đang chạy trích xuất GSG..." : "🔎 Chạy trích xuất GSG"}
+        </Button>
+        {skillExtraction && gsgExtraction && (
+          <Button size="sm" variant="secondary" onClick={openCompare}>
+            So sánh 2 nguồn
           </Button>
-          <span className="text-xs text-zinc-500">
-            Trích xuất lúc {new Date(extraction.extractedAt).toLocaleString("vi-VN")} — nguồn:{" "}
-            {extraction.sourceUrls.length}
-          </span>
-        </div>
+        )}
+      </div>
+
+      {(viewMode === "skill" || viewMode === "gsg") && (
+        <SingleSourceModal
+          extraction={viewMode === "skill" ? skillExtraction! : gsgExtraction!}
+          checked={checked}
+          onToggle={toggle}
+          onClose={() => setViewMode(null)}
+          onSubmit={() => submitSingle(viewMode)}
+          submitting={accept.isPending}
+        />
       )}
 
-      {extraction && (
-        <Modal
-          open={open}
-          onClose={() => setOpen(false)}
-          title="So sánh dữ liệu AI trích xuất"
-          width="max-w-5xl"
-        >
-          <div className="space-y-3">
-            <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
-                  <tr>
-                    <th className="p-2">Trường</th>
-                    <th className="p-2">Hiện tại</th>
-                    <th className="p-2">AI trích xuất</th>
-                    <th className="p-2 text-center">Áp dụng</th>
-                    <th className="p-2">Ghi chú</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {extraction.fields.map((field: DestinationAiExtractionFieldItem, i) => (
-                    <tr key={i} className="border-t border-zinc-200 align-top dark:border-zinc-800">
-                      <td className="p-2 font-medium">{FIELD_LABELS[field.key]}</td>
-                      <td className="whitespace-pre-line p-2 text-zinc-500">
-                        {formatFieldValue(field.currentValue)}
-                      </td>
-                      <td className="whitespace-pre-line p-2">{formatFieldValue(field.newValue)}</td>
-                      <td className="p-2 text-center">
-                        {field.found ? (
-                          <div className="flex flex-col items-center gap-1">
-                            <Checkbox label="" checked={checked.has(i)} onChange={() => toggle(i)} />
-                            {/* Chi la GOI Y trang thai lan truoc — KHONG khoa tick lai, cho phep
-                                ap dung lai neu du lieu that bi mat/sua nham sau do (yeu cau nguoi
-                                dung 07/2026). */}
-                            {field.status !== "pending" && (
-                              <Badge tone={field.status === "accepted" ? "emerald" : "gray"}>
-                                {field.status === "accepted" ? "Đã chấp nhận" : "Đã bỏ qua"}
-                              </Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <Badge tone="gray">Không tìm thấy</Badge>
-                        )}
-                      </td>
-                      <td className="p-2 text-xs text-zinc-500">{field.note ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant="primary"
-                size="sm"
-                loading={accept.isPending}
-                disabled={checked.size === 0}
-                onClick={() => accept.mutate()}
-              >
-                {accept.isPending ? "Đang chấp nhận..." : `Chấp nhận / áp dụng lại ${checked.size} mục đã tick`}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-                Đóng
-              </Button>
-            </div>
-          </div>
-        </Modal>
+      {viewMode === "compare" && skillExtraction && gsgExtraction && (
+        <CompareModal
+          skill={skillExtraction}
+          gsg={gsgExtraction}
+          selection={compareSelection}
+          onSelect={(rowId, pick) =>
+            setCompareSelection((prev) => {
+              const next = new Map(prev);
+              next.set(rowId, pick);
+              return next;
+            })
+          }
+          onClose={() => setViewMode(null)}
+          onSubmit={submitCompare}
+          submitting={accept.isPending}
+        />
       )}
     </div>
+  );
+}
+
+function SingleSourceModal({
+  extraction,
+  checked,
+  onToggle,
+  onClose,
+  onSubmit,
+  submitting,
+}: {
+  extraction: DestinationAiExtraction;
+  checked: Set<number>;
+  onToggle: (i: number) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+  submitting: boolean;
+}) {
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`So sánh dữ liệu AI trích xuất — ${SOURCE_LABELS[extraction.source]}`}
+      width="max-w-5xl"
+    >
+      <div className="space-y-3">
+        {extraction.source === "gsg" && (
+          <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+            ⚠️ Nguồn tự động (Google Search Grounding) — CHƯA xác minh được theo từng URL cụ thể (giới hạn kỹ
+            thuật). Kiểm tra kỹ hơn bình thường trước khi Chấp nhận, đặc biệt SĐT/giờ mở cửa/giá vé.
+          </p>
+        )}
+        <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
+              <tr>
+                <th className="p-2">Trường</th>
+                <th className="p-2">Hiện tại</th>
+                <th className="p-2">AI trích xuất</th>
+                <th className="p-2 text-center">Áp dụng</th>
+                <th className="p-2">Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody>
+              {extraction.fields.map((field: DestinationAiExtractionFieldItem, i) => (
+                <tr key={i} className="border-t border-zinc-200 align-top dark:border-zinc-800">
+                  <td className="p-2 font-medium">{FIELD_LABELS[field.key]}</td>
+                  <td className="whitespace-pre-line p-2 text-zinc-500">{formatFieldValue(field.currentValue)}</td>
+                  <td className="whitespace-pre-line p-2">{formatFieldValue(field.newValue)}</td>
+                  <td className="p-2 text-center">
+                    {field.found ? (
+                      <div className="flex flex-col items-center gap-1">
+                        <Checkbox label="" checked={checked.has(i)} onChange={() => onToggle(i)} />
+                        {field.status !== "pending" && (
+                          <Badge tone={field.status === "accepted" ? "emerald" : "gray"}>
+                            {field.status === "accepted" ? "Đã chấp nhận" : "Đã bỏ qua"}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <Badge tone="gray">Không tìm thấy</Badge>
+                    )}
+                  </td>
+                  <td className="p-2 text-xs text-zinc-500">{field.note ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            loading={submitting}
+            disabled={checked.size === 0}
+            onClick={onSubmit}
+          >
+            {submitting ? "Đang chấp nhận..." : `Chấp nhận / áp dụng lại ${checked.size} mục đã tick`}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Đóng
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function CompareModal({
+  skill,
+  gsg,
+  selection,
+  onSelect,
+  onClose,
+  onSubmit,
+  submitting,
+}: {
+  skill: DestinationAiExtraction;
+  gsg: DestinationAiExtraction;
+  selection: Map<string, "current" | "skill" | "gsg">;
+  onSelect: (rowId: string, pick: "current" | "skill" | "gsg") => void;
+  onClose: () => void;
+  onSubmit: (rows: CompareRow[]) => void;
+  submitting: boolean;
+}) {
+  const rows = useMemo(() => buildCompareRows(skill.fields, gsg.fields), [skill, gsg]);
+  const pickedCount = [...selection.values()].filter((v) => v !== "current").length;
+
+  return (
+    <Modal open onClose={onClose} title="So sánh 2 nguồn trích xuất" width="max-w-6xl">
+      <div className="space-y-3">
+        <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+          ⚠️ Cột "Google Search" CHƯA xác minh theo từng URL cụ thể — nếu 2 nguồn lệch nhau, ưu tiên Skill
+          trừ khi bạn tự kiểm tra lại thấy Google Search đúng hơn.
+        </p>
+        <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
+          <table className="w-full min-w-[900px] text-sm">
+            <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
+              <tr>
+                <th className="p-2">Trường</th>
+                <th className="p-2">Hiện tại</th>
+                <th className="p-2">Skill</th>
+                <th className="p-2">Google Search</th>
+                <th className="p-2 text-center">Chọn nguồn để ghi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.rowId} className="border-t border-zinc-200 align-top dark:border-zinc-800">
+                  <td className="p-2 font-medium">{row.label}</td>
+                  <td className="whitespace-pre-line p-2 text-zinc-500">{formatFieldValue(row.currentValue)}</td>
+                  <td className="whitespace-pre-line p-2">
+                    {row.skillIndex === null ? "—" : row.skillFound ? formatFieldValue(row.skillValue) : "(không tìm thấy)"}
+                  </td>
+                  <td className="whitespace-pre-line p-2">
+                    {row.gsgIndex === null ? "—" : row.gsgFound ? formatFieldValue(row.gsgValue) : "(không tìm thấy)"}
+                  </td>
+                  <td className="p-2">
+                    <div className="flex flex-col items-start gap-1 text-xs">
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name={`pick-${row.rowId}`}
+                          checked={(selection.get(row.rowId) ?? "current") === "current"}
+                          onChange={() => onSelect(row.rowId, "current")}
+                        />
+                        Giữ hiện tại
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name={`pick-${row.rowId}`}
+                          disabled={row.skillIndex === null || !row.skillFound}
+                          checked={selection.get(row.rowId) === "skill"}
+                          onChange={() => onSelect(row.rowId, "skill")}
+                        />
+                        Dùng Skill
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name={`pick-${row.rowId}`}
+                          disabled={row.gsgIndex === null || !row.gsgFound}
+                          checked={selection.get(row.rowId) === "gsg"}
+                          onChange={() => onSelect(row.rowId, "gsg")}
+                        />
+                        Dùng Google Search
+                      </label>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            loading={submitting}
+            disabled={pickedCount === 0}
+            onClick={() => onSubmit(rows)}
+          >
+            {submitting ? "Đang ghi..." : `Ghi ${pickedCount} trường đã chọn`}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Đóng
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

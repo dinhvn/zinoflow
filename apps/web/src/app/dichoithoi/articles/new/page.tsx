@@ -131,6 +131,29 @@ export default function NewArticlePage() {
         />
       </label>
 
+      <details className="mb-2 rounded border border-zinc-200 text-xs dark:border-zinc-800">
+        <summary className="cursor-pointer select-none bg-zinc-50 px-2 py-1 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+          💡 Chọn model Gemini nào cho phù hợp?
+        </summary>
+        <div className="space-y-1 px-2 py-2 text-zinc-500 dark:text-zinc-400">
+          <p>
+            <strong>Gemini 3.6 Flash / 3.5 Flash</strong> — mô hình chính khi tạo hàng loạt bài
+            điểm đến: nhanh, rẻ, xuất dữ liệu có cấu trúc (JSON/Markdown) chuẩn để đưa thẳng vào
+            database.
+          </p>
+          <p>
+            <strong>Gemini 3.1 Pro</strong> — chỉ dùng cho bài "Key/Featured" cần văn phong mượt,
+            sâu (vd tổng quan Đà Lạt, TP.HCM, Hạ Long); chi phí cao hơn Flash.
+          </p>
+          <p>
+            <strong>Nhiệt độ (temperature)</strong> khác nhau theo thao tác, không chỉnh tay được:
+            <strong> trích xuất thông tin</strong> dùng 0.1 (ưu tiên chính xác/nhất quán) —
+            <strong> viết bài</strong> dùng 0.5 (câu từ mềm mại, giàu cảm xúc hơn nhưng vẫn bám sát
+            dữ liệu nguồn).
+          </p>
+        </div>
+      </details>
+
       <div className="grid grid-cols-2 gap-4">
         <label className="block text-sm">
           <span className="mb-1 block text-zinc-500">AI Provider</span>

@@ -27,7 +27,7 @@ export class CreateContentJobUseCase {
   private static readonly DEFAULT_PROVIDER = "anthropic" as const;
   private static readonly DEFAULT_MODELS: Record<string, string> = {
     anthropic: "claude-opus-4-8",
-    gemini: "gemini-2.5-pro",
+    gemini: "gemini-3.1-pro-preview",
     openai: "gpt-default", // thay khi implement OpenAI adapter
   };
 

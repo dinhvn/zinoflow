@@ -35,6 +35,13 @@ export interface PromptJobContext {
    * prompt guide-diem-den binh thuong voi moi gia tri khac.
    */
   contentTier?: "flagship" | "standard" | null;
+  /**
+   * CHI Gemini doc (Anthropic bo qua — spec §5). Khong set = provider tu default.
+   * Scope RIENG theo caller — KHONG set 1 gia tri chung cho ca pipeline, de
+   * pipeline chung (laruki/dochoi3s) khong bi anh huong boi quyet dinh cua
+   * dichoithoi (dichoithoi-destination-ai-extraction-plan §6 D3 Muc B).
+   */
+  temperature?: number;
 }
 
 // max_tokens theo do dai du kien cua tung buoc (output JSON). "content" (Option 3,
@@ -60,6 +67,7 @@ export class PromptBuilder {
       prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("outline", ctx)), vars),
       maxTokens: MAX_TOKENS.outline,
       vars,
+      temperature: ctx.temperature,
     };
   }
 
@@ -81,6 +89,7 @@ export class PromptBuilder {
       prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("section", ctx)), vars),
       maxTokens: MAX_TOKENS.section,
       vars,
+      temperature: ctx.temperature,
     };
   }
 
@@ -108,6 +117,7 @@ export class PromptBuilder {
       prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("content", ctx)), vars),
       maxTokens: MAX_TOKENS.content,
       vars,
+      temperature: ctx.temperature,
     };
   }
 

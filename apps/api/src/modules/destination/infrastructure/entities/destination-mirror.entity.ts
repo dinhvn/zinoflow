@@ -215,4 +215,15 @@ export class DestinationMirrorEntity {
 
   @Column({ name: "ai_reference_summary_updated_at", type: "timestamptz", nullable: true })
   aiReferenceSummaryUpdatedAt!: Date | null;
+
+  /**
+   * Ban GSG (Gemini + Google Search Grounding, tu dong trong app) cua tom tat
+   * tham khao — TACH BIET voi `aiReferenceSummary` (nguon Skill thu cong), ca 2
+   * cung dua vao prompt viet bai (§6 A2), khong gop/chon-1 nhu cac field cung khac.
+   */
+  @Column({ name: "ai_reference_summary_gsg", type: "text", nullable: true })
+  aiReferenceSummaryGsg!: string | null;
+
+  @Column({ name: "ai_reference_summary_gsg_updated_at", type: "timestamptz", nullable: true })
+  aiReferenceSummaryGsgUpdatedAt!: Date | null;
 }

@@ -32,6 +32,20 @@ export interface StructuredGenerationRequest {
   prompt: string;
   maxTokens: number;
   vars: Readonly<Record<string, unknown>>;
+  /**
+   * CHI Gemini doc field nay — Anthropic (Opus 4.8) cam truyen temperature/top_p/
+   * top_k (spec §5), provider Anthropic bo qua hoan toan. Khong set = de SDK Gemini
+   * tu default, KHONG ngam dinh 1 gia tri co dinh trong provider (moi use case phai
+   * tu chon tuong minh theo tac vu — vd 0.1 cho trich xuat GSG, 0.5-0.6 cho viet bai).
+   */
+  temperature?: number;
+  /**
+   * CHI Gemini doc field nay — bat Google Search Grounding (`tools:[{google_search:{}}]`).
+   * Dung cho nhanh trich xuat GSG (dichoithoi-destination-ai-extraction-plan §6 B2);
+   * KHONG dung cho pipeline viet bai (sourceContext da co du du lieu that, khong can
+   * search them). Anthropic/OpenAI bo qua field nay.
+   */
+  useGoogleSearch?: boolean;
 }
 
 export interface ContentAiProvider {
