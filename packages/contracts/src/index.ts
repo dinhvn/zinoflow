@@ -7,6 +7,7 @@ export * from "./dichoithoi/destination";
 export * from "./dichoithoi/destination-article";
 export * from "./dichoithoi/destination-tag";
 export * from "./dichoithoi/destination-type-assignment";
+export * from "./dichoithoi/ai-prompt-preview";
 export * from "./dichoithoi/destination-relations-map";
 export * from "./dichoithoi/destination-ai-extraction";
 export * from "./dichoithoi/coverage-score";

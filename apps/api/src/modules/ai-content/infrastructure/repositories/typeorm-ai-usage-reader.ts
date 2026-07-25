@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import type { AiUsageLogEntry } from "@zinoflow/contracts";
+import type { AiUsageLogEntry, AiUsageLogRow } from "@zinoflow/contracts";
 import type {
   AiUsageReader,
   AiUsageSummaryData,
+  ListAiUsageLogsFilter,
 } from "../../application/ports/ai-usage-reader.port";
 import { AiUsageLogEntity } from "../entities/ai-usage-log.entity";
 
@@ -109,5 +110,45 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
       responseText: r.responseText,
       createdAt: r.createdAt.toISOString(),
     }));
+  }
+
+  async listRecent(
+    filter: ListAiUsageLogsFilter,
+  ): Promise<{ rows: AiUsageLogRow[]; total: number; operations: string[] }> {
+    let qb = this.repo.createQueryBuilder("u").orderBy("u.created_at", "DESC");
+    if (filter.provider) qb = qb.andWhere("u.provider = :provider", { provider: filter.provider });
+    if (filter.operation) qb = qb.andWhere("u.operation = :operation", { operation: filter.operation });
+    if (filter.from) qb = qb.andWhere("u.created_at >= :from", { from: filter.from });
+    if (filter.to) qb = qb.andWhere("u.created_at < :to", { to: filter.to });
+
+    const [entities, total] = await qb
+      .skip((filter.page - 1) * filter.limit)
+      .take(filter.limit)
+      .getManyAndCount();
+
+    const operationRows = await this.repo
+      .createQueryBuilder("u")
+      .select("DISTINCT u.operation", "operation")
+      .orderBy("u.operation", "ASC")
+      .getRawMany<{ operation: string }>();
+
+    return {
+      rows: entities.map((r) => ({
+        id: r.id,
+        jobId: r.jobId,
+        operation: r.operation,
+        provider: r.provider,
+        model: r.model,
+        inputTokens: r.inputTokens,
+        outputTokens: r.outputTokens,
+        costUsd: Number(r.costUsd),
+        latencyMs: r.latencyMs,
+        promptText: r.promptText,
+        responseText: r.responseText,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      total,
+      operations: operationRows.map((r) => r.operation),
+    };
   }
 }

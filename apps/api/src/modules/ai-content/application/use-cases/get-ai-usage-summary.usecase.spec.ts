@@ -17,6 +17,7 @@ describe("GetAiUsageSummaryUseCase", () => {
         return EMPTY;
       },
       listByJobId: async () => [],
+      listRecent: async () => ({ rows: [], total: 0, operations: [] }),
     };
     return { usecase: new GetAiUsageSummaryUseCase(reader), calls };
   }

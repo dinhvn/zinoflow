@@ -76,3 +76,34 @@ export const aiUsageLogEntrySchema = z.object({
   createdAt: z.string(),
 });
 export type AiUsageLogEntry = z.infer<typeof aiUsageLogEntrySchema>;
+
+/**
+ * Man "Lịch sử gọi AI" (/usage, tab Lịch sử) — liệt kê TỪNG lượt gọi AI toàn hệ
+ * thống (không chỉ theo 1 content job như `listByJobId`/aiUsageLogEntrySchema),
+ * kem jobId de biet lan nao thuoc job viet bai nao (null = khong gan job, vd
+ * goi y Type/Tag taxonomy). Yeu cau nguoi dung 24/07/2026.
+ */
+export const aiUsageLogRowSchema = aiUsageLogEntrySchema.extend({
+  jobId: z.string().nullable(),
+});
+export type AiUsageLogRow = z.infer<typeof aiUsageLogRowSchema>;
+
+export const listAiUsageLogsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  provider: z.string().optional(),
+  operation: z.string().optional(),
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
+export type ListAiUsageLogsQuery = z.infer<typeof listAiUsageLogsQuerySchema>;
+
+export const listAiUsageLogsResponseSchema = z.object({
+  rows: z.array(aiUsageLogRowSchema),
+  total: z.number().int(),
+  page: z.number().int(),
+  limit: z.number().int(),
+  /** Danh sach operation duy nhat tung xuat hien — dung cho dropdown loc, khong can query rieng */
+  operations: z.array(z.string()),
+});
+export type ListAiUsageLogsResponse = z.infer<typeof listAiUsageLogsResponseSchema>;

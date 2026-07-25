@@ -3,6 +3,7 @@ import {
   activatePromptVersionRequestSchema,
   aiProviderKeySchema,
   aiUsageSummaryQuerySchema,
+  listAiUsageLogsQuerySchema,
   createContentJobRequestSchema,
   createManualDraftRequestSchema,
   createPromptVersionRequestSchema,
@@ -23,6 +24,8 @@ import {
   type CreateContentJobResponse,
   type CreateManualDraftRequest,
   type ListAiProvidersResponse,
+  type ListAiUsageLogsQuery,
+  type ListAiUsageLogsResponse,
   type PromptTemplateDetail,
   type PromptTemplateListResponse,
   type ReviewDraftRequest,
@@ -291,6 +294,21 @@ export class ContentController {
     @Query(new ZodValidationPipe(aiUsageSummaryQuerySchema)) query: AiUsageSummaryQuery,
   ): Promise<AiUsageSummaryResponse> {
     return this.getAiUsageSummary.execute(query);
+  }
+
+  /**
+   * Lich su TUNG luot goi AI toan he thong (khong chi theo 1 content job) — man
+   * "Lich su goi AI" (/usage, tab Lich su), yeu cau nguoi dung 24/07/2026: xem lai
+   * prompt/response da gui cho ca cac tac vu khong co job (vd goi y Type/Tag
+   * taxonomy dichoithoi). Doc thang tu AI_USAGE_READER, khong qua use-case rieng
+   * (cung pattern don gian nhu listUsageLogs theo jobId o tren).
+   */
+  @Get("ai-usage/logs")
+  async listAiUsageLogs(
+    @Query(new ZodValidationPipe(listAiUsageLogsQuerySchema)) query: ListAiUsageLogsQuery,
+  ): Promise<ListAiUsageLogsResponse> {
+    const { rows, total, operations } = await this.usageReader.listRecent(query);
+    return { rows, total, page: query.page, limit: query.limit, operations };
   }
 
   /** Bat/tat provider tu Settings page. */

@@ -75,14 +75,7 @@ export function AiUsageDashboard() {
   const maxDailyCost = Math.max(1e-9, ...(d?.daily ?? []).map((x) => x.costUsd));
 
   return (
-    <div className="max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Chi phí AI</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Tổng hợp token + chi phí mỗi lần gọi AI (ai_usage_logs). Mặc định 30 ngày gần nhất.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {/* Bo loc ngay */}
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
         <label className="text-sm">
