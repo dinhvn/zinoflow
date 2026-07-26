@@ -45,11 +45,17 @@ export const relatedSpotlightItemSchema = z.object({
   name: z.string(),
   badge: z.string().nullable(),
   criterion: z.string(),
+  /** Diem so cham diem thuc te — CHI co khi isPreview=true (tinh live trong
+   * CMS), khong luu/khong co khi doc RelatedJson that da publish. */
+  score: z.number().optional(),
 });
 export type RelatedSpotlightItem = z.infer<typeof relatedSpotlightItemSchema>;
 
 export const getRelatedSpotlightResponseSchema = z.object({
   items: z.array(relatedSpotlightItemSchema),
+  /** true khi diem CHUA publish — items la KET QUA TINH LIVE (preview), khong
+   * phai RelatedJson that da ghi SQL Server (se chi chinh xac 100% sau publish). */
+  isPreview: z.boolean(),
 });
 export type GetRelatedSpotlightResponse = z.infer<typeof getRelatedSpotlightResponseSchema>;
 

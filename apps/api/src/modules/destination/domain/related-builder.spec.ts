@@ -57,50 +57,54 @@ describe("computeNearby (panel goi y nearby khi curate tay)", () => {
   });
 });
 
-describe("scoreCandidate (relations-plan §1.3)", () => {
+describe("scoreCandidate (relations-plan §1.3, SUA 26/07/2026: yeu to chi phoi phu thuoc CUNG CUM hay khong)", () => {
   const noClusterDistances = new Map<string, number>();
 
-  it("khop TAG (du chi 1/vai tag) PHAI thang chenh lech Type+cum+khoang cach cong lai " +
-    "(quyet dinh nguoi dung 25/07/2026 lan 2: Tag la yeu to CHI PHOI, Type chi con la tiebreaker)", () => {
+  it("CUNG CUM: khop TAG (du chi 1/vai tag) PHAI thang chenh lech Type+khoang cach cong lai " +
+    "(trong 1 cum, Tag la yeu to CHI PHOI, Type chi con la tiebreaker)", () => {
     const self = candidate({
       slug: "self",
       parentSlug: "cum-a",
-      provinceCode: "01",
       types: ["bien-dao"],
       tags: ["phu-hop-gia-dinh", "lang-man-cap-doi", "check-in-song-ao"],
     });
-    const khopMotTagKhacCumKhacType = candidate({
+    const khopMotTagKhacType = candidate({
       slug: "khop-1-tag",
-      parentSlug: "cum-b", // khac cum
-      provinceCode: "02", // khac tinh -> mat luon proximityTier (0)
-      types: ["nui-cao-nguyen"], // khac type -> mat typeOverlap 50
+      parentSlug: "cum-a", // cung cum voi self
+      types: ["nui-cao-nguyen"], // khac type -> mat typeOverlap minor
       tags: ["check-in-song-ao"], // khop 1/3 tag cua self -> tier 1000
     });
-    const khopKhongTagCungCumCungType = candidate({
+    const khopKhongTagCungType = candidate({
       slug: "khop-0-tag",
-      parentSlug: "cum-a", // cung cum -> +200
-      types: ["bien-dao"], // cung type -> +50
+      parentSlug: "cum-a", // cung cum voi self
+      types: ["bien-dao"], // cung type -> +50 (minor trong cum)
       tags: [], // khong khop tag nao -> 0
     });
 
-    const scoreTagWins = scoreCandidate(self, khopMotTagKhacCumKhacType, noClusterDistances);
-    const scoreTypeClusterOnly = scoreCandidate(self, khopKhongTagCungCumCungType, noClusterDistances);
+    const scoreTagWins = scoreCandidate(self, khopMotTagKhacType, noClusterDistances);
+    const scoreTypeOnly = scoreCandidate(self, khopKhongTagCungType, noClusterDistances);
 
-    // 1000 (khop 1/3 tag) > 200+50+priority (cung cum + cung type + uu tien mac dinh, toi da ~262)
-    expect(scoreTagWins).toBeGreaterThan(scoreTypeClusterOnly);
+    // 1000 (khop 1/3 tag, tiered) > 50 (cung type, minor) + priority mac dinh
+    expect(scoreTagWins).toBeGreaterThan(scoreTypeOnly);
   });
 
-  it("khop TOAN BO tag PHAI thang khop 2 tag, khop 2 tag PHAI thang khop 1 tag", () => {
+  it("CUNG CUM: khop TOAN BO tag PHAI thang khop 2 tag, khop 2 tag PHAI thang khop 1 tag", () => {
     const self = candidate({
       slug: "self",
+      parentSlug: "cum-a",
       tags: ["phu-hop-gia-dinh", "lang-man-cap-doi", "check-in-song-ao"],
     });
     const khop3 = candidate({
       slug: "khop-3",
+      parentSlug: "cum-a",
       tags: ["phu-hop-gia-dinh", "lang-man-cap-doi", "check-in-song-ao"],
     });
-    const khop2 = candidate({ slug: "khop-2", tags: ["phu-hop-gia-dinh", "lang-man-cap-doi"] });
-    const khop1 = candidate({ slug: "khop-1", tags: ["phu-hop-gia-dinh"] });
+    const khop2 = candidate({
+      slug: "khop-2",
+      parentSlug: "cum-a",
+      tags: ["phu-hop-gia-dinh", "lang-man-cap-doi"],
+    });
+    const khop1 = candidate({ slug: "khop-1", parentSlug: "cum-a", tags: ["phu-hop-gia-dinh"] });
 
     const score3 = scoreCandidate(self, khop3, noClusterDistances);
     const score2 = scoreCandidate(self, khop2, noClusterDistances);
@@ -110,25 +114,23 @@ describe("scoreCandidate (relations-plan §1.3)", () => {
     expect(score2).toBeGreaterThan(score1);
   });
 
-  it("truong hop nguoi dung neu ro: self co 3 tag, ung vien chi khop 1 tag VAN thang ung vien " +
-    "khop 0 tag du trung ca Type lan cung cum ('type sau tag')", () => {
+  it("CUNG CUM: self co 3 tag, ung vien chi khop 1 tag VAN thang ung vien khop 0 tag du trung " +
+    "ca Type lan flagship ('type sau tag' trong pham vi 1 cum)", () => {
     const self = candidate({
       slug: "self",
       parentSlug: "cum-a",
-      provinceCode: "01",
       types: ["bien-dao"],
       tags: ["phu-hop-gia-dinh", "lang-man-cap-doi", "check-in-song-ao"],
       contentTier: "flagship",
     });
     const khop1TagKhacType = candidate({
-      slug: "khop-1-tag-khac-type-khac-cum",
-      parentSlug: "cum-b",
-      provinceCode: "02",
+      slug: "khop-1-tag-khac-type",
+      parentSlug: "cum-a",
       types: ["nui-cao-nguyen"],
       tags: ["check-in-song-ao"],
     });
-    const khop0TagCungTypeCungCum = candidate({
-      slug: "khop-0-tag-cung-type-cung-cum",
+    const khop0TagCungTypeFlagship = candidate({
+      slug: "khop-0-tag-cung-type-flagship",
       parentSlug: "cum-a",
       types: ["bien-dao"],
       tags: [],
@@ -136,20 +138,23 @@ describe("scoreCandidate (relations-plan §1.3)", () => {
     });
 
     const scoreTag = scoreCandidate(self, khop1TagKhacType, noClusterDistances);
-    const scoreTypeClusterTier = scoreCandidate(self, khop0TagCungTypeCungCum, noClusterDistances);
+    const scoreTypeTier = scoreCandidate(self, khop0TagCungTypeFlagship, noClusterDistances);
 
-    expect(scoreTag).toBeGreaterThan(scoreTypeClusterTier);
+    expect(scoreTag).toBeGreaterThan(scoreTypeTier);
   });
 
-  it("Priority KHONG duoc dao thu tu cung-loai-hinh, ke ca Priority=1 vs Priority=5", () => {
-    const self = candidate({ slug: "self", types: ["bien-dao"] });
+  it("CUNG CUM: Priority KHONG duoc dao thu tu cung-loai-hinh (Type la minor trong cum), " +
+    "ke ca Priority=1 vs Priority=5", () => {
+    const self = candidate({ slug: "self", parentSlug: "cum-a", types: ["bien-dao"] });
     const sameTypeLowPriority = candidate({
       slug: "cung-loai-uu-tien-thap",
+      parentSlug: "cum-a",
       types: ["bien-dao"],
       priority: 5,
     });
     const otherTypeHighPriority = candidate({
       slug: "khac-loai-uu-tien-cao",
+      parentSlug: "cum-a",
       types: ["di-tich-lich-su"],
       priority: 1,
     });
@@ -158,6 +163,172 @@ describe("scoreCandidate (relations-plan §1.3)", () => {
     const scoreOtherType = scoreCandidate(self, otherTypeHighPriority, noClusterDistances);
 
     expect(scoreSameType).toBeGreaterThan(scoreOtherType);
+  });
+
+  it("NGOAI CUM: khop TYPE (du chi 1 loai) PHAI thang chenh lech Tag+priority cong lai " +
+    "(ngoai cum, Type la yeu to CHI PHOI — phan hoi nguoi dung 26/07/2026, dao nguoc CUNG CUM)", () => {
+    const self = candidate({
+      slug: "self",
+      parentSlug: "cum-a",
+      types: ["bien-dao"],
+      tags: ["check-in-song-ao"],
+    });
+    const khopTypeKhacCum = candidate({
+      slug: "khop-type-khac-cum",
+      parentSlug: "cum-b", // khac cum voi self
+      types: ["bien-dao"], // khop type cua self -> tier 3000
+      tags: [], // khong khop tag -> 0
+    });
+    const khopTagKhacCum = candidate({
+      slug: "khop-tag-khac-cum",
+      parentSlug: "cum-c", // khac cum voi self
+      types: ["nui-cao-nguyen"], // khac type -> 0
+      tags: ["check-in-song-ao"], // khop tag cua self -> minor 50
+    });
+
+    const scoreType = scoreCandidate(self, khopTypeKhacCum, noClusterDistances);
+    const scoreTag = scoreCandidate(self, khopTagKhacCum, noClusterDistances);
+
+    expect(scoreType).toBeGreaterThan(scoreTag);
+  });
+
+  it("NGOAI CUM: 2 diem CUNG bac Type nhung o cum GAN hon PHAI thang o cum XA hon " +
+    "(them yeu to khoang cach cum-cum, gan uu tien hon — phan hoi nguoi dung 26/07/2026)", () => {
+    const self = candidate({
+      slug: "self",
+      parentSlug: "cum-a",
+      provinceCode: "01", // khac tinh voi ca 2 ung vien -> bat buoc dung mo hinh 2 tang qua clusterDistances
+      distanceFromCenter: 1_000,
+      types: ["bien-dao"],
+    });
+    const cumGan = candidate({
+      slug: "cum-gan",
+      parentSlug: "cum-b",
+      provinceCode: "02",
+      distanceFromCenter: 1_000,
+      types: ["bien-dao"], // cung bac Type voi self (full match)
+    });
+    const cumXa = candidate({
+      slug: "cum-xa",
+      parentSlug: "cum-c",
+      provinceCode: "03",
+      distanceFromCenter: 1_000,
+      types: ["bien-dao"], // cung bac Type voi self (full match)
+    });
+    const clusterDistances = new Map([
+      [clusterDistanceKey("cum-a", "cum-b"), 10_000], // tong ~12km
+      [clusterDistanceKey("cum-a", "cum-c"), 90_000], // tong ~92km
+    ]);
+
+    const scoreGan = scoreCandidate(self, cumGan, clusterDistances);
+    const scoreXa = scoreCandidate(self, cumXa, clusterDistances);
+
+    expect(scoreGan).toBeGreaterThan(scoreXa);
+  });
+
+  it("NGOAI CUM, GAN (< 50km): khoang cach thang du ung vien XA khop Type/Tag TOI DA " +
+    "(phan hoi nguoi dung 26/07/2026 lan 2: duoi 50km khoang cach uu tien nhat)", () => {
+    const self = candidate({
+      slug: "self",
+      parentSlug: "cum-a",
+      provinceCode: "01",
+      distanceFromCenter: 1_000,
+      types: ["bien-dao"],
+      tags: ["check-in-song-ao"],
+    });
+    const ganKhacType = candidate({
+      slug: "gan-khac-type",
+      parentSlug: "cum-b",
+      provinceCode: "02",
+      distanceFromCenter: 1_000,
+      types: ["nui-cao-nguyen"], // hoan toan khac type/tag voi self
+      tags: [],
+    });
+    const xaCungTypeTag = candidate({
+      slug: "xa-cung-type-tag",
+      parentSlug: "cum-c",
+      provinceCode: "03",
+      distanceFromCenter: 1_000,
+      types: ["bien-dao"], // khop toan bo type
+      tags: ["check-in-song-ao"], // khop toan bo tag
+      contentTier: "flagship",
+      priority: 1,
+    });
+    const clusterDistances = new Map([
+      [clusterDistanceKey("cum-a", "cum-b"), 20_000], // tong ~22km -> GAN (<50km)
+      [clusterDistanceKey("cum-a", "cum-c"), 90_000], // tong ~92km -> XA (>=50km)
+    ]);
+
+    const scoreGan = scoreCandidate(self, ganKhacType, clusterDistances);
+    const scoreXa = scoreCandidate(self, xaCungTypeTag, clusterDistances);
+
+    // Gan (22km, khac type/tag hoan toan) VAN thang Xa (92km, khop ca Type
+    // lan Tag toi da + flagship + priority cao nhat) — khoang cach chi phoi
+    // tuyet doi trong vung < 50km, khong bi Type/Tag/priority/tier vuot qua.
+    expect(scoreGan).toBeGreaterThan(scoreXa);
+  });
+
+  it("NGOAI CUM, dung nguong 50km: cang gan trong vung <50km cang diem cao (lien tuc)", () => {
+    const self = candidate({ slug: "self", parentSlug: "cum-a", provinceCode: "01", distanceFromCenter: 0 });
+    const rat10km = candidate({
+      slug: "rat-gan",
+      parentSlug: "cum-b",
+      provinceCode: "02",
+      distanceFromCenter: 0,
+    });
+    const gan45km = candidate({
+      slug: "gan-sat-nguong",
+      parentSlug: "cum-c",
+      provinceCode: "03",
+      distanceFromCenter: 0,
+    });
+    const clusterDistances = new Map([
+      [clusterDistanceKey("cum-a", "cum-b"), 10_000],
+      [clusterDistanceKey("cum-a", "cum-c"), 45_000],
+    ]);
+
+    const scoreRatGan = scoreCandidate(self, rat10km, clusterDistances);
+    const scoreGanSatNguong = scoreCandidate(self, gan45km, clusterDistances);
+
+    expect(scoreRatGan).toBeGreaterThan(scoreGanSatNguong);
+  });
+
+  it("luat 'GAN chi phoi' CHI ap dung cho POI — node Cum/Tinh gan van dung nhanh Type-chi-phoi " +
+    "(phat hien qua verify live 26/07/2026: Cum/Tinh gan chiem het top danh sach neu khong loai)", () => {
+    const self = candidate({
+      slug: "self",
+      parentSlug: "cum-a",
+      provinceCode: "01",
+      distanceFromCenter: 1_000,
+      types: ["bien-dao"],
+    });
+    const cumGanKhongCungType = candidate({
+      slug: "cum-gan-khong-type",
+      kind: "cluster", // node hanh chinh, khong phai POI
+      parentSlug: "cum-b",
+      provinceCode: "02",
+      distanceFromCenter: 1_000,
+      types: [], // khong co Type gi ca
+    });
+    const poiXaCungType = candidate({
+      slug: "poi-xa-cung-type",
+      kind: "poi",
+      parentSlug: "cum-c",
+      provinceCode: "03",
+      distanceFromCenter: 1_000,
+      types: ["bien-dao"], // khop toan bo type voi self
+    });
+    const clusterDistances = new Map([
+      [clusterDistanceKey("cum-a", "cum-b"), 10_000], // ~12km -> GAN neu la POI
+      [clusterDistanceKey("cum-a", "cum-c"), 90_000], // ~92km -> XA
+    ]);
+
+    const scoreCumGan = scoreCandidate(self, cumGanKhongCungType, clusterDistances);
+    const scorePoiXa = scoreCandidate(self, poiXaCungType, clusterDistances);
+
+    // Cum gan (12km) KHONG duoc huong luat "gan chi phoi" vi khong phai POI —
+    // POI xa (92km) nhung khop Type toan bo van thang.
+    expect(scorePoiXa).toBeGreaterThan(scoreCumGan);
   });
 
   it("cung cum/cung tinh dung haversine truc tiep tu toa do rieng", () => {
@@ -216,28 +387,36 @@ describe("scoreCandidate (relations-plan §1.3)", () => {
     expect(scoreWithReal).toBeLessThan(scoreHaversineOnly);
   });
 
-  it("cung tag (khong cung type) PHAI thang cung type (khong cung tag) — Tag chi phoi, dao nguoc " +
-    "ban truoc 25/07/2026 (luc do Type con chi phoi)", () => {
-    const self = candidate({ slug: "self", provinceCode: "22", types: ["bien-dao"], tags: ["check-in-song-ao"] });
-    const sameTagOnly = candidate({
-      slug: "cung-tag",
-      provinceCode: "99",
-      types: ["nui-cao-nguyen"],
-      tags: ["check-in-song-ao"], // khop 1/1 tag cua self -> full match, tier 3000
-    });
-    const sameTypeOtherProvinceNoTag = candidate({
-      slug: "cung-type-khac-tag",
-      provinceCode: "99",
+  it("NGOAI CUM: cung type (khong cung tag) PHAI thang cung tag (khong cung type) — Type chi phoi " +
+    "ngoai cum (phan hoi nguoi dung 26/07/2026, dao nguoc ban truoc do Tag chi phoi moi noi)", () => {
+    const self = candidate({
+      slug: "self",
+      parentSlug: "cum-a",
+      provinceCode: "22",
       types: ["bien-dao"],
+      tags: ["check-in-song-ao"],
+    });
+    const sameTypeOnly = candidate({
+      slug: "cung-type",
+      parentSlug: "cum-b", // khac cum voi self
+      provinceCode: "99",
+      types: ["bien-dao"], // khop 1/1 type cua self -> full match, tier 3000
       tags: [],
     });
+    const sameTagOtherType = candidate({
+      slug: "cung-tag-khac-type",
+      parentSlug: "cum-c", // khac cum voi self
+      provinceCode: "99",
+      types: ["nui-cao-nguyen"],
+      tags: ["check-in-song-ao"],
+    });
 
-    const scoreSameTag = scoreCandidate(self, sameTagOnly, noClusterDistances);
-    const scoreSameType = scoreCandidate(self, sameTypeOtherProvinceNoTag, noClusterDistances);
-    const fullTagMatchScore = 3000 + (6 - sameTagOnly.priority) * 4; // tier full-match + priority mac dinh
+    const scoreSameType = scoreCandidate(self, sameTypeOnly, noClusterDistances);
+    const scoreSameTag = scoreCandidate(self, sameTagOtherType, noClusterDistances);
+    const fullTypeMatchScore = 3000 + (6 - sameTypeOnly.priority) * 4; // tier full-match + priority mac dinh
 
-    expect(scoreSameTag).toBe(fullTagMatchScore);
-    expect(scoreSameTag).toBeGreaterThan(scoreSameType); // Tag gio la yeu to chi phoi, khong phai Type
+    expect(scoreSameType).toBe(fullTypeMatchScore);
+    expect(scoreSameType).toBeGreaterThan(scoreSameTag); // Type gio la yeu to chi phoi ngoai cum
   });
 });
 

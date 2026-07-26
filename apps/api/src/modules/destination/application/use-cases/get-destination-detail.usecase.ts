@@ -28,6 +28,7 @@ import {
   type RelatedCandidate,
 } from "../../domain/related-builder";
 import { deriveContentState, deriveProductionState } from "../../domain/destination-mirror";
+import { resolveGalleryThumbPath } from "../services/gallery-json.util";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
 const NEARBY_PREVIEW_COUNT = 8;
@@ -178,7 +179,9 @@ export class GetDestinationDetailUseCase {
       siteUpdatedAt: entity.siteUpdatedAt?.toISOString() ?? null,
       syncedAt: entity.syncedAt?.toISOString() ?? null,
       imageUrl: this.imageChecker.buildUrl(entity.thumbnail),
-      galleryImageUrls: entity.gallery.map((g) => this.imageChecker.buildUrl(g.path)),
+      galleryImageUrls: entity.gallery.map((g) =>
+        this.imageChecker.buildUrl(resolveGalleryThumbPath(g.path)),
+      ),
       activeJobStatus,
       draftArticle: entity.draftArticle,
       content,

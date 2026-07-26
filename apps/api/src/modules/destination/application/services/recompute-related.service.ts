@@ -19,6 +19,7 @@ import {
   buildRelatedItems,
   clusterDistanceKey,
   type RelatedCandidate,
+  type RelatedItem,
 } from "../../domain/related-builder";
 import { buildAncestors, buildChildren } from "../../domain/ancestors-children-builder";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
@@ -139,6 +140,47 @@ export class RecomputeRelatedService {
     return [...affected];
   }
 
+  /**
+   * Tinh LIVE (khong ghi SQL Server/khong purge cache) RelatedJson cho 1 diem —
+   * dung cho khoi "Xem trước: Điểm đến liên quan trên website" khi diem CHUA
+   * publish (phan hoi nguoi dung 26/07/2026: workflow thuong soan xong toan bo
+   * 1 cum moi roi publish cung luc, can xem truoc quan he giua cac diem draft
+   * voi nhau TRUOC khi publish). includeDrafts:true — an toan vi ham nay CHI
+   * doc/tra ve, khong ghi gi ca nen khong co rui ro sinh link cong khai gay.
+   */
+  async previewFor(slug: string): Promise<RelatedItem[]> {
+    const all = await this.mirrorRepo.findAll();
+    const candidates = all.map(toCandidate);
+    const self = candidates.find((c) => c.slug === slug);
+    if (!self) return [];
+
+    const [curated, excluded, clusterDistancePairs, poiDistancePairs] = await Promise.all([
+      this.relationRepo.findCuratedRelated(slug),
+      this.relationRepo.findExcluded(slug),
+      this.clusterDistanceRepo.findAll(),
+      this.poiDistanceRepo.findAll(),
+    ]);
+    const clusterDistances = new Map(
+      clusterDistancePairs.map((p) => [
+        clusterDistanceKey(p.clusterASlug, p.clusterBSlug),
+        p.distanceMeters,
+      ]),
+    );
+    const poiDistances = new Map(
+      poiDistancePairs.map((p) => [clusterDistanceKey(p.poiASlug, p.poiBSlug), p.distanceMeters]),
+    );
+
+    return buildRelatedItems({
+      self,
+      all: candidates,
+      curatedRelatedSlugs: curated.map((r) => r.targetSlug),
+      clusterDistances,
+      poiDistances,
+      excludedSlugs: new Set(excluded),
+      includeDrafts: true,
+    });
+  }
+
   private async run(
     all: DestinationMirrorEntity[],
     slugs: readonly string[],
@@ -181,7 +223,10 @@ export class RecomputeRelatedService {
         poiDistances,
         excludedSlugs: new Set(excluded),
       });
-      const relatedChanged = await this.siteDb.updateRelatedJson(siteId, JSON.stringify(items));
+      // score chi de debug/xem truoc trong CMS (GetRelatedSpotlightUseCase) —
+      // KHONG can thiet cho website cong khai, loai bo truoc khi ghi JSON that.
+      const publicItems = items.map(({ score: _score, ...rest }) => rest);
+      const relatedChanged = await this.siteDb.updateRelatedJson(siteId, JSON.stringify(publicItems));
 
       const ancestors = buildAncestors(self, candidates);
       const children = buildChildren(self, candidates);

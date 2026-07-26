@@ -30,6 +30,7 @@ import {
   formatDistanceBadge,
   type RelatedCandidate,
 } from "../../domain/related-builder";
+import { RecomputeRelatedService } from "../services/recompute-related.service";
 import { KIND_LABELS } from "../../domain/destination-mirror";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
@@ -90,6 +91,7 @@ export class CreateDestinationJobUseCase {
     private readonly poiDistanceRepo: PoiDistanceRepository,
     private readonly createContentJob: CreateContentJobUseCase,
     private readonly promptBuilder: PromptBuilder,
+    private readonly recomputeRelated: RecomputeRelatedService,
   ) {}
 
   /** Luu thong tin cung cap cho AI ma KHONG tao bai (nut "Luu thong tin"). */
@@ -209,15 +211,14 @@ export class CreateDestinationJobUseCase {
    * ten chuan -> auto-link) + content hien tai khi mode update + ghi chu nguoi
    * dung. AI bi cam bia so lieu ngoai khoi nay.
    *
-   * Diem lien quan (25/07/2026, sua sau khi phat hien prompt dang dung bo loc
-   * "cung tinh" tho rieng, khong lien quan gi thuat toan RelatedJson da nang
-   * cap Tag-chi-phoi + rao 100km): UU TIEN dung thang RelatedJson da precompute
-   * (fetchRelatedJson) — nhat quan voi khoi "Diem den lien quan" cong khai
-   * tren website, dung dung Tag/Type/khoang cach that thay vi "cung tinh" tho
-   * (tinh lon nhu Lam Dong co the goi y diem cach hang chuc km khong lien
-   * quan). FALLBACK ve loc "cung tinh" cu CHI khi RelatedJson rong (diem MOI
-   * chua tung publish/recompute tren site — van can co goi y cho lan viet
-   * dau, khong de trong).
+   * Diem lien quan: UU TIEN dung thang RelatedJson da precompute (fetchRelatedJson)
+   * — nhat quan voi khoi "Diem den lien quan" cong khai tren website, dung dung
+   * Tag/Type/khoang cach that. FALLBACK (26/07/2026, thay ban loc "cung tinh"
+   * tho 25/07/2026 — van co the goi y diem cach hang chuc/tram km khong lien
+   * quan trong 1 tinh sau sap nhap) CHI khi RelatedJson rong (diem MOI chua
+   * tung publish/recompute): dung RecomputeRelatedService.previewFor() — CUNG
+   * 1 cong thuc cham diem That (Tag chi phoi + rao 100km), includeDrafts:true
+   * de goi y duoc ca ung vien draft cung cum moi, khong ghi gi ca (chi doc).
    */
   private async buildSourceContext(
     destination: DestinationMirrorEntity,
@@ -253,24 +254,14 @@ export class CreateDestinationJobUseCase {
         return r.badge ? `- ${r.name} (${r.badge})` : `- ${r.name}`;
       });
     } else {
-      // Fallback: diem MOI chua tung publish/recompute -> loc tho cung tinh
-      // tu mirror (hanh vi cu, dam bao van co goi y cho lan viet dau tien).
-      const fallbackCandidates = all
-        .filter(
-          (d) =>
-            d.slug !== destination.slug &&
-            d.provinceCode !== null &&
-            d.provinceCode === destination.provinceCode &&
-            d.siteStatus === 1,
-        )
-        .slice(0, MAX_RELATED_IN_PROMPT);
-      relatedLines = fallbackCandidates.map((d) => {
-        includedSlugs.add(d.slug);
-        // nhac them so km THAT (dichoithoi_poi_distances) khi da co du lieu —
-        // chi co gia tri neu diem nay da tung bam nut "Tinh khoang cach", nen
-        // KHONG phai moi ten deu co so — bo qua im lang khi chua co, khong bia so.
-        const meters = poiDistances.get(clusterDistanceKey(destination.slug, d.slug));
-        return meters === undefined ? `- ${d.name}` : `- ${d.name} (${formatDistanceBadge(meters)})`;
+      // Fallback: diem MOI chua tung publish/recompute -> tinh LIVE bang dung
+      // cong thuc That (Tag chi phoi + rao 100km), includeDrafts:true de goi y
+      // duoc ca ung vien draft cung cum moi (vd Da Teh) ngay tu diem dau tien,
+      // khong phai doi publish (phan hoi nguoi dung 26/07/2026).
+      const preview = await this.recomputeRelated.previewFor(destination.slug);
+      relatedLines = preview.slice(0, MAX_RELATED_IN_PROMPT).map((item) => {
+        includedSlugs.add(item.slug);
+        return item.badge ? `- ${item.name} (${item.badge})` : `- ${item.name}`;
       });
     }
     if (relatedLines.length > 0) {
@@ -283,7 +274,11 @@ export class CreateDestinationJobUseCase {
     // khong lap. Huu ich cho doan "lich trinh goi y"/"di chuyen" (co the ke
     // ten 1 diem sat ben du khac han chu de).
     const bySlug = new Map(all.map((d) => [d.slug, d]));
-    const nearbyLines = computeNearby(toCandidate(destination), all.map(toCandidate))
+    // includeDrafts: true — ngu canh van ban cho AI, khong phai link that
+    // (xem ly do o khoi fallback tren).
+    const nearbyLines = computeNearby(toCandidate(destination), all.map(toCandidate), {
+      includeDrafts: true,
+    })
       .filter((n) => !includedSlugs.has(n.slug))
       .slice(0, MAX_NEARBY_IN_PROMPT)
       .map((n) => {

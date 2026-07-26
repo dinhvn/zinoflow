@@ -60,7 +60,11 @@ export class RecomputeNearbyDistancesUseCase {
 
     const candidates = all.map(toCandidate);
     const selfCandidate = candidates.find((c) => c.slug === slug)!;
-    const nearby = computeNearby(selfCandidate, candidates);
+    // includeDrafts: true — km that cache o poi_distances huu ich noi bo (badge
+    // "Gan day" CMS + prompt AI) du chua publish; buoc ghi RelatedJson cong khai
+    // ben duoi (RecomputeRelatedService) da TU bo qua an toan khi self chua
+    // publish (siteStatus !== 1), nen khong co rui ro sinh link cong khai gay.
+    const nearby = computeNearby(selfCandidate, candidates, { includeDrafts: true });
     if (nearby.length === 0) {
       return { slug, candidates: 0, relatedUpdated: false, durationMs: Date.now() - startedAt };
     }

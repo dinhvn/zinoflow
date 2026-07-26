@@ -1647,18 +1647,30 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                 hệ&quot; bên dưới hoặc trên trang bản đồ, override thuật toán.
               </li>
               <li>
-                <strong>Chấm điểm tự động</strong> — toàn bộ điểm đến còn lại, cộng:
+                <strong>Chấm điểm tự động</strong> — toàn bộ điểm đến còn lại, yếu tố chi phối{" "}
+                <strong>khác nhau tuỳ có cùng cụm hay không</strong> (26/07/2026):
                 <ul className="mt-1 list-disc space-y-0.5 pl-4">
                   <li>
-                    <strong>Cùng Tag (chủ đề/trải nghiệm phù hợp) — yếu tố chi phối chính:</strong>{" "}
-                    khớp <em>toàn bộ</em> tag của điểm này → 3000 điểm; khớp ≥2 tag → 2000; khớp
-                    1 tag → 1000; không khớp → 0. Khoảng cách giữa các mức này rất lớn nên số tag
-                    khớp gần như luôn quyết định thứ hạng, các yếu tố dưới đây chỉ để phân định
-                    khi số tag khớp bằng nhau.
+                    <strong>Cùng cụm trực tiếp:</strong> Cùng <strong>Tag</strong> (chủ đề/trải
+                    nghiệm phù hợp) là yếu tố chi phối chính — khớp <em>toàn bộ</em> tag → 3000
+                    điểm; khớp ≥2 tag → 2000; khớp 1 tag → 1000; không khớp → 0. Loại hình (Type)
+                    lúc này chỉ là yếu tố phụ (tối đa 50 điểm) — lý do: cùng 1 cụm thì việc ghép
+                    lịch trình đã chắc chắn, nên "phù hợp trải nghiệm gì" (Tag) quan trọng hơn
+                    "là gì" (Type).
                   </li>
-                  <li>Cùng Loại hình (Type): tối đa 50 điểm — chỉ còn là yếu tố phụ.</li>
+                  <li>
+                    <strong>Khác cụm</strong> (kể cả cùng tỉnh khác cụm): đảo lại — cùng{" "}
+                    <strong>Loại hình</strong> là yếu tố chi phối chính (khớp toàn bộ/≥2/1 loại →
+                    3000/2000/1000, tương tự Tag ở trên); tiếp theo là{" "}
+                    <strong>khoảng cách giữa 2 cụm</strong> — cụm càng gần càng ưu tiên hơn (2 điểm
+                    cùng bậc Loại hình thì điểm ở cụm gần hơn luôn thắng); Tag lúc này chỉ còn là
+                    yếu tố phụ nhẹ nhất (tối đa 50 điểm).
+                  </li>
                   <li>Cùng cụm/tỉnh cha: +200 (cùng cụm) hoặc +100 (cùng tỉnh).</li>
-                  <li>Càng gần càng nhiều điểm (tối đa 100, giảm dần theo khoảng cách thật).</li>
+                  <li>
+                    Càng gần càng nhiều điểm (tối đa 100 trong cụm; nhân 3 lần — tối đa ~300 —
+                    khi khác cụm, vì lúc đó khoảng cách là yếu tố phụ thứ 2 quan trọng hơn).
+                  </li>
                   <li>Độ ưu tiên tay (Priority 1–5): +4 đến +20.</li>
                   <li>Điểm đến hạng Flagship: +10.</li>
                 </ul>
@@ -1683,11 +1695,19 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           relatedSpotlightQuery.data ? ` (${relatedSpotlightQuery.data.items.length})` : ""
         }`}
       >
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Đọc thẳng kết quả thuật toán đã tính sẵn (không tính lại) — đúng y hệt khối &quot;Điểm
-          đến liên quan&quot; sẽ hiện trên trang công khai. Khác với &quot;Gần đây&quot;/&quot;Liên
-          quan (curated)&quot; bên dưới (2 khối đó chỉ phục vụ gán quan hệ tay).
-        </p>
+        {relatedSpotlightQuery.data?.isPreview ? (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            ⚠️ Điểm này <strong>chưa publish</strong> — đây là kết quả tính LIVE (bao gồm cả điểm
+            lân cận chưa publish) để xem trước, chưa phải dữ liệu đã ghi vào website. Số liệu có
+            thể đổi chút ít khi publish thật (lúc đó chỉ tính trên các điểm đã lên site).
+          </p>
+        ) : (
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Đọc thẳng kết quả thuật toán đã tính sẵn (không tính lại) — đúng y hệt khối &quot;Điểm
+            đến liên quan&quot; sẽ hiện trên trang công khai. Khác với &quot;Gần đây&quot;/&quot;Liên
+            quan (curated)&quot; bên dưới (2 khối đó chỉ phục vụ gán quan hệ tay).
+          </p>
+        )}
         {relatedSpotlightQuery.isLoading && (
           <p className="text-xs text-zinc-400">Đang tải...</p>
         )}
@@ -1710,6 +1730,14 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                   {item.name}
                 </Link>
                 <span className="flex shrink-0 items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  {item.score !== undefined && (
+                    <span
+                      className="rounded bg-indigo-50 px-1.5 py-0.5 font-mono text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                      title="Điểm số thuật toán (chỉ hiện trong CMS, không có trên website công khai)"
+                    >
+                      {Math.round(item.score)}đ
+                    </span>
+                  )}
                   {item.badge && <span>{item.badge}</span>}
                   <span className="rounded bg-zinc-100 px-1.5 py-0.5 dark:bg-zinc-800">
                     {relatedCriterionLabel(item.criterion)}
