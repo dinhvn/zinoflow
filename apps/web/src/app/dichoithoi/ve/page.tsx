@@ -18,6 +18,7 @@ import { Button } from "@/shared/ui/button";
 import { PageHeader } from "@/shared/ui/page-header";
 import { DestinationTicketLinksEditor } from "@/features/dichoithoi/destination-ticket-links-editor";
 import { ImportTicketsModal } from "@/features/dichoithoi/import-tickets-modal";
+import { FeatureIntro } from "@/shared/ui";
 
 const LINK_STATUS_TONE: Record<AffiliateLinkItem["linkStatus"], BadgeTone> = {
   converted: "emerald",
@@ -162,6 +163,26 @@ function TicketsPageContent() {
           <Button size="sm" className="whitespace-nowrap" onClick={() => setImportOpen(true)}>
             Nhập từ Sheet
           </Button>
+        }
+      />
+
+      <FeatureIntro
+        summary={
+          <>
+            Mặc định chỉ hiện điểm đến <strong>có cơ hội gắn link</strong> (đã có giá vé nhưng
+            chưa có link mua online) — tick &quot;Hiện cả điểm miễn phí/chưa có giá&quot; để xem
+            hết (166/272 điểm hiện tại là miễn phí, không cần link vé).
+          </>
+        }
+        details={
+          <>
+            Badge trạng thái link: <strong>converted</strong> (xanh) = đã tự chuyển thành link
+            affiliate đúng luật; <strong>no-rule</strong> (vàng) = chưa có đối tác/luật khớp để tự
+            chuyển, cần kiểm tra tay; <strong>manual-override</strong> (xám) = link đã được ghi đè
+            thủ công, không tự động chuyển nữa. 1 điểm đến gộp chung mọi link vé vào 1 khối sửa
+            (khác Khách sạn/Tour — mỗi cái là 1 bản ghi riêng). Từ trang chi tiết điểm đến bấm
+            &quot;Quản lý vé cho...&quot; sẽ tự mở đúng khối sửa ở đây.
+          </>
         }
       />
 

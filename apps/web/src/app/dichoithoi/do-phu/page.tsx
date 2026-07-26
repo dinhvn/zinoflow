@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listCoverageScoresResponseSchema, type DestinationCoverageScore } from "@zinoflow/contracts";
 import { apiGet } from "@/shared/api-client";
-import { Badge, ErrorBox } from "@/shared/ui";
+import { Badge, ErrorBox, FeatureIntro } from "@/shared/ui";
 import type { BadgeTone } from "@/shared/ui";
 
 function toneForScore(score: number): BadgeTone {
@@ -32,6 +32,25 @@ export default function DoPhuPage() {
           thiếu đúng mục gì để bổ sung. Điểm thấp hiện trước.
         </p>
       </div>
+
+      <FeatureIntro
+        summary={
+          <>
+            % tính từ 10 mục dữ liệu cơ bản đã có/thiếu (địa chỉ, toạ độ, ảnh, nội dung, giờ mở
+            cửa, giá vé, FAQ, mẹo thực tế, link vé, tag) — bấm 1 dòng để xem đúng mục nào còn thiếu.
+          </>
+        }
+        details={
+          <>
+            Chỉ tính cho điểm đã <strong>publish</strong> (chưa publish không có gì để chấm điểm).
+            Badge <strong>Flagship/Standard/POI</strong> là hạng nội dung — điểm Flagship (tỉnh/cụm
+            nổi bật) có thêm tiêu chí &quot;có điểm tham quan con nổi bật&quot; nên khắt khe hơn
+            POI thường. Màu: xanh lá ≥80%, vàng ≥50%, đỏ &lt;50%. Không dùng AI — thuần tính từ dữ
+            liệu đã nhập, giúp biết nhanh điểm nào &quot;mỏng&quot; cần bổ sung mà không cần đọc
+            từng trang.
+          </>
+        }
+      />
 
       {query.isLoading && <p className="text-sm text-zinc-500">Đang tải...</p>}
       {query.isError && <ErrorBox error={query.error} fallback="Lỗi tải độ phủ nội dung" />}

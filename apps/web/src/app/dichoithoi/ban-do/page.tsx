@@ -15,6 +15,7 @@ import { PageHeader } from "@/shared/ui/page-header";
 import { Select } from "@/shared/ui/select";
 import { Button } from "@/shared/ui/button";
 import { Slider } from "@/shared/ui/slider";
+import { FeatureIntro } from "@/shared/ui";
 import { DestinationPoiDistanceTable } from "@/features/dichoithoi/destination-poi-distance-table";
 
 // Leaflet dung truc tiep `window` — phai tat SSR (relations-plan §5.1, Giai doan A4).
@@ -209,7 +210,33 @@ export default function BanDoPage() {
     <div className="space-y-4">
       <PageHeader
         title="Bản đồ tổng quan điểm đến"
-        description={`Hiện ${filtered.length}/${items.length} điểm đến trên bản đồ thật (OpenStreetMap) — dùng để QA toạ độ sai và xem khoảng trống nội dung theo khu vực. Bật "Hiện lớp quan hệ" để xem trực quan các quan hệ đã tính (khoảng cách cụm/tỉnh, quan hệ curated tay) và "spotlight" (bấm 1 điểm để xem RelatedJson thật của điểm đó, tối đa 8 mục, đường đỏ nét đứt). Bật "Nối tay" rồi bấm lần lượt 2 điểm để tạo quan hệ curated mới; bấm vào 1 đường quan hệ để xoá/loại trừ.`}
+        description={`Hiện ${filtered.length}/${items.length} điểm đến trên bản đồ thật (OpenStreetMap) — dùng để QA toạ độ sai và xem khoảng trống nội dung theo khu vực.`}
+      />
+
+      <FeatureIntro
+        summary={
+          <>
+            Chấm nhỏ = điểm lẻ (POI), chấm to = tỉnh/cụm; cam = Flagship, xanh = Standard; mờ =
+            chưa publish. Bật <strong>&quot;Hiện lớp quan hệ&quot;</strong> để xem trực quan các
+            quan hệ đã tính.
+          </>
+        }
+        details={
+          <>
+            Lớp quan hệ gồm 3 loại đường: <strong>xám nhạt</strong> = khoảng cách cụm/tỉnh tự tính
+            (lọc theo mức ở thanh trượt); <strong>tím đậm</strong> = quan hệ curated gán tay (bấm
+            vào đường để xoá); <strong>đỏ nét đứt</strong> = &quot;spotlight&quot; — hiện khi bấm 1
+            điểm bất kỳ, vẽ đúng RelatedJson thật đã tính sẵn (tối đa 8 mục, bấm vào 1 đường đỏ để
+            loại trừ gợi ý đó). Bật <strong>&quot;Nối tay&quot;</strong> rồi bấm lần lượt 2 điểm để
+            tạo quan hệ curated mới. Bộ lọc tỉnh/trạng thái/content tier chỉ ẩn/hiện marker, không
+            đổi dữ liệu.
+            <br />
+            Chọn <strong>&quot;Xem cụm/tỉnh cụ thể&quot;</strong> để thu hẹp bản đồ về đúng 1
+            cụm/tỉnh + con của nó, tự zoom vừa khít, hiện tên từng điểm cạnh chấm, vẽ thêm đường{" "}
+            <strong>xanh lá</strong> = khoảng cách đường bộ thật con↔con (OpenRouteService, kéo
+            thanh trượt để lọc bớt khi rối), kèm bảng liệt kê đủ mọi cặp bên dưới bản đồ.
+          </>
+        }
       />
 
       <div className="flex flex-wrap gap-2">

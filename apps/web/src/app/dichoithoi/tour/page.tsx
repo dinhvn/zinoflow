@@ -12,6 +12,7 @@ import { Badge } from "@/shared/ui/badge";
 import { PageHeader } from "@/shared/ui/page-header";
 import { AffiliateUrlPreview } from "@/features/dichoithoi/affiliate-url-preview";
 import { ImportToursModal } from "@/features/dichoithoi/import-tours-modal";
+import { FeatureIntro } from "@/shared/ui";
 
 const EMPTY_FORM = {
   name: "",
@@ -104,6 +105,24 @@ export default function ToursPage() {
           <Button size="sm" className="whitespace-nowrap" onClick={() => setImportOpen(true)}>
             Nhập từ Sheet
           </Button>
+        }
+      />
+
+      <FeatureIntro
+        summary={
+          <>
+            Lưu ở đây là <strong>lên website ngay</strong>, không qua bước duyệt — kiểm tra kỹ
+            trước khi bấm Lưu. 1 tour hiện ở khối gợi ý của mọi điểm đến cùng mã tỉnh.
+          </>
+        }
+        details={
+          <>
+            Khác Khách sạn (gán theo điểm gần nhất qua toạ độ), Tour gán theo{" "}
+            <strong>mã tỉnh</strong> — nên 1 tour có thể xuất hiện ở nhiều điểm đến cùng tỉnh cùng
+            lúc, không cần chọn tay từng điểm. &quot;Nhập từ Sheet&quot; để thêm nhiều tour cùng
+            lúc. Cần chọn &quot;Provider&quot; (đối tác affiliate) đã tạo sẵn ở trang Affiliate để
+            link đặt tour có gắn mã hoa hồng.
+          </>
         }
       />
 

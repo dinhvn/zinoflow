@@ -37,6 +37,7 @@ import { Input } from "@/shared/ui/input";
 import { Pagination } from "@/shared/ui/pagination";
 import { Select } from "@/shared/ui/select";
 import { PageHeader } from "@/shared/ui/page-header";
+import { FeatureIntro } from "@/shared/ui";
 import { ImportDestinationsModal } from "@/features/dichoithoi/import-destinations-modal";
 import { ExportDestinationsModal } from "@/features/dichoithoi/export-destinations-modal";
 import { ImportDestinationFieldsModal } from "@/features/dichoithoi/import-destination-fields-modal";
@@ -465,6 +466,36 @@ export default function DichoithoiPage() {
             >
               {syncMutation.isPending ? "Đang đồng bộ..." : "Đồng bộ từ website"}
             </Button>
+          </>
+        }
+      />
+
+      <FeatureIntro
+        summary={
+          <>
+            Danh sách toàn bộ điểm đến (tỉnh/cụm/POI) đồng bộ 1 chiều từ website — bấm{" "}
+            <strong>Đồng bộ từ website</strong> sau khi ai đó sửa trực tiếp trên site, dùng{" "}
+            <strong>+ Thêm điểm đến</strong> để tạo điểm mới (chưa cần publish ngay vẫn thao tác
+            được — xem khối &quot;Công cụ&quot; bên dưới).
+          </>
+        }
+        details={
+          <>
+            Bộ lọc (tỉnh/cụm, loại, trạng thái bài, trạng thái online) + sắp xếp + phân trang chỉ
+            ảnh hưởng danh sách hiển thị, không đổi dữ liệu. <strong>Nhập từ Sheet</strong>/
+            <strong>Xuất CSV</strong>/<strong>Nhập cập nhật hàng loạt</strong> dùng khi cần thêm/sửa
+            nhiều điểm cùng lúc thay vì từng điểm một.
+            <br />
+            Khối <strong>&quot;Công cụ&quot;</strong> chạy các tác vụ tính lại trên toàn site —
+            thường chỉ cần bấm SAU KHI publish điểm đến mới: <strong>Re-link toàn bộ</strong> quét
+            lại link nội bộ trong mọi bài (xem trước trước khi áp dụng thật);{" "}
+            <strong>Tính lại khối liên quan</strong> làm mới gợi ý &quot;Điểm đến liên quan&quot;
+            hiển thị công khai; <strong>Tính lại khoảng cách cụm/tỉnh</strong> và{" "}
+            <strong>Tính khoảng cách đường bộ</strong> (chọn 1 cụm/tỉnh) gọi OpenRouteService để có
+            số km thật dùng cho AI viết bài + hiển thị; <strong>Làm mới toàn bộ khối động</strong>{" "}
+            cập nhật lại các khối tự tính (giá, đánh giá...) trên mọi trang; <strong>Migrate ảnh
+            cũ</strong> chuyển ảnh từ nguồn lưu trữ cũ sang nguồn hiện tại. Chạy dư không hại gì,
+            chỉ tốn thời gian — không bắt buộc chạy mỗi ngày.
           </>
         }
       />

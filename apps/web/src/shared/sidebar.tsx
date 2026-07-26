@@ -47,7 +47,6 @@ const DICHOITHOI_ITEMS: NavItem[] = [
   { href: "/dichoithoi/ban-do", label: "Bản đồ tổng quan", icon: IconMap },
   { href: "/dichoithoi/articles", label: "Article", icon: IconDoc },
   { href: "/dichoithoi/thu-vien-anh", label: "Thư viện ảnh", icon: IconImage },
-  { href: "/dichoithoi/dia-chi", label: "Tra cứu địa chỉ", icon: IconSearch },
   { href: "/dichoithoi/danh-muc", label: "Nội dung danh mục", icon: IconDoc },
   { href: "/dichoithoi/chu-de", label: "Chủ đề", icon: IconTag },
   { href: "/dichoithoi/phan-loai", label: "Rà soát loại hình", icon: IconFlow },
@@ -59,8 +58,9 @@ const DICHOITHOI_ITEMS: NavItem[] = [
   { href: "/dichoithoi/quy-trinh", label: "Quy trình", icon: IconFlow },
 ];
 
-/** Công cụ (destination-spec §7.1) — thao tác vận hành chung, không gắn 1 module cụ thể */
+/** Công cụ (destination-spec §7.1) — tiện ích tra cứu/cấu hình nền, không phải trang soạn nội dung */
 const DICHOITHOI_TOOL_ITEMS: NavItem[] = [
+  { href: "/dichoithoi/dia-chi", label: "Tra cứu địa chỉ", icon: IconSearch },
   { href: "/dichoithoi/affiliate", label: "Quy tắc affiliate", icon: IconLink },
 ];
 

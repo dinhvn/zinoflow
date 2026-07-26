@@ -10,6 +10,7 @@ import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
 import { Badge } from "@/shared/ui/badge";
 import { PageHeader } from "@/shared/ui/page-header";
+import { FeatureIntro } from "@/shared/ui";
 import { AffiliateUrlPreview } from "@/features/dichoithoi/affiliate-url-preview";
 import { ImportHotelsModal } from "@/features/dichoithoi/import-hotels-modal";
 
@@ -118,6 +119,25 @@ export default function HotelsPage() {
             <Button size="sm" className="whitespace-nowrap" onClick={() => setImportOpen(true)}>
               Nhập từ Sheet
             </Button>
+          </>
+        }
+      />
+
+      <FeatureIntro
+        summary={
+          <>
+            Lưu ở đây là <strong>lên website ngay</strong>, không qua bước duyệt — kiểm tra kỹ
+            trước khi bấm Lưu. Khách sạn tự hiện trong khối gợi ý ở trang điểm đến gần nhất.
+          </>
+        }
+        details={
+          <>
+            &quot;Tính lại gán tự động theo khoảng cách&quot; chạy lại thuật toán gán khách sạn vào
+            điểm đến gần nhất (dựa vào toạ độ lat/lng đã nhập) — bấm lại sau khi thêm/sửa hàng
+            loạt khách sạn để khối gợi ý trên trang điểm đến cập nhật đúng. &quot;Nhập từ
+            Sheet&quot; để thêm nhiều khách sạn cùng lúc thay vì nhập tay từng cái. Cần chọn
+            &quot;Provider&quot; (đối tác affiliate) đã tạo sẵn ở trang Affiliate để link đặt phòng
+            có gắn mã hoa hồng.
           </>
         }
       />

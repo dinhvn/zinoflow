@@ -10,7 +10,7 @@ import {
   type TaxonomyBoardDestination,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend } from "@/shared/api-client";
-import { Badge, Button, Checkbox, ErrorBox, Modal, PageHeader, Select } from "@/shared/ui";
+import { Badge, Button, Checkbox, ErrorBox, FeatureIntro, Modal, PageHeader, Select } from "@/shared/ui";
 import { AiInvocationBar } from "@/features/dichoithoi/ai-invocation-bar";
 
 const QUERY_KEY = ["taxonomy-kanban-board"];
@@ -37,7 +37,28 @@ export default function PhanLoaiPage() {
     <div className="space-y-4">
       <PageHeader
         title="Rà soát loại hình điểm đến"
-        description="Xem lại và sửa loại hình (Type) đã gán cho từng điểm đến, theo từng cụm/tỉnh một — dữ liệu cũ có thể thiếu hoặc sai (vd Vịnh Hạ Long từng bị gán nhầm 'Di tích lịch sử'). Chọn 1 cụm/tỉnh, bấm vào 1 thẻ điểm đến để tick/bỏ tick loại hình — lưu ngay khi tick, không cần nút lưu riêng. Cột 'Chưa phân loại' (viền cam) luôn hiện đầu tiên, đây là danh sách ưu tiên xử lý trước."
+        description="Xem lại và sửa loại hình (Type) đã gán cho từng điểm đến, theo từng cụm/tỉnh một — dữ liệu cũ có thể thiếu hoặc sai."
+      />
+
+      <FeatureIntro
+        summary={
+          <>
+            Chọn 1 cụm/tỉnh, bấm vào 1 thẻ điểm đến để tick/bỏ tick loại hình — lưu ngay khi tick,
+            không cần nút lưu riêng. Cột <strong>&quot;Chưa phân loại&quot;</strong> (viền cam)
+            luôn hiện đầu tiên — đây là danh sách ưu tiên xử lý trước.
+          </>
+        }
+        details={
+          <>
+            Dữ liệu cũ có thể sai (vd Vịnh Hạ Long từng bị gán nhầm &quot;Di tích lịch sử&quot;) nên
+            đáng rà lại dù điểm đã có sẵn loại hình, không chỉ mỗi cột &quot;Chưa phân loại&quot;.
+            Bấm <strong>&quot;Gợi ý AI cho cụm này&quot;</strong> để AI đánh giá lại toàn bộ điểm
+            trong cụm dựa trên tên + nội dung thật (không bịa) — kết quả chỉ lưu vào bảng nháp chờ
+            duyệt, KHÔNG tự ghi. Thẻ có gợi ý AI hiện chip &quot;AI&quot; — bấm thẻ mở popup đã tick
+            sẵn theo gợi ý (nếu điểm đó chưa có loại hình nào) kèm lý do, tự quyết định tick/bỏ
+            tick rồi lưu.
+          </>
+        }
       />
 
       {query.isLoading && <p className="text-sm text-zinc-500">Đang tải...</p>}

@@ -12,6 +12,7 @@ import { Badge } from "@/shared/ui/badge";
 import { PageHeader } from "@/shared/ui/page-header";
 import { AffiliateUrlPreview } from "@/features/dichoithoi/affiliate-url-preview";
 import { ImportProductsModal } from "@/features/dichoithoi/import-products-modal";
+import { FeatureIntro } from "@/shared/ui";
 
 const EMPTY_FORM = {
   name: "",
@@ -92,6 +93,24 @@ export default function ProductsPage() {
           <Button size="sm" className="whitespace-nowrap" onClick={() => setImportOpen(true)}>
             Nhập từ Sheet
           </Button>
+        }
+      />
+
+      <FeatureIntro
+        summary={
+          <>
+            Sản phẩm gắn vào bài qua <strong>tag</strong> (từ khoá), không gắn theo điểm đến/tỉnh
+            như Khách sạn/Tour — cần đặt tag trùng với tag dùng trong khối động của bài viết.
+          </>
+        }
+        details={
+          <>
+            Trường &quot;tags&quot; (phân cách bằng dấu phẩy) là điểm nối duy nhất với bài viết:
+            khối <code>[[block:products tag=...]]</code> chèn trong bài cẩm nang sẽ hiện MỌI sản
+            phẩm có tag khớp — không cần chọn tay từng sản phẩm. Muốn chèn đúng 1 sản phẩm cụ thể
+            (không lọc theo tag) thì dùng <code>[[block:product id=...]]</code> với ID của sản
+            phẩm đó. &quot;Nhập từ Sheet&quot; để thêm nhiều sản phẩm cùng lúc.
+          </>
         }
       />
 

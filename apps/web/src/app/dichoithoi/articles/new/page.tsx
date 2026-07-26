@@ -11,6 +11,8 @@ import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
+import { Textarea } from "@/shared/ui/textarea";
+import { FeatureIntro } from "@/shared/ui";
 
 /**
  * Tao bai cam nang moi (dichoithoi-article-spec.md §9, §1.1, §1.2) — 2 lua
@@ -92,6 +94,25 @@ export default function NewArticlePage() {
         Nam&quot;) — có thể chèn khối động, tự động thay bằng dữ liệu thật lúc đăng bài.
       </p>
 
+      <FeatureIntro
+        summary={
+          <>
+            2 cách tạo: <strong>Viết tay</strong> mở thẳng editor với khung gợi ý (không tốn AI),{" "}
+            <strong>Tạo bằng AI</strong> để AI soạn nháp trước (tốn 1 lượt gọi AI, vẫn phải duyệt
+            trước khi đăng).
+          </>
+        }
+        details={
+          <>
+            Dù chọn cách nào, bài luôn dừng ở bước duyệt trên trang <code>/content/&#123;id&#125;</code>{" "}
+            — không có đường tắt đăng thẳng. AI có thể tự gợi ý chèn khối động dạng{" "}
+            <code>[[block:...]]</code> (tự thay bằng dữ liệu thật lúc publish) khi thấy hợp ngữ
+            cảnh — nhưng vẫn cần người duyệt kiểm tra lại ở bước sau. &quot;Tư liệu tham khảo&quot;
+            không bắt buộc nhưng giúp AI bám sát thực tế hơn thay vì bịa chi tiết.
+          </>
+        }
+      />
+
       <label className="block text-sm">
         <span className="mb-1 block text-zinc-500">Tiêu đề / chủ đề bài viết</span>
         <Input
@@ -122,12 +143,12 @@ export default function NewArticlePage() {
         <span className="mb-1 block text-zinc-500">
           Tư liệu tham khảo (tuỳ chọn — dán ghi chú/link nguồn để AI viết bám sát thực tế hơn)
         </span>
-        <textarea
+        <Textarea
           value={sourceContext}
           onChange={(e) => setSourceContext(e.target.value)}
           placeholder="VD: liệt kê tên các thác/khách sạn muốn nhắc tới, kèm ghi chú thật đã biết..."
           rows={4}
-          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="w-full"
         />
       </label>
 

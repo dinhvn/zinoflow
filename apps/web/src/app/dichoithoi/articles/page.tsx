@@ -7,6 +7,7 @@ import { apiGet, apiSend } from "@/shared/api-client";
 import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { Button, buttonClasses } from "@/shared/ui/button";
 import { PageHeader } from "@/shared/ui/page-header";
+import { FeatureIntro } from "@/shared/ui";
 
 const jobsListSchema = z.array(contentJobSchema);
 
@@ -56,6 +57,23 @@ export default function DichoithoiArticlesPage() {
           <a href="/dichoithoi/articles/new" className={buttonClasses({ variant: "primary" })}>
             + Bài cẩm nang mới
           </a>
+        }
+      />
+
+      <FeatureIntro
+        summary={
+          <>
+            Danh sách job AI viết bài cẩm nang của dichoithoi (lọc từ cùng 1 nguồn job với
+            laruki/dochoi3s) — bấm tên bài để mở trang soạn/duyệt chi tiết.
+          </>
+        }
+        details={
+          <>
+            Job đang chạy tự refresh mỗi 3s (chấm xanh nhấp nháy &quot;GeneratingOutline&quot;), khi
+            xong chuyển sang tần suất 15s. Job <strong>Failed</strong> có nút &quot;Thử lại&quot;
+            ngay tại đây — không cần vào trang chi tiết. Bấm &quot;+ Bài cẩm nang mới&quot; để tạo
+            job mới (khác trang tạo bài giới thiệu 1 điểm đến ở màn &quot;Điểm đến&quot;).
+          </>
         }
       />
 

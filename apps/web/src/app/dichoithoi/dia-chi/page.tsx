@@ -10,6 +10,7 @@ import { apiGet } from "@/shared/api-client";
 import { Input } from "@/shared/ui/input";
 import { Pagination } from "@/shared/ui/pagination";
 import { Select } from "@/shared/ui/select";
+import { FeatureIntro } from "@/shared/ui";
 
 /**
  * Tra cuu dia chi cu -> moi sau sap nhap don vi hanh chinh 2025.
@@ -52,6 +53,23 @@ export default function DiaChiPage() {
           chỉ để tra cứu — không ảnh hưởng tới điểm đến.
         </p>
       </div>
+
+      <FeatureIntro
+        summary={
+          <>
+            Tra cứu 2 chiều: nhập tên phường/xã CŨ hoặc MỚI đều tìm ra được — dùng khi viết bài cần
+            biết địa chỉ hiện tại của 1 địa danh cũ, hoặc ngược lại.
+          </>
+        }
+        details={
+          <>
+            Dòng ghi &quot;(không đổi)&quot; nghĩa là phường/xã đó giữ nguyên tên qua đợt sáp nhập —
+            gộp 1 dòng thay vì lặp lại y hệt ở cả 2 cột để đỡ gây nhầm &quot;có thay đổi&quot;. Dữ
+            liệu chỉ đọc (bảng gốc <code>admin_ward_mappings</code>), không sửa được ở đây và không
+            ảnh hưởng tới dữ liệu điểm đến.
+          </>
+        }
+      />
 
       <div className="flex flex-wrap gap-2">
         <Input

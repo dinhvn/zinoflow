@@ -20,6 +20,7 @@ import { Select } from "@/shared/ui/select";
 import { Badge } from "@/shared/ui/badge";
 import { Modal } from "@/shared/ui/modal";
 import { PageHeader } from "@/shared/ui/page-header";
+import { FeatureIntro } from "@/shared/ui";
 import { emptyToUndef, parseRowsFromText } from "@/features/dichoithoi/sheet-import-csv";
 
 const EMPTY_NETWORK_FORM = {
@@ -54,6 +55,25 @@ export default function AffiliatePage() {
       <PageHeader
         title="Affiliate"
         description="Quản lý mạng affiliate (template chung) và danh sách đối tác (klook/vexere/booking...). Đối tác là nguồn dropdown provider bắt buộc khi nhập link ở Vé/Khách sạn/Tour."
+      />
+      <FeatureIntro
+        summary={
+          <>
+            Cài đặt nền cho toàn bộ link affiliate trên site — làm ở đây TRƯỚC khi nhập giá
+            vé/khách sạn/tour, vì các trang đó cần chọn Đối tác từ danh sách đã tạo sẵn tại đây.
+          </>
+        }
+        details={
+          <>
+            <strong>Mạng affiliate</strong> (Accesstrade...) lưu 1 template deep-link dùng chung —
+            sửa template không cần deploy, chỉ cần bấm &quot;Áp dụng lại toàn bộ&quot; để mọi link
+            cũ tự cập nhật theo template mới. <strong>Đối tác</strong> (Klook, Vexere,
+            Booking.com...) gán vào 1 mạng — đây chính là danh sách dropdown &quot;Provider&quot;
+            bắt buộc khi nhập link ở trang Vé/Khách sạn/Tour, nên cần tạo đối tác ở đây trước. Có
+            thể nhập hàng loạt đối tác từ 1 Google Sheet public (dán link, lưu thẳng — không có
+            bước xem trước).
+          </>
+        }
       />
       <NetworksSection />
       <PartnersSection />
