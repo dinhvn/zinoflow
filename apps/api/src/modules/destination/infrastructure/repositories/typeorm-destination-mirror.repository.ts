@@ -263,6 +263,14 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     await this.repo.update({ slug }, { distanceFromCenter: String(distanceMeters) });
   }
 
+  async setTags(slug: string, tagSlugs: readonly string[]): Promise<void> {
+    await this.repo.update({ slug }, { tags: [...tagSlugs] });
+  }
+
+  async setTypes(slug: string, typeSlugs: readonly string[]): Promise<void> {
+    await this.repo.update({ slug }, { types: [...typeSlugs] });
+  }
+
   async renameSlug(oldSlug: string, newSlug: string): Promise<void> {
     await this.repo.manager.transaction(async (manager) => {
       await manager.query(`UPDATE dichoithoi_destinations SET slug = $1 WHERE slug = $2`, [

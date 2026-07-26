@@ -107,6 +107,16 @@ export class PublishDestinationUseCase {
       siteId = created.siteId;
       await this.mirrorRepo.setSiteId(slug, siteId);
       this.logger.log(`Tao diem den moi tren SQL Server: ${slug} -> siteId ${siteId}`);
+
+      // Tag/Type da gan tam luc con la draft (mirror.tags/types, xem
+      // ApplyTagAssignmentsUseCase/UpdateDestinationTypesUseCase) gio moi co
+      // DestinationId de ghi that xuong v2.DestinationTagMap/DestinationTypeMap.
+      if (destination.tags.length > 0) {
+        await this.siteDb.replaceTagAssignments(slug, destination.tags);
+      }
+      if (destination.types.length > 0) {
+        await this.siteDb.replaceTypeAssignments(slug, destination.types);
+      }
     }
 
     // Render HTML sach roi auto-link toi moi diem published khac (spec §3.4 thoi diem 1)

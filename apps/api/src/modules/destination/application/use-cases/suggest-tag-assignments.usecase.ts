@@ -14,6 +14,11 @@ import { buildPromptLogText } from "../../../ai-content/application/services/pro
 import { DomainRuleError } from "../../../shared/errors/app-error";
 import { TAG_SUGGEST_SYSTEM, buildTagSuggestPrompt } from "../../domain/tag-suggest-prompt";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+import { buildTagSuggestCandidates } from "./tag-suggest-candidates";
+import {
+  DESTINATION_MIRROR_REPOSITORY,
+  type DestinationMirrorRepository,
+} from "../ports/destination-mirror.repository";
 
 const DEFAULT_PROVIDER = "anthropic";
 const DEFAULT_MODELS: Record<string, string> = {
@@ -33,12 +38,15 @@ export class SuggestTagAssignmentsUseCase {
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(AI_PROVIDER_REGISTRY) private readonly registry: AiProviderRegistry,
     @Inject(AI_USAGE_RECORDER) private readonly usage: AiUsageRecorder,
+    @Inject(DESTINATION_MIRROR_REPOSITORY)
+    private readonly mirrorRepo: DestinationMirrorRepository,
   ) {}
 
   async execute(request: SuggestTagAssignmentsRequest): Promise<SuggestTagAssignmentsResponse> {
-    const [tags, assignments] = await Promise.all([
+    const [tags, assignments, mirrors] = await Promise.all([
       this.siteDb.fetchTags(),
       this.siteDb.fetchTagAssignments(),
+      this.mirrorRepo.findAll(),
     ]);
     if (tags.length === 0) {
       throw new DomainRuleError(
@@ -46,10 +54,7 @@ export class SuggestTagAssignmentsUseCase {
       );
     }
 
-    const requestedSlugs = request.destinationSlugs?.length ? new Set(request.destinationSlugs) : null;
-    const candidates = assignments.filter((a) =>
-      requestedSlugs ? requestedSlugs.has(a.destinationSlug) : a.tagSlugs.length === 0,
-    );
+    const candidates = buildTagSuggestCandidates(assignments, mirrors, request.destinationSlugs);
     if (candidates.length === 0) {
       return { suggestions: [] };
     }

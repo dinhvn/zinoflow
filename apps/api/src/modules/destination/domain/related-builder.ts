@@ -102,17 +102,26 @@ export interface NearbyEntry {
  * quan he curated — KHONG con dung de xay RelatedJson, xem buildRelatedItems):
  * khoang cach toi moi diem published co toa do, top 10 trong ban kinh 30km,
  * gan nhat truoc.
+ *
+ * `includeDrafts` (mac dinh false, GIU NGUYEN hanh vi cu cho moi noi goi):
+ * cho phep goi y ca diem CHUA publish — CHI dung cho tab "Quan he" trong CMS
+ * (get-destination-detail.usecase.ts) de nguoi dung chu dong lien ket tay giua
+ * cac diem draft cung cum truoc khi publish (phan hoi nguoi dung 26/07/2026).
+ * KHONG bat o RecomputeNearbyDistancesUseCase/CreateDestinationJobUseCase —
+ * 2 cho nay nuoi RelatedJson/auto-link cong khai tren site that, phai giu
+ * published-only de khong goi y link toi trang chua ton tai (404).
  */
 export function computeNearby(
   self: RelatedCandidate,
   all: readonly RelatedCandidate[],
+  options: { includeDrafts?: boolean } = {},
 ): NearbyEntry[] {
   if (self.lat === null || self.lng === null) return [];
   return all
     .filter(
       (c) =>
         c.slug !== self.slug &&
-        c.siteStatus === 1 &&
+        (options.includeDrafts || c.siteStatus === 1) &&
         c.lat !== null &&
         c.lng !== null,
     )

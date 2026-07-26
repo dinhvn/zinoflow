@@ -9,6 +9,11 @@ import {
   TAXONOMY_SUGGESTION_REPOSITORY,
   type TaxonomySuggestionRepository,
 } from "../ports/taxonomy-suggestion.repository";
+import {
+  DESTINATION_MIRROR_REPOSITORY,
+  type DestinationMirrorRepository,
+} from "../ports/destination-mirror.repository";
+import { buildTaxonomyTypeSuggestCandidates } from "./taxonomy-type-suggest-candidates";
 
 /**
  * Dung prompt se gui AI cho `SuggestTaxonomyTypesUseCase` (cung 1 cum/tinh) —
@@ -23,22 +28,23 @@ export class PreviewTaxonomyTypeSuggestPromptUseCase {
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(TAXONOMY_SUGGESTION_REPOSITORY)
     private readonly suggestionRepo: TaxonomySuggestionRepository,
+    @Inject(DESTINATION_MIRROR_REPOSITORY)
+    private readonly mirrorRepo: DestinationMirrorRepository,
   ) {}
 
   async execute(clusterSlug: string): Promise<PreviewPromptResponse> {
-    const [allDestinations, contentRows, taxonomy, existingSuggestions] = await Promise.all([
+    const [allDestinations, contentRows, taxonomy, existingSuggestions, mirrors] = await Promise.all([
       this.siteDb.fetchAllDestinations(),
       this.siteDb.fetchAllContentRows(),
       this.siteDb.fetchTaxonomyContent(),
       this.suggestionRepo.findAll(),
+      this.mirrorRepo.findAll(),
     ]);
 
     const acceptedSlugs = new Set(
       existingSuggestions.filter((s) => s.status === "accepted").map((s) => s.destinationSlug),
     );
-    const candidates = allDestinations.filter(
-      (d) => d.kind === "poi" && d.parentSlug === clusterSlug && !acceptedSlugs.has(d.slug),
-    );
+    const candidates = buildTaxonomyTypeSuggestCandidates(allDestinations, mirrors, clusterSlug, acceptedSlugs);
     const contentBySlug = new Map(contentRows.map((c) => [c.slug, c.contentHtml]));
     const prompt = buildTaxonomyTypeSuggestPrompt(taxonomy.types, candidates, contentBySlug);
 

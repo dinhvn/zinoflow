@@ -11,6 +11,10 @@ import {
 import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
 import { buildPromptLogText } from "../../../ai-content/application/services/prompt-log-text";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+import {
+  DESTINATION_MIRROR_REPOSITORY,
+  type DestinationMirrorRepository,
+} from "../ports/destination-mirror.repository";
 
 /** So diem den toi thieu 1 tag can co de khong bi coi la "duoi nguong" (destination-spec §2.4 buoc 2) */
 const MIN_DESTINATIONS_PER_TAG = 3;
@@ -34,13 +38,23 @@ export class ReverseCheckTagAssignmentsUseCase {
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(AI_PROVIDER_REGISTRY) private readonly registry: AiProviderRegistry,
     @Inject(AI_USAGE_RECORDER) private readonly usage: AiUsageRecorder,
+    @Inject(DESTINATION_MIRROR_REPOSITORY)
+    private readonly mirrorRepo: DestinationMirrorRepository,
   ) {}
 
   async execute(): Promise<ReverseCheckTagAssignmentsResponse> {
-    const [tags, assignments] = await Promise.all([
+    const [tags, siteAssignments, mirrors] = await Promise.all([
       this.siteDb.fetchTags(),
       this.siteDb.fetchTagAssignments(),
+      this.mirrorRepo.findAll(),
     ]);
+    // Gom them POI CHUA publish (siteId=null) — tag cua nhom nay o mirror.tags,
+    // khong nam trong fetchTagAssignments() (SQL Server) nen bi bo sot khoi ra
+    // soat neu khong merge (phan hoi nguoi dung 26/07/2026).
+    const draftAssignments = mirrors
+      .filter((m) => m.kind === "poi" && m.siteId === null)
+      .map((m) => ({ destinationId: -1, destinationSlug: m.slug, destinationName: m.name, tagSlugs: m.tags }));
+    const assignments = [...siteAssignments, ...draftAssignments];
 
     const findings: TagReverseCheckFinding[] = [...this.findUnderThresholdTags(tags, assignments)];
 

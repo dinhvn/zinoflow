@@ -76,6 +76,14 @@ export interface DestinationMirrorRepository {
   /** Cap nhat khoang cach toi trung tam cum/tinh cha, met (dichoithoi-poi-distance-plan.md) */
   setDistanceFromCenter(slug: string, distanceMeters: number): Promise<void>;
   /**
+   * Ghi tag NHAP cho diem chua publish (siteId=null) — SQL Server chua co
+   * DestinationId de tro FK v2.DestinationTagMap nen phai luu tam o day. Khi
+   * publish lan dau, PublishDestinationUseCase day cot nay sang SQL Server.
+   */
+  setTags(slug: string, tagSlugs: readonly string[]): Promise<void>;
+  /** Ghi Type NHAP cho diem chua publish — cung ly do/co che voi setTags */
+  setTypes(slug: string, typeSlugs: readonly string[]): Promise<void>;
+  /**
    * Doi slug 1 diem den (Phase 24 chieu ghi) — cascade TRONG 1 transaction:
    * dichoithoi_destinations.slug + parent_slug cua con, dichoithoi_destination_relations
    * (source/target_slug), hotel_destination_map/tour_destination_map.destination_slug,

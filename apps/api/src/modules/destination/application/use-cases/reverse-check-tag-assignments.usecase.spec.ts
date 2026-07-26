@@ -12,6 +12,9 @@ import type {
   StructuredGenerationRequest,
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import type { AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
+import type { DestinationMirrorRepository } from "../ports/destination-mirror.repository";
+
+const emptyMirrorRepo = { findAll: async () => [] } as unknown as DestinationMirrorRepository;
 
 const TAGS: SiteTagRow[] = [
   { id: 1, slug: "hoang-so", name: "Hoang so", description: null, metaDescription: null, status: 0 },
@@ -41,6 +44,7 @@ function buildUseCase(assignments: SiteTagAssignmentRow[], aiOutput: unknown) {
     siteDb,
     { resolve: () => fakeProvider(aiOutput) } as AiProviderRegistry,
     { record: async () => {} } as AiUsageRecorder,
+    emptyMirrorRepo,
   );
 }
 
@@ -93,6 +97,7 @@ describe("ReverseCheckTagAssignmentsUseCase (destination-spec §2.4 buoc 2)", ()
         },
       } as AiProviderRegistry,
       { record: async () => {} } as AiUsageRecorder,
+      emptyMirrorRepo,
     );
 
     const result = await usecase.execute();

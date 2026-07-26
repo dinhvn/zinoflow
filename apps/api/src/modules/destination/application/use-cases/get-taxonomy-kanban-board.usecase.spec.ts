@@ -2,6 +2,7 @@ import { GetTaxonomyKanbanBoardUseCase } from "./get-taxonomy-kanban-board.useca
 import type { DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 import type { ImageChecker } from "../ports/image-checker.port";
 import type { TaxonomySuggestionRepository } from "../ports/taxonomy-suggestion.repository";
+import type { DestinationMirrorRepository } from "../ports/destination-mirror.repository";
 
 function fakeImageChecker(): ImageChecker {
   return {
@@ -14,6 +15,8 @@ function fakeSuggestionRepo(
 ): TaxonomySuggestionRepository {
   return { findAll: async () => rows } as unknown as TaxonomySuggestionRepository;
 }
+
+const emptyMirrorRepo = { findAll: async () => [] } as unknown as DestinationMirrorRepository;
 
 describe("GetTaxonomyKanbanBoardUseCase (relations-plan §6.1-6.2, Giai doan B2)", () => {
   it("chi lay diem kind=poi lam the Kanban, tinh/cum chi lam dropdown, gop dung typeSlugs", async () => {
@@ -51,6 +54,7 @@ describe("GetTaxonomyKanbanBoardUseCase (relations-plan §6.1-6.2, Giai doan B2)
       siteDb,
       fakeImageChecker(),
       fakeSuggestionRepo(),
+      emptyMirrorRepo,
     );
     const result = await useCase.execute();
 
@@ -99,6 +103,7 @@ describe("GetTaxonomyKanbanBoardUseCase (relations-plan §6.1-6.2, Giai doan B2)
           status: "pending",
         },
       ]),
+      emptyMirrorRepo,
     );
     const result = await useCase.execute();
 

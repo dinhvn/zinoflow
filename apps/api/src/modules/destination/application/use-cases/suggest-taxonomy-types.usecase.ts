@@ -20,6 +20,11 @@ import {
   TAXONOMY_SUGGESTION_REPOSITORY,
   type TaxonomySuggestionRepository,
 } from "../ports/taxonomy-suggestion.repository";
+import {
+  DESTINATION_MIRROR_REPOSITORY,
+  type DestinationMirrorRepository,
+} from "../ports/destination-mirror.repository";
+import { buildTaxonomyTypeSuggestCandidates } from "./taxonomy-type-suggest-candidates";
 
 const DEFAULT_PROVIDER = "anthropic";
 const DEFAULT_MODELS: Record<string, string> = {
@@ -44,21 +49,27 @@ export class SuggestTaxonomyTypesUseCase {
     private readonly suggestionRepo: TaxonomySuggestionRepository,
     @Inject(AI_PROVIDER_REGISTRY) private readonly registry: AiProviderRegistry,
     @Inject(AI_USAGE_RECORDER) private readonly usage: AiUsageRecorder,
+    @Inject(DESTINATION_MIRROR_REPOSITORY)
+    private readonly mirrorRepo: DestinationMirrorRepository,
   ) {}
 
   async execute(request: SuggestTaxonomyTypesRequest): Promise<SuggestTaxonomyTypesResponse> {
-    const [allDestinations, contentRows, taxonomy, existingSuggestions] = await Promise.all([
+    const [allDestinations, contentRows, taxonomy, existingSuggestions, mirrors] = await Promise.all([
       this.siteDb.fetchAllDestinations(),
       this.siteDb.fetchAllContentRows(),
       this.siteDb.fetchTaxonomyContent(),
       this.suggestionRepo.findAll(),
+      this.mirrorRepo.findAll(),
     ]);
 
     const acceptedSlugs = new Set(
       existingSuggestions.filter((s) => s.status === "accepted").map((s) => s.destinationSlug),
     );
-    const candidates = allDestinations.filter(
-      (d) => d.kind === "poi" && d.parentSlug === request.clusterSlug && !acceptedSlugs.has(d.slug),
+    const candidates = buildTaxonomyTypeSuggestCandidates(
+      allDestinations,
+      mirrors,
+      request.clusterSlug,
+      acceptedSlugs,
     );
     if (candidates.length === 0) {
       return { suggestions: [] };

@@ -101,7 +101,9 @@ export class GetDestinationDetailUseCase {
     const hasDistanceData =
       entity.distanceFromCenter !== null ||
       poiDistancePairs.some((p) => p.poiASlug === slug || p.poiBSlug === slug);
-    const nearby = computeNearby(self, candidates)
+    // includeDrafts: tab "Quan he" trong CMS — cho phep goi y ca diem cung
+    // cum CHUA publish (khac RelatedJson cong khai tren site, luon published-only).
+    const nearby = computeNearby(self, candidates, { includeDrafts: true })
       .slice(0, NEARBY_PREVIEW_COUNT)
       .map((n) => {
         const realMeters = poiDistances.get(clusterDistanceKey(slug, n.slug));
@@ -124,11 +126,14 @@ export class GetDestinationDetailUseCase {
     // SQL Server co the chua cau hinh hoac diem chua co bai -> content = null.
     const content = await this.fetchSiteContent(entity.siteId);
 
-    // Type/Tag da gan (§7.3, hien badge chi-doc tren trang detail) — doc thang tu
-    // SQL Server (KHONG qua Postgres mirror, "types" tren mirror chi dung rieng cho
-    // related-builder va co the stale sau khi seed lai taxonomy). Best-effort nhu
-    // fetchSiteContent: site DB co the chua cau hinh.
-    const { assignedTypes, assignedTags } = await this.fetchTaxonomyAssignments(entity.siteId);
+    // Type/Tag da gan (§7.3, hien badge chi-doc tren trang detail) — diem DA publish
+    // doc thang tu SQL Server (nguon that, mirror co the stale sau khi seed lai
+    // taxonomy). Diem CHUA publish (siteId=null) doc tu mirror.types/tags — do la
+    // Type/Tag dang o trang thai NHAP (xem UpdateDestinationTypesUseCase/
+    // ApplyTagAssignmentsUseCase), SQL Server chua co DestinationId de tra ve
+    // (bug thuc te 26/07/2026: gan tag cho diem draft xong nhung trang detail
+    // van hien "chua gan" vi luon doc SQL Server bat ke siteId).
+    const { assignedTypes, assignedTags } = await this.fetchTaxonomyAssignments(entity);
 
     return {
       siteId: entity.siteId,
@@ -240,16 +245,14 @@ export class GetDestinationDetailUseCase {
 
   /** Type/Tag da gan cho 1 diem den — rong neu site DB chua cau hinh hoac loi (khong chan trang detail). */
   private async fetchTaxonomyAssignments(
-    siteId: number | null,
+    entity: DestinationMirrorEntity,
   ): Promise<Pick<DestinationDetail, "assignedTypes" | "assignedTags">> {
     const empty = { assignedTypes: [], assignedTags: [] };
-    if (siteId === null || !this.siteDb.isConfigured()) return empty;
+    if (!this.siteDb.isConfigured()) return empty;
     try {
-      const [taxonomyContent, typeAssignments, tags, tagAssignments] = await Promise.all([
+      const [taxonomyContent, tags] = await Promise.all([
         this.siteDb.fetchTaxonomyContent(),
-        this.siteDb.fetchTypeAssignments(),
         this.siteDb.fetchTags(),
-        this.siteDb.fetchTagAssignments(),
       ]);
       const groupNameById = new Map(taxonomyContent.groups.map((g) => [g.id, g.name]));
       const typeBySlug = new Map(
@@ -258,7 +261,23 @@ export class GetDestinationDetailUseCase {
           { name: t.name, groupName: groupNameById.get(t.groupId) ?? "" },
         ]),
       );
-      const typeSlugs = typeAssignments.find((a) => a.destinationId === siteId)?.typeSlugs ?? [];
+      const tagNameBySlug = new Map(tags.map((t) => [t.slug, t.name]));
+
+      let typeSlugs: readonly string[];
+      let tagSlugs: readonly string[];
+      if (entity.siteId === null) {
+        // Diem CHUA publish — Type/Tag dang o trang thai NHAP tren mirror.
+        typeSlugs = entity.types;
+        tagSlugs = entity.tags;
+      } else {
+        const [typeAssignments, tagAssignments] = await Promise.all([
+          this.siteDb.fetchTypeAssignments(),
+          this.siteDb.fetchTagAssignments(),
+        ]);
+        typeSlugs = typeAssignments.find((a) => a.destinationId === entity.siteId)?.typeSlugs ?? [];
+        tagSlugs = tagAssignments.find((a) => a.destinationId === entity.siteId)?.tagSlugs ?? [];
+      }
+
       const assignedTypes = typeSlugs
         .map((slug) => {
           const t = typeBySlug.get(slug);
@@ -266,8 +285,6 @@ export class GetDestinationDetailUseCase {
         })
         .filter((t): t is { slug: string; name: string; groupName: string } => t !== null);
 
-      const tagNameBySlug = new Map(tags.map((t) => [t.slug, t.name]));
-      const tagSlugs = tagAssignments.find((a) => a.destinationId === siteId)?.tagSlugs ?? [];
       const assignedTags = tagSlugs
         .map((slug) => {
           const name = tagNameBySlug.get(slug);
@@ -278,7 +295,7 @@ export class GetDestinationDetailUseCase {
       return { assignedTypes, assignedTags };
     } catch (err) {
       this.logger.warn(
-        `Khong doc duoc Type/Tag da gan cho siteId=${siteId}: ${err instanceof Error ? err.message : err}`,
+        `Khong doc duoc Type/Tag da gan cho slug=${entity.slug}: ${err instanceof Error ? err.message : err}`,
       );
       return empty;
     }

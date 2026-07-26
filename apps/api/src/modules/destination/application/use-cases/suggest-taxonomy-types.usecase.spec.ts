@@ -3,6 +3,9 @@ import type { DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
 import type { TaxonomySuggestionRepository } from "../ports/taxonomy-suggestion.repository";
 import type { AiProviderRegistry } from "../../../ai-content/application/ports/content-ai-provider.port";
 import type { AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
+import type { DestinationMirrorRepository } from "../ports/destination-mirror.repository";
+
+const emptyMirrorRepo = { findAll: async () => [] } as unknown as DestinationMirrorRepository;
 
 function fakeSiteDb(): DichoithoiSiteDb {
   return {
@@ -87,6 +90,7 @@ describe("SuggestTaxonomyTypesUseCase (relations-plan §6.3, Giai doan B3)", () 
         ],
       }),
       fakeUsageRecorder(),
+      emptyMirrorRepo,
     );
 
     const result = await useCase.execute({ clusterSlug: "quang-ninh" });
@@ -126,6 +130,7 @@ describe("SuggestTaxonomyTypesUseCase (relations-plan §6.3, Giai doan B3)", () 
       suggestionRepo,
       registry,
       fakeUsageRecorder(),
+      emptyMirrorRepo,
     );
 
     const result = await useCase.execute({ clusterSlug: "cum-khong-ton-tai" });
