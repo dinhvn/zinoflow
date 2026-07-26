@@ -13,6 +13,10 @@ import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../../../ai-content/app
 import { buildPromptLogText } from "../../../ai-content/application/services/prompt-log-text";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+import {
+  DESTINATION_MIRROR_REPOSITORY,
+  type DestinationMirrorRepository,
+} from "../ports/destination-mirror.repository";
 
 const DEFAULT_PROVIDER = "anthropic";
 const DEFAULT_MODELS: Record<string, string> = {
@@ -41,6 +45,8 @@ export class GenerateTagDescriptionUseCase {
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(AI_PROVIDER_REGISTRY) private readonly registry: AiProviderRegistry,
     @Inject(AI_USAGE_RECORDER) private readonly usage: AiUsageRecorder,
+    @Inject(DESTINATION_MIRROR_REPOSITORY)
+    private readonly mirrorRepo: DestinationMirrorRepository,
   ) {}
 
   async execute(request: GenerateTagDescriptionRequest): Promise<GenerateTagDescriptionResponse> {
@@ -50,7 +56,18 @@ export class GenerateTagDescriptionUseCase {
       throw new DomainRuleError(`Không tìm thấy tag "${request.tagSlug}"`);
     }
 
-    const assignedDestinations = await this.siteDb.fetchDestinationsForTag(request.tagSlug);
+    // Gom them POI CHUA publish da gan tag nay qua mirror.tags — CHI de AI biet
+    // ma nhac ten trong doan van (KHONG anh huong auto-link, van CHI link toi
+    // diem da publish qua PreviewTagDescriptionUseCase/UpdateTagDescriptionUseCase,
+    // vi diem chua publish khong co trang that de link toi — phan hoi nguoi dung 26/07/2026).
+    const [siteAssignedDestinations, mirrors] = await Promise.all([
+      this.siteDb.fetchDestinationsForTag(request.tagSlug),
+      this.mirrorRepo.findAll(),
+    ]);
+    const draftAssignedDestinations = mirrors
+      .filter((m) => m.kind === "poi" && m.siteId === null && m.tags.includes(request.tagSlug))
+      .map((m) => ({ slug: m.slug, name: m.name }));
+    const assignedDestinations = [...siteAssignedDestinations, ...draftAssignedDestinations];
 
     const providerKey = aiProviderKeySchema.parse(request.aiProvider ?? DEFAULT_PROVIDER);
     const model = request.aiModel ?? DEFAULT_MODELS[providerKey] ?? DEFAULT_MODELS[DEFAULT_PROVIDER]!;

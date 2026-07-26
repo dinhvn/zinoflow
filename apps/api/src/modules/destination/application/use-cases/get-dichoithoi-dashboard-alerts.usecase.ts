@@ -2,6 +2,10 @@ import { Inject, Injectable } from "@nestjs/common";
 import { CONTENT_JOB_REPOSITORY, type ContentJobRepository } from "../../../ai-content/application/ports/content-job.repository";
 import { GetCoverageScoresUseCase } from "./get-coverage-scores.usecase";
 import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+import {
+  DESTINATION_MIRROR_REPOSITORY,
+  type DestinationMirrorRepository,
+} from "../ports/destination-mirror.repository";
 
 /** Diem duoi nguong nay bi tinh la "do phu thap" (destination-spec §7.2) */
 const LOW_COVERAGE_THRESHOLD_PERCENT = 60;
@@ -41,15 +45,18 @@ export class GetDichoithoiDashboardAlertsUseCase {
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobs: ContentJobRepository,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     private readonly coverageScores: GetCoverageScoresUseCase,
+    @Inject(DESTINATION_MIRROR_REPOSITORY)
+    private readonly mirrorRepo: DestinationMirrorRepository,
   ) {}
 
   async execute(): Promise<DichoithoiDashboardAlertsResponse> {
-    const [coverage, tags, tagAssignments, allJobs, coverageRows] = await Promise.all([
+    const [coverage, tags, tagAssignments, allJobs, coverageRows, mirrors] = await Promise.all([
       this.coverageScores.execute(),
       this.siteDb.fetchTags(),
       this.siteDb.fetchTagAssignments(),
       this.jobs.findAll(),
       this.siteDb.fetchContentCoverageRows(),
+      this.mirrorRepo.findAll(),
     ]);
 
     const lowCoverageCount = coverage.items.filter(
@@ -64,10 +71,18 @@ export class GetDichoithoiDashboardAlertsUseCase {
               100,
           );
 
+    // Gom them POI CHUA publish (siteId=null) — tag cua nhom nay o mirror.tags,
+    // dam bao dem dung khop voi ReverseCheckTagAssignmentsUseCase (phan hoi
+    // nguoi dung 26/07/2026), khong de dashboard bao "duoi nguong" sai vi thieu
+    // diem draft da gan tag.
+    const draftTagSlugs = mirrors
+      .filter((m) => m.kind === "poi" && m.siteId === null)
+      .flatMap((m) => m.tags);
     const countByTag = new Map<string, number>();
     for (const a of tagAssignments) {
       for (const slug of a.tagSlugs) countByTag.set(slug, (countByTag.get(slug) ?? 0) + 1);
     }
+    for (const slug of draftTagSlugs) countByTag.set(slug, (countByTag.get(slug) ?? 0) + 1);
     const underThresholdTagCount = tags.filter(
       (t) => (countByTag.get(t.slug) ?? 0) < MIN_DESTINATIONS_PER_TAG,
     ).length;

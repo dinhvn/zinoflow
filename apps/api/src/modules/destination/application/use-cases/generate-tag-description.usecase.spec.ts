@@ -9,6 +9,9 @@ import type {
 } from "../../../ai-content/application/ports/content-ai-provider.port";
 import type { AiUsageRecorder } from "../../../ai-content/application/ports/ai-usage-recorder.port";
 import { DomainRuleError } from "../../../shared/errors/app-error";
+import type { DestinationMirrorRepository } from "../ports/destination-mirror.repository";
+
+const emptyMirrorRepo = { findAll: async () => [] } as unknown as DestinationMirrorRepository;
 
 const TAGS: SiteTagRow[] = [
   { id: 1, slug: "lang-man", name: "Lang man — Check-in cap doi", description: null, metaDescription: null, status: 0 },
@@ -39,6 +42,7 @@ describe("GenerateTagDescriptionUseCase (destination-spec §2.4 buoc 3)", () => 
       siteDb,
       { resolve: () => fakeProvider({ description: "Mo ta lang man" }) } as AiProviderRegistry,
       { record: async (e) => void usageRecords.push(e.operation) } as AiUsageRecorder,
+      emptyMirrorRepo,
     );
 
     const result = await usecase.execute({ tagSlug: "lang-man" });
@@ -56,6 +60,7 @@ describe("GenerateTagDescriptionUseCase (destination-spec §2.4 buoc 3)", () => 
       siteDb,
       { resolve: () => fakeProvider({ description: "x" }) } as AiProviderRegistry,
       { record: async () => {} } as AiUsageRecorder,
+      emptyMirrorRepo,
     );
 
     await expect(usecase.execute({ tagSlug: "khong-ton-tai" })).rejects.toThrow(DomainRuleError);

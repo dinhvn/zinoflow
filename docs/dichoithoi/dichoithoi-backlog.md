@@ -1476,6 +1476,28 @@ xong, không còn gì mở ở mức ưu tiên này.**
   (25/07/2026)**: thêm link `/content/{activeContentJobId}` cạnh dòng trạng
   thái (`[slug]/page.tsx`). Verify: trang `/content/[id]` load 200 cho job
   thật của `dalat-fairytale-land`.
+- ✅ **Cho phép gán Tag/Type/xem quan hệ cho điểm đến CHƯA publish — ĐÃ BUILD
+  + verify sống 26/07/2026** (phát hiện qua cụm "Đạ Tẻh" mới tạo, siteId=null):
+  Tag Kanban, Type Kanban, gợi ý+xem trước prompt AI, list tổng trang Chủ đề,
+  rà soát ngược, trang chi tiết điểm đến (badge Tag/Type), tab "Quan hệ" —
+  tất cả trước đây chỉ đọc SQL Server (`WHERE Status=1`) nên bỏ sót/hiện sai
+  điểm draft. Gán Tag/Type cho điểm draft giờ lưu tạm vào mirror Postgres
+  (cột `tags`/`types`), tự động đẩy sang `DestinationTagMap`/`TypeMap` thật
+  khi publish lần đầu. Xem chi tiết code tại commit `8606009`.
+  - ✅ **2/3 việc phụ còn lại — ĐÃ BUILD + verify sống 26/07/2026**:
+    1. `generate-tag-description.usecase.ts` — prompt AI soạn mô tả
+       `/chu-de/{slug}` giờ gồm cả điểm draft đã gán tag qua mirror.tags, để
+       AI biết đủ ngữ cảnh khi viết. **Không đổi** `preview-tag-description.usecase.ts`/
+       `update-tag-description.usecase.ts` (bước sinh link `<a href>` thật) —
+       vẫn CHỈ link tới điểm đã publish, verify sống: mention tên điểm draft
+       trong mô tả KHÔNG bị biến thành link (đúng, tránh 404).
+    2. `get-dichoithoi-dashboard-alerts.usecase.ts` — đếm "chủ đề dưới ngưỡng"
+       giờ gồm cả điểm draft gán tag qua mirror, khớp đúng số trang Rà soát ngược.
+  - ❌ **1/3 việc phụ — XÁC NHẬN KHÔNG PHẢI BUG, giữ nguyên**: `manage-taxonomy-content.usecase.ts`
+    (auto-link mô tả Type/Group/Tỉnh) dùng cùng cơ chế sinh link thật với mục
+    1 phần preview/update ở trên — PHẢI giữ published-only để không tạo link
+    chết trên trang `/loai`, `/tinh` công khai. Đánh giá "cosmetic gap" trong
+    audit 26/07/2026 trước đó là sai — đây là hành vi đúng, không sửa.
 
 ## Việc CŨ hơn — đã lỗi thời, cần rà lại khi đụng tới
 

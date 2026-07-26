@@ -53,7 +53,7 @@ describe("GetDichoithoiDashboardAlertsUseCase (destination-spec §7.2, Phase 23)
       typeof GetCoverageScoresUseCase
     >[0];
     const coverageScores = new GetCoverageScoresUseCase(mirrorRepo, siteDb);
-    const usecase = new GetDichoithoiDashboardAlertsUseCase(jobsRepo, siteDb, coverageScores);
+    const usecase = new GetDichoithoiDashboardAlertsUseCase(jobsRepo, siteDb, coverageScores, mirrorRepo);
     return { usecase };
   }
 
@@ -96,6 +96,26 @@ describe("GetDichoithoiDashboardAlertsUseCase (destination-spec §7.2, Phase 23)
 
     const underThreshold = result.alerts.find((a) => a.key === "under-threshold-tag");
     expect(underThreshold?.count).toBe(1); // chi "hoang-so" (1 diem) duoi nguong 3
+  });
+
+  it("gom ca diem draft (siteId=null) da gan tag qua mirror.tags vao dem nguong", async () => {
+    const tags = [
+      { id: 1, slug: "hoang-so", name: "Hoang so", description: null, status: 1 },
+    ] as unknown as Awaited<ReturnType<DichoithoiSiteDb["fetchTags"]>>;
+    const tagAssignments = [
+      { destinationId: 1, destinationSlug: "a", destinationName: "A", tagSlugs: ["hoang-so"] },
+      { destinationId: 2, destinationSlug: "b", destinationName: "B", tagSlugs: ["hoang-so"] },
+    ];
+    const mirrors = [
+      { kind: "poi", siteId: null, tags: ["hoang-so"] },
+      { kind: "cluster", siteId: null, tags: ["hoang-so"] }, // khong phai poi -> khong tinh
+    ];
+    const { usecase } = setup({ tags, tagAssignments, mirrors });
+    const result = await usecase.execute();
+
+    const underThreshold = result.alerts.find((a) => a.key === "under-threshold-tag");
+    // 2 (SQL) + 1 (draft poi) = 3, dat nguong -> khong con alert nao
+    expect(underThreshold).toBeUndefined();
   });
 
   it("dem dung diem thieu anh gallery", async () => {
