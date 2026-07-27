@@ -419,6 +419,28 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     });
   }
 
+  async deleteDestination(siteId: number, slug: string): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("slug", slug);
+      return request.query(`
+        SET XACT_ABORT ON;
+        BEGIN TRAN;
+
+        DELETE FROM v2.DestinationTagMap WHERE DestinationId = @siteId;
+        DELETE FROM v2.DestinationTypeMap WHERE DestinationId = @siteId;
+        DELETE FROM v2.DestinationContent WHERE DestinationId = @siteId;
+        DELETE FROM v2.DestinationRelation WHERE SourceId = @siteId OR TargetId = @siteId;
+        DELETE FROM v2.ArticleDestinationMap WHERE DestinationSlug = @slug;
+        DELETE FROM v2.SlugRedirect WHERE DestinationId = @siteId;
+        DELETE FROM v2.Destination WHERE Id = @siteId;
+
+        COMMIT;
+      `);
+    });
+  }
+
   /** Bind tham so metadata dung chung cho insert + update */
   private bindMeta(request: sql.Request, meta: SiteDestinationMeta): sql.Request {
     request.input("slug", meta.slug);

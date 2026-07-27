@@ -54,6 +54,7 @@ import { LocalFileImageDownloader } from "./infrastructure/reference/local-file-
 import { GetDestinationDetailUseCase } from "./application/use-cases/get-destination-detail.usecase";
 import { UpsertDestinationUseCase } from "./application/use-cases/upsert-destination.usecase";
 import { RenameDestinationSlugUseCase } from "./application/use-cases/rename-destination-slug.usecase";
+import { DeleteDestinationUseCase } from "./application/use-cases/delete-destination.usecase";
 import { ImportDestinationsUseCase } from "./application/use-cases/import-destinations.usecase";
 import { ExportDestinationsUseCase } from "./application/use-cases/export-destinations.usecase";
 import { BulkUpdateDestinationFieldsUseCase } from "./application/use-cases/bulk-update-destination-fields.usecase";
@@ -188,6 +189,7 @@ import {
     GetDestinationDetailUseCase,
     UpsertDestinationUseCase,
     RenameDestinationSlugUseCase,
+    DeleteDestinationUseCase,
     ImportDestinationsUseCase,
     ExportDestinationsUseCase,
     BulkUpdateDestinationFieldsUseCase,

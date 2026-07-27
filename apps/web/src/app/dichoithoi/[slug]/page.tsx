@@ -17,6 +17,8 @@ import {
   listAiProvidersResponseSchema,
   publishDestinationResultSchema,
   renameDestinationSlugResponseSchema,
+  previewDeleteDestinationResponseSchema,
+  deleteDestinationResponseSchema,
   recomputeNearbyDistancesReportSchema,
   getRelatedSpotlightResponseSchema,
   DESTINATION_BLOCK_LABELS,
@@ -758,6 +760,24 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       ),
     onSuccess: (r) => {
       window.location.href = `/dichoithoi/${r.newSlug}`;
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+
+  // --- Xoa han diem den/cum (+ con chau neu la cum) — thao tac RIENG, canh bao
+  // ro pham vi anh huong TRUOC khi xoa, khong the tu hoan tac (27/07/2026) ---
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const deletePreviewQuery = useQuery({
+    queryKey: ["destination-delete-preview", slug],
+    queryFn: () =>
+      apiGet(`/destinations/${slug}/delete-preview`, previewDeleteDestinationResponseSchema),
+    enabled: deleteOpen,
+  });
+  const deleteDestination = useMutation({
+    mutationFn: async () =>
+      deleteDestinationResponseSchema.parse(await apiSend("DELETE", `/destinations/${slug}`)),
+    onSuccess: () => {
+      window.location.href = d?.parent ? `/dichoithoi/${d.parent.slug}` : "/dichoithoi";
     },
     onError: (e) => setActionError(toActionError(e)),
   });
@@ -1515,6 +1535,110 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                   setNewSlugInput("");
                 }}
               >
+                Huỷ
+              </Button>
+            </div>
+          </div>
+        )}
+      </Group>
+
+      {/* Xoa han diem den/cum — thao tac nguy hiem NHAT trang, canh bao ro pham
+          vi anh huong (con chau neu la cum) truoc khi xoa that (27/07/2026) */}
+      <Group title="🗑️ Xoá điểm đến (nguy hiểm)">
+        {!deleteOpen ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-zinc-500">
+              Xoá hẳn{" "}
+              {d.kind === "cluster"
+                ? "cụm này VÀ TOÀN BỘ điểm đến bên trong"
+                : "điểm đến này"}{" "}
+              khỏi hệ thống — không thể tự hoàn tác.
+            </p>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+              onClick={() => setDeleteOpen(true)}
+            >
+              Xoá...
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {deletePreviewQuery.isLoading && (
+              <p className="text-xs text-zinc-400">Đang kiểm tra phạm vi ảnh hưởng...</p>
+            )}
+            {deletePreviewQuery.isError && (
+              <p className="text-xs text-red-600 dark:text-red-400">
+                {deletePreviewQuery.error instanceof Error
+                  ? deletePreviewQuery.error.message
+                  : "Lỗi kiểm tra phạm vi ảnh hưởng"}
+              </p>
+            )}
+            {deletePreviewQuery.data && (
+              <div className="rounded border border-red-300 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                <p className="font-medium">
+                  Sắp xoá: {deletePreviewQuery.data.target.name}
+                  {deletePreviewQuery.data.target.isPublished && (
+                    <span className="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-white">
+                      ĐÃ PUBLISH
+                    </span>
+                  )}
+                </p>
+                {deletePreviewQuery.data.descendants.length > 0 && (
+                  <>
+                    <p className="mt-2 font-medium">
+                      Cùng với {deletePreviewQuery.data.descendants.length} điểm bên trong cụm
+                      này:
+                    </p>
+                    <ul className="mt-1 max-h-40 list-inside list-disc space-y-0.5 overflow-y-auto">
+                      {deletePreviewQuery.data.descendants.map((item) => (
+                        <li key={item.slug}>
+                          {item.name}
+                          {item.isPublished && (
+                            <span className="ml-1 rounded bg-red-600 px-1 py-0.5 text-[10px] text-white">
+                              ĐÃ PUBLISH
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                <p className="mt-2">
+                  {deletePreviewQuery.data.target.isPublished ||
+                  deletePreviewQuery.data.descendants.some((item) => item.isPublished)
+                    ? "⚠️ Có điểm ĐÃ PUBLISH trong danh sách này — xoá sẽ mất vĩnh viễn khỏi website đang chạy (404, mất SEO)."
+                    : "Chưa publish — chỉ xoá trong công cụ này, không ảnh hưởng website."}
+                </p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="bg-red-600 text-white hover:bg-red-700"
+                loading={deleteDestination.isPending}
+                disabled={!deletePreviewQuery.data}
+                onClick={() => {
+                  const preview = deletePreviewQuery.data;
+                  if (!preview) return;
+                  const total = 1 + preview.descendants.length;
+                  if (
+                    window.confirm(
+                      `Xoá "${preview.target.name}"${
+                        preview.descendants.length > 0
+                          ? ` + ${preview.descendants.length} điểm bên trong`
+                          : ""
+                      } (tổng ${total})? KHÔNG THỂ hoàn tác.`,
+                    )
+                  ) {
+                    deleteDestination.mutate();
+                  }
+                }}
+              >
+                {deleteDestination.isPending ? "Đang xoá..." : "Xác nhận xoá vĩnh viễn"}
+              </Button>
+              <Button size="sm" onClick={() => setDeleteOpen(false)}>
                 Huỷ
               </Button>
             </div>

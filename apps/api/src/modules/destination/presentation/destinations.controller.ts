@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   Param,
@@ -79,6 +80,8 @@ import {
   type RelinkAllReport,
   type RenameDestinationSlugRequest,
   type RenameDestinationSlugResponse,
+  type PreviewDeleteDestinationResponse,
+  type DeleteDestinationResponse,
   type SaveAiInputsRequest,
   type SuggestDestinationMetaRequest,
   type DestinationArticle,
@@ -133,6 +136,7 @@ import { MigrateDestinationImagesUseCase } from "../application/use-cases/migrat
 import { GetDestinationDetailUseCase } from "../application/use-cases/get-destination-detail.usecase";
 import { UpsertDestinationUseCase } from "../application/use-cases/upsert-destination.usecase";
 import { RenameDestinationSlugUseCase } from "../application/use-cases/rename-destination-slug.usecase";
+import { DeleteDestinationUseCase } from "../application/use-cases/delete-destination.usecase";
 import { ImportDestinationsUseCase } from "../application/use-cases/import-destinations.usecase";
 import { ExportDestinationsUseCase } from "../application/use-cases/export-destinations.usecase";
 import { BulkUpdateDestinationFieldsUseCase } from "../application/use-cases/bulk-update-destination-fields.usecase";
@@ -207,6 +211,7 @@ export class DestinationsController {
     private readonly getDetail: GetDestinationDetailUseCase,
     private readonly upsertDestination: UpsertDestinationUseCase,
     private readonly renameSlug: RenameDestinationSlugUseCase,
+    private readonly deleteDestination: DeleteDestinationUseCase,
     private readonly importDestinations: ImportDestinationsUseCase,
     private readonly exportDestinations: ExportDestinationsUseCase,
     private readonly bulkUpdateFields: BulkUpdateDestinationFieldsUseCase,
@@ -374,6 +379,23 @@ export class DestinationsController {
     request: RenameDestinationSlugRequest,
   ): Promise<RenameDestinationSlugResponse> {
     return this.renameSlug.execute(slug, request.newSlug);
+  }
+
+  /** Xem truoc pham vi anh huong (chinh no + con chau neu la cum) truoc khi xoa that */
+  @Get(":slug/delete-preview")
+  previewDeleteDestination(
+    @Param("slug") slug: string,
+  ): Promise<PreviewDeleteDestinationResponse> {
+    return this.deleteDestination.preview(slug);
+  }
+
+  /**
+   * Xoa han 1 diem den/cum (+ con chau neu la cum) — ho tro ca diem DA publish
+   * (xoa cung tren SQL Server). KHONG the tu hoan tac, xem DeleteDestinationUseCase.
+   */
+  @Delete(":slug")
+  deleteDestinationBySlug(@Param("slug") slug: string): Promise<DeleteDestinationResponse> {
+    return this.deleteDestination.execute(slug);
   }
 
   @Get("taxonomy")

@@ -274,6 +274,13 @@ export interface DichoithoiSiteDb {
    */
   renameSlug(siteId: number, oldSlug: string, newSlug: string): Promise<void>;
   /**
+   * Xoa CUNG 1 diem den DA PUBLISH khoi site that (v2.Destination + moi bang
+   * lien quan: DestinationContent/TagMap/TypeMap/Relation/ArticleDestinationMap/
+   * SlugRedirect) — goi cho TUNG diem 1 (usecase tu lo thu tu con truoc cha khi
+   * xoa ca cum, tranh vi pham FK ParentId neu co). KHONG the tu hoan tac.
+   */
+  deleteDestination(siteId: number, slug: string): Promise<void>;
+  /**
    * Card diem den theo bo loc (article-spec §3.1 khoi `destinations`) — CHI diem
    * da published (Status=1). typeSlug khop qua DestinationTypeMap+DestinationType.
    */

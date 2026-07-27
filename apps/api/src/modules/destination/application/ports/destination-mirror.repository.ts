@@ -91,6 +91,14 @@ export interface DestinationMirrorRepository {
    * (chuoi tu do) — cham thang o day de tranh circular dependency module (xem plan).
    */
   renameSlug(oldSlug: string, newSlug: string): Promise<void>;
+  /**
+   * Xoa nhieu diem den + TOAN BO tham chieu cheo bang khong co FK (relations,
+   * poi/cluster distances, hotel/tour map, ve, ai-extraction staging,
+   * products.tags) trong 1 transaction Postgres (cung pattern voi renameSlug).
+   * `slugs` PHAI theo thu tu CON TRUOC CHA (bottom-up) — dam bao logic nhat
+   * quan khi xoa ca cum (cascade xoa het con truoc khi xoa chinh cum).
+   */
+  deleteCascade(slugs: readonly string[]): Promise<void>;
   /** Cap nhat danh sach link mua ve (affiliateUrl da tinh san — spec affiliate-link §2) */
   setTicketLinks(slug: string, ticketLinks: readonly AffiliateLinkItem[]): Promise<void>;
   /** Cap nhat gia ve theo doi tuong — nhap tay hoan toan (content-seo-ux-plan §5.5a) */

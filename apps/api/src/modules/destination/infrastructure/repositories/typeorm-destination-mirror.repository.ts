@@ -307,6 +307,48 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     });
   }
 
+  async deleteCascade(slugs: readonly string[]): Promise<void> {
+    if (slugs.length === 0) return;
+    const list = [...slugs];
+    await this.repo.manager.transaction(async (manager) => {
+      await manager.query(
+        `DELETE FROM dichoithoi_destination_relations WHERE source_slug = ANY($1) OR target_slug = ANY($1)`,
+        [list],
+      );
+      await manager.query(
+        `DELETE FROM dichoithoi_poi_distances WHERE poi_a_slug = ANY($1) OR poi_b_slug = ANY($1)`,
+        [list],
+      );
+      await manager.query(
+        `DELETE FROM dichoithoi_cluster_distances WHERE cluster_a_slug = ANY($1) OR cluster_b_slug = ANY($1)`,
+        [list],
+      );
+      // hotel_destination_map/tour_destination_map/destination_tickets/products do
+      // module khac "so huu" hoac khong co FK — cham thang qua manager (cung ly do
+      // voi renameSlug o tren, tranh circular dependency module).
+      await manager.query(`DELETE FROM hotel_destination_map WHERE destination_slug = ANY($1)`, [
+        list,
+      ]);
+      await manager.query(`DELETE FROM tour_destination_map WHERE destination_slug = ANY($1)`, [
+        list,
+      ]);
+      await manager.query(`DELETE FROM destination_tickets WHERE destination_slug = ANY($1)`, [
+        list,
+      ]);
+      await manager.query(
+        `DELETE FROM dichoithoi_destination_ai_extractions WHERE destination_slug = ANY($1)`,
+        [list],
+      );
+      await manager.query(
+        `UPDATE products SET tags = COALESCE(
+           (SELECT array_agg(t) FROM unnest(tags) t WHERE t <> ALL($1)), '{}'
+         ) WHERE tags && $1`,
+        [list],
+      );
+      await manager.query(`DELETE FROM dichoithoi_destinations WHERE slug = ANY($1)`, [list]);
+    });
+  }
+
   async setTicketLinks(slug: string, ticketLinks: readonly AffiliateLinkItem[]): Promise<void> {
     await this.repo.update({ slug }, { ticketLinks: [...ticketLinks] });
   }

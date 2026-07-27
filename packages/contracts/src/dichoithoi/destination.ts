@@ -651,6 +651,32 @@ export const renameDestinationSlugResponseSchema = z.object({
 });
 export type RenameDestinationSlugResponse = z.infer<typeof renameDestinationSlugResponseSchema>;
 
+/** 1 diem se bi xoa (chinh no hoac con chau) — hien trong popup xac nhan truoc khi xoa that. */
+export const deleteDestinationImpactItemSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  kind: destinationKindSchema,
+  isPublished: z.boolean(),
+});
+export type DeleteDestinationImpactItem = z.infer<typeof deleteDestinationImpactItemSchema>;
+
+/**
+ * Xem truoc pham vi anh huong TRUOC khi xoa that (nut "Xoá" tren trang chi
+ * tiet) — xoa 1 cum se xoa CA con chau (POI ben trong), phai hien du danh
+ * sach de nguoi dung xac nhan dung y, dac biet canh bao neu co diem DA
+ * publish (xoa se mat that tren website dang chay).
+ */
+export const previewDeleteDestinationResponseSchema = z.object({
+  target: deleteDestinationImpactItemSchema,
+  descendants: z.array(deleteDestinationImpactItemSchema),
+});
+export type PreviewDeleteDestinationResponse = z.infer<typeof previewDeleteDestinationResponseSchema>;
+
+export const deleteDestinationResponseSchema = z.object({
+  deletedSlugs: z.array(z.string()),
+});
+export type DeleteDestinationResponse = z.infer<typeof deleteDestinationResponseSchema>;
+
 /**
  * 1 dong import hang loat — giong upsert nhung slug TUY CHON (thieu thi server
  * tu sinh tu ten) + kem thong tin cho AI (ghi chu + URL nguon).
