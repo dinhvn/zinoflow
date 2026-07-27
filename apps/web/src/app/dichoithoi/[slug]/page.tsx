@@ -50,6 +50,7 @@ import { DestinationEditorialReviewEditor } from "@/features/dichoithoi/destinat
 import { DestinationMetaTitleEditor } from "@/features/dichoithoi/destination-meta-title-editor";
 import { DestinationExternalReviewUrlsEditor } from "@/features/dichoithoi/destination-external-review-urls-editor";
 import { DestinationAiExtractionPanel } from "@/features/dichoithoi/destination-ai-extraction-panel";
+import { ClusterPoiCandidatesPanel } from "@/features/dichoithoi/cluster-poi-candidates-panel";
 import {
   DestinationJobSuggestionsModal,
   countAppliedFrameGroups,
@@ -1086,6 +1087,12 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       <Group title="🔎 Trích xuất AI (Google Maps + web tham khảo)">
         <DestinationAiExtractionPanel slug={d.slug} onAccepted={() => invalidate()} />
       </Group>
+
+      {d.kind === "cluster" && (
+        <Group title="🧭 Tìm điểm con trong cụm (AI)">
+          <ClusterPoiCandidatesPanel clusterSlug={d.slug} onAccepted={() => invalidate()} />
+        </Group>
+      )}
 
       <Group title="✍️ Viết bài bằng AI">
         {!d.hasDistanceData && (

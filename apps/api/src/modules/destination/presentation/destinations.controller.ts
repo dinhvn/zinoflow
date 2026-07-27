@@ -112,6 +112,13 @@ import {
   type AcceptDestinationAiExtractionFieldsRequest,
   type DestinationAiExtraction,
   type GetDestinationAiExtractionResponse,
+  findClusterPoiCandidatesRequestSchema,
+  type FindClusterPoiCandidatesRequest,
+  acceptClusterPoiCandidatesRequestSchema,
+  type AcceptClusterPoiCandidatesRequest,
+  type ClusterPoiCandidateItem,
+  type GetClusterPoiCandidatesResponse,
+  type PreviewClusterPoiPromptResponse,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { ValidationError } from "../../shared/errors/app-error";
@@ -155,6 +162,10 @@ import { UpdateDestinationGalleryUseCase } from "../application/use-cases/update
 import { GetDestinationAiExtractionUseCase } from "../application/use-cases/get-destination-ai-extraction.usecase";
 import { AcceptDestinationAiExtractionFieldsUseCase } from "../application/use-cases/accept-destination-ai-extraction-fields.usecase";
 import { ExtractDestinationInfoGsgUseCase } from "../application/use-cases/extract-destination-info-gsg.usecase";
+import { FindClusterPoiCandidatesUseCase } from "../application/use-cases/find-cluster-poi-candidates.usecase";
+import { PreviewClusterPoiPromptUseCase } from "../application/use-cases/preview-cluster-poi-prompt.usecase";
+import { GetClusterPoiCandidatesUseCase } from "../application/use-cases/get-cluster-poi-candidates.usecase";
+import { AcceptClusterPoiCandidatesUseCase } from "../application/use-cases/accept-cluster-poi-candidates.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { RecomputeClusterDistancesUseCase } from "../application/use-cases/recompute-cluster-distances.usecase";
@@ -230,6 +241,10 @@ export class DestinationsController {
     private readonly getAiExtraction: GetDestinationAiExtractionUseCase,
     private readonly acceptAiExtractionFields: AcceptDestinationAiExtractionFieldsUseCase,
     private readonly extractDestinationInfoGsg: ExtractDestinationInfoGsgUseCase,
+    private readonly findClusterPoiCandidates: FindClusterPoiCandidatesUseCase,
+    private readonly previewClusterPoiPrompt: PreviewClusterPoiPromptUseCase,
+    private readonly getClusterPoiCandidates: GetClusterPoiCandidatesUseCase,
+    private readonly acceptClusterPoiCandidates: AcceptClusterPoiCandidatesUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     private readonly recomputeClusterDistancesUseCase: RecomputeClusterDistancesUseCase,
     private readonly recomputeGroupDistances: RecomputeGroupDistancesUseCase,
@@ -532,6 +547,48 @@ export class DestinationsController {
   @Post(":slug/ai-extraction/gsg")
   runGsgExtraction(@Param("slug") slug: string): Promise<DestinationAiExtraction> {
     return this.extractDestinationInfoGsg.execute(slug);
+  }
+
+  /**
+   * Tim diem con (POI) trong 1 cum DA CO SAN bang Gemini + Google Search Grounding
+   * (dichoithoi-cluster-poi-discovery-plan.md) — ghi vao bang staging, chua ghi gi
+   * len DB that cho toi khi Chap nhan tung dong.
+   */
+  @Post(":slug/cluster-poi-candidates")
+  findClusterPoiCandidatesForSlug(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(findClusterPoiCandidatesRequestSchema))
+    request: FindClusterPoiCandidatesRequest,
+  ): Promise<ClusterPoiCandidateItem[]> {
+    return this.findClusterPoiCandidates.execute(slug, request.extraNotes);
+  }
+
+  /** Xem truoc prompt tim diem con, KHONG goi Gemini — nut "Xem trước prompt" */
+  @Post(":slug/cluster-poi-candidates/preview")
+  previewClusterPoiPromptForSlug(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(findClusterPoiCandidatesRequestSchema))
+    request: FindClusterPoiCandidatesRequest,
+  ): Promise<PreviewClusterPoiPromptResponse> {
+    return this.previewClusterPoiPrompt.execute(slug, request.extraNotes);
+  }
+
+  /** Doc dong staging tim diem con trong cum (null = chua tung chay) */
+  @Get(":slug/cluster-poi-candidates")
+  getClusterPoiCandidatesForSlug(
+    @Param("slug") slug: string,
+  ): Promise<GetClusterPoiCandidatesResponse> {
+    return this.getClusterPoiCandidates.execute(slug);
+  }
+
+  /** Chap nhan cac ung vien da tick — tao moi hoac gan lai orphan tuy matchType */
+  @Post(":slug/cluster-poi-candidates/accept")
+  acceptClusterPoiCandidatesForSlug(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(acceptClusterPoiCandidatesRequestSchema))
+    request: AcceptClusterPoiCandidatesRequest,
+  ): Promise<ClusterPoiCandidateItem[]> {
+    return this.acceptClusterPoiCandidates.execute(slug, request.acceptedIndexes);
   }
 
   /**

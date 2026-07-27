@@ -84,6 +84,13 @@ import { ExtractDestinationInfoGsgUseCase } from "./application/use-cases/extrac
 import { DESTINATION_AI_EXTRACTION_REPOSITORY } from "./application/ports/destination-ai-extraction.repository";
 import { TypeOrmDestinationAiExtractionRepository } from "./infrastructure/repositories/typeorm-destination-ai-extraction.repository";
 import { DestinationAiExtractionEntity } from "./infrastructure/entities/destination-ai-extraction.entity";
+import { FindClusterPoiCandidatesUseCase } from "./application/use-cases/find-cluster-poi-candidates.usecase";
+import { PreviewClusterPoiPromptUseCase } from "./application/use-cases/preview-cluster-poi-prompt.usecase";
+import { GetClusterPoiCandidatesUseCase } from "./application/use-cases/get-cluster-poi-candidates.usecase";
+import { AcceptClusterPoiCandidatesUseCase } from "./application/use-cases/accept-cluster-poi-candidates.usecase";
+import { CLUSTER_POI_CANDIDATE_REPOSITORY } from "./application/ports/cluster-poi-candidate.repository";
+import { TypeOrmClusterPoiCandidateRepository } from "./infrastructure/repositories/typeorm-cluster-poi-candidate.repository";
+import { ClusterPoiCandidateEntity } from "./infrastructure/entities/cluster-poi-candidate.entity";
 import { RecomputeClusterDistancesUseCase } from "./application/use-cases/recompute-cluster-distances.usecase";
 import { GetDestinationsMapUseCase } from "./application/use-cases/get-destinations-map.usecase";
 import { GetTaxonomyKanbanBoardUseCase } from "./application/use-cases/get-taxonomy-kanban-board.usecase";
@@ -140,6 +147,7 @@ import {
       AdminWardEntity,
       AdminWardMappingEntity,
       DestinationAiExtractionEntity,
+      ClusterPoiCandidateEntity,
       ClusterDistanceEntity,
       PoiDistanceEntity,
       TaxonomySuggestionEntity,
@@ -206,6 +214,10 @@ import {
     GetDestinationAiExtractionUseCase,
     AcceptDestinationAiExtractionFieldsUseCase,
     ExtractDestinationInfoGsgUseCase,
+    FindClusterPoiCandidatesUseCase,
+    PreviewClusterPoiPromptUseCase,
+    GetClusterPoiCandidatesUseCase,
+    AcceptClusterPoiCandidatesUseCase,
     RecomputeClusterDistancesUseCase,
     RecomputeGroupDistancesUseCase,
     RecomputeNearbyDistancesUseCase,
@@ -232,6 +244,10 @@ import {
     {
       provide: DESTINATION_AI_EXTRACTION_REPOSITORY,
       useClass: TypeOrmDestinationAiExtractionRepository,
+    },
+    {
+      provide: CLUSTER_POI_CANDIDATE_REPOSITORY,
+      useClass: TypeOrmClusterPoiCandidateRepository,
     },
     { provide: CLUSTER_DISTANCE_REPOSITORY, useClass: TypeOrmClusterDistanceRepository },
     { provide: POI_DISTANCE_REPOSITORY, useClass: TypeOrmPoiDistanceRepository },
