@@ -1,9 +1,13 @@
 /**
- * GD5 — Nap 257 cum tu snapshot Atlas (plan-lam-moi-du-lieu-atlas.md GD5).
+ * GD5 — Nap cum tu snapshot Atlas (plan-lam-moi-du-lieu-atlas.md GD5).
  * Doc CSV, map ten tinh sheet -> node tinh da seed o GD4 (atlas-seed-provinces.ts)
  * qua ten trong admin_provinces, sinh slug theo quy tac GD1, UPSERT theo slug.
  *
  * - contentTier: "Cụm lớn" -> flagship, "Cụm nhỏ" -> standard (§7 cau 3).
+ * - priority: Cum lon -> 1, Cum nho -> 2 (sua 27/07/2026 lan 2 — nguoi dung phat
+ *   hien ban dau hardcode priority=3 cho MOI cum la SAI, khong phan biet duoc
+ *   flagship/standard qua Priority nhu cac noi khac dang dung, vd priorityScore
+ *   trong relations-plan §1.3).
  * - ai_notes = "Một số điểm trong cụm" + "Tiếp giáp" tu sheet (§7 cau 2) — nguoi
  *   dung se tu doc/cap nhat lai sau, KHONG luu thanh relation.
  * - Slug trung ten cum (2 cap: Phong Dien, Huong Son) -> hau to TEN TINH ca 2 ben.
@@ -34,7 +38,7 @@ const CSV_PATH = path.resolve(
   "docs",
   "dichoithoi",
   "chuan-hoa-du-lieu",
-  "atlas-cum-snapshot-2026-07-27.csv",
+  "atlas-cum-snapshot-2026-07-27-v2.csv",
 );
 
 function normalizeVietnamese(text: string): string {
@@ -93,15 +97,13 @@ function normalizeSheetProvinceName(name: string): string {
 }
 
 /**
- * Loi du lieu THAT trong sheet phat hien khi chay script 27/07/2026: dong "No"=18
- * ghi ten cum la "Củ Chi" nhung noi dung (Diem/Mo ta) la cum RIENG "Cần Giờ" (Rừng
- * Sác, Đảo Khỉ Cần Giờ, pha Vung Tau) — trung ten voi dong "No"=17 la Cu Chi that,
- * khien UPSERT theo slug ghi de mat du lieu Cu Chi that. Sua theo cot "No" (on
- * dinh hon match theo ten) — KHONG sua sheet, chi sua o buoc import nay.
+ * Loi du lieu THAT phat hien lan chay dau 27/07/2026: dong "No"=18 ghi ten cum
+ * la "Củ Chi" nhung noi dung la cum RIENG "Cần Giờ" — nguoi dung DA TU SUA
+ * TRUC TIEP trong sheet o ban cap nhat lan 2 (No=18 "Củ Chi" dung noi dung Cu
+ * Chi, No=19 "Cần Giờ" rieng) — GIU LAI object rong (khong con correction nao)
+ * thay vi xoa han de neu phat sinh loi tuong tu o ban sheet sau van co cho sua.
  */
-const CLUSTER_NAME_CORRECTIONS: Record<string, string> = {
-  "18": "Cần Giờ",
-};
+const CLUSTER_NAME_CORRECTIONS: Record<string, string> = {};
 
 interface ProvinceLookup {
   slug: string;
@@ -169,6 +171,10 @@ async function main(): Promise<void> {
 
       const contentTier = loaiCum === "Cụm lớn" ? "flagship" : loaiCum === "Cụm nhỏ" ? "standard" : null;
       if (!contentTier) errors.push(`Loai cum la "${loaiCum}" (khong phai Cụm lớn/Cụm nhỏ) — cum "${clusterName}"`);
+      // Uu tien tay (1=cao nhat): Cum lon -> 1, Cum nho -> 2 (sua 27/07/2026 lan 2 —
+      // ban dau hardcode 3 cho ca 2 loai la SAI, khong phan biet duoc flagship/standard
+      // qua Priority nhu cac noi khac dang dung, vd relations-plan §1.3 priorityScore).
+      const priority = contentTier === "flagship" ? 1 : 2;
 
       const aiNotesParts: string[] = [];
       if (diemTrongCum) aiNotesParts.push(`Một số điểm trong cụm:\n${diemTrongCum}`);
@@ -179,7 +185,7 @@ async function main(): Promise<void> {
         `INSERT INTO dichoithoi_destinations
            (slug, site_id, kind, parent_slug, province_code, name, name_unaccented,
             short_description, content_tier, ai_notes, priority, has_local_changes)
-         VALUES ($1, NULL, 'cluster', $2, $3, $4, $5, $6, $7, $8, 3, true)
+         VALUES ($1, NULL, 'cluster', $2, $3, $4, $5, $6, $7, $8, $9, true)
          ON CONFLICT (slug) DO UPDATE SET
            parent_slug = EXCLUDED.parent_slug,
            province_code = EXCLUDED.province_code,
@@ -187,7 +193,8 @@ async function main(): Promise<void> {
            name_unaccented = EXCLUDED.name_unaccented,
            short_description = EXCLUDED.short_description,
            content_tier = EXCLUDED.content_tier,
-           ai_notes = EXCLUDED.ai_notes
+           ai_notes = EXCLUDED.ai_notes,
+           priority = EXCLUDED.priority
          RETURNING (xmax = 0) AS is_insert`,
         [
           slug,
@@ -198,6 +205,7 @@ async function main(): Promise<void> {
           moTa,
           contentTier,
           aiNotes,
+          priority,
         ],
       );
       if (res.rows[0]?.is_insert === "true") created++;
@@ -205,14 +213,15 @@ async function main(): Promise<void> {
     }
 
     const byTier = await client.query(
-      `SELECT content_tier, count(*) AS c FROM dichoithoi_destinations WHERE kind = 'cluster' GROUP BY content_tier`,
+      `SELECT content_tier, priority, count(*) AS c FROM dichoithoi_destinations
+       WHERE kind = 'cluster' GROUP BY content_tier, priority ORDER BY priority`,
     );
     const totalClusters = await client.query(`SELECT count(*) AS c FROM dichoithoi_destinations WHERE kind = 'cluster'`);
 
     console.log(`\n=== GD5 NAP CUM XONG ===`);
     console.log(`Tao moi: ${created}, cap nhat: ${updated}, loi: ${errors.length}`);
     console.log(`Tong cum trong DB: ${totalClusters.rows[0]?.c}`);
-    console.log(`Theo ContentTier:`, byTier.rows);
+    console.log(`Theo ContentTier + Priority:`, byTier.rows);
     if (errors.length > 0) {
       console.log(`\nLoi (${errors.length}):`);
       errors.forEach((e) => console.log(` - ${e}`));
