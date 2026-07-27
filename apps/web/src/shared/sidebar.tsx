@@ -62,6 +62,7 @@ const DICHOITHOI_ITEMS: NavItem[] = [
 const DICHOITHOI_TOOL_ITEMS: NavItem[] = [
   { href: "/dichoithoi/dia-chi", label: "Tra cứu địa chỉ", icon: IconSearch },
   { href: "/dichoithoi/affiliate", label: "Quy tắc affiliate", icon: IconLink },
+  { href: "/dichoithoi/backup-con-lai", label: "Backup còn lại", icon: IconDoc },
 ];
 
 /** Khu CMS khuyenmai (laruki + dochoi3s) — tao content AI ghi vao CMS */

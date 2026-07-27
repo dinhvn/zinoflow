@@ -753,43 +753,30 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   CMS zinoflow (`dichoithoi-flat-modern-ui`) — cân nhắc có áp dụng tinh thần
   tương tự cho website công khai hay đây là gu riêng, cần hỏi lại.
 
-- **Chuẩn hoá dữ liệu Tỉnh/Cụm/Điểm theo Atlas 34 tỉnh — 257 cụm (ĐÃ PHÂN
-  TÍCH 27/07/2026, CHƯA CHỐT quyết định, CHƯA có plan implement)** — Atlas
-  đã chốt xong (Google Sheet, snapshot + phân tích đầy đủ ở
-  `docs/dichoithoi/chuan-hoa-du-lieu/phan-tich-hien-trang-va-dinh-huong.md`).
-  Tóm tắt phát hiện chính: DB hiện tại lệch xa đích (17 node tỉnh theo mô
-  hình 63 tỉnh CŨ — còn cả Hà Giang/Phú Yên/Quảng Bình/Kiên Giang đã sáp
-  nhập; 2 hệ mã tỉnh không khớp nhau giữa cây destination và
-  `admin_provinces`; 12/257 cụm; 141 POI treo thẳng tỉnh; Đà Lạt ôm 71 con
-  cần chia lại thành nhiều cụm). **Câu hỏi cụm liên tỉnh cũ đã ĐÓNG** —
-  sheet chốt mỗi cụm thuộc đúng 1 tỉnh, case xuyên tỉnh thể hiện bằng quan
-  hệ "Tiếp giáp" (11 cạnh), KHÔNG cần mở schema đa-tỉnh. Chờ người dùng
-  chốt 6 câu hỏi ở §7 của doc phân tích rồi mới viết plan implement.
-  **Phân tích tiếp 27/07/2026** — cách làm mới toàn bộ điểm đến:
-  `chuan-hoa-du-lieu/phuong-an-lam-moi-diem-den.md` so sánh 2 phương án
-  (A: wipe & restore qua bảng backup tạm + thư mục ảnh tạm; B: giữ data,
-  tách cha, orphan-match gắn lại). **Người dùng ĐÃ CHỐT phương án A
-  (27/07/2026)** sau khi xem khuyến nghị B — doc §6 liệt kê 7 điều kiện an
-  toàn BẮT BUỘC khi viết plan cho A (backup trọn vẹn bảng destinations +
-  ảnh, tái dùng fuzzy-match, màn "backup còn lại" chống chết âm thầm,
-  merge có duyệt, pg_dump lưới cuối, wipe SẠCH cả 2 DB gồm mọi bảng vệ
-  tinh qua deleteCascade; poi_distances KHÔNG khôi phục — user tự tính lại
-  bằng nút CMS sẵn có). **§7 đã CHỐT ĐỦ 7 quyết định (27/07/2026)**: chuẩn
-  cứng 3 tầng; Tiếp giáp + danh sách điểm sheet → `ai_notes` cụm (không
-  lưu relation); Loại cụm map thẳng ContentTier; slug trùng tên hậu tố
-  tỉnh cả 2 bên; theo đúng sheet kể cả cụm trùng tên tỉnh (lưu ý slug đụng
-  node tỉnh — quyết lúc viết plan), Đạ Huoai/Đạ Tẻh user tự sửa tay; không
-  gate publish dần (check thin-content lúc release — đã ghi release-checklist
-  mục 4); thêm mã code chữ cho tỉnh khớp `admin_provinces`. **PLAN
-  IMPLEMENT ĐÃ VIẾT (27/07/2026, CHƯA BUILD)**:
-  `chuan-hoa-du-lieu/plan-lam-moi-du-lieu-atlas.md` — 9 giai đoạn theo phụ
-  thuộc: GĐ1 chốt slug tỉnh-vs-cụm-trùng-tên (còn 1 xác nhận nhỏ của người
-  dùng) → GĐ2 backup (bảng tạm + thư mục ảnh tạm + pg_dump) → GĐ3 wipe cả
-  2 DB → GĐ4 dựng 34 tỉnh + mã 3 chữ → GĐ5 nạp 257 cụm qua import sẵn có →
-  GĐ6 nâng cấp Tìm-điểm-con thêm matchType "backup-match" (khôi phục merge
-  có duyệt) → GĐ7 màn "Backup còn lại" (điều kiện cứng) → GĐ8 vận hành lấp
-  điểm (việc người dùng) → GĐ9 dọn dẹp backup (drop bảng tạm + xoá ảnh
-  tạm, CHỈ sau khi GĐ8 xong + người dùng xác nhận).
+- ✅ **Chuẩn hoá dữ liệu Tỉnh/Cụm/Điểm theo Atlas 34 tỉnh — 257 cụm (GĐ1-7
+  ĐÃ BUILD + VERIFY DỮ LIỆU THẬT 27/07/2026 trên `dichoithoi_dev`; GĐ8 đang
+  vận hành liên tục; GĐ9 CHƯA CHẠY — chờ xác nhận)** — plan đầy đủ +
+  kết quả build ở `chuan-hoa-du-lieu/plan-lam-moi-du-lieu-atlas.md` (mục
+  "Kết quả build" cuối file). Tóm tắt: wipe & restore qua bảng backup tạm
+  `dichoithoi_destinations_backup` + thư mục ảnh tạm → dựng lại 34 node
+  tỉnh (`tinh-<x>`/`thanh-pho-<x>` cho 6 TP trực thuộc TW) → nạp 257 cụm từ
+  sheet Atlas (90 flagship/167 standard, khớp đúng) → tính năng "Tìm điểm
+  con trong cụm" nâng cấp thêm `matchType: "backup-match"` (khôi phục
+  nguyên bài viết/ảnh/toạ độ cũ, mặc định giữ bản backup, có tuỳ chọn dùng
+  bản AI mới) → trang `/dichoithoi/backup-con-lai` (màn "Backup còn lại",
+  điều kiện cứng chống chết dữ liệu âm thầm — khôi phục tay hoặc bỏ hẳn).
+  Verify thật: cụm Bảo Lộc ra 17 backup-match qua Gemini + accept đúng cả 2
+  nhánh; khôi phục ảnh thật (thác Triều Hải, 8 ảnh gallery); Playwright
+  UI trang Backup còn lại; script GĐ9 (`atlas-cleanup-backup.ts`) đã test
+  guard (chặn đúng khi còn dòng chưa xử lý) nhưng **TUYỆT ĐỐI CHƯA CHẠY
+  THẬT** — chỉ chạy khi người dùng xác nhận đã tìm xong điểm cho các cụm.
+  5 script one-time nằm ở `apps/api/scripts/atlas-*.ts`.
+  Câu hỏi cụm liên tỉnh cũ đã ĐÓNG từ lúc phân tích (1 cụm 1 tỉnh + quan hệ
+  "Tiếp giáp" ghi vào `ai_notes` cụm, không lưu relation, không mở schema
+  đa-tỉnh). GĐ4 phát hiện đính chính: mã tỉnh SỐ trong cây destination
+  vốn ĐÃ là mã 34-tỉnh-mới (không lệch với `admin_provinces` như phân
+  tích ban đầu tưởng) — chỉ cần join qua `province_code`, không cần
+  migration đổi hệ mã.
 
 - ✅ **Tìm điểm con trong cụm bằng AI (27/07/2026, ĐÃ BUILD + VERIFY dữ liệu
   thật trên `dichoithoi_dev`)** — plan đầy đủ

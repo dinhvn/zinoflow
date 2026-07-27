@@ -13,6 +13,7 @@ import type {
   PriceBreakdownItem,
 } from "@zinoflow/contracts";
 import { DestinationMirrorEntity } from "../entities/destination-mirror.entity";
+import type { ClusterPoiBackupEntity } from "../entities/cluster-poi-backup.entity";
 import { AdminProvinceEntity, AdminWardMappingEntity } from "../entities/admin-units.entity";
 import type {
   AddressMappingsListResult,
@@ -74,6 +75,65 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
 
   async updateMetadata(slug: string, meta: DestinationMetadataInput): Promise<void> {
     await this.repo.update({ slug }, this.metaColumns(meta));
+  }
+
+  async restoreFromBackup(
+    newSlug: string,
+    source: ClusterPoiBackupEntity,
+    parentSlug: string,
+    override: { name: string; shortDescription: string | null; priority: number },
+  ): Promise<void> {
+    await this.repo.insert({
+      slug: newSlug,
+      siteId: null, // diem khoi phuc tu backup — luon draft, publish lai tu dau
+      kind: "poi",
+      parentSlug,
+      provinceCode: source.provinceCode,
+      name: override.name,
+      nameUnaccented: normalizeVietnamese(override.name),
+      shortDescription: override.shortDescription,
+      thumbnail: source.thumbnail,
+      lat: source.lat,
+      lng: source.lng,
+      googleMapsUrl: source.googleMapsUrl,
+      addressNew: source.addressNew,
+      addressOld: source.addressOld,
+      contactPhone: source.contactPhone,
+      contactWebsite: source.contactWebsite,
+      ticketLinks: source.ticketLinks,
+      ticketPrice: source.ticketPrice,
+      priceBreakdown: source.priceBreakdown,
+      practicalNotes: source.practicalNotes,
+      editorialReview: source.editorialReview,
+      metaTitle: source.metaTitle,
+      externalReviewUrls: source.externalReviewUrls,
+      hotelGroupId: source.hotelGroupId,
+      priority: override.priority,
+      contentTier: source.contentTier,
+      order: source.order,
+      distanceFromCenter: null, // tinh lai bang nut CMS sau khi cay moi on dinh (chot 27/07/2026)
+      siteStatus: null,
+      contentSource: source.contentSource,
+      contentHash: null,
+      activeContentJobId: null,
+      aiNotes: source.aiNotes,
+      aiReferenceUrls: source.aiReferenceUrls,
+      syncFlags: [],
+      types: source.types,
+      tags: source.tags,
+      hasLocalChanges: true,
+      siteUpdatedAt: null,
+      syncedAt: null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- xem ghi chu draftArticle o entity
+      draftArticle: source.draftArticle as any,
+      gallery: source.gallery,
+      heroImageMeta: source.heroImageMeta,
+      openingHours: source.openingHours,
+      aiReferenceSummary: source.aiReferenceSummary,
+      aiReferenceSummaryUpdatedAt: null,
+      aiReferenceSummaryGsg: source.aiReferenceSummaryGsg,
+      aiReferenceSummaryGsgUpdatedAt: null,
+    });
   }
 
   /** Map metadata input -> cot entity (dung chung create + update) */

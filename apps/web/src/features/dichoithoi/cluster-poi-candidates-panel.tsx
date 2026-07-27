@@ -17,10 +17,14 @@ import { ErrorBox } from "@/shared/ui/error-box";
 import { Modal } from "@/shared/ui/modal";
 import { Textarea } from "@/shared/ui/textarea";
 
-const MATCH_TYPE_BADGE: Record<ClusterPoiCandidateMatchType, { label: string; tone: "emerald" | "amber" | "gray" }> = {
+const MATCH_TYPE_BADGE: Record<
+  ClusterPoiCandidateMatchType,
+  { label: string; tone: "emerald" | "amber" | "gray" | "indigo" }
+> = {
   new: { label: "Mới", tone: "emerald" },
   "orphan-match": { label: "Có thể trùng điểm chưa gán cụm → gán lại", tone: "amber" },
   "existing-in-cluster": { label: "Đã có trong cụm — bỏ qua", tone: "gray" },
+  "backup-match": { label: "Có trong backup — khôi phục", tone: "indigo" },
 };
 
 /**
@@ -38,6 +42,7 @@ export function ClusterPoiCandidatesPanel({
   const queryClient = useQueryClient();
   const [extraNotes, setExtraNotes] = useState("");
   const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [preferAi, setPreferAi] = useState<Set<number>>(new Set());
   const [previewData, setPreviewData] = useState<PreviewClusterPoiPromptResponse | null>(null);
   const [error, setError] = useState<unknown>(null);
 
@@ -80,10 +85,14 @@ export function ClusterPoiCandidatesPanel({
 
   const accept = useMutation({
     mutationFn: (acceptedIndexes: number[]) =>
-      apiSend("POST", `/destinations/${clusterSlug}/cluster-poi-candidates/accept`, { acceptedIndexes }),
+      apiSend("POST", `/destinations/${clusterSlug}/cluster-poi-candidates/accept`, {
+        acceptedIndexes,
+        preferAiMetadataIndexes: acceptedIndexes.filter((i) => preferAi.has(i)),
+      }),
     onSuccess: () => {
       setError(null);
       setChecked(new Set());
+      setPreferAi(new Set());
       void queryClient.invalidateQueries({ queryKey });
       onAccepted();
     },
@@ -92,6 +101,15 @@ export function ClusterPoiCandidatesPanel({
 
   function toggle(i: number) {
     setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
+
+  function togglePreferAi(i: number) {
+    setPreferAi((prev) => {
       const next = new Set(prev);
       if (next.has(i)) next.delete(i);
       else next.add(i);
@@ -151,6 +169,7 @@ export function ClusterPoiCandidatesPanel({
               {candidates.map((c: ClusterPoiCandidateItem, i) => {
                 const badge = MATCH_TYPE_BADGE[c.matchType];
                 const actionable = c.matchType !== "existing-in-cluster" && c.status === "pending";
+                const isBackupMatch = c.matchType === "backup-match";
                 return (
                   <tr key={i} className="border-t border-zinc-200 align-top dark:border-zinc-800">
                     <td className="p-2 text-center">
@@ -173,6 +192,23 @@ export function ClusterPoiCandidatesPanel({
                         <Badge tone={badge.tone}>{badge.label}</Badge>
                         {c.matchedName && (
                           <span className="text-xs text-zinc-500">Khớp với: {c.matchedName}</span>
+                        )}
+                        {isBackupMatch && (
+                          <span className="text-xs text-zinc-500">
+                            Backup có: {c.backupHasArticle ? "✍️ bài viết" : "— chưa có bài"}
+                            {" · "}
+                            {c.backupHasImages ? "🖼️ ảnh" : "— chưa có ảnh"}
+                          </span>
+                        )}
+                        {isBackupMatch && actionable && checked.has(i) && (
+                          <label className="flex items-center gap-1 text-xs text-zinc-500">
+                            <input
+                              type="checkbox"
+                              checked={preferAi.has(i)}
+                              onChange={() => togglePreferAi(i)}
+                            />
+                            Dùng tên/mô tả/ưu tiên của AI thay vì giữ nguyên bản backup
+                          </label>
                         )}
                       </div>
                     </td>

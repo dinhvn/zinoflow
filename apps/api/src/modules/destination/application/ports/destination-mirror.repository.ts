@@ -11,6 +11,7 @@ import type {
   PriceBreakdownItem,
 } from "@zinoflow/contracts";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
+import type { ClusterPoiBackupEntity } from "../../infrastructure/entities/cluster-poi-backup.entity";
 import type { SiteDestinationRow } from "../../domain/destination-mirror";
 
 /**
@@ -61,6 +62,19 @@ export interface DestinationMirrorRepository {
   ): Promise<DestinationMirrorEntity[]>;
   /** Tao diem den moi trong AI tool (siteId=null cho toi khi publish) */
   createLocal(slug: string, meta: DestinationMetadataInput): Promise<void>;
+  /**
+   * Khoi phuc 1 dong TU bang backup tam (dot lam moi du lieu theo Atlas — GD6
+   * plan-lam-moi-du-lieu-atlas.md) thanh 1 diem den MOI (slug moi, siteId=null,
+   * draft): copy NGUYEN bai viet/gallery/Type-Tag/toa do/gio mo cua/gia ve... tu
+   * `source`, chi ghi de name/shortDescription/priority/parentSlug theo tham so
+   * (nguoi dung co the chon dung ban AI hoac giu ban backup cho 3 truong nay).
+   */
+  restoreFromBackup(
+    newSlug: string,
+    source: ClusterPoiBackupEntity,
+    parentSlug: string,
+    override: { name: string; shortDescription: string | null; priority: number },
+  ): Promise<void>;
   /** Sua metadata (giu nguyen siteId/content/job/sync) */
   updateMetadata(slug: string, meta: DestinationMetadataInput): Promise<void>;
   /** Upsert tu site row; flags ghi de hoan toan (ket qua quyet dinh sync moi nhat) */

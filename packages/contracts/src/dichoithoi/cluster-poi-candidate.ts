@@ -26,11 +26,16 @@ export type ClusterPoiCandidatePriorityLevel = z.infer<
  *   thao tac duoc.
  * - "orphan-match": khop 1 diem dang chua gan cum (parentSlug=null) cung tinh — Chap
  *   nhan se gan lai parentSlug thay vi tao moi.
+ * - "backup-match": khop 1 dong trong bang backup (dichoithoi_destinations_backup,
+ *   dot lam moi du lieu theo Atlas — GD6 plan-lam-moi-du-lieu-atlas.md) chua duoc
+ *   khoi phuc — Chap nhan se KHOI PHUC nguyen dong backup (bai viet/anh/toa do/
+ *   Type/Tag...) vao cum nay thay vi tao diem trong rong.
  */
 export const clusterPoiCandidateMatchTypeSchema = z.enum([
   "new",
   "existing-in-cluster",
   "orphan-match",
+  "backup-match",
 ]);
 export type ClusterPoiCandidateMatchType = z.infer<typeof clusterPoiCandidateMatchTypeSchema>;
 
@@ -46,6 +51,9 @@ export const clusterPoiCandidateItemSchema = z.object({
   /** Chi co gia tri khi matchType != "new" */
   matchedSlug: z.string().nullable(),
   matchedName: z.string().nullable(),
+  /** matchType="backup-match" — goi y nhanh cho nguoi duyet biet backup co gi truoc khi tick */
+  backupHasArticle: z.boolean().nullable(),
+  backupHasImages: z.boolean().nullable(),
   status: clusterPoiCandidateStatusSchema,
 });
 export type ClusterPoiCandidateItem = z.infer<typeof clusterPoiCandidateItemSchema>;
@@ -74,9 +82,15 @@ export type FindClusterPoiCandidatesRequest = z.infer<
   typeof findClusterPoiCandidatesRequestSchema
 >;
 
-/** POST :slug/cluster-poi-candidates/accept */
+/**
+ * POST :slug/cluster-poi-candidates/accept — preferAiMetadataIndexes la tap con
+ * cua acceptedIndexes, CHI co y nghia voi matchType="backup-match": danh dau dong
+ * nao nguoi dung chon dung ten/mo ta/priority AI tim duoc THAY VI giu nguyen ban
+ * backup (mac dinh khong co trong danh sach nay = GIU BAN BACKUP, vi da duyet tay).
+ */
 export const acceptClusterPoiCandidatesRequestSchema = z.object({
   acceptedIndexes: z.array(z.number().int().min(0)).min(1),
+  preferAiMetadataIndexes: z.array(z.number().int().min(0)).optional(),
 });
 export type AcceptClusterPoiCandidatesRequest = z.infer<
   typeof acceptClusterPoiCandidatesRequestSchema

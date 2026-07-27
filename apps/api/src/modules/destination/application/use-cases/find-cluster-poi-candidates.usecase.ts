@@ -11,6 +11,10 @@ import {
   type ClusterPoiCandidateRepository,
 } from "../ports/cluster-poi-candidate.repository";
 import {
+  CLUSTER_POI_BACKUP_REPOSITORY,
+  type ClusterPoiBackupRepository,
+} from "../ports/cluster-poi-backup.repository";
+import {
   AI_PROVIDER_REGISTRY,
   type AiProviderRegistry,
 } from "../../../ai-content/application/ports/content-ai-provider.port";
@@ -25,6 +29,7 @@ import {
 } from "../services/build-cluster-poi-prompt";
 import { isLikelySameDestinationName } from "../services/fuzzy-match-destination-name";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
+import type { ClusterPoiBackupEntity } from "../../infrastructure/entities/cluster-poi-backup.entity";
 
 const geminiLocationSchema = z.object({
   name: z.string().min(1).max(128),
@@ -40,6 +45,11 @@ const geminiResponseSchema = z.object({
  * Tim diem con (POI) trong 1 cum DA CO SAN bang Gemini + Google Search Grounding
  * (dichoithoi-cluster-poi-discovery-plan.md) — ghi vao bang staging, KHONG tao/sua
  * gi tren DB that cho toi khi nguoi dung Chap nhan (AcceptClusterPoiCandidatesUseCase).
+ *
+ * GD6 (plan-lam-moi-du-lieu-atlas.md): them nguon doi chieu thu 3 — bang tam
+ * dichoithoi_destinations_backup (dot lam moi du lieu theo Atlas) — de nguoi dung
+ * KHOI PHUC nguyen bai viet/anh/toa do cu thay vi tao diem trong rong. Uu tien phan
+ * loai: existing-in-cluster -> orphan-match -> backup-match -> new.
  */
 @Injectable()
 export class FindClusterPoiCandidatesUseCase {
@@ -50,6 +60,8 @@ export class FindClusterPoiCandidatesUseCase {
     private readonly mirrorRepo: DestinationMirrorRepository,
     @Inject(CLUSTER_POI_CANDIDATE_REPOSITORY)
     private readonly candidateRepo: ClusterPoiCandidateRepository,
+    @Inject(CLUSTER_POI_BACKUP_REPOSITORY)
+    private readonly backupRepo: ClusterPoiBackupRepository,
     @Inject(AI_PROVIDER_REGISTRY) private readonly registry: AiProviderRegistry,
     @Inject(AI_USAGE_RECORDER) private readonly usage: AiUsageRecorder,
   ) {}
@@ -64,9 +76,10 @@ export class FindClusterPoiCandidatesUseCase {
       throw new DomainRuleError(`"${clusterSlug}" không phải Cụm — chỉ dùng được cho Kind=cluster`);
     }
     const provinceName = all.find((d) => d.kind === "province" && d.provinceCode === cluster.provinceCode)?.name ?? null;
+    const backupCandidates = await this.backupRepo.findUnrestoredByProvince(cluster.provinceCode);
 
     const provider = this.registry.resolve("gemini");
-    const userPrompt = buildClusterPoiUserPrompt(cluster, provinceName, extraNotes);
+    const userPrompt = buildClusterPoiUserPrompt(cluster, provinceName, extraNotes, cluster.aiNotes);
     const promptRequest = {
       model: CLUSTER_POI_MODEL,
       operation: "find-cluster-poi-candidates",
@@ -80,9 +93,7 @@ export class FindClusterPoiCandidatesUseCase {
 
     const { output, usage } = await provider.generateStructured(promptRequest, geminiResponseSchema);
 
-    const candidates = output.locations.map((loc) =>
-      this.classify(loc, cluster, all),
-    );
+    const candidates = output.locations.map((loc) => this.classify(loc, cluster, all, backupCandidates));
 
     const extractedAt = new Date();
     await this.candidateRepo.upsert({ clusterSlug, extractedAt, candidates });
@@ -104,26 +115,34 @@ export class FindClusterPoiCandidatesUseCase {
   /**
    * Tinh matchType bang fuzzy-match LONG (quyet dinh 27/07/2026 — luon de nguoi dung
    * tu xem lai): uu tien "existing-in-cluster" (da co san trong CHINH cum nay) truoc
-   * "orphan-match" (diem chua gan cum nao, cung tinh) — con lai la "new".
+   * "orphan-match" (diem chua gan cum nao, cung tinh) truoc "backup-match" (co trong
+   * bang backup tam, chua khoi phuc) — con lai la "new".
    */
   private classify(
     loc: z.infer<typeof geminiLocationSchema>,
     cluster: DestinationMirrorEntity,
     all: DestinationMirrorEntity[],
+    backupCandidates: ClusterPoiBackupEntity[],
   ): ClusterPoiCandidateItem {
+    const base = {
+      name: loc.name,
+      priorityLevel: loc.priority_level,
+      shortDescription: loc.short_description,
+      address: loc.address,
+      status: "pending" as const,
+    };
+
     const existingChild = all.find(
       (d) => d.parentSlug === cluster.slug && isLikelySameDestinationName(d.name, loc.name),
     );
     if (existingChild) {
       return {
-        name: loc.name,
-        priorityLevel: loc.priority_level,
-        shortDescription: loc.short_description,
-        address: loc.address,
+        ...base,
         matchType: "existing-in-cluster",
         matchedSlug: existingChild.slug,
         matchedName: existingChild.name,
-        status: "pending",
+        backupHasArticle: null,
+        backupHasImages: null,
       };
     }
 
@@ -136,26 +155,34 @@ export class FindClusterPoiCandidatesUseCase {
     );
     if (orphan) {
       return {
-        name: loc.name,
-        priorityLevel: loc.priority_level,
-        shortDescription: loc.short_description,
-        address: loc.address,
+        ...base,
         matchType: "orphan-match",
         matchedSlug: orphan.slug,
         matchedName: orphan.name,
-        status: "pending",
+        backupHasArticle: null,
+        backupHasImages: null,
+      };
+    }
+
+    const backup = backupCandidates.find((b) => isLikelySameDestinationName(b.name, loc.name));
+    if (backup) {
+      return {
+        ...base,
+        matchType: "backup-match",
+        matchedSlug: backup.slug,
+        matchedName: backup.name,
+        backupHasArticle: backup.draftArticle !== null,
+        backupHasImages: Boolean(backup.thumbnail) || backup.gallery.length > 0,
       };
     }
 
     return {
-      name: loc.name,
-      priorityLevel: loc.priority_level,
-      shortDescription: loc.short_description,
-      address: loc.address,
+      ...base,
       matchType: "new",
       matchedSlug: null,
       matchedName: null,
-      status: "pending",
+      backupHasArticle: null,
+      backupHasImages: null,
     };
   }
 }

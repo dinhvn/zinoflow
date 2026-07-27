@@ -9,6 +9,7 @@ import {
   CLUSTER_POI_CANDIDATE_REPOSITORY,
   type ClusterPoiCandidateRepository,
 } from "../ports/cluster-poi-candidate.repository";
+import { RestoreClusterPoiBackupService } from "../services/restore-cluster-poi-backup.service";
 import { UpsertDestinationUseCase } from "./upsert-destination.usecase";
 import { slugifyVietnamese } from "../../../shared/text/vietnamese";
 
@@ -20,6 +21,12 @@ import { slugifyVietnamese } from "../../../shared/text/vietnamese";
  *   sai ngu canh cho diem chua qua content/quality gate).
  * - "orphan-match": gan lai parentSlug cua diem orphan da co sang cum nay.
  * - "existing-in-cluster": bo qua (khong co gi de ap dung).
+ * - "backup-match" (GD6 plan-lam-moi-du-lieu-atlas.md): KHOI PHUC nguyen dong tu
+ *   bang tam dichoithoi_destinations_backup — tao diem moi mang toan bo bai viet/
+ *   gallery/Type-Tag/toa do... cua dong backup, copy anh tu thu muc backup ve web
+ *   root, danh dau backup da khoi phuc. Mac dinh GIU ten/mo ta/priority CUA BACKUP
+ *   (da duyet tay truoc do) — chi dung ban AI moi khi index nam trong
+ *   preferAiMetadataIndexes.
  */
 @Injectable()
 export class AcceptClusterPoiCandidatesUseCase {
@@ -30,10 +37,15 @@ export class AcceptClusterPoiCandidatesUseCase {
     private readonly candidateRepo: ClusterPoiCandidateRepository,
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly mirrorRepo: DestinationMirrorRepository,
+    private readonly restoreBackup: RestoreClusterPoiBackupService,
     private readonly upsertDestination: UpsertDestinationUseCase,
   ) {}
 
-  async execute(clusterSlug: string, acceptedIndexes: number[]): Promise<ClusterPoiCandidateItem[]> {
+  async execute(
+    clusterSlug: string,
+    acceptedIndexes: number[],
+    preferAiMetadataIndexes: number[] = [],
+  ): Promise<ClusterPoiCandidateItem[]> {
     const record = await this.candidateRepo.findByClusterSlug(clusterSlug);
     if (!record) {
       throw new DomainRuleError(`Chưa có dữ liệu ứng viên nào cho cụm "${clusterSlug}"`);
@@ -42,6 +54,7 @@ export class AcceptClusterPoiCandidatesUseCase {
     if (!cluster) {
       throw new DomainRuleError(`Không tìm thấy cụm "${clusterSlug}"`);
     }
+    const preferAiSet = new Set(preferAiMetadataIndexes);
 
     const candidates = record.candidates.map((c) => ({ ...c }));
     const appliedIndexes: number[] = [];
@@ -84,6 +97,14 @@ export class AcceptClusterPoiCandidatesUseCase {
           contentTier: orphan.contentTier,
         });
         appliedIndexes.push(index);
+      } else if (candidate.matchType === "backup-match" && candidate.matchedSlug) {
+        const useAi = preferAiSet.has(index);
+        const newSlug = await this.restoreBackup.execute(candidate.matchedSlug, clusterSlug, {
+          name: useAi ? candidate.name : undefined,
+          shortDescription: useAi ? candidate.shortDescription : undefined,
+          priority: useAi ? candidate.priorityLevel : undefined,
+        });
+        if (newSlug) appliedIndexes.push(index);
       }
       // "existing-in-cluster" — khong co gi de ap dung, bo qua.
     }

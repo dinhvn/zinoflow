@@ -119,6 +119,12 @@ import {
   type ClusterPoiCandidateItem,
   type GetClusterPoiCandidatesResponse,
   type PreviewClusterPoiPromptResponse,
+  type GetClusterPoiBackupRemainingResponse,
+  restoreClusterPoiBackupRequestSchema,
+  type RestoreClusterPoiBackupRequest,
+  type RestoreClusterPoiBackupResponse,
+  skipClusterPoiBackupRequestSchema,
+  type SkipClusterPoiBackupRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
 import { ValidationError } from "../../shared/errors/app-error";
@@ -166,6 +172,9 @@ import { FindClusterPoiCandidatesUseCase } from "../application/use-cases/find-c
 import { PreviewClusterPoiPromptUseCase } from "../application/use-cases/preview-cluster-poi-prompt.usecase";
 import { GetClusterPoiCandidatesUseCase } from "../application/use-cases/get-cluster-poi-candidates.usecase";
 import { AcceptClusterPoiCandidatesUseCase } from "../application/use-cases/accept-cluster-poi-candidates.usecase";
+import { GetClusterPoiBackupRemainingUseCase } from "../application/use-cases/get-cluster-poi-backup-remaining.usecase";
+import { RestoreClusterPoiBackupUseCase } from "../application/use-cases/restore-cluster-poi-backup.usecase";
+import { SkipClusterPoiBackupUseCase } from "../application/use-cases/skip-cluster-poi-backup.usecase";
 import { Patch } from "@nestjs/common";
 import { RecomputeRelatedService } from "../application/services/recompute-related.service";
 import { RecomputeClusterDistancesUseCase } from "../application/use-cases/recompute-cluster-distances.usecase";
@@ -245,6 +254,9 @@ export class DestinationsController {
     private readonly previewClusterPoiPrompt: PreviewClusterPoiPromptUseCase,
     private readonly getClusterPoiCandidates: GetClusterPoiCandidatesUseCase,
     private readonly acceptClusterPoiCandidates: AcceptClusterPoiCandidatesUseCase,
+    private readonly getClusterPoiBackupRemaining: GetClusterPoiBackupRemainingUseCase,
+    private readonly restoreClusterPoiBackup: RestoreClusterPoiBackupUseCase,
+    private readonly skipClusterPoiBackup: SkipClusterPoiBackupUseCase,
     private readonly recomputeRelated: RecomputeRelatedService,
     private readonly recomputeClusterDistancesUseCase: RecomputeClusterDistancesUseCase,
     private readonly recomputeGroupDistances: RecomputeGroupDistancesUseCase,
@@ -477,6 +489,36 @@ export class DestinationsController {
   }
 
   /**
+   * Man "Backup còn lại" (GD7 plan-lam-moi-du-lieu-atlas.md) — dieu kien cung
+   * chong mat du lieu am tham trong dot lam moi theo Atlas. Tien to "cluster-poi-backup"
+   * la LITERAL nen dat TRUOC ":slug" (dung quy uoc file nay).
+   */
+  @Get("cluster-poi-backup/remaining")
+  getClusterPoiBackupRemainingList(): Promise<GetClusterPoiBackupRemainingResponse> {
+    return this.getClusterPoiBackupRemaining.execute();
+  }
+
+  /** Khoi phuc TAY 1 dong backup vao 1 cum nguoi dung tu chon (GD7) */
+  @Post("cluster-poi-backup/:slug/restore")
+  restoreClusterPoiBackupForSlug(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(restoreClusterPoiBackupRequestSchema))
+    request: RestoreClusterPoiBackupRequest,
+  ): Promise<RestoreClusterPoiBackupResponse> {
+    return this.restoreClusterPoiBackup.execute(slug, request.targetClusterSlug);
+  }
+
+  /** Bo han 1 dong backup, khong khoi phuc (GD7) */
+  @Post("cluster-poi-backup/:slug/skip")
+  skipClusterPoiBackupForSlug(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(skipClusterPoiBackupRequestSchema))
+    request: SkipClusterPoiBackupRequest,
+  ): Promise<{ ok: true }> {
+    return this.skipClusterPoiBackup.execute(slug, request.note);
+  }
+
+  /**
    * Chi tiet 1 diem den cho trang /dichoithoi/[slug] (spec §7.3).
    * DAT SAU cac GET tinh ("taxonomy") de khong nuot chung thanh slug.
    */
@@ -588,7 +630,11 @@ export class DestinationsController {
     @Body(new ZodValidationPipe(acceptClusterPoiCandidatesRequestSchema))
     request: AcceptClusterPoiCandidatesRequest,
   ): Promise<ClusterPoiCandidateItem[]> {
-    return this.acceptClusterPoiCandidates.execute(slug, request.acceptedIndexes);
+    return this.acceptClusterPoiCandidates.execute(
+      slug,
+      request.acceptedIndexes,
+      request.preferAiMetadataIndexes ?? [],
+    );
   }
 
   /**

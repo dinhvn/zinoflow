@@ -39,7 +39,7 @@ export class PreviewClusterPoiPromptUseCase {
 
     return {
       systemPrompt: CLUSTER_POI_SYSTEM_PROMPT,
-      userPrompt: buildClusterPoiUserPrompt(cluster, provinceName, extraNotes),
+      userPrompt: buildClusterPoiUserPrompt(cluster, provinceName, extraNotes, cluster.aiNotes),
       config: {
         model: CLUSTER_POI_MODEL,
         useGoogleSearch: CLUSTER_POI_USE_GOOGLE_SEARCH,

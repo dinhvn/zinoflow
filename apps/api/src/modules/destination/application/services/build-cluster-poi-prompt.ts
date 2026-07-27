@@ -34,14 +34,24 @@ QUY TẮC CÀO DỮ LIỆU:
 
 Trả về DUY NHẤT JSON theo đúng schema đã cho — KHÔNG kèm văn bản dẫn dắt, không giải thích ngoài JSON. Tiếng Việt có dấu đầy đủ cho mọi giá trị text.`;
 
-/** Prompt nguoi dung (chua ten cum + tinh + ghi chu bo sung) — dung chung generate/preview. */
+/**
+ * Prompt nguoi dung (chua ten cum + tinh + ghi chu bo sung) — dung chung generate/preview.
+ * `clusterAiNotes` (cot ai_notes cua chinh cum, thuong la "Một số điểm trong cụm" +
+ * "Tiếp giáp" nhap tu sheet Atlas luc import — plan-lam-moi-du-lieu-atlas.md GD5/§7
+ * cau 2) LUON duoc dua vao TRUOC extraNotes nguoi dung go them trong luc bam nut,
+ * khong can nguoi dung tu copy lai.
+ */
 export function buildClusterPoiUserPrompt(
   cluster: Pick<DestinationMirrorEntity, "name">,
   provinceName: string | null,
   extraNotes: string | null,
+  clusterAiNotes: string | null,
 ): string {
   const scope = [cluster.name, provinceName ? `(${provinceName})` : null].filter(Boolean).join(" ");
   const lines = [`Cụm du lịch cần quét: "${scope}".`];
+  if (clusterAiNotes?.trim()) {
+    lines.push(`Ghi chú sẵn có của cụm (từ dữ liệu nội bộ):\n${clusterAiNotes.trim()}`);
+  }
   if (extraNotes?.trim()) {
     lines.push(`Thông tin bổ sung từ người dùng cung cấp: ${extraNotes.trim()}`);
   }

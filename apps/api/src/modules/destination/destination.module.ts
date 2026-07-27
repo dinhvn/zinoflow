@@ -91,6 +91,13 @@ import { AcceptClusterPoiCandidatesUseCase } from "./application/use-cases/accep
 import { CLUSTER_POI_CANDIDATE_REPOSITORY } from "./application/ports/cluster-poi-candidate.repository";
 import { TypeOrmClusterPoiCandidateRepository } from "./infrastructure/repositories/typeorm-cluster-poi-candidate.repository";
 import { ClusterPoiCandidateEntity } from "./infrastructure/entities/cluster-poi-candidate.entity";
+import { CLUSTER_POI_BACKUP_REPOSITORY } from "./application/ports/cluster-poi-backup.repository";
+import { TypeOrmClusterPoiBackupRepository } from "./infrastructure/repositories/typeorm-cluster-poi-backup.repository";
+import { ClusterPoiBackupEntity } from "./infrastructure/entities/cluster-poi-backup.entity";
+import { GetClusterPoiBackupRemainingUseCase } from "./application/use-cases/get-cluster-poi-backup-remaining.usecase";
+import { RestoreClusterPoiBackupUseCase } from "./application/use-cases/restore-cluster-poi-backup.usecase";
+import { SkipClusterPoiBackupUseCase } from "./application/use-cases/skip-cluster-poi-backup.usecase";
+import { RestoreClusterPoiBackupService } from "./application/services/restore-cluster-poi-backup.service";
 import { RecomputeClusterDistancesUseCase } from "./application/use-cases/recompute-cluster-distances.usecase";
 import { GetDestinationsMapUseCase } from "./application/use-cases/get-destinations-map.usecase";
 import { GetTaxonomyKanbanBoardUseCase } from "./application/use-cases/get-taxonomy-kanban-board.usecase";
@@ -148,6 +155,7 @@ import {
       AdminWardMappingEntity,
       DestinationAiExtractionEntity,
       ClusterPoiCandidateEntity,
+      ClusterPoiBackupEntity,
       ClusterDistanceEntity,
       PoiDistanceEntity,
       TaxonomySuggestionEntity,
@@ -218,6 +226,10 @@ import {
     PreviewClusterPoiPromptUseCase,
     GetClusterPoiCandidatesUseCase,
     AcceptClusterPoiCandidatesUseCase,
+    GetClusterPoiBackupRemainingUseCase,
+    RestoreClusterPoiBackupUseCase,
+    SkipClusterPoiBackupUseCase,
+    RestoreClusterPoiBackupService,
     RecomputeClusterDistancesUseCase,
     RecomputeGroupDistancesUseCase,
     RecomputeNearbyDistancesUseCase,
@@ -248,6 +260,10 @@ import {
     {
       provide: CLUSTER_POI_CANDIDATE_REPOSITORY,
       useClass: TypeOrmClusterPoiCandidateRepository,
+    },
+    {
+      provide: CLUSTER_POI_BACKUP_REPOSITORY,
+      useClass: TypeOrmClusterPoiBackupRepository,
     },
     { provide: CLUSTER_DISTANCE_REPOSITORY, useClass: TypeOrmClusterDistanceRepository },
     { provide: POI_DISTANCE_REPOSITORY, useClass: TypeOrmPoiDistanceRepository },

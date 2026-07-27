@@ -1,9 +1,16 @@
 # Plan implement: Làm mới dữ liệu Tỉnh/Cụm/Điểm theo Atlas (phương án A — wipe & restore)
 
-Ghi 27/07/2026. Trạng thái: **PLAN — CHƯA BUILD.** Bối cảnh: mọi quyết định
-đã chốt trong 2 doc cùng thư mục (`phan-tich-hien-trang-va-dinh-huong.md`
-§7 — 7 quyết định; `phuong-an-lam-moi-diem-den.md` §5-6 — phương án A + 7
-điều kiện an toàn). Plan này chỉ triển khai, KHÔNG mở lại các quyết định đó.
+Ghi 27/07/2026. Trạng thái: **GĐ1-7 ĐÃ BUILD + VERIFY DỮ LIỆU THẬT trên
+`dichoithoi_dev` (27/07/2026)** — xem tóm tắt ở mục "Kết quả build" cuối
+file. GĐ8 (vận hành lấp điểm cho 257 cụm) là việc liên tục của người dùng,
+không phải code. **GĐ9 (dọn backup) đã viết + test guard, TUYỆT ĐỐI CHƯA
+CHẠY THẬT — chỉ chạy khi người dùng xác nhận đã tìm xong điểm cho các cụm
+và đồng ý dọn.**
+
+Bối cảnh: mọi quyết định đã chốt trong 2 doc cùng thư mục
+(`phan-tich-hien-trang-va-dinh-huong.md` §7 — 7 quyết định;
+`phuong-an-lam-moi-diem-den.md` §5-6 — phương án A + 7 điều kiện an toàn).
+Plan này chỉ triển khai, KHÔNG mở lại các quyết định đó.
 
 ## Hiện trạng đã audit (file:line đã đọc — nền tảng cho từng giai đoạn)
 
@@ -102,23 +109,28 @@ Phụ thuộc: GĐ2 xong và DoD đã verify (không wipe khi backup chưa chắ
 poi/cluster_distances + vé + 2 bảng staging (cả 2 DB phần tương ứng);
 bảng backup + thư mục ảnh tạm CÒN NGUYÊN (đếm lại lần nữa sau wipe).
 
-### GĐ4 — Dựng nền 34 tỉnh + thống nhất mã
+### GĐ4 — Dựng nền 34 node tỉnh (KHÔNG cần đổi hệ mã — đính chính 27/07/2026)
 
 Phụ thuộc: GĐ3 (tạo trên nền sạch).
 
-- Migration: widen `dichoithoi_destinations.province_code`
-  `varchar(2)`→`varchar(3)`; từ nay cột này mang mã 3 chữ khớp
-  `admin_provinces.code` (quyết định §7 câu 7 — "thêm code"; chọn THAY
-  hẳn mã số vì sau wipe không còn dòng cũ nào phải migrate, đây là lúc
-  duy nhất đổi hệ mã với chi phí 0). Đồng bộ phía SQL Server: rà cách
-  `v2.Province` sinh khi publish (soi `mssql-site-db.adapter.ts` lúc
-  code) để mã mới đi xuyên suốt.
-- Seed 34 node tỉnh (`kind=province`) từ `admin_provinces`: slug theo quy
-  tắc GĐ1, name chuẩn theo `admin_provinces` (KHÔNG lấy tên sheet — sheet
-  ghi không nhất quán "TP." vs "Thành phố", "Hoà" vs "Hòa").
+> **ĐÍNH CHÍNH khi bắt đầu code (27/07/2026)**: kết luận "2 hệ mã lệch
+> nhau" trong doc phân tích là SO NHẦM CỘT — `admin_provinces` có CẢ 2 mã:
+> `province_code` SỐ ('01','08','68'... — PK, khớp đúng
+> `dichoithoi_destinations.province_code` LẪN `v2.Province.Code` bên SQL
+> Server, vốn đã là 34 tỉnh mới với OldNames ghi tỉnh sáp nhập) và `code`
+> CHỮ ('HNI','LDG'...). Mã số trong cây destination đã LÀ mã mới (node
+> "Hà Giang" mang mã 08 = Tuyên Quang mới) — chỉ TÊN/SLUG node tỉnh là
+> cũ. Quyết định §7 câu 7 ("thêm code") thoả sẵn: mã chữ join qua
+> `admin_provinces`, không cần cột mới, không migration.
+
+- Seed 34 node tỉnh (`kind=province`) từ `admin_provinces`: mã =
+  `province_code` số như hiện tại; name chuẩn theo `admin_provinces`
+  (KHÔNG lấy tên sheet); slug theo quy tắc GĐ1 (`tinh-<x>`, riêng
+  `place_type='Thành phố Trung Ương'` → `thanh-pho-<x>`).
 
 **DoD**: 34 node tỉnh trong mirror, mỗi node join được `admin_provinces`
-qua mã 3 chữ; không còn dòng nào mang mã số cũ; build + app boot sạch.
+qua `province_code`; slug đúng quy tắc GĐ1 cho cả 6 thành phố TW; build +
+app boot sạch.
 
 ### GĐ5 — Nạp 257 cụm từ snapshot Atlas
 
@@ -235,5 +247,50 @@ vào doc này.
   bug, nhưng là lý do wipe (GĐ3) phải đi đường riêng và ảnh gốc để lại tới
   GĐ9 (ghi rõ ở trên để người code sau không "tiện tay" tái dùng nguyên
   use case).
+
+## Kết quả build (27/07/2026 — verify dữ liệu thật trên `dichoithoi_dev`)
+
+**Script one-time** (`apps/api/scripts/`): `atlas-backup-destinations.ts`,
+`atlas-wipe-destinations.ts`, `atlas-seed-provinces.ts`,
+`atlas-seed-clusters.ts`, `atlas-cleanup-backup.ts` (GĐ9, đã test guard,
+CHƯA chạy thật).
+
+- **GĐ2 backup**: bảng `dichoithoi_destinations_backup` 337 dòng (308
+  poi + 12 cluster + 17 province cũ) = đúng bảng gốc; ảnh copy 511 mục
+  sang `D:\Gits\mmo\dichoithoi\backup-images-atlas-2026-07-27`; pg_dump +
+  `.bak` SQL Server tạo xong.
+- **GĐ3 wipe**: cả 2 DB về 0 dòng destination + bảng vệ tinh; `v2.Province`
+  (34) + taxonomy Tag(17)/Type(18)/TypeGroup(4) giữ nguyên; bảng backup +
+  ảnh tạm còn nguyên sau wipe. Phát sinh 1 lỗi thật lúc chạy (SQL Server
+  báo thiếu `QUOTED_IDENTIFIER ON`) — đã sửa script, KHÔNG mất dữ liệu
+  (Postgres đã wipe, SQL Server tự rollback do lỗi — chạy lại thành công).
+- **GĐ4**: 34/34 node tỉnh, đúng quy tắc slug (`thanh-pho-*` × 6,
+  `tinh-*` × 28), 0 trùng slug.
+- **GĐ5**: 257/257 cụm, ContentTier 90 flagship / 167 standard (khớp
+  Atlas), đếm theo tỉnh khớp phân tích (Lâm Đồng 15, An Giang 11...).
+  Phát hiện + tự sửa 1 lỗi dữ liệu thật trong sheet: dòng "No=18" tên
+  "Củ Chi" nhưng nội dung là cụm "Cần Giờ" (trùng tên với "Củ Chi" thật ở
+  No=17) — sửa cứng trong script (`CLUSTER_NAME_CORRECTIONS`), có log rõ.
+- **GĐ6 backup-match**: verify thật bằng Gemini (cụm Bảo Lộc sau khi nạp
+  lại ra 8 "new" + 17 "backup-match"); test cả 2 nhánh accept — giữ bản
+  backup mặc định (priority/mô tả đúng y bản backup) và
+  `preferAiMetadataIndexes` (đổi đúng sang bản AI); test khôi phục ảnh
+  thật qua GĐ7 endpoint với `thac-trieu-hai` (8 ảnh gallery + thumbnail) —
+  file thật xuất hiện đúng trong web root.
+- **GĐ7 màn Backup còn lại**: verify qua Playwright (UI thật, không chỉ
+  API) — trang `/dichoithoi/backup-con-lai`, combobox chọn cụm lọc đúng
+  theo tên tỉnh, khôi phục "Bà Nà Hill" → đếm giảm 333→332, query DB xác
+  nhận `parent_slug`/bài viết đúng; test "Bỏ hẳn" 1 dòng (cụm "An Giang"
+  trùng tên tỉnh) → đếm giảm đúng, không hiện lại trong danh sách lẫn
+  không còn được đề xuất `backup-match` cho lần tìm điểm sau.
+- **GĐ9**: chạy thử `--yes` khi còn 332 dòng chưa xử lý → guard chặn đúng,
+  in rõ lý do, KHÔNG đụng DB/file (verify lại bảng backup vẫn 337 dòng,
+  thư mục ảnh tạm vẫn 511 mục). Chưa chạy thật lần nào.
+
+Sau các phép test trên, trạng thái DB cuối phiên: bảng backup còn 332
+dòng chưa xử lý (335 gốc − 3 đã khôi phục qua accept − 1 khôi phục tay −
+1 bỏ hẳn); có vài POI/cụm thật đã tạo trong lúc test (Đồi chè Tâm Châu,
+Chùa Linh Quy Pháp Ấn, Thác Triều Hải, Bà Nà Hill) — đây là dữ liệu thật
+hợp lệ, không phải rác cần dọn.
 - `province_code` `varchar(2)` chứa mã số là di sản trước sáp nhập — thay
   hẳn bằng mã 3 chữ ở GĐ4 là "lệch tài liệu được sửa", không phải lỗ hổng.

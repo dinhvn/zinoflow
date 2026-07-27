@@ -11,6 +11,7 @@ export * from "./dichoithoi/ai-prompt-preview";
 export * from "./dichoithoi/destination-relations-map";
 export * from "./dichoithoi/destination-ai-extraction";
 export * from "./dichoithoi/cluster-poi-candidate";
+export * from "./dichoithoi/cluster-poi-backup";
 export * from "./dichoithoi/coverage-score";
 export * from "./dichoithoi/dashboard-alerts";
 export * from "./dichoithoi/affiliate";
