@@ -105,6 +105,15 @@ lại tracking trạng thái.
 15. `archive/` — tài liệu audit/note một-lần đã lỗi thời (mô tả code TRƯỚC
     Phase 18 rebuild UI / Phase B migrate schema v2), giữ lại chỉ để tham khảo
     lịch sử, KHÔNG phản ánh trạng thái hiện tại.
+16. `dichoithoi-cluster-poi-discovery-plan.md` — tìm điểm con (POI) trong 1
+    cụm đã có sẵn bằng Gemini + Google Search Grounding, duyệt qua bảng
+    trước khi ghi DB (đã build + verify 27/07/2026).
+17. `chuan-hoa-du-lieu/` — chuẩn hoá Tỉnh/Cụm/Điểm theo Atlas 34 tỉnh —
+    257 cụm (27/07/2026): `phan-tich-hien-trang-va-dinh-huong.md` (hiện
+    trạng + 7 quyết định đã chốt §7), `phuong-an-lam-moi-diem-den.md`
+    (chốt phương án A wipe & restore + 7 điều kiện an toàn §6),
+    `plan-lam-moi-du-lieu-atlas.md` (plan implement 9 giai đoạn — CHƯA
+    BUILD), kèm snapshot CSV sheet Atlas.
 
 ## 1) Ba thành phần và vai trò (đã chốt)
 

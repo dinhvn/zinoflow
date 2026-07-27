@@ -29,6 +29,16 @@ tự, không bỏ bước.
       (Hotel/HotelGroup/DestinationGroup/DestinationReview/Province qua
       `HotelRepository` và các nơi khác), xác nhận có cần mang theo lên
       production mới không, hay cũng bỏ luôn.
+- [ ] **Backup DB production cũ giữ riêng 1 bản để đối chiếu URL** (khác bản
+      backup lưới-an-toàn ở trên, dùng bản này để so sánh, không phục hồi) —
+      đợt này là nâng cấp kiến trúc lớn (tổ chức lại cấu trúc dữ liệu điểm
+      đến), slug/URL mới nhiều khả năng khác cũ và **không còn liên kết
+      trực tiếp trong DB mới** (không có cột legacy-slug/FK về ID cũ). Lúc
+      release, sẽ yêu cầu Claude đọc DB cũ (bản backup này) + DB mới, so
+      sánh slug, ra danh sách slug cũ không còn tồn tại ở DB mới — làm cơ sở
+      redirect ở bước 3. Không tự map bằng suy diễn máy móc — Claude đề xuất
+      map (theo tên/toạ độ/nội dung), người dùng duyệt từng dòng trước khi
+      áp dụng.
 
 ## 2) Đưa code + database mới lên
 
@@ -62,6 +72,22 @@ tự, không bỏ bước.
 - [ ] Sitemap.xml sinh đúng, không thiếu URL so với trước khi xoá.
 - [ ] robots.txt đúng cho production (không còn `Disallow: /` kiểu môi
       trường staging/dev).
+- [ ] **So DB cũ (backup) vs DB mới → danh sách slug mất → redirect** — quy
+      trình lúc release (yêu cầu Claude thực hiện):
+      1. Claude đọc bản backup DB cũ (giữ riêng ở bước 1) + DB mới, liệt kê
+         toàn bộ slug `/diem-den/{slug}` cũ không còn tồn tại ở DB mới.
+      2. Với mỗi slug mất, Claude đề xuất map sang URL mới tương ứng (match
+         theo tên/toạ độ/nội dung — không suy máy móc 1-1 vì kiến trúc đã
+         đổi); slug **map được** → redirect 301 sang URL điểm đến mới.
+      3. Slug **không map được** (điểm đến đã gộp/xoá hẳn trong đợt tổ chức
+         lại) → redirect 301 về trang danh mục/tỉnh gần nhất tương ứng (đã
+         chốt: ưu tiên giữ SEO equity ở mức tỉnh/loại thay vì về trang chủ
+         hoặc để 404 thật).
+      4. Toàn bộ danh sách map (kể cả bước 3) phải qua **người dùng duyệt
+         từng dòng** trước khi áp dụng redirect — Claude không tự publish.
+      - Việc này làm **trước khi** chạy mục "Redirect 301" ở phần Check SEO
+        bên dưới — mục đó chỉ verify lại redirect đã cấu hình còn hoạt động
+        đúng trên domain thật.
 
 ## 4) Check SEO tổng quát
 
@@ -84,6 +110,13 @@ lại trên **domain production thật**, không chỉ trên local:
       trỏ vào production mới (nếu hạ tầng đổi IP/host).
 - [ ] Không có nội dung trùng lặp/thin content phát sinh do lỗi migrate dữ
       liệu (xem mục "Rà data" bên dưới).
+- [ ] **Rà cụm mỏng trước khi mở index (chốt 27/07/2026, chuẩn hoá Atlas
+      257 cụm)** — sau đợt làm mới toàn bộ điểm đến, cụm nào lúc release
+      vẫn còn quá mỏng (gợi ý ngưỡng: <5 điểm con hoặc chưa có mô tả/nội
+      dung đọc được) thì để `noindex`/ẩn khỏi sitemap, KHÔNG đưa 257 trang
+      cụm rỗng lên cùng lúc — đúng mẫu "scaled content abuse" Google phạt
+      (dichoithoi-seo-principles §3). Xem
+      `chuan-hoa-du-lieu/phan-tich-hien-trang-va-dinh-huong.md` §5/§7.
 
 ## 5) Kiểm tra tốc độ
 

@@ -753,6 +753,56 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   CMS zinoflow (`dichoithoi-flat-modern-ui`) — cân nhắc có áp dụng tinh thần
   tương tự cho website công khai hay đây là gu riêng, cần hỏi lại.
 
+- **Chuẩn hoá dữ liệu Tỉnh/Cụm/Điểm theo Atlas 34 tỉnh — 257 cụm (ĐÃ PHÂN
+  TÍCH 27/07/2026, CHƯA CHỐT quyết định, CHƯA có plan implement)** — Atlas
+  đã chốt xong (Google Sheet, snapshot + phân tích đầy đủ ở
+  `docs/dichoithoi/chuan-hoa-du-lieu/phan-tich-hien-trang-va-dinh-huong.md`).
+  Tóm tắt phát hiện chính: DB hiện tại lệch xa đích (17 node tỉnh theo mô
+  hình 63 tỉnh CŨ — còn cả Hà Giang/Phú Yên/Quảng Bình/Kiên Giang đã sáp
+  nhập; 2 hệ mã tỉnh không khớp nhau giữa cây destination và
+  `admin_provinces`; 12/257 cụm; 141 POI treo thẳng tỉnh; Đà Lạt ôm 71 con
+  cần chia lại thành nhiều cụm). **Câu hỏi cụm liên tỉnh cũ đã ĐÓNG** —
+  sheet chốt mỗi cụm thuộc đúng 1 tỉnh, case xuyên tỉnh thể hiện bằng quan
+  hệ "Tiếp giáp" (11 cạnh), KHÔNG cần mở schema đa-tỉnh. Chờ người dùng
+  chốt 6 câu hỏi ở §7 của doc phân tích rồi mới viết plan implement.
+  **Phân tích tiếp 27/07/2026** — cách làm mới toàn bộ điểm đến:
+  `chuan-hoa-du-lieu/phuong-an-lam-moi-diem-den.md` so sánh 2 phương án
+  (A: wipe & restore qua bảng backup tạm + thư mục ảnh tạm; B: giữ data,
+  tách cha, orphan-match gắn lại). **Người dùng ĐÃ CHỐT phương án A
+  (27/07/2026)** sau khi xem khuyến nghị B — doc §6 liệt kê 7 điều kiện an
+  toàn BẮT BUỘC khi viết plan cho A (backup trọn vẹn bảng destinations +
+  ảnh, tái dùng fuzzy-match, màn "backup còn lại" chống chết âm thầm,
+  merge có duyệt, pg_dump lưới cuối, wipe SẠCH cả 2 DB gồm mọi bảng vệ
+  tinh qua deleteCascade; poi_distances KHÔNG khôi phục — user tự tính lại
+  bằng nút CMS sẵn có). **§7 đã CHỐT ĐỦ 7 quyết định (27/07/2026)**: chuẩn
+  cứng 3 tầng; Tiếp giáp + danh sách điểm sheet → `ai_notes` cụm (không
+  lưu relation); Loại cụm map thẳng ContentTier; slug trùng tên hậu tố
+  tỉnh cả 2 bên; theo đúng sheet kể cả cụm trùng tên tỉnh (lưu ý slug đụng
+  node tỉnh — quyết lúc viết plan), Đạ Huoai/Đạ Tẻh user tự sửa tay; không
+  gate publish dần (check thin-content lúc release — đã ghi release-checklist
+  mục 4); thêm mã code chữ cho tỉnh khớp `admin_provinces`. **PLAN
+  IMPLEMENT ĐÃ VIẾT (27/07/2026, CHƯA BUILD)**:
+  `chuan-hoa-du-lieu/plan-lam-moi-du-lieu-atlas.md` — 9 giai đoạn theo phụ
+  thuộc: GĐ1 chốt slug tỉnh-vs-cụm-trùng-tên (còn 1 xác nhận nhỏ của người
+  dùng) → GĐ2 backup (bảng tạm + thư mục ảnh tạm + pg_dump) → GĐ3 wipe cả
+  2 DB → GĐ4 dựng 34 tỉnh + mã 3 chữ → GĐ5 nạp 257 cụm qua import sẵn có →
+  GĐ6 nâng cấp Tìm-điểm-con thêm matchType "backup-match" (khôi phục merge
+  có duyệt) → GĐ7 màn "Backup còn lại" (điều kiện cứng) → GĐ8 vận hành lấp
+  điểm (việc người dùng) → GĐ9 dọn dẹp backup (drop bảng tạm + xoá ảnh
+  tạm, CHỈ sau khi GĐ8 xong + người dùng xác nhận).
+
+- ✅ **Tìm điểm con trong cụm bằng AI (27/07/2026, ĐÃ BUILD + VERIFY dữ liệu
+  thật trên `dichoithoi_dev`)** — plan đầy đủ
+  ở `docs/dichoithoi/dichoithoi-cluster-poi-discovery-plan.md`. Tóm tắt:
+  Gemini + Google Search Grounding sinh danh sách điểm cho 1 cụm ĐÃ CÓ SẴN
+  (không tạo cụm mới), duyệt qua bảng trước khi ghi — mỗi ứng viên gắn
+  `matchType` (new/existing-in-cluster/orphan-match, tính bằng fuzzy-match
+  lỏng) quyết định hành động khi Chấp nhận: tạo draft Postgres-only qua
+  `UpsertDestinationUseCase.create()` (giống tạo tay) hoặc gán lại
+  `parentSlug` qua `.update()` cho điểm orphan — KHÔNG dùng
+  `MssqlSiteDbAdapter.createDestination()` (publish thẳng, sai ngữ cảnh).
+  Kèm nút "Xem trước prompt" (có block cấu hình model/GSG/temperature).
+
 ## A) Quyết định CẦN BẠN CHỐT trước khi code (không phải việc kỹ thuật thuần)
 
 | # | Việc | Ảnh hưởng | Nguồn |
@@ -1290,6 +1340,23 @@ xong, không còn gì mở ở mức ưu tiên này.**
 5. Cào dữ liệu khách sạn/tour: ưu tiên API/affiliate feed chính thức nếu nhà
    cung cấp có, tần suất thấp nếu phải cào HTML — rủi ro ToS là quyết định
    kinh doanh của bạn, không phải giới hạn kỹ thuật (hotel-spec §1, tour-spec §1).
+6. ⚠️ **`v2.SlugRedirect` cần mở rộng trước khi dùng cho redirect release
+   (làm sát lúc release, không cần gấp bây giờ)** — bảng hiện có
+   (`DiChoiThoi.Common/DbEntities/V2/V2SlugRedirect.cs`, Phase 24 07/2026)
+   chỉ hỗ trợ case "đổi slug tại chỗ của 1 điểm đến vẫn tồn tại"
+   (`OldSlug` → `DestinationId` bắt buộc, non-nullable). Không khớp nhu cầu
+   redirect khi release (xoá sạch production + đưa DB mới — xem
+   `dichoithoi-release-checklist.md` mục 1 + mục 3 "So DB cũ vs DB mới"):
+   - `DestinationId` cũ trong backup không còn ý nghĩa gì ở DB mới (ID sinh
+     lại) — không thể copy thẳng bảng cũ, phải build lại từ so sánh DB.
+   - Case "điểm đến đã gộp/xoá, redirect về trang tỉnh/danh mục gần nhất"
+     (đã chốt khi phân tích 27/07/2026) không map được vào 1 `DestinationId`
+     cụ thể — bảng cần thêm cột đích redirect không bắt buộc là 1 điểm đến
+     (ví dụ `RedirectUrl` nullable, đổi `DestinationId` thành nullable, ưu
+     tiên `DestinationId` nếu có).
+   - `DestinationController.Detail` (`DiChoiThoi.Web/Controllers/DestinationController.cs`
+     dòng ~140-154) và `DestinationExtrasRepository.FindRedirectSlugAsync`
+     cũng cần sửa theo cho khớp cột mới.
 
 ## D) Đã làm rõ / không còn là việc mở (tránh làm lại)
 
