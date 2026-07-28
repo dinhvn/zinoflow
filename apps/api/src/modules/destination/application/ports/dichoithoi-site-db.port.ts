@@ -291,8 +291,8 @@ export interface DichoithoiSiteDb {
   fetchTaxonomyContent(): Promise<TaxonomyContentRows>;
   /**
    * Ghi de Description + MetaDescription cho 1 group/type/province (Phase 18.2,
-   * content-seo-ux-plan §10.3). descriptionHtml CHI ap dung cho target="type" (auto-link,
-   * xem manage-taxonomy-content.usecase.ts) — bo qua (khong co cot) voi group/province.
+   * content-seo-ux-plan §10.3). descriptionHtml (auto-link, xem manage-taxonomy-content.usecase.ts)
+   * ap dung cho ca 3 target (Group/Province them 07/2026, cung cot DescriptionHtml nhu Type).
    */
   updateTaxonomyDescription(
     target: "group" | "type" | "province",
@@ -303,6 +303,10 @@ export interface DichoithoiSiteDb {
   ): Promise<void>;
   /** Diem den (da published) dang gan 1 Type — dung lam target cho auto-link mo ta Type */
   fetchDestinationsForType(typeId: number): Promise<AutoLinkTargetRow[]>;
+  /** Diem den (da published) thuoc bat ky Type nao trong 1 Group — target cho auto-link mo ta Group */
+  fetchDestinationsForGroup(groupId: number): Promise<AutoLinkTargetRow[]>;
+  /** Diem den (da published) la con truc tiep cua node tinh — target cho auto-link mo ta Province */
+  fetchDestinationsForProvince(provinceId: number): Promise<AutoLinkTargetRow[]>;
 
   /** Toan bo tag da duyet (destination-spec §2.4 buoc 0 — 7 tag seed san) */
   fetchTags(): Promise<SiteTagRow[]>;

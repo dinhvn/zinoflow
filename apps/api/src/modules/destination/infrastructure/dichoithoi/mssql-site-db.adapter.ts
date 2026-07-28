@@ -583,9 +583,9 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     };
   }
 
-  /** Phase 18.2 — sua doan gioi thieu 1 group/type/province (content-seo-ux-plan §10.3).
-   * descriptionHtml chi ghi thuc su khi target="type" (co cot DescriptionHtml) — group/province
-   * khong co cot nay, tham so bi bo qua (khong loi neu truyen null). */
+  /** Phase 18.2 + auto-link Group/Province (07/2026) — sua doan gioi thieu 1 group/type/province
+   * (content-seo-ux-plan §10.3). Ca 3 target deu co cot DescriptionHtml tu 06-taxonomy-group-
+   * province-autolink-columns.sql — luon ghi descriptionHtml (co the null khi Description rong). */
   async updateTaxonomyDescription(
     target: "group" | "type" | "province",
     id: number,
@@ -599,16 +599,11 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       request.input("id", id);
       request.input("description", description);
       request.input("metaDescription", metaDescription);
-      if (target === "type") {
-        request.input("descriptionHtml", descriptionHtml);
-        return request.query(`
-          UPDATE ${table}
-          SET Description = @description, MetaDescription = @metaDescription, DescriptionHtml = @descriptionHtml
-          WHERE Id = @id
-        `);
-      }
+      request.input("descriptionHtml", descriptionHtml);
       return request.query(`
-        UPDATE ${table} SET Description = @description, MetaDescription = @metaDescription WHERE Id = @id
+        UPDATE ${table}
+        SET Description = @description, MetaDescription = @metaDescription, DescriptionHtml = @descriptionHtml
+        WHERE Id = @id
       `);
     });
   }
@@ -623,6 +618,40 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         FROM v2.DestinationTypeMap m
         JOIN v2.Destination d ON d.Id = m.DestinationId
         WHERE m.TypeId = @typeId AND d.Status = 1
+      `);
+    });
+    return rows.recordset.map((r) => ({ slug: r.Slug, name: r.Name }));
+  }
+
+  /** Diem den (published) thuoc bat ky Type nao trong 1 Group — target cho auto-link mo ta Group,
+   * cung tap voi luoi hien thi tren /loai/{group} (GetGroupPageAsync ben website). */
+  async fetchDestinationsForGroup(groupId: number): Promise<AutoLinkTargetRow[]> {
+    const rows = await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("groupId", groupId);
+      return request.query<{ Slug: string; Name: string }>(`
+        SELECT DISTINCT d.Slug, d.Name
+        FROM v2.DestinationTypeMap m
+        JOIN v2.DestinationType t ON t.Id = m.TypeId
+        JOIN v2.Destination d ON d.Id = m.DestinationId
+        WHERE t.GroupId = @groupId AND d.Status = 1
+      `);
+    });
+    return rows.recordset.map((r) => ({ slug: r.Slug, name: r.Name }));
+  }
+
+  /** Diem den (published) la con TRUC TIEP cua node tinh — target cho auto-link mo ta Province,
+   * cung dieu kien loc voi GetProvincePageAsync ben website (ParentId, KHONG phai ProvinceId —
+   * tranh trung noi dung voi cac cum con nhu Da Lat/Phan Thiet, xem database-redesign §3.4). */
+  async fetchDestinationsForProvince(provinceId: number): Promise<AutoLinkTargetRow[]> {
+    const rows = await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("provinceId", provinceId);
+      return request.query<{ Slug: string; Name: string }>(`
+        SELECT d.Slug, d.Name
+        FROM v2.Destination d
+        JOIN v2.Province p ON p.DestinationId = d.ParentId
+        WHERE p.Id = @provinceId AND d.Status = 1
       `);
     });
     return rows.recordset.map((r) => ({ slug: r.Slug, name: r.Name }));

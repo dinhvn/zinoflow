@@ -52,12 +52,13 @@ export default function DanhMucPage() {
             <br />
             <strong>Meta description</strong> là ô riêng bên dưới — dùng cho thẻ{" "}
             <code>&lt;meta description&gt;</code> Google hiển thị trên kết quả tìm kiếm, để trống
-            thì web tự lấy từ đoạn giới thiệu. Riêng dòng &quot;Loại&quot;: khi lưu, tên điểm đến
-            nhắc trong đoạn giới thiệu sẽ <strong>tự động thành link nội bộ</strong> tới trang điểm
-            đến đó (không cần thao tác gì thêm) — Nhóm/Tỉnh chưa có tính năng này. Dòng &quot;Loại&quot;
-            cũng hỗ trợ Markdown đầy đủ (đồng bộ với ô Nội dung bài viết điểm đến): <code>- </code>{" "}
-            gạch đầu dòng, <code>**chữ**</code> in đậm, <code>## Tiêu đề</code>... — thường không
-            cần cho đoạn ngắn 2-4 câu, nhưng dùng được nếu cần.
+            thì web tự lấy từ đoạn giới thiệu. Khi lưu, tên điểm đến nhắc trong đoạn giới thiệu sẽ{" "}
+            <strong>tự động thành link nội bộ</strong> tới trang điểm đến đó (không cần thao tác gì
+            thêm) — áp dụng cho cả 3 nhóm Nhóm/Loại/Tỉnh, chỉ link tới điểm đến thực sự xuất hiện
+            trên chính trang danh mục đó. Cũng hỗ trợ Markdown đầy đủ (đồng bộ với ô Nội dung bài
+            viết điểm đến): <code>- </code> gạch đầu dòng, <code>**chữ**</code> in đậm,{" "}
+            <code>## Tiêu đề</code>... — thường không cần cho đoạn ngắn 2-4 câu, nhưng dùng được
+            nếu cần.
           </>
         }
       />
@@ -83,6 +84,7 @@ function TaxonomySections({ data }: { data: TaxonomyContent }) {
             path={`/loai/${g.slug}`}
             initialDescription={g.description}
             initialMetaDescription={g.metaDescription}
+            autoLink
           />
         ))}
       </Section>
@@ -115,6 +117,7 @@ function TaxonomySections({ data }: { data: TaxonomyContent }) {
             path={`/tinh/${p.slug}`}
             initialDescription={p.description}
             initialMetaDescription={p.metaDescription}
+            autoLink
           />
         ))}
       </Section>
@@ -148,7 +151,7 @@ function DescriptionRow({
   path: string;
   initialDescription: string | null;
   initialMetaDescription: string | null;
-  /** Type co auto-link (tu link ten diem den khi luu) — hien 1 dong ghi chu nho. */
+  /** Ca 3 target deu co auto-link (tu link ten diem den khi luu) — hien 1 dong ghi chu nho. */
   autoLink?: boolean;
 }) {
   const queryClient = useQueryClient();
