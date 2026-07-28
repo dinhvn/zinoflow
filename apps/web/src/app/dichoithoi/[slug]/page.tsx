@@ -252,6 +252,7 @@ const TABS = [
   { id: "commerce", label: "Thương mại & bổ trợ", icon: "💰" },
   { id: "recommendations", label: "Gợi ý liên quan", icon: "🔗" },
   { id: "relations", label: "Quan hệ & đồng bộ", icon: "🧭" },
+  { id: "settings", label: "Cài đặt", icon: "⚙️" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -1457,7 +1458,7 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           </div>
 
           <div className={activeTab === "basic-info" ? "space-y-4" : "hidden"}>
-            <PanelHead title="ℹ️ Thông tin cơ bản" hint="Metadata điểm đến (tên, toạ độ, địa chỉ, liên hệ...), Meta Title SEO, và thao tác đổi slug. Trích xuất AI từ Google Maps/web tham khảo xem ở khung phía trên đầu trang." />
+            <PanelHead title="ℹ️ Thông tin cơ bản" hint="Metadata điểm đến (tên, toạ độ, địa chỉ, liên hệ...) và Meta Title SEO. Đổi slug/xoá điểm đến chuyển sang tab &quot;⚙️ Cài đặt&quot;. Trích xuất AI từ Google Maps/web tham khảo xem ở khung phía trên đầu trang." />
 
       <Group title="Thông tin điểm đến">
         <p className="mb-3 text-xs text-zinc-500">
@@ -1483,175 +1484,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         />
       </Group>
 
-      {/* Doi slug — thao tac RIENG, tach khoi form sua thuong (Phase 24 chieu ghi) */}
-      <Group title="⚠️ Đổi slug (nâng cao)">
-        {!renameOpen ? (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-zinc-500">
-              Đổi URL <code className="font-mono">/{d.slug}</code> — chỉ dùng khi thật cần (vd sai
-              chính tả). Con cháu + link nội bộ sẽ tự cập nhật, URL cũ tự chuyển hướng.
-            </p>
-            <Button size="sm" variant="secondary" onClick={() => setRenameOpen(true)}>
-              Đổi slug
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="rounded border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
-              <p className="font-medium">Đọc kỹ trước khi đổi:</p>
-              <ul className="mt-1 list-inside list-disc space-y-0.5">
-                <li>URL cũ tự động chuyển hướng (301) sang URL mới — không lo mất khách/SEO.</li>
-                <li>Toàn bộ điểm con, link nội bộ trong bài khác tự cập nhật theo.</li>
-                <li>
-                  Ảnh trên hosting <strong>không</strong> tự đổi tên thư mục — vẫn hiển thị đúng,
-                  chỉ là path không còn khớp slug mới (không phải lỗi).
-                </li>
-              </ul>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm text-zinc-400">/diem-den/</span>
-              <Input
-                value={newSlugInput}
-                onChange={(e) => setNewSlugInput(e.target.value)}
-                placeholder="slug-moi"
-                className="flex-1"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-amber-600 text-white hover:bg-amber-700"
-                loading={renameSlug.isPending}
-                disabled={!newSlugInput.trim() || newSlugInput.trim() === d.slug}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Đổi slug "${d.slug}" → "${newSlugInput.trim()}"? Không thể tự hoàn tác.`,
-                    )
-                  ) {
-                    renameSlug.mutate();
-                  }
-                }}
-              >
-                {renameSlug.isPending ? "Đang đổi..." : "Xác nhận đổi"}
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setRenameOpen(false);
-                  setNewSlugInput("");
-                }}
-              >
-                Huỷ
-              </Button>
-            </div>
-          </div>
-        )}
-      </Group>
-
-      {/* Xoa han diem den/cum — thao tac nguy hiem NHAT trang, canh bao ro pham
-          vi anh huong (con chau neu la cum) truoc khi xoa that (27/07/2026) */}
-      <Group title="🗑️ Xoá điểm đến (nguy hiểm)">
-        {!deleteOpen ? (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-zinc-500">
-              Xoá hẳn{" "}
-              {d.kind === "cluster"
-                ? "cụm này VÀ TOÀN BỘ điểm đến bên trong"
-                : "điểm đến này"}{" "}
-              khỏi hệ thống — không thể tự hoàn tác.
-            </p>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
-              onClick={() => setDeleteOpen(true)}
-            >
-              Xoá...
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {deletePreviewQuery.isLoading && (
-              <p className="text-xs text-zinc-400">Đang kiểm tra phạm vi ảnh hưởng...</p>
-            )}
-            {deletePreviewQuery.isError && (
-              <p className="text-xs text-red-600 dark:text-red-400">
-                {deletePreviewQuery.error instanceof Error
-                  ? deletePreviewQuery.error.message
-                  : "Lỗi kiểm tra phạm vi ảnh hưởng"}
-              </p>
-            )}
-            {deletePreviewQuery.data && (
-              <div className="rounded border border-red-300 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                <p className="font-medium">
-                  Sắp xoá: {deletePreviewQuery.data.target.name}
-                  {deletePreviewQuery.data.target.isPublished && (
-                    <span className="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-white">
-                      ĐÃ PUBLISH
-                    </span>
-                  )}
-                </p>
-                {deletePreviewQuery.data.descendants.length > 0 && (
-                  <>
-                    <p className="mt-2 font-medium">
-                      Cùng với {deletePreviewQuery.data.descendants.length} điểm bên trong cụm
-                      này:
-                    </p>
-                    <ul className="mt-1 max-h-40 list-inside list-disc space-y-0.5 overflow-y-auto">
-                      {deletePreviewQuery.data.descendants.map((item) => (
-                        <li key={item.slug}>
-                          {item.name}
-                          {item.isPublished && (
-                            <span className="ml-1 rounded bg-red-600 px-1 py-0.5 text-[10px] text-white">
-                              ĐÃ PUBLISH
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-                <p className="mt-2">
-                  {deletePreviewQuery.data.target.isPublished ||
-                  deletePreviewQuery.data.descendants.some((item) => item.isPublished)
-                    ? "⚠️ Có điểm ĐÃ PUBLISH trong danh sách này — xoá sẽ mất vĩnh viễn khỏi website đang chạy (404, mất SEO)."
-                    : "Chưa publish — chỉ xoá trong công cụ này, không ảnh hưởng website."}
-                </p>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-red-600 text-white hover:bg-red-700"
-                loading={deleteDestination.isPending}
-                disabled={!deletePreviewQuery.data}
-                onClick={() => {
-                  const preview = deletePreviewQuery.data;
-                  if (!preview) return;
-                  const total = 1 + preview.descendants.length;
-                  if (
-                    window.confirm(
-                      `Xoá "${preview.target.name}"${
-                        preview.descendants.length > 0
-                          ? ` + ${preview.descendants.length} điểm bên trong`
-                          : ""
-                      } (tổng ${total})? KHÔNG THỂ hoàn tác.`,
-                    )
-                  ) {
-                    deleteDestination.mutate();
-                  }
-                }}
-              >
-                {deleteDestination.isPending ? "Đang xoá..." : "Xác nhận xoá vĩnh viễn"}
-              </Button>
-              <Button size="sm" onClick={() => setDeleteOpen(false)}>
-                Huỷ
-              </Button>
-            </div>
-          </div>
-        )}
-      </Group>
           </div>
 
           <div className={activeTab === "commerce" ? "space-y-4" : "hidden"}>
@@ -1925,6 +1757,183 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           {d.syncedAt ? new Date(d.syncedAt).toLocaleString("vi-VN") : "—"}
         </Field>
         <Field label="Site ID">{d.siteId ?? "— (chưa có trên web)"}</Field>
+      </Group>
+          </div>
+
+          <div className={activeTab === "settings" ? "space-y-4" : "hidden"}>
+            <PanelHead title="⚙️ Cài đặt" hint="Thao tác nâng cao/nguy hiểm cho điểm đến này — đổi slug, xoá vĩnh viễn." />
+
+      {/* Doi slug — thao tac RIENG, tach khoi form sua thuong (Phase 24 chieu ghi).
+          Chuyen tu tab "Thong tin co ban" sang day (07/2026, theo yeu cau nguoi dung)
+          cung "Xoa diem den" — ca 2 la thao tac nang cao/nguy hiem, khong phai sua
+          metadata thuong xuyen nen tach rieng khoi "basic-info". */}
+      <Group title="⚠️ Đổi slug (nâng cao)">
+        {!renameOpen ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-zinc-500">
+              Đổi URL <code className="font-mono">/{d.slug}</code> — chỉ dùng khi thật cần (vd sai
+              chính tả). Con cháu + link nội bộ sẽ tự cập nhật, URL cũ tự chuyển hướng.
+            </p>
+            <Button size="sm" variant="secondary" onClick={() => setRenameOpen(true)}>
+              Đổi slug
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="rounded border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+              <p className="font-medium">Đọc kỹ trước khi đổi:</p>
+              <ul className="mt-1 list-inside list-disc space-y-0.5">
+                <li>URL cũ tự động chuyển hướng (301) sang URL mới — không lo mất khách/SEO.</li>
+                <li>Toàn bộ điểm con, link nội bộ trong bài khác tự cập nhật theo.</li>
+                <li>
+                  Ảnh trên hosting <strong>không</strong> tự đổi tên thư mục — vẫn hiển thị đúng,
+                  chỉ là path không còn khớp slug mới (không phải lỗi).
+                </li>
+              </ul>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm text-zinc-400">/diem-den/</span>
+              <Input
+                value={newSlugInput}
+                onChange={(e) => setNewSlugInput(e.target.value)}
+                placeholder="slug-moi"
+                className="flex-1"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="bg-amber-600 text-white hover:bg-amber-700"
+                loading={renameSlug.isPending}
+                disabled={!newSlugInput.trim() || newSlugInput.trim() === d.slug}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Đổi slug "${d.slug}" → "${newSlugInput.trim()}"? Không thể tự hoàn tác.`,
+                    )
+                  ) {
+                    renameSlug.mutate();
+                  }
+                }}
+              >
+                {renameSlug.isPending ? "Đang đổi..." : "Xác nhận đổi"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setRenameOpen(false);
+                  setNewSlugInput("");
+                }}
+              >
+                Huỷ
+              </Button>
+            </div>
+          </div>
+        )}
+      </Group>
+
+      {/* Xoa han diem den/cum — thao tac nguy hiem NHAT trang, canh bao ro pham
+          vi anh huong (con chau neu la cum) truoc khi xoa that (27/07/2026) */}
+      <Group title="🗑️ Xoá điểm đến (nguy hiểm)">
+        {!deleteOpen ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-zinc-500">
+              Xoá hẳn{" "}
+              {d.kind === "cluster"
+                ? "cụm này VÀ TOÀN BỘ điểm đến bên trong"
+                : "điểm đến này"}{" "}
+              khỏi hệ thống — không thể tự hoàn tác.
+            </p>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+              onClick={() => setDeleteOpen(true)}
+            >
+              Xoá...
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {deletePreviewQuery.isLoading && (
+              <p className="text-xs text-zinc-400">Đang kiểm tra phạm vi ảnh hưởng...</p>
+            )}
+            {deletePreviewQuery.isError && (
+              <p className="text-xs text-red-600 dark:text-red-400">
+                {deletePreviewQuery.error instanceof Error
+                  ? deletePreviewQuery.error.message
+                  : "Lỗi kiểm tra phạm vi ảnh hưởng"}
+              </p>
+            )}
+            {deletePreviewQuery.data && (
+              <div className="rounded border border-red-300 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                <p className="font-medium">
+                  Sắp xoá: {deletePreviewQuery.data.target.name}
+                  {deletePreviewQuery.data.target.isPublished && (
+                    <span className="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-white">
+                      ĐÃ PUBLISH
+                    </span>
+                  )}
+                </p>
+                {deletePreviewQuery.data.descendants.length > 0 && (
+                  <>
+                    <p className="mt-2 font-medium">
+                      Cùng với {deletePreviewQuery.data.descendants.length} điểm bên trong cụm
+                      này:
+                    </p>
+                    <ul className="mt-1 max-h-40 list-inside list-disc space-y-0.5 overflow-y-auto">
+                      {deletePreviewQuery.data.descendants.map((item) => (
+                        <li key={item.slug}>
+                          {item.name}
+                          {item.isPublished && (
+                            <span className="ml-1 rounded bg-red-600 px-1 py-0.5 text-[10px] text-white">
+                              ĐÃ PUBLISH
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                <p className="mt-2">
+                  {deletePreviewQuery.data.target.isPublished ||
+                  deletePreviewQuery.data.descendants.some((item) => item.isPublished)
+                    ? "⚠️ Có điểm ĐÃ PUBLISH trong danh sách này — xoá sẽ mất vĩnh viễn khỏi website đang chạy (404, mất SEO)."
+                    : "Chưa publish — chỉ xoá trong công cụ này, không ảnh hưởng website."}
+                </p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="bg-red-600 text-white hover:bg-red-700"
+                loading={deleteDestination.isPending}
+                disabled={!deletePreviewQuery.data}
+                onClick={() => {
+                  const preview = deletePreviewQuery.data;
+                  if (!preview) return;
+                  const total = 1 + preview.descendants.length;
+                  if (
+                    window.confirm(
+                      `Xoá "${preview.target.name}"${
+                        preview.descendants.length > 0
+                          ? ` + ${preview.descendants.length} điểm bên trong`
+                          : ""
+                      } (tổng ${total})? KHÔNG THỂ hoàn tác.`,
+                    )
+                  ) {
+                    deleteDestination.mutate();
+                  }
+                }}
+              >
+                {deleteDestination.isPending ? "Đang xoá..." : "Xác nhận xoá vĩnh viễn"}
+              </Button>
+              <Button size="sm" onClick={() => setDeleteOpen(false)}>
+                Huỷ
+              </Button>
+            </div>
+          </div>
+        )}
       </Group>
           </div>
         </div>
