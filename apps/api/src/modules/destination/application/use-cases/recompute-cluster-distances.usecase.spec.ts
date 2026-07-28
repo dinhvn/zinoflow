@@ -54,10 +54,11 @@ function fakeMirror(overrides: Partial<DestinationMirrorEntity> = {}): Destinati
 }
 
 describe("RecomputeClusterDistancesUseCase (relations-plan §1.2, Giai doan A2)", () => {
-  it("chi tinh cap cho node kind province/cluster co lat/lng, bo qua poi va node thieu toa do", async () => {
+  it("chi tinh cap cho node kind=cluster co lat/lng, bo qua province/poi va node thieu toa do", async () => {
     const mirrors = [
       fakeMirror({ slug: "da-lat", kind: "cluster", lat: "11.94", lng: "108.44" }),
       fakeMirror({ slug: "nha-trang", kind: "cluster", lat: "12.25", lng: "109.19" }),
+      fakeMirror({ slug: "bao-loc", kind: "cluster", lat: "11.55", lng: "107.81" }),
       fakeMirror({ slug: "an-giang", kind: "province", lat: "10.52", lng: "105.13" }),
       fakeMirror({ slug: "cum-thieu-toa-do", kind: "cluster", lat: null, lng: null }),
       fakeMirror({ slug: "ho-xuan-huong", kind: "poi", lat: "11.94", lng: "108.44" }),
@@ -79,7 +80,7 @@ describe("RecomputeClusterDistancesUseCase (relations-plan §1.2, Giai doan A2)"
     );
     const report = await usecase.execute();
 
-    expect(report.nodes).toBe(3);
+    expect(report.nodes).toBe(3); // chi 3 cum hop le, "an-giang" (tinh) bi loai
     expect(report.pairs).toBe(3); // C(3,2)
     expect(savedPairs).toHaveLength(3);
     for (const pair of savedPairs as { clusterASlug: string; clusterBSlug: string }[]) {
@@ -164,7 +165,7 @@ describe("RecomputeClusterDistancesUseCase (relations-plan §1.2, Giai doan A2)"
       fakeMirror({ slug: "nha-trang", kind: "cluster", lat: "12.25", lng: "109.19" }),
       // "toa-do-loi" mo phong node ORS khong tim duoc duong (vd Lam Dong/Quang
       // Binh thuc te 23/07/2026) — moi cap lien quan tra null tu adapter.
-      fakeMirror({ slug: "toa-do-loi", kind: "province", lat: "10.0", lng: "104.0" }),
+      fakeMirror({ slug: "toa-do-loi", kind: "cluster", lat: "10.0", lng: "104.0" }),
     ];
     const mirrorRepo = { findAll: async () => mirrors } as unknown as DestinationMirrorRepository;
     let savedPairs: { clusterASlug: string; clusterBSlug: string }[] = [];

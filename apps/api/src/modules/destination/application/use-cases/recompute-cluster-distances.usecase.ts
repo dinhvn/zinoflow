@@ -17,14 +17,16 @@ import {
 
 /**
  * Tinh lai bang dichoithoi_cluster_distances — khoang cach DUONG BO THAT (ORS)
- * giua toa do trung tam moi cap node cap cao (kind IN province,cluster) co
- * lat/lng (relations-plan §1.2, Giai doan A2; nang cap len ORS o
- * dichoithoi-poi-distance-plan.md Giai doan 5, 23/07/2026 — truoc day dung
- * Haversine, thay bang ORS de dong bo voi poi_distances/DistanceFromCenter da
- * nang cap tu Giai doan 1-3). Chi chay thu cong (nut "Cong cu"/API), KHONG nam
- * trong job recompute-related thuong xuyen — toa do trung tam cac node nay
- * hiem khi doi. Quy mo nho (thuong ~20-30 node, xem audit trong plan doc) nen
- * 1 lan goi ORS Matrix la du, khong can chia block.
+ * giua toa do trung tam moi cap CUM (kind=cluster) co lat/lng (relations-plan
+ * §1.2, Giai doan A2; nang cap len ORS o dichoithoi-poi-distance-plan.md Giai
+ * doan 5, 23/07/2026 — truoc day dung Haversine, thay bang ORS de dong bo voi
+ * poi_distances/DistanceFromCenter da nang cap tu Giai doan 1-3). CHI tinh
+ * cum<->cum, KHONG tinh tinh<->tinh (nguoi dung xac nhan 27/07/2026 khong can
+ * — toa do trung tam tinh khong du chinh xac de co gia tri thuc te). Chi chay
+ * thu cong (nut "Cong cu"/API), KHONG nam trong job recompute-related thuong
+ * xuyen — toa do trung tam cac node nay hiem khi doi. Quy mo nho (thuong
+ * ~20-30 node, xem audit trong plan doc) nen 1 lan goi ORS Matrix la du,
+ * khong can chia block.
  */
 @Injectable()
 export class RecomputeClusterDistancesUseCase {
@@ -49,13 +51,13 @@ export class RecomputeClusterDistancesUseCase {
 
     const all = await this.mirrorRepo.findAll();
     const nodes = all
-      .filter((d) => (d.kind === "province" || d.kind === "cluster") && d.lat !== null && d.lng !== null)
+      .filter((d) => d.kind === "cluster" && d.lat !== null && d.lng !== null)
       .map((d) => ({ slug: d.slug, lat: Number(d.lat), lng: Number(d.lng) }))
       .sort((a, b) => a.slug.localeCompare(b.slug));
 
     if (nodes.length < 2) {
       await this.clusterDistanceRepo.replaceAll([]);
-      this.logger.log(`Tính lại khoảng cách cụm/tỉnh: ${nodes.length} node, 0 cặp`);
+      this.logger.log(`Tính lại khoảng cách giữa các cụm: ${nodes.length} node, 0 cặp`);
       return { nodes: nodes.length, pairs: 0, failedPairs: 0, durationMs: Date.now() - startedAt };
     }
 
@@ -96,7 +98,7 @@ export class RecomputeClusterDistancesUseCase {
           failedPairs.join(", "),
       );
     }
-    this.logger.log(`Tính lại khoảng cách cụm/tỉnh: ${nodes.length} node, ${pairs.length} cặp`);
+    this.logger.log(`Tính lại khoảng cách giữa các cụm: ${nodes.length} node, ${pairs.length} cặp`);
     return {
       nodes: nodes.length,
       pairs: pairs.length,
