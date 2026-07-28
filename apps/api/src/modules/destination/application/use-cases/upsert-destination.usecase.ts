@@ -100,10 +100,11 @@ export class UpsertDestinationUseCase {
   private async toMetaWithCoords(request: UpsertDestinationRequest): Promise<DestinationMetadataInput> {
     const googleMapsUrl = request.googleMapsUrl?.trim() || null;
     const coords = googleMapsUrl ? await this.parseMapsLink.execute(googleMapsUrl) : { lat: null, lng: null };
+    const parentSlug = request.parentSlug ?? (await this.deriveClusterParent(request));
     return {
       name: request.name,
       kind: request.kind,
-      parentSlug: request.parentSlug ?? null,
+      parentSlug,
       provinceCode: request.provinceCode ?? null,
       shortDescription: request.shortDescription ?? null,
       thumbnail: request.thumbnail ?? null,
@@ -118,6 +119,20 @@ export class UpsertDestinationUseCase {
       priority: request.priority ?? 3,
       contentTier: request.contentTier ?? null,
     };
+  }
+
+  /**
+   * Tu suy ra tinh cha khi tao/sua CUM ma khong chon parentSlug — chuan cung 3
+   * tang Tinh->Cum->Diem (dichoithoi-chuan-hoa-du-lieu §7 cau 1) khong cho phep
+   * cum mo coi. CHI ap dung cho kind=cluster (KHONG tu gan POI thang tinh — vi
+   * pham dung quy tac vua chot). Khong tim thay tinh khop provinceCode thi tra
+   * null nhu cu, de nguyen validate/UI xu ly.
+   */
+  private async deriveClusterParent(request: UpsertDestinationRequest): Promise<string | null> {
+    if (request.kind !== "cluster" || !request.provinceCode) return null;
+    const all = await this.mirrorRepo.findAll();
+    const province = all.find((d) => d.kind === "province" && d.provinceCode === request.provinceCode);
+    return province?.slug ?? null;
   }
 
   /** Cha + tinh phai ton tai (neu duoc chi dinh) — tranh lien ket gay. */

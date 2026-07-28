@@ -231,7 +231,13 @@ export function DestinationMetadataForm({
             ))}
           </Select>
         </Field>
-        <Field label="Điểm cha (slug) — để trống nếu không có">
+        <Field
+          label={
+            v.kind === "cluster"
+              ? "Điểm cha (slug) — để trống thì tự gán vào tỉnh đã chọn ở trên"
+              : "Điểm cha (slug) — để trống nếu không có"
+          }
+        >
           <input
             value={v.parentSlug}
             onChange={(e) => set("parentSlug", e.target.value)}

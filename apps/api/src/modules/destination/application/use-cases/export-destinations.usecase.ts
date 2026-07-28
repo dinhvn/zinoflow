@@ -11,6 +11,9 @@ import {
 } from "../ports/destination-mirror.repository";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 
+/** listAllMatching() lam giau san provinceName (join admin_provinces o repo) — xem list-destinations.usecase.ts */
+type EnrichedMirrorEntity = DestinationMirrorEntity & { provinceName?: string | null };
+
 /** "," / dấu nháy kép / xuống dòng -> escape theo RFC4180 (quote + nhân đôi "" nếu cần). */
 function csvCell(value: string): string {
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
@@ -71,18 +74,30 @@ export class ExportDestinationsUseCase {
       "q" | "provinceCode" | "parentSlug" | "kind" | "contentState" | "production"
     >,
   ): Promise<string> {
-    const entities = await this.mirrorRepo.listAllMatching({
-      ...filter,
-      sortBy: "name",
-      sortDir: "asc",
-    });
+    const [entities, all] = await Promise.all([
+      this.mirrorRepo.listAllMatching({ ...filter, sortBy: "name", sortDir: "asc" }) as Promise<
+        EnrichedMirrorEntity[]
+      >,
+      this.mirrorRepo.findAll(),
+    ]);
+    // Ten cum/tinh cha — chi provinceName duoc repo join san (admin_provinces), parentSlug thi
+    // chua co ten kem theo nen tra rieng qua slug (dung cho POI thuoc cum, cum thuoc tinh).
+    const nameBySlug = new Map(all.map((d) => [d.slug, d.name]));
 
-    // "name" luon xuat kem slug de nguoi dung de nhan biet dong tren Google Sheet — chi tham khao,
-    // KHONG nam trong DESTINATION_BULK_EDIT_FIELD_KEYS nen khi nhap lai se khong bao gio bi ghi de.
-    const header = ["slug", "name", ...fields];
+    // "name"/"province"/"parent" luon xuat kem slug de nguoi dung de nhan biet dong tren Google
+    // Sheet — chi tham khao, KHONG nam trong DESTINATION_BULK_EDIT_FIELD_KEYS nen khi nhap lai se
+    // khong bao gio bi ghi de.
+    const header = ["slug", "name", "province", "parent", ...fields];
     const lines = [header.map(csvCell).join(",")];
     for (const e of entities) {
-      const row = [e.slug, e.name, ...fields.map((f) => fieldValue(e, f))];
+      const parentName = e.parentSlug ? (nameBySlug.get(e.parentSlug) ?? e.parentSlug) : "";
+      const row = [
+        e.slug,
+        e.name,
+        e.provinceName ?? "",
+        parentName,
+        ...fields.map((f) => fieldValue(e, f)),
+      ];
       lines.push(row.map((v) => csvCell(String(v))).join(","));
     }
     return lines.join("\n");

@@ -122,7 +122,7 @@ export function ImportDestinationFieldsModal({
           </Button>
         </div>
         <p className="text-xs text-zinc-500">
-          Cột hỗ trợ: slug, name (chỉ tham khảo, không cập nhật),{" "}
+          Cột hỗ trợ: slug, name/province/parent (chỉ tham khảo, không cập nhật),{" "}
           {DESTINATION_BULK_EDIT_FIELD_KEYS.join(", ")}
         </p>
         {parseError && <p className="text-sm text-red-600 dark:text-red-400">⚠️ {parseError}</p>}

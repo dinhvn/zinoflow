@@ -62,10 +62,12 @@ export function ExportDestinationsModal({
     <Modal open={open} onClose={onClose} title="Xuất CSV để sửa hàng loạt">
       <div className="space-y-4">
         <p className="text-sm text-zinc-500">
-          Xuất <strong>đúng bộ lọc đang xem</strong> trên trang danh sách (không giới hạn phân
-          trang). File CSV dùng <code>slug</code> làm khoá, luôn kèm cột <code>name</code> để dễ
-          nhận biết dòng (chỉ tham khảo — sửa cột này trên sheet sẽ không được cập nhật lại) — dán
-          vào Google Sheet, sửa xong dán lại link để nhập lại (nút &quot;Nhập từ Sheet&quot;).
+          Xuất <strong>đúng bộ lọc đang xem</strong> trên trang danh sách (chọn &quot;Mọi cấp&quot; ở
+          bộ lọc &quot;Cấp&quot; để xuất cả tỉnh/cụm/điểm đến, không chỉ điểm đến) — không giới hạn
+          phân trang. File CSV dùng <code>slug</code> làm khoá, luôn kèm cột{" "}
+          <code>name</code>/<code>province</code>/<code>parent</code> để dễ nhận biết dòng (chỉ
+          tham khảo — sửa các cột này trên sheet sẽ không được cập nhật lại) — dán vào Google Sheet,
+          sửa xong dán lại link để nhập lại (nút &quot;Nhập từ Sheet&quot;).
         </p>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
