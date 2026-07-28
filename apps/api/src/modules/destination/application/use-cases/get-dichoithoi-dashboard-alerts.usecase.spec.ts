@@ -129,4 +129,19 @@ describe("GetDichoithoiDashboardAlertsUseCase (destination-spec §7.2, Phase 23)
     const missingGallery = result.alerts.find((a) => a.key === "missing-gallery");
     expect(missingGallery?.count).toBe(1);
   });
+
+  it("dem dung cum/diem thieu toa do, bo qua tinh", async () => {
+    const mirrors = [
+      { kind: "cluster", siteId: 1, tags: [], lat: null, lng: null },
+      { kind: "poi", siteId: 1, tags: [], lat: "11.94", lng: "108.44" },
+      { kind: "poi", siteId: null, tags: [], lat: null, lng: "108.44" },
+      { kind: "province", siteId: 1, tags: [], lat: null, lng: null }, // tinh -> bo qua
+    ];
+    const { usecase } = setup({ mirrors });
+    const result = await usecase.execute();
+
+    const missingCoords = result.alerts.find((a) => a.key === "missing-coords");
+    expect(missingCoords?.count).toBe(2);
+    expect(missingCoords?.href).toBe("/dichoithoi?missingCoords=true");
+  });
 });

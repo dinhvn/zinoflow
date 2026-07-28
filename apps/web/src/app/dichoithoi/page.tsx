@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   destinationTaxonomySchema,
@@ -31,6 +32,7 @@ import { apiGet, apiSend } from "@/shared/api-client";
 import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { Button, buttonClasses } from "@/shared/ui/button";
 import { Card, ActionRow } from "@/shared/ui/card";
+import { Checkbox } from "@/shared/ui/checkbox";
 import { DataTable, type DataTableColumn, type SortDirection } from "@/shared/ui/data-table";
 import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
@@ -113,15 +115,26 @@ const SYNC_FLAG_LABELS: Record<string, string> = {
 
 const SITE_BASE_URL = "https://dichoithoi.com";
 
-/** Hub khu Dichoithoi — danh sách điểm đến từ mirror (spec §7.2). */
+/** useSearchParams bat buoc nam trong Suspense o App Router (Next.js). */
 export default function DichoithoiPage() {
+  return (
+    <Suspense>
+      <DichoithoiPageContent />
+    </Suspense>
+  );
+}
+
+/** Hub khu Dichoithoi — danh sách điểm đến từ mirror (spec §7.2). */
+function DichoithoiPageContent() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [provinceCode, setProvinceCode] = useState("");
   const [parentSlug, setParentSlug] = useState("");
   const [kind, setKind] = useState("");
   const [contentState, setContentState] = useState("");
   const [production, setProduction] = useState("");
+  const [missingCoords, setMissingCoords] = useState(searchParams.get("missingCoords") === "true");
   const [sortBy, setSortBy] = useState<DestinationSortBy>("name");
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
   const [page, setPage] = useState(1);
@@ -147,6 +160,7 @@ export default function DichoithoiPage() {
       kind,
       contentState,
       production,
+      missingCoords,
       sortBy,
       sortDir,
       page,
@@ -165,6 +179,7 @@ export default function DichoithoiPage() {
       if (kind) params.set("kind", kind);
       if (contentState) params.set("contentState", contentState);
       if (production) params.set("production", production);
+      if (missingCoords) params.set("missingCoords", "true");
       return apiGet(`/destinations?${params}`, listDestinationsResponseSchema);
     },
   });
@@ -231,7 +246,7 @@ export default function DichoithoiPage() {
       setSyncError(null);
     },
     onError: (err) =>
-      setSyncError(err instanceof Error ? err.message : "Tính lại khoảng cách cụm/tỉnh thất bại"),
+      setSyncError(err instanceof Error ? err.message : "Tính lại khoảng cách giữa các cụm thất bại"),
   });
 
   // Khoang cach duong bo that (OpenRouteService) theo 1 cum/tinh — chon rieng
@@ -244,6 +259,9 @@ export default function DichoithoiPage() {
   const groupOptions = (groupsQuery.data?.items ?? [])
     .filter((d) => d.kind === "province" || d.kind === "cluster")
     .sort((a, b) => a.name.localeCompare(b.name, "vi"));
+  // Tra ten cha (cum/tinh) tu slug — dung cho cot "Cụm" trong bang danh sach,
+  // tai su dung du lieu /destinations/map da fetch san (khong goi API rieng).
+  const nameBySlug = new Map((groupsQuery.data?.items ?? []).map((d) => [d.slug, d.name]));
   const [selectedGroupSlug, setSelectedGroupSlug] = useState("");
   const [groupDistancesReport, setGroupDistancesReport] =
     useState<RecomputeGroupDistancesReport | null>(null);
@@ -372,6 +390,21 @@ export default function DichoithoiPage() {
       render: (d) => d.provinceName ?? "—",
     },
     {
+      key: "parentSlug",
+      header: "Cụm",
+      render: (d) =>
+        d.parentSlug ? (
+          <a
+            href={`/dichoithoi/${d.parentSlug}`}
+            className="text-blue-600 hover:underline dark:text-blue-400"
+          >
+            {nameBySlug.get(d.parentSlug) ?? d.parentSlug}
+          </a>
+        ) : (
+          "—"
+        ),
+    },
+    {
       key: "kind",
       header: "Cấp",
       sortable: true,
@@ -481,8 +514,9 @@ export default function DichoithoiPage() {
         }
         details={
           <>
-            Bộ lọc (tỉnh/cụm, loại, trạng thái bài, trạng thái online) + sắp xếp + phân trang chỉ
-            ảnh hưởng danh sách hiển thị, không đổi dữ liệu. <strong>Nhập từ Sheet</strong>/
+            Bộ lọc (tỉnh/cụm, loại, trạng thái bài, trạng thái online, chỉ cụm/điểm chưa có toạ độ)
+            + sắp xếp + phân trang chỉ ảnh hưởng danh sách hiển thị, không đổi dữ liệu.{" "}
+            <strong>Nhập từ Sheet</strong>/
             <strong>Xuất CSV</strong>/<strong>Nhập cập nhật hàng loạt</strong> dùng khi cần thêm/sửa
             nhiều điểm cùng lúc thay vì từng điểm một.
             <br />
@@ -490,9 +524,10 @@ export default function DichoithoiPage() {
             thường chỉ cần bấm SAU KHI publish điểm đến mới: <strong>Re-link toàn bộ</strong> quét
             lại link nội bộ trong mọi bài (xem trước trước khi áp dụng thật);{" "}
             <strong>Tính lại khối liên quan</strong> làm mới gợi ý &quot;Điểm đến liên quan&quot;
-            hiển thị công khai; <strong>Tính lại khoảng cách cụm/tỉnh</strong> và{" "}
-            <strong>Tính khoảng cách đường bộ</strong> (chọn 1 cụm/tỉnh) gọi OpenRouteService để có
-            số km thật dùng cho AI viết bài + hiển thị; <strong>Làm mới toàn bộ khối động</strong>{" "}
+            hiển thị công khai; <strong>Tính khoảng cách đường bộ</strong> (giữa các cụm với nhau,
+            không tính tỉnh) và <strong>Tính khoảng cách đường bộ (con↔cha+con)</strong> (chọn 1
+            cụm/tỉnh) gọi OpenRouteService để có số km thật dùng cho AI viết bài + hiển thị;{" "}
+            <strong>Làm mới toàn bộ khối động</strong>{" "}
             cập nhật lại các khối tự tính (giá, đánh giá...) trên mọi trang; <strong>Migrate ảnh
             cũ</strong> chuyển ảnh từ nguồn lưu trữ cũ sang nguồn hiện tại. Chạy dư không hại gì,
             chỉ tốn thời gian — không bắt buộc chạy mỗi ngày.
@@ -556,7 +591,7 @@ export default function DichoithoiPage() {
           >
             {recomputeClusterDistancesMutation.isPending
               ? "Đang tính..."
-              : "Tính lại khoảng cách cụm/tỉnh"}
+              : "Tính khoảng cách đường bộ"}
           </Button>
           <span className="flex items-center gap-1.5">
             <Select
@@ -794,6 +829,14 @@ export default function DichoithoiPage() {
             </option>
           ))}
         </Select>
+        <Checkbox
+          label="Chỉ cụm/điểm chưa có toạ độ"
+          checked={missingCoords}
+          onChange={(e) => {
+            setMissingCoords(e.target.checked);
+            resetToFirstPage();
+          }}
+        />
       </div>
 
       {listQuery.isError && <ErrorBox error={listQuery.error} fallback="Lỗi tải danh sách" />}

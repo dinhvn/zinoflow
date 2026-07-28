@@ -243,6 +243,11 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
         (e) => hasRealTicketPrice(e.ticketPrice) || e.ticketLinks.length > 0,
       );
     }
+    if (query.missingCoords) {
+      filtered = filtered.filter(
+        (e) => e.kind !== "province" && (e.lat === null || e.lng === null),
+      );
+    }
 
     // Sort server-side tren TOAN BO du lieu da loc, truoc khi cat trang (spec sort).
     // Cast: entity.kind khai bao string nhung gia tri thuc luon thuoc union kind.

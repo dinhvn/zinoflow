@@ -95,6 +95,13 @@ export class GetDichoithoiDashboardAlertsUseCase {
 
     const missingGalleryCount = coverageRows.filter((r) => !r.hasGallery).length;
 
+    // Cum/diem thieu toa do (khong tinh tinh) -> khong tinh duoc khoang cach
+    // duong bo that (ORS) cho node do (dichoithoi-poi-distance-plan.md), phai
+    // sua tay Google Maps link truoc.
+    const missingCoordsCount = mirrors.filter(
+      (m) => m.kind !== "province" && (m.lat === null || m.lng === null),
+    ).length;
+
     const alerts: DichoithoiDashboardAlert[] = [
       {
         key: "low-coverage",
@@ -125,6 +132,12 @@ export class GetDichoithoiDashboardAlertsUseCase {
         label: `${missingGalleryCount} điểm không có ảnh gallery`,
         count: missingGalleryCount,
         href: "/dichoithoi",
+      },
+      {
+        key: "missing-coords",
+        label: `${missingCoordsCount} cụm/điểm đến chưa có toạ độ`,
+        count: missingCoordsCount,
+        href: "/dichoithoi?missingCoords=true",
       },
     ].filter((a) => a.count > 0);
 

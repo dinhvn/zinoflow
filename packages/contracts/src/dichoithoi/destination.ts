@@ -323,6 +323,8 @@ export const listDestinationsQuerySchema = z.object({
   production: destinationProductionStateSchema.optional(),
   /** true = chỉ điểm có giá vé thật (không "miễn phí") hoặc đã có link mua — trang /ve (doc §11.3) */
   hasTicketOpportunity: z.coerce.boolean().optional(),
+  /** true = chỉ cụm/điểm đến (KHÔNG gồm tỉnh) thiếu lat/lng — cảnh báo "Việc cần làm" */
+  missingCoords: z.coerce.boolean().optional(),
   sortBy: destinationSortBySchema.default("name"),
   sortDir: z.enum(["asc", "desc"]).default("asc"),
   page: z.coerce.number().int().min(1).default(1),
