@@ -1415,7 +1415,29 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           card > tung block ben trong editor) — o day chi can 1 cap: tung block cua
           editor tu la 1 khoi ro rang, khong can them 1 lop card ngoai nua. */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-medium">Nội dung bài viết</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="font-medium">Nội dung bài viết</h3>
+          {/* Link sang job AI tao/cap nhat bai gan nhat — dung latestContentJobId
+              (qua bien jobId da tinh o tren) nen van bam duoc CA khi dang chay LAN
+              khi da xong (publish khong xoa latestContentJobId, khac activeContentJobId).
+              Nguoi dung yeu cau 29/07/2026: dang o tab Noi dung cung can xem chi tiet
+              job, khong chi tab AI ho tro. */}
+          {jobId && (
+            <a
+              href={`/content/${jobId}`}
+              className="flex items-center gap-1 text-xs text-violet-600 hover:underline dark:text-violet-400"
+            >
+              {jobStatus === "Created" || jobStatus === "GeneratingOutline" ? (
+                <>
+                  <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-violet-300 border-t-violet-600" />
+                  AI đang soạn — xem job →
+                </>
+              ) : (
+                "🤖 Xem chi tiết job AI →"
+              )}
+            </a>
+          )}
+        </div>
         {draftArticle && (
           <DestinationJobSuggestionsModal
             jobSuggestions={jobSuggestions}
