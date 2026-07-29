@@ -38,7 +38,7 @@ const CSV_PATH = path.resolve(
   "docs",
   "dichoithoi",
   "chuan-hoa-du-lieu",
-  "atlas-cum-snapshot-2026-07-27-v2.csv",
+  "atlas-cum-snapshot-2026-07-29.csv",
 );
 
 function normalizeVietnamese(text: string): string {
