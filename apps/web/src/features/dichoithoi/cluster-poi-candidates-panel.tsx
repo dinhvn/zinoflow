@@ -108,6 +108,25 @@ export function ClusterPoiCandidatesPanel({
     });
   }
 
+  // Chi tinh tren cac dong THUC SU tick duoc (khac "existing-in-cluster" —
+  // dong da khoa khong co checkbox) — "chon tat ca" khong dung cham vao do.
+  const actionableIndexes = candidates
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.matchType !== "existing-in-cluster" && c.status === "pending")
+    .map(({ i }) => i);
+  const allChecked = actionableIndexes.length > 0 && actionableIndexes.every((i) => checked.has(i));
+
+  function toggleAll() {
+    setChecked((prev) => {
+      if (allChecked) {
+        const next = new Set(prev);
+        for (const i of actionableIndexes) next.delete(i);
+        return next;
+      }
+      return new Set([...prev, ...actionableIndexes]);
+    });
+  }
+
   function togglePreferAi(i: number) {
     setPreferAi((prev) => {
       const next = new Set(prev);
@@ -127,7 +146,10 @@ export function ClusterPoiCandidatesPanel({
         <p>
           Gemini + Google Search Grounding tự quét toàn bộ điểm tham quan thuộc cụm này (kể cả hidden
           gems), phân loại độ ưu tiên 1-5 — KHÔNG tự ghi DB, chỉ hiện bảng bên dưới để bạn duyệt từng
-          dòng. Dòng đánh dấu &quot;có thể trùng&quot; nên tự kiểm tra kỹ trước khi tick.
+          dòng. Dòng đánh dấu &quot;có thể trùng&quot; nên tự kiểm tra kỹ trước khi tick. Checkbox ở
+          đầu bảng chọn/bỏ chọn tất cả dòng còn tick được — dòng &quot;Đã có trong cụm&quot; đã khoá
+          sẵn, không bị chọn nhầm ngay cả khi bấm chọn tất cả. Tìm lại lần sau vẫn an toàn: điểm đã
+          chấp nhận trước đó sẽ tự khớp lại thành &quot;Đã có trong cụm&quot;, không tạo trùng.
         </p>
       </div>
 
@@ -157,7 +179,13 @@ export function ClusterPoiCandidatesPanel({
           <table className="w-full min-w-[720px] text-sm">
             <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
               <tr>
-                <th className="p-2 text-center">Chọn</th>
+                <th className="p-2 text-center">
+                  {actionableIndexes.length > 0 ? (
+                    <Checkbox label="" checked={allChecked} onChange={toggleAll} />
+                  ) : (
+                    "Chọn"
+                  )}
+                </th>
                 <th className="p-2">Tên</th>
                 <th className="p-2">Ưu tiên</th>
                 <th className="p-2">Mô tả</th>
