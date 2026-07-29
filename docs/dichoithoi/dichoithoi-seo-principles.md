@@ -6,6 +6,12 @@ plan...) phải tuân theo tinh thần ở đây. Nếu 1 đề xuất nào đó
 trong spec khác) mâu thuẫn với nguyên tắc dưới, nguyên tắc ở đây thắng — dừng
 lại và hỏi lại người dùng thay vì âm thầm làm theo spec cũ.
 
+Tài liệu này là TƯ DUY/QUY TRÌNH. Trích dẫn/sự thật CHI TIẾT từ tài liệu
+chính thức Google (16 chính sách spam, structured data, sitemap, Core Web
+Vitals, duplicate content...) nằm ở
+`docs/dichoithoi/dichoithoi-google-seo-guidelines.md` — đọc file đó khi cần
+tra cứu 1 quy tắc cụ thể/trích dẫn chính xác, không suy đoán lại từ trí nhớ.
+
 ## 0) Vai trò bắt buộc khi làm việc trên dichoithoi
 
 Khi làm bất kỳ việc gì liên quan tới website dichoithoi (thiết kế, code, review,
@@ -88,9 +94,18 @@ lời rõ ràng 3 câu sau (không phải sau khi code xong mới nghĩ tới):
   — mọi quyết định kỹ thuật đã chốt ở content-seo-ux-plan §10.5 (bỏ framework
   nặng, Tailwind purge, vanilla JS, SVG, ảnh tối ưu) phục vụ trực tiếp mục
   tiêu SEO này, không chỉ vì "cho nhẹ".
-- **Freshness**: nội dung cập nhật thường xuyên có lợi cho ranking, nhất là
-  trang mùa vụ/sự kiện — cân nhắc khi thiết kế tần suất rà soát lại nội dung
-  cũ (không chỉ tạo mới).
+- **Freshness — CẤM date-spam, đây là chính sách Google công bố rõ, không
+  phải suy diễn**: nội dung cập nhật thường xuyên có lợi cho ranking, NHƯNG
+  Google liệt kê rõ trong khung tự đánh giá "search-engine-first" (dấu hiệu
+  XẤU): *"Are you changing the date of a page to make it appear fresh, when
+  content has not been substantively changed?"* — và với sitemap `<lastmod>`,
+  Google **tự đối chiếu** giá trị khai báo với thay đổi thực tế trên trang,
+  nếu lệch sẽ **ngừng tin cậy tín hiệu ngày cho toàn site** (không chỉ 1
+  trang). Bất kỳ trường ngày nào hiển thị cho người đọc/JSON-LD/sitemap CHỈ
+  được đổi khi nội dung THẬT SỰ đổi — không tự động hoá vô điều kiện. Xem
+  đầy đủ trích dẫn + case áp dụng thật (badge cập nhật dichoithoi.com) ở
+  `dichoithoi-google-seo-guidelines.md` §4 + §7 và
+  `dichoithoi-content-freshness-plan.md`.
 - **Không "intrusive interstitials"**: quá nhiều CTA/quảng cáo che nội dung
   trên màn hình đầu bị Google phạt trực tiếp — đã có giới hạn cụ thể (content-
   seo-ux-plan §9.5, thanh CTA dính đáy không quá 15-20% chiều cao màn hình).

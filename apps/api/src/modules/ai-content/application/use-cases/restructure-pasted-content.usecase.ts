@@ -56,7 +56,6 @@ const looseRestructureSchema = z.object({
     .optional(),
   sections: z.array(looseSectionSchema),
   faq: z.array(faqItemSchema).optional(),
-  updateNotice: z.string().optional(),
   metadata: z
     .object({
       name: z.string().optional(),
@@ -105,7 +104,7 @@ export class RestructurePastedContentUseCase {
       'Với blockKey "an-gi" hoặc "qua-mang-ve": nếu văn bản gốc liệt kê món ăn/đặc sản cụ thể,',
       "tách vào \"items\" (mỗi mục {ten, moTa}); không có thông tin thì bỏ trống.",
       "Cũng trích xuất thêm (nếu văn bản gốc có): title, intro, quickFacts",
-      "(openingTime/ticketPrice/transport/food/hotel/tip), faq, updateNotice, metadata",
+      "(openingTime/ticketPrice/transport/food/hotel/tip), faq, metadata",
       "(name/metaTitle/metaDescription/description/searchKeyword).",
     ].join("\n");
 
@@ -166,9 +165,6 @@ function assembleDestinationArticle(
       tip: loose.quickFacts?.tip?.trim() || MISSING_MARK,
     },
     faq: padFaq(loose.faq ?? []),
-    updateNotice:
-      loose.updateNotice?.trim() ||
-      `Thông tin trong bài cập nhật tháng ${currentMonthYear()}, giá vé và giờ mở cửa có thể thay đổi.`,
     metadata: {
       name: loose.metadata?.name?.trim() || topic,
       slugSuggestion: slugifyVietnamese(topic) || "diem-den",
@@ -196,7 +192,3 @@ function padFaq(faq: { question: string; answer: string }[]): { question: string
   return filled;
 }
 
-function currentMonthYear(): string {
-  const now = new Date();
-  return `${now.getMonth() + 1}/${now.getFullYear()}`;
-}

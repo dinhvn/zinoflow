@@ -73,7 +73,6 @@ const COMMON_VARS = [
   "toneProfile",
   "sourceContext",
   "products",
-  "currentDate",
 ];
 
 /** Bien theo operation (= COMMON_VARS + extra moi buoc, theo PromptBuilder) */

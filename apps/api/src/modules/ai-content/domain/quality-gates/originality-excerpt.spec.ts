@@ -25,7 +25,6 @@ function baseArticle(overrides: Partial<DestinationArticle> = {}): DestinationAr
       { question: "Có mất phí không?", answer: "Có, 20.000đ/người." },
       { question: "Xa Đà Lạt không?", answer: "Khoảng 50km, chạy xe máy 1.5 giờ." },
     ],
-    updateNotice: "Cập nhật tháng 6/2026, giá vé có thể thay đổi.",
     metadata: {
       name: "Thác Pongour",
       slugSuggestion: "thac-pongour",

@@ -120,14 +120,37 @@ describe("GetDichoithoiDashboardAlertsUseCase (destination-spec §7.2, Phase 23)
 
   it("dem dung diem thieu anh gallery", async () => {
     const coverageRows = [
-      { destinationId: 1, hasOpeningTime: true, hasTicketPrice: true, hasFaq: true, hasPracticalNotes: true, hasTicketLinks: true, hasMainContent: true, hasGallery: false },
-      { destinationId: 2, hasOpeningTime: true, hasTicketPrice: true, hasFaq: true, hasPracticalNotes: true, hasTicketLinks: true, hasMainContent: true, hasGallery: true },
+      { destinationId: 1, hasOpeningTime: true, hasTicketPrice: true, hasFaq: true, hasPracticalNotes: true, hasTicketLinks: true, hasMainContent: true, hasGallery: false, contentUpdatedAt: null, lastVerifiedAt: null },
+      { destinationId: 2, hasOpeningTime: true, hasTicketPrice: true, hasFaq: true, hasPracticalNotes: true, hasTicketLinks: true, hasMainContent: true, hasGallery: true, contentUpdatedAt: null, lastVerifiedAt: null },
     ];
     const { usecase } = setup({ coverageRows });
     const result = await usecase.execute();
 
     const missingGallery = result.alerts.find((a) => a.key === "missing-gallery");
     expect(missingGallery?.count).toBe(1);
+  });
+
+  it("dem dung diem chua ra lai noi dung > 5 thang (content-freshness-plan.md Giai doan F)", async () => {
+    const now = new Date();
+    const recent = new Date(now);
+    recent.setMonth(recent.getMonth() - 1);
+    const stale = new Date(now);
+    stale.setMonth(stale.getMonth() - 6);
+    const coverageRows = [
+      // moi (ContentUpdatedAt gan day) -> khong tinh
+      { destinationId: 1, hasOpeningTime: true, hasTicketPrice: true, hasFaq: true, hasPracticalNotes: true, hasTicketLinks: true, hasMainContent: true, hasGallery: true, contentUpdatedAt: recent, lastVerifiedAt: null },
+      // LastVerifiedAt gan day, ContentUpdatedAt cu -> lay moc moi nhat, khong tinh
+      { destinationId: 2, hasOpeningTime: true, hasTicketPrice: true, hasFaq: true, hasPracticalNotes: true, hasTicketLinks: true, hasMainContent: true, hasGallery: true, contentUpdatedAt: stale, lastVerifiedAt: recent },
+      // ca 2 deu cu hon 5 thang -> tinh
+      { destinationId: 3, hasOpeningTime: true, hasTicketPrice: true, hasFaq: true, hasPracticalNotes: true, hasTicketLinks: true, hasMainContent: true, hasGallery: true, contentUpdatedAt: stale, lastVerifiedAt: null },
+      // ca 2 deu null (chua tung qua co che moi) -> tinh
+      { destinationId: 4, hasOpeningTime: true, hasTicketPrice: true, hasFaq: true, hasPracticalNotes: true, hasTicketLinks: true, hasMainContent: true, hasGallery: true, contentUpdatedAt: null, lastVerifiedAt: null },
+    ];
+    const { usecase } = setup({ coverageRows });
+    const result = await usecase.execute();
+
+    const staleContent = result.alerts.find((a) => a.key === "stale-content");
+    expect(staleContent?.count).toBe(2);
   });
 
   it("dem dung cum/diem thieu toa do, bo qua tinh", async () => {

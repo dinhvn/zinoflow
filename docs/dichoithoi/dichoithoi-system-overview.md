@@ -96,6 +96,17 @@ lại tracking trạng thái.
     `/dichoithoi/phan-loai`. `dichoithoi-taxonomy-overview.md` (hiện trạng
     TRƯỚC redesign, 23/07/2026) chỉ còn giá trị lịch sử/baseline map slug
     cũ→mới. Đọc trước khi đụng seed taxonomy hoặc prompt AI gán Type/Tag.
+12j. `dichoithoi-content-freshness-plan.md` — ĐÃ BUILD+VERIFY (29/07/2026):
+    thay dòng `updateNotice` AI viết cứng lúc generate (đã xoá hẳn) bằng tín
+    hiệu "cập nhật nội dung" thật (2 cột `ContentUpdatedAt`/`LastVerifiedAt`
+    tách biệt, gate so sánh giá trị + AI Haiku phân loại `ContentHtml`, badge
+    ẩn sau 6 tháng, tránh "date spam") — đọc trước khi đụng
+    `PublishDestinationUseCase`/badge cập nhật trên trang detail.
+12k. `dichoithoi-google-seo-guidelines.md` — tổng hợp ĐẦY ĐỦ chính sách SEO
+    chính thức Google (16 chính sách spam, structured data, sitemap
+    `lastmod`, Core Web Vitals, duplicate content, cảnh báo date-spam
+    nguyên văn) đọc trực tiếp 29/07/2026 — tra cứu khi cần trích dẫn chính
+    xác, companion cho `dichoithoi-seo-principles.md`.
 13. `dichoithoi-system-design.md` — **đọc file này nếu chỉ có thời gian đọc 1
     file**: tổng hợp toàn bộ spec thành 1 bức tranh kỹ thuật đầy đủ (bảng dữ
     liệu 2 database, sơ đồ luồng, API surface, nguyên tắc xuyên suốt).

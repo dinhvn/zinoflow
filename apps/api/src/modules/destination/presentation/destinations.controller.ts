@@ -72,6 +72,8 @@ import {
   type ListDestinationsQuery,
   type ListDestinationsResponse,
   type PublishDestinationResult,
+  confirmContentUpdateRequestSchema,
+  type ConfirmContentUpdateRequest,
   type RecomputeRelatedReport,
   type RecomputeClusterDistancesReport,
   type RecomputeGroupDistancesReport,
@@ -134,6 +136,8 @@ import { GetDestinationTaxonomyUseCase } from "../application/use-cases/get-dest
 import { GetDestinationsMapUseCase } from "../application/use-cases/get-destinations-map.usecase";
 import { CreateDestinationJobUseCase } from "../application/use-cases/create-destination-job.usecase";
 import { PublishDestinationUseCase } from "../application/use-cases/publish-destination.usecase";
+import { VerifyContentStillAccurateUseCase } from "../application/use-cases/verify-content-still-accurate.usecase";
+import { ConfirmContentUpdateUseCase } from "../application/use-cases/confirm-content-update.usecase";
 import { RelinkAllUseCase } from "../application/use-cases/relink-all.usecase";
 import { UpdateThumbnailUseCase } from "../application/use-cases/update-thumbnail.usecase";
 import { UpdateDestinationHeroImageMetaUseCase } from "../application/use-cases/update-destination-hero-image-meta.usecase";
@@ -216,6 +220,8 @@ export class DestinationsController {
     private readonly getDestinationsMap: GetDestinationsMapUseCase,
     private readonly createJob: CreateDestinationJobUseCase,
     private readonly publishDestination: PublishDestinationUseCase,
+    private readonly verifyContentStillAccurate: VerifyContentStillAccurateUseCase,
+    private readonly confirmContentUpdateUseCase: ConfirmContentUpdateUseCase,
     private readonly relinkAll: RelinkAllUseCase,
     private readonly updateThumbnail: UpdateThumbnailUseCase,
     private readonly updateHeroImageMeta: UpdateDestinationHeroImageMetaUseCase,
@@ -910,5 +916,25 @@ export class DestinationsController {
   @Post(":slug/publish")
   publish(@Param("slug") slug: string): Promise<PublishDestinationResult> {
     return this.publishDestination.execute(slug);
+  }
+
+  /** Nut "Đã kiểm tra, vẫn đúng" (content-freshness-plan.md Giai doan D) — LastVerifiedAt=now() */
+  @Post(":slug/verify-content")
+  async verifyContent(@Param("slug") slug: string): Promise<{ ok: true }> {
+    await this.verifyContentStillAccurate.execute(slug);
+    return { ok: true };
+  }
+
+  /**
+   * Bien tap vien xac nhan/lat lai ket qua AI phan loai ContentHtml sau publish
+   * (content-freshness-plan.md Giai doan C — PublishDestinationResult.pendingContentClassification).
+   */
+  @Post(":slug/confirm-content-update")
+  async confirmContentUpdate(
+    @Param("slug") slug: string,
+    @Body(new ZodValidationPipe(confirmContentUpdateRequestSchema)) request: ConfirmContentUpdateRequest,
+  ): Promise<{ ok: true }> {
+    await this.confirmContentUpdateUseCase.execute(slug, request.isMeaningful);
+    return { ok: true };
   }
 }

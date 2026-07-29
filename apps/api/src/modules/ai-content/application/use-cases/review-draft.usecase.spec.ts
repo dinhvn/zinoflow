@@ -61,7 +61,6 @@ const validArticle: DestinationArticle = {
     { question: "Nên đi mấy ngày?", answer: "2-3 ngày là hợp lý cho chuyến đi trọn vẹn." },
     { question: "Đi Đà Lạt tốn bao nhiêu?", answer: "Tuỳ dịch vụ, trung bình 2-3 triệu/người/chuyến ngắn." },
   ],
-  updateNotice: "Thông tin trong bài cập nhật tháng 6/2026, giá vé và giờ mở cửa có thể thay đổi.",
   metadata: {
     name: "Đà Lạt",
     slugSuggestion: "da-lat",

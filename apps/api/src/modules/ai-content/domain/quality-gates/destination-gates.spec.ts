@@ -40,8 +40,6 @@ function validArticle(overrides: Partial<DestinationArticle> = {}): DestinationA
       { question: "Tham quan mất bao lâu?", answer: "Tuyến ngắn 4 tiếng, ngủ đêm 2 ngày 1 đêm." },
       { question: "Có nên ngủ đêm trên du thuyền?", answer: "Nên, nếu ngân sách cho phép." },
     ],
-    updateNotice:
-      "Thông tin trong bài cập nhật tháng 6/2026, giá vé và giờ mở cửa có thể thay đổi.",
     metadata: {
       name: "Vịnh Hạ Long",
       slugSuggestion: "vinh-ha-long",
@@ -108,15 +106,8 @@ describe("destination gates (spec dichoithoi §6)", () => {
     expect(result.details.join(" ")).toContain("tiêu đề H1");
   });
 
-  it("policy: fail khi updateNotice khong co thang/nam", () => {
-    const article = validArticle({ updateNotice: "Thông tin có thể thay đổi theo thời gian." });
-    const result = evaluateDestinationPolicyGate(gateInput(article));
-    expect(result.passed).toBe(false);
-  });
-
   it("policy: fail khi gia ve khong kem luu y thay doi", () => {
     const article = validArticle({
-      updateNotice: "Thông tin trong bài cập nhật tháng 6/2026.",
       quickFacts: { ...validArticle().quickFacts, ticketPrice: "290.000đ/người lớn" },
     });
     const result = evaluateDestinationPolicyGate(gateInput(article));

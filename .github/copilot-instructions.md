@@ -21,6 +21,11 @@ Key docs (read before making design decisions):
   mandatory SEO-owner mindset + 3-question checklist (useful to user? SEO-correct structure?
   what extra signal increases SEO?) to run BEFORE designing/coding any dichoithoi feature or
   displayed field. Overrides other dichoithoi specs on conflict.
+- `docs/dichoithoi/dichoithoi-google-seo-guidelines.md` — full compiled reference of Google's
+  official SEO policies (16 spam policies, structured data rules, sitemap `lastmod` accuracy,
+  Core Web Vitals ranking impact, duplicate content/canonical, helpful-content date-spam warning)
+  read directly from `developers.google.com/search/docs` 29/07/2026 — consult for exact quotes/
+  rules, companion to the mindset doc above.
 - `docs/dichoithoi/dichoithoi-destination-spec.md` — destination content for dichoithoi.com (M6)
 - `docs/specs/folder-structure.md` — monorepo layout
 - `docs/clean-architecture-playbook.md` — architecture rules

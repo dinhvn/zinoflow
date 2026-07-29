@@ -11,6 +11,9 @@ import { SyncDestinationsUseCase } from "./application/use-cases/sync-destinatio
 import { GetDestinationTaxonomyUseCase } from "./application/use-cases/get-destination-taxonomy.usecase";
 import { CreateDestinationJobUseCase } from "./application/use-cases/create-destination-job.usecase";
 import { PublishDestinationUseCase } from "./application/use-cases/publish-destination.usecase";
+import { ClassifyContentChangeUseCase } from "./application/use-cases/classify-content-change.usecase";
+import { VerifyContentStillAccurateUseCase } from "./application/use-cases/verify-content-still-accurate.usecase";
+import { ConfirmContentUpdateUseCase } from "./application/use-cases/confirm-content-update.usecase";
 import { RelinkAllUseCase } from "./application/use-cases/relink-all.usecase";
 import { RelinkAllWorker } from "./infrastructure/workers/relink-all.worker";
 import { RecomputeRelatedService } from "./application/services/recompute-related.service";
@@ -185,6 +188,9 @@ import {
     GetDestinationTaxonomyUseCase,
     CreateDestinationJobUseCase,
     PublishDestinationUseCase,
+    ClassifyContentChangeUseCase,
+    VerifyContentStillAccurateUseCase,
+    ConfirmContentUpdateUseCase,
     RelinkAllUseCase,
     RelinkAllWorker,
     UpdateThumbnailUseCase,

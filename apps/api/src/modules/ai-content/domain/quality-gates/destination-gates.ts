@@ -209,23 +209,20 @@ export function evaluateDestinationSeoGate(input: DestinationGateInput): Quality
 }
 
 /**
- * Policy gate travel (§6.3 + spec chinh §19.5.3): co dong thoi diem cap nhat,
- * gia ve kem luu y thay doi, khong claim tuyet doi.
+ * Policy gate travel (§6.3 + spec chinh §19.5.3): gia ve kem luu y thay doi,
+ * khong claim tuyet doi. Truoc day con check dong "updateNotice" phai co
+ * thang/nam — bo (content-freshness-plan.md Giai doan E): badge "cap nhat"
+ * gio tinh dong tu ContentUpdatedAt/LastVerifiedAt (v2.DestinationContent),
+ * khong con la text AI viet cung.
  */
 export function evaluateDestinationPolicyGate(input: DestinationGateInput): QualityCheck {
   const { article, draftMarkdown } = input;
   const details: string[] = [];
 
-  // updateNotice phai co thang/nam cu the (vd "tháng 6/2026" hoac "06/2026")
-  if (!/\d{1,2}\s*[/-]\s*20\d{2}/.test(article.updateNotice)) {
-    details.push('Dòng cập nhật phải ghi rõ tháng/năm (vd "cập nhật tháng 6/2026")');
-  }
-
   // Gia ve: hoac kem luu y thay doi, hoac la gia tri "mien phi"/"can kiem tra"
   const price = article.quickFacts.ticketPrice;
   const priceHasCaveat =
     containsNormalized(price, "có thể thay đổi") ||
-    containsNormalized(article.updateNotice, "có thể thay đổi") ||
     MISSING_DATA_MARKERS.some((m) => containsNormalized(price, m));
   if (!priceHasCaveat) {
     details.push('Giá vé phải kèm lưu ý "có thể thay đổi" (hoặc ghi Miễn phí / Cần kiểm tra)');

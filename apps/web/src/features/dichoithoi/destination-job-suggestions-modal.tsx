@@ -77,7 +77,7 @@ export function mergeFrameGroup(
     case "faq":
       return { ...article, faq: suggestion.faq };
     case "metadata":
-      return { ...article, metadata: suggestion.metadata, updateNotice: suggestion.updateNotice };
+      return { ...article, metadata: suggestion.metadata };
   }
 }
 
@@ -94,10 +94,7 @@ function isFrameGroupApplied(
     case "faq":
       return JSON.stringify(current.faq) === JSON.stringify(suggestion.faq);
     case "metadata":
-      return (
-        JSON.stringify(current.metadata) === JSON.stringify(suggestion.metadata) &&
-        current.updateNotice === suggestion.updateNotice
-      );
+      return JSON.stringify(current.metadata) === JSON.stringify(suggestion.metadata);
   }
 }
 
@@ -327,9 +324,6 @@ function FrameGroupPreview({ group, frame }: { group: FrameGroupKey; frame: Dest
       </p>
       <p>
         <strong>Từ khoá:</strong> {frame.metadata.searchKeyword}
-      </p>
-      <p>
-        <strong>Dòng cập nhật:</strong> {frame.updateNotice}
       </p>
     </div>
   );

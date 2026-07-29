@@ -95,6 +95,38 @@ Tham chiếu bắt buộc: `docs/dichoithoi/dichoithoi-seo-principles.md` (3-câ
 checklist) và mục "SEO on-page" của skill `qa-audit` (repo dichoithoi) — chạy
 lại trên **domain production thật**, không chỉ trên local:
 
+- [ ] **Kiểm tra Google Search Console — mục "Manual Actions" — TRƯỚC KHI
+      release, không phải sau khi thấy traffic giảm mới đi tìm nguyên nhân**
+      (29/07/2026, ghi nhận từ câu hỏi "production cũ 247 điểm, traffic
+      <100/ngày, có bị Google đánh flag không"). Sự thật đã xác minh qua
+      tài liệu chính thức Google (`support.google.com/webmasters/answer/9044175`):
+      **CHỈ có 1 loại "flag" chính thức duy nhất là Manual Action** (do người
+      review thật xác nhận vi phạm spam policy) — traffic thấp/nội dung cũ/ít
+      cập nhật **không phải** 1 dạng phạt riêng, chỉ là hệ quả xếp hạng thấp.
+      Nếu Manual Actions rỗng (khả năng cao với case này) → không có gì phải
+      "gỡ" trước khi release. Nếu CÓ action đang treo → phải fix + gửi
+      reconsideration request và đợi Google duyệt TRƯỚC khi release (không
+      để lẫn vào cùng đợt big-change, sẽ khó tách nguyên nhân nếu ranking có
+      vấn đề sau đó).
+- [ ] **Chấp nhận trước: ranking có thể dao động vài tuần đầu sau release,
+      đây là hành vi bình thường, không phải dấu hiệu xấu** — trích Google
+      (`developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes`):
+      *"visibility có thể dao động tạm thời trong lúc chuyển đổi... thứ hạng
+      sẽ ổn định dần theo thời gian"*; site cỡ vừa có thể mất "vài tuần" để
+      phần lớn trang được index lại đầy đủ. Không hoảng khi thấy traffic dip
+      ngay sau release — chỉ cần lo lắng nếu KHÔNG hồi phục sau nhiều tuần
+      (khi đó mới đi tìm lỗi kỹ thuật thật, ví dụ redirect sai/thiếu).
+- [ ] Redirect 301 giữ **tối thiểu 1 năm** cho toàn bộ slug cũ đã map (không
+      gỡ sớm) — để tín hiệu/trust tích luỹ nhiều năm của domain cũ chuyển hết
+      sang URL mới, đúng khuyến nghị chính thức Google ở nguồn trên. Xem danh
+      sách map slug cũ→mới đã duyệt ở mục 1/3 phía trên.
+- [ ] **Rà lại toàn bộ checklist ở
+      `docs/dichoithoi/dichoithoi-google-seo-guidelines.md` §9** (checklist áp
+      dụng nhanh, tổng hợp từ 16 chính sách spam + structured data + sitemap +
+      Core Web Vitals + duplicate content + §8 site relaunch) — đối chiếu với
+      TOÀN BỘ thay đổi của đợt release này (không chỉ tính năng vừa code xong
+      lúc review, vì release có thể gộp nhiều thay đổi tích luỹ từ nhiều
+      phiên làm việc khác nhau mà không có ai rà tổng lại 1 lần).
 - [ ] Mỗi trang đúng 1 `<h1>`, khớp chủ đề trang.
 - [ ] `<link rel="canonical">` trỏ đúng domain production (`https://dichoithoi.com/...`),
       không còn sót `localhost`/domain staging.

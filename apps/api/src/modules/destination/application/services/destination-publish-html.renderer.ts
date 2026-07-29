@@ -12,8 +12,6 @@ import { renderMarkdownToSafeHtml } from "./rich-markdown.renderer";
 export async function renderDestinationBodyHtml(article: DestinationArticle): Promise<string> {
   const lines: string[] = [];
   lines.push(article.intro, "");
-  // Luu y cap nhat hien ngay dau bai — gate policy yeu cau co thang/nam (spec §6)
-  lines.push(`> ${article.updateNotice}`, "");
   for (const section of article.sections) {
     lines.push(`## ${section.heading}`, "");
     lines.push(section.content, "");

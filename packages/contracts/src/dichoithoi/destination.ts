@@ -412,6 +412,16 @@ export const addedLinkSchema = z.object({
 });
 export type AddedLink = z.infer<typeof addedLinkSchema>;
 
+/** AI phan loai ContentHtml sua tay co phai "meaningful update" that hay khong —
+ * content-freshness-plan.md Giai doan C. CHUA tu dong bump ContentUpdatedAt —
+ * chi la goi y, can bien tap vien xac nhan (POST /destinations/:slug/confirm-content-update)
+ * moi that su ghi (tranh phai "revert" 1 bump da ghi neu AI doan sai). */
+export const pendingContentClassificationSchema = z.object({
+  isMeaningful: z.boolean(),
+  reason: z.string(),
+});
+export type PendingContentClassification = z.infer<typeof pendingContentClassificationSchema>;
+
 /** Ket qua publish 1 bai diem den xuong SQL Server (Phase C) */
 export const publishDestinationResultSchema = z.object({
   slug: z.string(),
@@ -422,8 +432,18 @@ export const publishDestinationResultSchema = z.object({
   /** So diem den duoc tinh lai khoi lien quan (RelatedJson) sau publish */
   relatedRecomputed: z.number().int(),
   durationMs: z.number().int(),
+  /** null = khong can hoi (publish lan dau, field so lieu da doi tu bump roi, hoac
+   * ContentHtml khong doi gi) — co gia tri khi ContentHtml doi VA field so lieu
+   * khong doi, can bien tap vien xac nhan qua confirm-content-update. */
+  pendingContentClassification: pendingContentClassificationSchema.nullable(),
 });
 export type PublishDestinationResult = z.infer<typeof publishDestinationResultSchema>;
+
+/** Xac nhan/lat lai ket qua AI phan loai ContentHtml (content-freshness-plan.md Giai doan C) */
+export const confirmContentUpdateRequestSchema = z.object({
+  isMeaningful: z.boolean(),
+});
+export type ConfirmContentUpdateRequest = z.infer<typeof confirmContentUpdateRequestSchema>;
 
 /**
  * Xem truoc HTML se ghi vao v2.DestinationContent luc Publish (dry-run, khong ghi DB) —
@@ -876,6 +896,14 @@ export const updateMetaTitleRequestSchema = z.object({
 });
 export type UpdateMetaTitleRequest = z.infer<typeof updateMetaTitleRequestSchema>;
 export type SuggestEditorialReviewResponse = z.infer<typeof suggestEditorialReviewResponseSchema>;
+
+/** Ket qua AI phan loai ContentHtml sua tay co phai "meaningful update" that hay
+ * chi sua chinh ta/cau chu (content-freshness-plan.md Giai doan C) */
+export const classifyContentChangeResponseSchema = z.object({
+  isMeaningful: z.boolean(),
+  reason: z.string(),
+});
+export type ClassifyContentChangeResponse = z.infer<typeof classifyContentChangeResponseSchema>;
 
 /** Cap nhat link Google Maps/TripAdvisor... nhap tay (Phase 28.0) */
 export const updateExternalReviewUrlsRequestSchema = z.object({

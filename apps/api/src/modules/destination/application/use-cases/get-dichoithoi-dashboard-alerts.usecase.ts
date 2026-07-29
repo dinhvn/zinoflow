@@ -9,6 +9,9 @@ import {
 
 /** Diem duoi nguong nay bi tinh la "do phu thap" (destination-spec §7.2) */
 const LOW_COVERAGE_THRESHOLD_PERCENT = 60;
+/** content-freshness-plan.md Giai doan F — canh bao SOM HON 1 thang so voi nguong
+ * an badge phia website (6 thang), de co khoang dem ra lai truoc khi badge bien mat. */
+const STALE_CONTENT_THRESHOLD_MONTHS = 5;
 /** Phai khop MIN_DESTINATIONS_PER_TAG cua ReverseCheckTagAssignmentsUseCase
  * (khong import truc tiep de tranh keo theo dependency AI provider/usage
  * chi de lay 1 hang so — xem ghi chu o do neu doi nguong). */
@@ -95,6 +98,18 @@ export class GetDichoithoiDashboardAlertsUseCase {
 
     const missingGalleryCount = coverageRows.filter((r) => !r.hasGallery).length;
 
+    // content-freshness-plan.md Giai doan F — bai publish lau khong ai ra lai gia ve/gio mo
+    // cua/noi dung (ca 2 moc ContentUpdatedAt/LastVerifiedAt deu null hoac cu hon nguong).
+    const staleContentThreshold = new Date();
+    staleContentThreshold.setMonth(staleContentThreshold.getMonth() - STALE_CONTENT_THRESHOLD_MONTHS);
+    const staleContentCount = coverageRows.filter((r) => {
+      const latest =
+        !r.contentUpdatedAt || (r.lastVerifiedAt && r.lastVerifiedAt > r.contentUpdatedAt)
+          ? r.lastVerifiedAt
+          : r.contentUpdatedAt;
+      return !latest || latest < staleContentThreshold;
+    }).length;
+
     // Cum/diem thieu toa do (khong tinh tinh) -> khong tinh duoc khoang cach
     // duong bo that (ORS) cho node do (dichoithoi-poi-distance-plan.md), phai
     // sua tay Google Maps link truoc.
@@ -138,6 +153,12 @@ export class GetDichoithoiDashboardAlertsUseCase {
         label: `${missingCoordsCount} cụm/điểm đến chưa có toạ độ`,
         count: missingCoordsCount,
         href: "/dichoithoi?missingCoords=true",
+      },
+      {
+        key: "stale-content",
+        label: `${staleContentCount} điểm chưa rà lại nội dung > ${STALE_CONTENT_THRESHOLD_MONTHS} tháng`,
+        count: staleContentCount,
+        href: "/dichoithoi",
       },
     ].filter((a) => a.count > 0);
 

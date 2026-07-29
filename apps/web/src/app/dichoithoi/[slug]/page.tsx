@@ -79,7 +79,6 @@ function emptyDraftArticle(name: string): DestinationArticle {
     intro: "",
     quickFacts: { openingTime: "", ticketPrice: "", transport: "", food: "", hotel: "", tip: "" },
     faq: [],
-    updateNotice: "",
     metadata: {
       name,
       slugSuggestion: "",
@@ -146,7 +145,6 @@ function normalizeDraftArticle(raw: unknown, name: string): DestinationArticle {
           answer: typeof f?.answer === "string" ? f.answer : "",
         }))
       : empty.faq,
-    updateNotice: typeof r.updateNotice === "string" ? r.updateNotice : empty.updateNotice,
     metadata: {
       ...empty.metadata,
       ...(r.metadata && typeof r.metadata === "object" ? r.metadata : {}),
@@ -704,7 +702,6 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           intro: draft.article.intro,
           quickFacts: draft.article.quickFacts,
           faq: draft.article.faq,
-          updateNotice: draft.article.updateNotice,
           metadata: draft.article.metadata,
         });
       } catch {
@@ -745,8 +742,32 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       ),
     onSuccess: () => {
       setActionError(null);
+      setContentClassificationResolved(false);
       invalidate();
     },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+
+  // --- Tin hieu "cap nhat noi dung" (content-freshness-plan.md) ---
+  // AI phan loai ContentHtml sau publish CHI la goi y (pendingContentClassification) —
+  // bien tap vien phai bam 1 trong 2 nut de that su ghi ContentUpdatedAt, tranh phai
+  // "lat lai" 1 gia tri da ghi neu AI doan sai.
+  const [contentClassificationResolved, setContentClassificationResolved] = useState(false);
+  const confirmContentUpdate = useMutation({
+    mutationFn: async (isMeaningful: boolean) => {
+      await apiSend("POST", `/destinations/${slug}/confirm-content-update`, { isMeaningful });
+    },
+    onSuccess: () => {
+      setActionError(null);
+      setContentClassificationResolved(true);
+    },
+    onError: (e) => setActionError(toActionError(e)),
+  });
+  const verifyContentStillAccurate = useMutation({
+    mutationFn: async () => {
+      await apiSend("POST", `/destinations/${slug}/verify-content`, {});
+    },
+    onSuccess: () => setActionError(null),
     onError: (e) => setActionError(toActionError(e)),
   });
 
@@ -1042,7 +1063,23 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           >
             {publish.isPending ? "Đang đăng..." : "Đăng lên dichoithoi"}
           </Button>
+          {d.siteId !== null && (
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={verifyContentStillAccurate.isPending}
+              onClick={() => verifyContentStillAccurate.mutate()}
+              title="Bấm sau khi đã tự kiểm tra lại giá vé/giờ mở cửa/thông tin thực tế và xác nhận vẫn đúng, dù không cần sửa chữ nào trong bài."
+            >
+              ✅ Đã kiểm tra, vẫn đúng
+            </Button>
+          )}
         </div>
+        {verifyContentStillAccurate.isSuccess && (
+          <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
+            Đã ghi nhận — trang chi tiết sẽ hiện &quot;Đã kiểm tra &amp; xác nhận thông tin&quot; kèm tháng hiện tại.
+          </p>
+        )}
 
         {publish.data && (
           <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
@@ -1050,6 +1087,47 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
             liên quan cho {publish.data.relatedRecomputed} điểm.
             {publish.data.addedLinks.length > 0 &&
               ` Link nội bộ: ${publish.data.addedLinks.map((l) => l.targetName).join(", ")}.`}
+          </div>
+        )}
+
+        {publish.data?.pendingContentClassification && !contentClassificationResolved && (
+          <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+            <p>
+              🤖 AI nhận định lần sửa này{" "}
+              <strong>
+                {publish.data.pendingContentClassification.isMeaningful
+                  ? "LÀ cập nhật nội dung thực sự"
+                  : "CHỈ là sửa câu chữ/chính tả"}
+              </strong>
+              : {publish.data.pendingContentClassification.reason}
+            </p>
+            <p className="mt-2 flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                loading={confirmContentUpdate.isPending}
+                onClick={() =>
+                  confirmContentUpdate.mutate(publish.data!.pendingContentClassification!.isMeaningful)
+                }
+              >
+                Đồng ý
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                loading={confirmContentUpdate.isPending}
+                onClick={() =>
+                  confirmContentUpdate.mutate(!publish.data!.pendingContentClassification!.isMeaningful)
+                }
+              >
+                Không đúng, đổi lại
+              </Button>
+            </p>
+            <p className="mt-2 text-xs text-amber-700/80 dark:text-amber-400/80">
+              Vì sao quan trọng cho SEO: đánh dấu đúng giúp badge &quot;Cập nhật tháng...&quot; +
+              tín hiệu <code>dateModified</code>/sitemap gửi cho Google phản ánh đúng sự thật —
+              đánh dấu sai (nói &quot;cập nhật&quot; dù không đổi gì) bị Google coi là spam ngày
+              tháng và có thể bị bỏ qua tín hiệu freshness của cả trang.
+            </p>
           </div>
         )}
       </Group>

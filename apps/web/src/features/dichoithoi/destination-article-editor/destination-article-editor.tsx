@@ -146,9 +146,7 @@ export function DestinationArticleEditor({
 
       <MetadataEditor
         metadata={article.metadata}
-        updateNotice={article.updateNotice}
         onChangeMetadata={(patch) => update({ metadata: { ...article.metadata, ...patch } })}
-        onChangeUpdateNotice={(updateNotice) => update({ updateNotice })}
       />
     </div>
   );
@@ -373,14 +371,10 @@ function FaqEditor({ faq, onChange }: { faq: Faq[]; onChange: (next: Faq[]) => v
 
 function MetadataEditor({
   metadata,
-  updateNotice,
   onChangeMetadata,
-  onChangeUpdateNotice,
 }: {
   metadata: DestinationArticle["metadata"];
-  updateNotice: string;
   onChangeMetadata: (patch: Partial<DestinationArticle["metadata"]>) => void;
-  onChangeUpdateNotice: (next: string) => void;
 }) {
   return (
     <section className="rounded border border-zinc-200 p-3 dark:border-zinc-800">
@@ -432,10 +426,6 @@ function MetadataEditor({
             placeholder="Cách nhau dấu phẩy"
             className="mt-1 w-full"
           />
-        </label>
-        <label className="block text-xs text-zinc-500">
-          Dòng cập nhật (vd: &quot;cập nhật tháng 6/2026&quot;)
-          <Input value={updateNotice} onChange={(e) => onChangeUpdateNotice(e.target.value)} className="mt-1 w-full" />
         </label>
       </div>
     </section>

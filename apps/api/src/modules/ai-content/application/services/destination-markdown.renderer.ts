@@ -11,7 +11,6 @@ export function renderDestinationMarkdown(article: DestinationArticle): string {
 
   lines.push(`# ${article.title}`, "");
   lines.push(article.intro, "");
-  lines.push(`> ${article.updateNotice}`, "");
 
   // Quick facts — hien thi de review tay (phan du lieu de sai nhat)
   lines.push("## Thông tin nhanh", "");

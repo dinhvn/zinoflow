@@ -41,7 +41,10 @@ export interface TaxonomyContentRows {
   }>;
 }
 
-/** Noi dung hien tai cua 1 diem den tren site — ngu canh cho mode update */
+/** Noi dung hien tai cua 1 diem den tren site — ngu canh cho mode update.
+ * priceBreakdownJson/practicalNotesJson/faqJson/contentUpdatedAt/lastVerifiedAt
+ * them cho content-freshness-plan.md Giai doan B — so sanh gia tri cu/moi
+ * ngay truoc khi publish de quyet dinh co bump ContentUpdatedAt hay khong. */
 export interface SiteDestinationContent {
   contentHtml: string;
   openingTime: string | null;
@@ -50,6 +53,11 @@ export interface SiteDestinationContent {
   food: string | null;
   hotel: string | null;
   tip: string | null;
+  priceBreakdownJson: string | null;
+  practicalNotesJson: string | null;
+  faqJson: string | null;
+  contentUpdatedAt: Date | null;
+  lastVerifiedAt: Date | null;
 }
 
 /** 1 dong content cho job re-link (spec §12.2) — thao tac tren ContentHtml */
@@ -95,6 +103,14 @@ export interface PublishDestinationInput {
   metaDescription: string;
   /** SiteId cac diem duoc auto-link nhac toi — ghi DestinationRelation (mentioned) */
   mentionedTargetSiteIds: readonly number[];
+  /**
+   * true khi noi dung THUC SU doi so voi ban dang publish (content-freshness-plan.md
+   * Giai doan B: so sanh gia tri quickFacts/priceBreakdown/practicalNotes/faq, hoac
+   * Giai doan C: AI xac nhan ContentHtml doi that) — true thi ghi ContentUpdatedAt =
+   * now(), false thi GIU NGUYEN gia tri cu (khong bump, tranh "date spam"). Diem
+   * publish LAN DAU (chua co ban cu de so sanh) luon truyen true.
+   */
+  contentChanged: boolean;
 }
 
 /** Metadata diem den ghi xuong v2.Destination (insert moi hoac update metadata) */
@@ -180,6 +196,9 @@ export interface SiteContentCoverageRow {
   hasMainContent: boolean;
   /** GalleryJson co it nhat 1 anh — dung cho canh bao dashboard (destination-spec §7.2) */
   hasGallery: boolean;
+  /** content-freshness-plan.md Giai doan F — dung tinh canh bao "stale-content" (dashboard) */
+  contentUpdatedAt: Date | null;
+  lastVerifiedAt: Date | null;
 }
 
 export interface DichoithoiSiteDb {
@@ -261,6 +280,19 @@ export interface DichoithoiSiteDb {
   updateGallery(siteId: number, galleryJson: string): Promise<void>;
   /** Ghi de HeroImageMetaJson — mo ta rieng (alt/caption/credit) cho Anh dai dien */
   updateHeroImageMeta(siteId: number, heroImageMetaJson: string | null): Promise<void>;
+  /**
+   * Ghi LastVerifiedAt = now() (content-freshness-plan.md Giai doan D) — bien tap
+   * vien xac nhan noi dung van dung du khong sua chu nao. KHONG dung ContentUpdatedAt
+   * (chi bump khi noi dung THUC SU doi, xem PublishDestinationUseCase).
+   */
+  markContentVerified(siteId: number): Promise<void>;
+  /**
+   * Ghi ContentUpdatedAt = now() (content-freshness-plan.md Giai doan C) — bien tap
+   * vien XAC NHAN ket qua AI phan loai ContentHtml la "co" (hoac lat lai tu "khong").
+   * CHI goi khi bien tap vien dong y qua endpoint confirm-content-update — publish
+   * KHONG tu dong goi ham nay cho nhanh AI-classify (xem PublishDestinationUseCase).
+   */
+  markContentUpdatedNow(siteId: number): Promise<void>;
   /** Insert diem den MOI (resolve ParentId/ProvinceId tu slug/code) -> tra ve siteId */
   createDestination(meta: SiteDestinationMeta): Promise<{ siteId: number }>;
   /** Cap nhat metadata diem den da ton tai (khong dong cham content/quan he) */

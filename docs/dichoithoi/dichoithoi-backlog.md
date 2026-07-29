@@ -1369,6 +1369,19 @@ xong, không còn gì mở ở mức ưu tiên này.**
      còn được dùng thật không (có thể là code cũ trước redesign, đã bị thay
      bằng `ChildRefModel`/`_RelatedDestinationGrid` — Detail.cshtml dùng cả 2
      đường, cần xác nhận đường nào đang active).
+8. ✅ **ĐÃ BUILD + VERIFY (29/07/2026)** — `dichoithoi-content-freshness-plan.md`:
+   tín hiệu "cập nhật nội dung" thật thay cho dòng `updateNotice` AI viết
+   cứng lúc generate cũ (đã xoá hẳn khỏi contract/prompt/renderer/gate). Đã
+   implement đủ 6 giai đoạn A-F cả 2 repo: 2 cột `ContentUpdatedAt`/
+   `LastVerifiedAt` tách biệt trong `v2.DestinationContent`, gate so sánh giá
+   trị cho field số liệu + AI (Haiku) phân loại `ContentHtml` + nút override,
+   nút "Đã kiểm tra, vẫn đúng", badge động ẩn sau 6 tháng, `dateModified`
+   JSON-LD (`WebPage` riêng) + sitemap `lastmod` đổi nguồn, dashboard alert
+   `stale-content` (5 tháng). Verify: 468 test zinoflow xanh, `dotnet build`
+   dichoithoi xanh, migration đã chạy trên `dichoithoi_dev`. Căn cứ chính
+   sách Google (trích dẫn "date change without substantive content change" +
+   `<lastmod>` verifiably-accurate) xem
+   `docs/dichoithoi/dichoithoi-google-seo-guidelines.md` §4/§7.
 
 ## D) Đã làm rõ / không còn là việc mở (tránh làm lại)
 

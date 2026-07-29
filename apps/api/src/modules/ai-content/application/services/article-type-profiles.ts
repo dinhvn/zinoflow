@@ -194,7 +194,6 @@ const destinationProfile: ArticleTypeProfile = {
         { question: PLACEHOLDER_NOTE, answer: PLACEHOLDER_NOTE },
         { question: PLACEHOLDER_NOTE, answer: PLACEHOLDER_NOTE },
       ],
-      updateNotice: PLACEHOLDER_NOTE,
       metadata: {
         name: topic,
         slugSuggestion: "bai-viet-tay",

@@ -117,7 +117,7 @@ const STAGES: Stage[] = [
       <>
         Dùng chung workflow ai-content: submit → InReview → Approve / Reject / RequestChange.{" "}
         <b>Approve chạy lại gates ngay lúc duyệt</b>; bài điểm đến chọn <b>4 gate travel</b>{" "}
-        (updateNotice tháng/năm, giá kèm lưu ý, cấm claim tuyệt đối, slug không trùng).
+        (giá kèm lưu ý thay đổi, cấm claim tuyệt đối, slug không trùng).
       </>
     ),
     branches: [

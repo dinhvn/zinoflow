@@ -65,7 +65,6 @@ describe("RestructurePastedContentUseCase (redesign luong viet bai §Phase 2)", 
         { question: "Đi mùa nào đẹp?", answer: "Mùa khô tháng 12-3." },
         { question: "Chi phí khoảng bao nhiêu?", answer: "Khoảng 2-3 triệu/người." },
       ],
-      updateNotice: "Thông tin trong bài cập nhật tháng 6/2026, có thể thay đổi.",
       metadata: {
         name: "Đà Lạt",
         metaTitle: "Đà Lạt: kinh nghiệm du lịch đầy đủ 2026",

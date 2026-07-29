@@ -206,9 +206,6 @@ export class StubContentAiProvider implements ContentAiProvider {
         question,
         answer: "Trả lời mẫu (stub): provider thật sẽ trả lời theo dữ liệu điểm đến.",
       })),
-      updateNotice:
-        `Thông tin trong bài cập nhật tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}, ` +
-        "giá vé và giờ mở cửa có thể thay đổi.",
       metadata: {
         name: topic,
         slugSuggestion: this.toSlug(topic),

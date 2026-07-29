@@ -19,6 +19,8 @@ import { evaluateGatesForArticle } from "../../../ai-content/domain/quality-gate
 import { renderDestinationMarkdown } from "../../../ai-content/application/services/destination-markdown.renderer";
 import { parseDraftArticleOrThrow } from "../services/parse-draft-article";
 import { buildGalleryJson } from "../services/gallery-json.util";
+import { hasMeaningfulFieldChange } from "../../domain/has-meaningful-field-change";
+import { ClassifyContentChangeUseCase } from "./classify-content-change.usecase";
 
 /**
  * Publish draft_article HIEN TAI cua 1 diem den xuong SQL Server dichoithoi
@@ -44,6 +46,7 @@ export class PublishDestinationUseCase {
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
     @Inject(CACHE_PURGE) private readonly cachePurge: CachePurgePort,
     private readonly recomputeRelated: RecomputeRelatedService,
+    private readonly classifyContentChange: ClassifyContentChangeUseCase,
   ) {}
 
   async execute(slug: string): Promise<PublishDestinationResult> {
@@ -82,6 +85,9 @@ export class PublishDestinationUseCase {
 
     // Diem MOI (chua co tren web): INSERT shell xuong SQL Server lay siteId truoc khi
     // ghi noi dung. Diem cu: dung siteId san co.
+    // content-freshness-plan.md: publish LAN DAU luon coi la meaningful (khong co
+    // ban cu de so sanh) — phai chot truoc khi siteId bi gan lai o nhanh tao moi duoi.
+    const isFirstPublish = destination.siteId === null;
     let siteId = destination.siteId;
     if (siteId === null) {
       const created = await this.siteDb.createDestination({
@@ -137,6 +143,54 @@ export class PublishDestinationUseCase {
     // xem migrate-sheet-content-to-tong-quan.ts) — tranh mat thong tin bai legacy.
     const hasAnGiBlock = article.sections.some((s) => s.blockKey === "an-gi");
     const hasDiChuyenBlock = article.sections.some((s) => s.blockKey === "di-chuyen");
+    const newFaqJson = buildFaqJson(article);
+    const newPriceBreakdownJson = JSON.stringify(destination.priceBreakdown);
+    const newPracticalNotesJson = JSON.stringify(destination.practicalNotes);
+
+    // content-freshness-plan.md Giai doan B/C: chi bump ContentUpdatedAt khi noi
+    // dung THUC SU doi so voi ban dang publish — KHONG dung khi publish lai y het
+    // (vd chi doi anh dai dien qua duong khac). Field so lieu so gia tri truc tiep
+    // (khong can AI); ContentHtml can AI phan loai NHUNG chi la goi y — bien tap
+    // vien phai xac nhan qua POST /destinations/:slug/confirm-content-update moi
+    // that su ghi (tranh phai "revert" 1 bump da ghi neu AI doan sai).
+    let contentChanged = isFirstPublish;
+    let pendingContentClassification: { isMeaningful: boolean; reason: string } | null = null;
+    if (!isFirstPublish) {
+      const existing = await this.siteDb.fetchDestinationContent(siteId);
+      if (!existing) {
+        // Khong the xay ra binh thuong (siteId da ton tai tu truoc) — an toan
+        // hon la coi nhu doi, tranh badge im lang sai neu du lieu bat thuong.
+        contentChanged = true;
+      } else {
+        const fieldsChanged = hasMeaningfulFieldChange(
+          {
+            ticketPrice: existing.ticketPrice,
+            openingTime: existing.openingTime,
+            priceBreakdownJson: existing.priceBreakdownJson,
+            practicalNotesJson: existing.practicalNotesJson,
+            faqJson: existing.faqJson,
+          },
+          {
+            ticketPrice: article.quickFacts.ticketPrice,
+            openingTime: article.quickFacts.openingTime,
+            priceBreakdownJson: newPriceBreakdownJson,
+            practicalNotesJson: newPracticalNotesJson,
+            faqJson: newFaqJson,
+          },
+        );
+        if (fieldsChanged) {
+          contentChanged = true;
+        } else if (existing.contentHtml.trim() !== linkedHtml.trim()) {
+          const classification = await this.classifyContentChange.execute({
+            destinationName: destination.name,
+            oldContentHtml: existing.contentHtml,
+            newContentHtml: linkedHtml,
+          });
+          pendingContentClassification = classification;
+        }
+      }
+    }
+
     const { contentHash } = await this.siteDb.publishDestination({
       siteId,
       title: article.title,
@@ -150,16 +204,17 @@ export class PublishDestinationUseCase {
       food: hasAnGiBlock ? null : article.quickFacts.food,
       hotel: article.quickFacts.hotel,
       tip: article.quickFacts.tip,
-      faqJson: buildFaqJson(article),
+      faqJson: newFaqJson,
       ticketLinksJson: JSON.stringify(destination.ticketLinks),
-      priceBreakdownJson: JSON.stringify(destination.priceBreakdown),
-      practicalNotesJson: JSON.stringify(destination.practicalNotes),
+      priceBreakdownJson: newPriceBreakdownJson,
+      practicalNotesJson: newPracticalNotesJson,
       galleryJson: buildGalleryJson(destination.gallery),
       metaTitle: article.metadata.metaTitle,
       metaDescription: article.metadata.metaDescription,
       mentionedTargetSiteIds: addedLinks
         .map((l) => siteIdBySlug.get(l.targetSlug))
         .filter((id): id is number => id !== undefined),
+      contentChanged,
     });
 
     // Nguon su that quan he o Postgres (spec §3.7) — publish ghi de bo mentioned auto
@@ -188,6 +243,7 @@ export class PublishDestinationUseCase {
       addedLinks,
       relatedRecomputed,
       durationMs: Date.now() - startedAt,
+      pendingContentClassification,
     };
   }
 }

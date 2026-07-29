@@ -134,7 +134,8 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
 
   async fetchDestinationContent(siteId: number): Promise<SiteDestinationContent | null> {
     const rows = await this.queryWithRetry<Record<string, unknown>>(
-      `SELECT ContentHtml, OpeningTime, TicketPrice, Transport, Food, HotelText, Tip
+      `SELECT ContentHtml, OpeningTime, TicketPrice, Transport, Food, HotelText, Tip,
+              PriceBreakdownJson, PracticalNotesJson, FaqJson, ContentUpdatedAt, LastVerifiedAt
        FROM v2.DestinationContent WHERE DestinationId = ${Number(siteId)}`,
     );
     const r = rows[0];
@@ -147,7 +148,34 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       food: (r.Food as string | null) ?? null,
       hotel: (r.HotelText as string | null) ?? null,
       tip: (r.Tip as string | null) ?? null,
+      priceBreakdownJson: (r.PriceBreakdownJson as string | null) ?? null,
+      practicalNotesJson: (r.PracticalNotesJson as string | null) ?? null,
+      faqJson: (r.FaqJson as string | null) ?? null,
+      contentUpdatedAt: r.ContentUpdatedAt ? new Date(r.ContentUpdatedAt as string) : null,
+      lastVerifiedAt: r.LastVerifiedAt ? new Date(r.LastVerifiedAt as string) : null,
     };
+  }
+
+  /** content-freshness-plan.md Giai doan D — xac nhan thu cong, khong dung publish */
+  async markContentVerified(siteId: number): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      await request.query(
+        `UPDATE v2.DestinationContent SET LastVerifiedAt = SYSUTCDATETIME() WHERE DestinationId = @siteId`,
+      );
+    });
+  }
+
+  /** content-freshness-plan.md Giai doan C — bien tap vien xac nhan ket qua AI phan loai */
+  async markContentUpdatedNow(siteId: number): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      await request.query(
+        `UPDATE v2.DestinationContent SET ContentUpdatedAt = SYSUTCDATETIME() WHERE DestinationId = @siteId`,
+      );
+    });
   }
 
   async fetchProvinceSlugs(): Promise<Array<{ slug: string; code: string; name: string }>> {
@@ -202,6 +230,7 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       request.input("galleryJson", input.galleryJson);
       request.input("metaTitle", input.metaTitle);
       request.input("metaDescription", input.metaDescription);
+      request.input("contentChanged", input.contentChanged ? 1 : 0);
       targets.forEach((id, i) => request.input(`target${i}`, id));
 
       const result = await request.query<{ ContentHash: string }>(`
@@ -216,23 +245,27 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
           UpdatedAt        = SYSUTCDATETIME()
         WHERE Id = @siteId;
 
+        -- ContentUpdatedAt CHI bump khi @contentChanged=1 (content-freshness-plan.md
+        -- Giai doan B/C — noi dung THUC SU doi), khac UpdatedAt o tren bi moi thao
+        -- tac publish dung vao du khong doi noi dung gi.
         UPDATE v2.DestinationContent SET
           ContentHtml = @contentHtml, OpeningTime = @openingTime, TicketPrice = @ticketPrice,
           Transport = @transport, Food = @food, HotelText = @hotel, Tip = @tip,
           FaqJson = @faqJson, TicketLinksJson = @ticketLinksJson,
           PriceBreakdownJson = @priceBreakdownJson, PracticalNotesJson = @practicalNotesJson,
           GalleryJson = @galleryJson, Title = @title,
-          MetaTitle = @metaTitle, MetaDescription = @metaDescription
+          MetaTitle = @metaTitle, MetaDescription = @metaDescription,
+          ContentUpdatedAt = CASE WHEN @contentChanged = 1 THEN SYSUTCDATETIME() ELSE ContentUpdatedAt END
         WHERE DestinationId = @siteId;
         IF @@ROWCOUNT = 0
           INSERT INTO v2.DestinationContent
             (DestinationId, ContentHtml, OpeningTime, TicketPrice, Transport, Food, HotelText,
              Tip, FaqJson, TicketLinksJson, PriceBreakdownJson, PracticalNotesJson, GalleryJson,
-             Title, MetaTitle, MetaDescription)
+             Title, MetaTitle, MetaDescription, ContentUpdatedAt)
           VALUES
             (@siteId, @contentHtml, @openingTime, @ticketPrice, @transport, @food, @hotel,
              @tip, @faqJson, @ticketLinksJson, @priceBreakdownJson, @practicalNotesJson,
-             @galleryJson, @title, @metaTitle, @metaDescription);
+             @galleryJson, @title, @metaTitle, @metaDescription, SYSUTCDATETIME());
 
         -- Quan he mentioned tu auto-link: thay toan bo dong auto cu cua nguon nay
         DELETE FROM v2.DestinationRelation
@@ -1061,6 +1094,8 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       HasTicketLinks: number;
       HasMainContent: number;
       HasGallery: number;
+      ContentUpdatedAt: string | null;
+      LastVerifiedAt: string | null;
     }>(`
       SELECT d.Id,
         CASE WHEN c.OpeningTime IS NOT NULL AND LEN(c.OpeningTime) > 0 THEN 1 ELSE 0 END AS HasOpeningTime,
@@ -1069,7 +1104,9 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
         CASE WHEN c.PracticalNotesJson IS NOT NULL AND LEN(c.PracticalNotesJson) > 2 THEN 1 ELSE 0 END AS HasPracticalNotes,
         CASE WHEN c.TicketLinksJson IS NOT NULL AND LEN(c.TicketLinksJson) > 2 THEN 1 ELSE 0 END AS HasTicketLinks,
         CASE WHEN c.ContentHtml IS NOT NULL AND LEN(c.ContentHtml) > 300 THEN 1 ELSE 0 END AS HasMainContent,
-        CASE WHEN c.GalleryJson IS NOT NULL AND LEN(c.GalleryJson) > 2 THEN 1 ELSE 0 END AS HasGallery
+        CASE WHEN c.GalleryJson IS NOT NULL AND LEN(c.GalleryJson) > 2 THEN 1 ELSE 0 END AS HasGallery,
+        c.ContentUpdatedAt,
+        c.LastVerifiedAt
       FROM v2.Destination d
       LEFT JOIN v2.DestinationContent c ON c.DestinationId = d.Id
       WHERE d.Status = 1
@@ -1083,6 +1120,8 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
       hasTicketLinks: Boolean(r.HasTicketLinks),
       hasMainContent: Boolean(r.HasMainContent),
       hasGallery: Boolean(r.HasGallery),
+      contentUpdatedAt: r.ContentUpdatedAt ? new Date(r.ContentUpdatedAt) : null,
+      lastVerifiedAt: r.LastVerifiedAt ? new Date(r.LastVerifiedAt) : null,
     }));
   }
 

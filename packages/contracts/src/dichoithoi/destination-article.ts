@@ -50,14 +50,17 @@ export const destinationArticleMetadataSchema = z.object({
 
 /**
  * Frame bai diem den = toan bai TRU sections (buoc 3 cua pipeline 3 buoc).
- * updateNotice: dong "thong tin cap nhat thang X/nam" — policy gate travel bat buoc.
+ * KHONG con field "updateNotice" (text AI viet cung "cap nhat thang X/nam") —
+ * content-freshness-plan.md Giai doan E: badge "cap nhat" gio tinh dong tu
+ * ContentUpdatedAt/LastVerifiedAt (v2.DestinationContent), khong con la text
+ * bake cung vao ContentHtml luc generate (rui ro "date spam" + khong tu lam
+ * moi khi bai lau khong ai rà lai).
  */
 export const destinationArticleFrameSchema = z.object({
   title: z.string().min(10).max(100),
   intro: z.string().min(80),
   quickFacts: destinationQuickFactsSchema,
   faq: z.array(faqItemSchema).min(3).max(6),
-  updateNotice: z.string().min(10),
   metadata: destinationArticleMetadataSchema,
 });
 export type DestinationArticleFrame = z.infer<typeof destinationArticleFrameSchema>;

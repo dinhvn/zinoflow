@@ -122,12 +122,9 @@ export class PromptBuilder {
   }
 
   private baseVars(ctx: PromptJobContext): Record<string, unknown> {
-    const now = new Date();
     return {
       // articleType khong dung trong template — stub provider can de chon shape output
       articleType: ctx.articleType,
-      // "MM/YYYY" cho updateNotice — model hay tu suy thang/nam sai theo kien thuc nen
-      currentDate: `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`,
       topic: ctx.topic,
       keywords: ctx.keywordSeed.join(", ") || "(tự suy ra từ chủ đề)",
       siteCode: ctx.siteCode,
