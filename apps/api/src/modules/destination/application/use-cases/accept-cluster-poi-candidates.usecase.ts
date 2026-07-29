@@ -12,13 +12,18 @@ import {
 import { RestoreClusterPoiBackupService } from "../services/restore-cluster-poi-backup.service";
 import { UpsertDestinationUseCase } from "./upsert-destination.usecase";
 import { slugifyVietnamese } from "../../../shared/text/vietnamese";
+import { classifyPoiAddress } from "../../domain/classify-poi-address";
 
 /**
  * Chap nhan cac ung vien da tick trong bang duyet tim diem con trong cum
  * (dichoithoi-cluster-poi-discovery-plan.md, giai doan 5) — theo matchType:
  * - "new": tao draft Postgres-only (siteId=null), Y HET luong tao tay "Thêm điểm
  *   đến mới" — KHONG dung MssqlSiteDbAdapter.createDestination() (publish thang,
- *   sai ngu canh cho diem chua qua content/quality gate).
+ *   sai ngu canh cho diem chua qua content/quality gate). Dia chi AI tra ve da
+ *   so phan lon la dang CU (truoc sap nhap don vi hanh chinh, nguoi dung phat
+ *   hien 07/2026) — tu phan loai qua classify-poi-address.ts (doi chieu
+ *   admin_ward_mappings/admin_wards cua dung tinh cum) truoc khi ghi, khong
+ *   con luon do vao AddressNew nhu truoc.
  * - "orphan-match": gan lai parentSlug cua diem orphan da co sang cum nay.
  * - "existing-in-cluster": bo qua (khong co gi de ap dung).
  * - "backup-match" (GD6 plan-lam-moi-du-lieu-atlas.md): KHOI PHUC nguyen dong tu
@@ -56,6 +61,16 @@ export class AcceptClusterPoiCandidatesUseCase {
     }
     const preferAiSet = new Set(preferAiMetadataIndexes);
 
+    // Nap 1 lan (khong phai moi candidate) — dung phan loai dia chi CU/MOI,
+    // xem classify-poi-address.ts. provinceCode luon co (bat buoc voi cluster).
+    const provinceName = cluster.provinceCode
+      ? await this.mirrorRepo.findProvinceName(cluster.provinceCode)
+      : null;
+    const [newWardNames, wardMappings] = await Promise.all([
+      cluster.provinceCode ? this.mirrorRepo.findWardNamesForProvince(cluster.provinceCode) : [],
+      provinceName ? this.mirrorRepo.findWardMappingsForProvince(provinceName) : [],
+    ]);
+
     const candidates = record.candidates.map((c) => ({ ...c }));
     const appliedIndexes: number[] = [];
 
@@ -65,6 +80,9 @@ export class AcceptClusterPoiCandidatesUseCase {
 
       if (candidate.matchType === "new") {
         const slug = await this.generateUniqueSlug(candidate.name);
+        const { addressNew, addressOld } = candidate.address
+          ? classifyPoiAddress(candidate.address, newWardNames, wardMappings)
+          : { addressNew: null, addressOld: null };
         await this.upsertDestination.create({
           slug,
           name: candidate.name,
@@ -72,7 +90,8 @@ export class AcceptClusterPoiCandidatesUseCase {
           parentSlug: clusterSlug,
           provinceCode: cluster.provinceCode,
           shortDescription: candidate.shortDescription,
-          addressNew: candidate.address,
+          addressNew,
+          addressOld,
           priority: candidate.priorityLevel,
         });
         appliedIndexes.push(index);

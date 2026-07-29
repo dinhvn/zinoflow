@@ -156,6 +156,17 @@ export interface DestinationMirrorRepository {
   listAddressMappings(query: AddressMappingsQuery): Promise<AddressMappingsListResult>;
   /** Danh sach ten tinh/thanh phan biet (cu va moi) cho bo loc tra cuu */
   listAddressMappingProvinces(): Promise<{ oldProvinces: string[]; newProvinces: string[] }>;
+  /** Ten tinh MOI (admin_provinces) tu ma tinh — khop dung format cot
+   * new_province_name trong admin_ward_mappings (cung nguon seed dvhcvn) */
+  findProvinceName(provinceCode: string): Promise<string | null>;
+  /** Ten phuong/xa MOI (sau sap nhap, admin_wards) thuoc 1 tinh — dung phan
+   * loai dia chi tu do AI tra ve la dang cu hay moi (classify-poi-address.ts) */
+  findWardNamesForProvince(provinceCode: string): Promise<string[]>;
+  /** Anh xa phuong/xa CU -> MOI (admin_ward_mappings) thuoc 1 tinh MOI (theo
+   * ten tinh moi, khop cot new_province_name) — cung dung cho classify-poi-address.ts */
+  findWardMappingsForProvince(
+    newProvinceName: string,
+  ): Promise<Array<{ oldWardName: string | null; newWardName: string | null }>>;
 }
 
 export interface AddressMappingsListResult {

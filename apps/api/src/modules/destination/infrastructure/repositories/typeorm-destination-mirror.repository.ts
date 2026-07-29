@@ -14,7 +14,7 @@ import type {
 } from "@zinoflow/contracts";
 import { DestinationMirrorEntity } from "../entities/destination-mirror.entity";
 import type { ClusterPoiBackupEntity } from "../entities/cluster-poi-backup.entity";
-import { AdminProvinceEntity, AdminWardMappingEntity } from "../entities/admin-units.entity";
+import { AdminProvinceEntity, AdminWardEntity, AdminWardMappingEntity } from "../entities/admin-units.entity";
 import type {
   AddressMappingsListResult,
   DestinationMetadataInput,
@@ -46,6 +46,8 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
     private readonly provinceRepo: Repository<AdminProvinceEntity>,
     @InjectRepository(AdminWardMappingEntity)
     private readonly wardMappingRepo: Repository<AdminWardMappingEntity>,
+    @InjectRepository(AdminWardEntity)
+    private readonly wardRepo: Repository<AdminWardEntity>,
     @Inject(CONTENT_JOB_REPOSITORY)
     private readonly jobRepo: ContentJobRepository,
   ) {}
@@ -565,5 +567,25 @@ export class TypeOrmDestinationMirrorRepository implements DestinationMirrorRepo
       distinct("newProvinceName"),
     ]);
     return { oldProvinces, newProvinces };
+  }
+
+  async findProvinceName(provinceCode: string): Promise<string | null> {
+    const row = await this.provinceRepo.findOne({ where: { provinceCode } });
+    return row?.name ?? null;
+  }
+
+  async findWardNamesForProvince(provinceCode: string): Promise<string[]> {
+    const rows = await this.wardRepo.find({ where: { provinceCode }, select: ["name"] });
+    return rows.map((r) => r.name);
+  }
+
+  async findWardMappingsForProvince(
+    newProvinceName: string,
+  ): Promise<Array<{ oldWardName: string | null; newWardName: string | null }>> {
+    const rows = await this.wardMappingRepo.find({
+      where: { newProvinceName },
+      select: ["oldWardName", "newWardName"],
+    });
+    return rows.map((r) => ({ oldWardName: r.oldWardName, newWardName: r.newWardName }));
   }
 }
