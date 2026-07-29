@@ -23,6 +23,47 @@ function guessContentType(filePath: string): string {
 }
 
 /**
+ * Danh sach file THUC TE tren dia can copy cho 1 "path" luu trong cot
+ * thumbnail/gallery — theo DUNG quy uoc 3-size ben website (GalleryItemModel.cs
+ * HasSizeVariants + DestinationDetailModel.cs HeroImage): path KHONG co duoi
+ * ".webp" = anh MOI, thuc te la 3 file rieng "{path}-hero/-medium/-thumb.webp"
+ * (BAT BUOC ca 3, khong phai chinh path do). path CO duoi ".webp" kieu
+ * "...-thumb.webp" (quy uoc cu, van con trong du lieu backup Atlas) — website
+ * co fallback tim "-hero.webp" cung base neu co, nen thu copy CA 2 file
+ * "-hero"/"-medium" cung base (KHONG bat buoc, backup co the chi co ban thumb).
+ * path phang ".webp" khac — anh cu 1 file duy nhat, dung nguyen.
+ *
+ * Bug thuc te phat hien 29/07/2026 (diem "thac-trieu-hai" sau khoi phuc tu
+ * backup Atlas): code cu chi thu copy DUNG 1 file dung ten voi gia tri path
+ * luu trong DB — voi anh MOI (path khong co duoi), file do KHONG TON TAI tren
+ * dia (chi co 3 file suffix rieng), nen toan bo anh gallery bi bo qua am tham
+ * (0 file copy duoc, website 404 het); voi thumbnail dang "-thumb.webp", chi
+ * ban thumb duoc copy con "-hero.webp"/"-medium.webp" cung base KHONG duoc
+ * copy du backup co san — hero luon hien chat luong thap (website tu fallback
+ * ve ban thumb khi khong thay hero, xem DestinationDetailModel.cs).
+ */
+export function resolveBackupImageCandidates(
+  storedPath: string,
+): Array<{ path: string; required: boolean }> {
+  if (!storedPath.endsWith(".webp")) {
+    return [
+      { path: `${storedPath}-hero.webp`, required: true },
+      { path: `${storedPath}-medium.webp`, required: true },
+      { path: `${storedPath}-thumb.webp`, required: true },
+    ];
+  }
+  if (storedPath.endsWith("-thumb.webp")) {
+    const base = storedPath.slice(0, -"-thumb.webp".length);
+    return [
+      { path: storedPath, required: true },
+      { path: `${base}-hero.webp`, required: false },
+      { path: `${base}-medium.webp`, required: false },
+    ];
+  }
+  return [{ path: storedPath, required: true }];
+}
+
+/**
  * Logic KHOI PHUC dung chung 1 dong tu bang tam dichoithoi_destinations_backup
  * thanh 1 diem den moi (dot lam moi du lieu theo Atlas — GD6 plan-lam-moi-du-lieu-atlas.md)
  * — dung boi CA 2 luong: AcceptClusterPoiCandidatesUseCase (khoi phuc qua bang
@@ -84,13 +125,19 @@ export class RestoreClusterPoiBackupService {
 
     const files: UploadFile[] = [];
     for (const oldPath of oldPaths) {
-      const absSource = path.join(backupDir, oldPath);
-      try {
-        const body = await readFile(absSource);
-        const newPath = oldPath.replace(oldSlug, newSlug);
-        files.push({ path: newPath, body, contentType: guessContentType(oldPath) });
-      } catch (err) {
-        this.logger.warn(`Không đọc được ảnh backup "${absSource}": ${err instanceof Error ? err.message : err}`);
+      for (const candidate of resolveBackupImageCandidates(oldPath)) {
+        const absSource = path.join(backupDir, candidate.path);
+        try {
+          const body = await readFile(absSource);
+          const newPath = candidate.path.replace(oldSlug, newSlug);
+          files.push({ path: newPath, body, contentType: guessContentType(candidate.path) });
+        } catch (err) {
+          if (candidate.required) {
+            this.logger.warn(
+              `Không đọc được ảnh backup "${absSource}": ${err instanceof Error ? err.message : err}`,
+            );
+          }
+        }
       }
     }
     if (files.length === 0) return;
