@@ -1345,6 +1345,31 @@ xong, không còn gì mở ở mức ưu tiên này.**
      dòng ~140-154) và `DestinationExtrasRepository.FindRedirectSlugAsync`
      cũng cần sửa theo cho khớp cột mới.
 
+7. ⚠️ **Còn 7 view khác dùng đúng pattern hardcode thumbnail bị lỗi vừa fix ở
+   `/diem-den` (29/07/2026)** — `src="/diem-den/thumbnail/{slug}.webp"`,
+   bỏ qua hẳn cột `Thumbnail` thật, chỉ đúng cho ảnh flat kiểu cũ (v1).
+   Điểm đến tạo qua luồng Atlas mới lưu `Thumbnail` dạng
+   `"{slug}/{slug}-thumb.webp"` nên sẽ tiếp tục 404 ở các chỗ này khi có
+   thêm điểm đến mới hiển thị qua đó. Đã sửa `Index.cshtml` (+ `destination.ts`
+   nhánh JS render khi tick facet) dùng `CommonUtils.DestinationCardThumbnailUrl()`
+   mới — CHƯA sửa các chỗ còn lại (không tự ý sửa hàng loạt, một số model
+   hiện chưa có sẵn field `Thumbnail` nên cần đổi cả model, rủi ro cao hơn 1
+   dòng view):
+   - `Views/Destination/_ChildDestination.cshtml` — model `DestinationShortModel`
+     KHÔNG có field `Thumbnail`, cần bổ sung field + query trước khi sửa view.
+   - `Views/Shared/_DestinationGroup.cshtml` — tương tự `_ChildDestination`.
+   - `Views/Shared/_DestinationCardList.cshtml` — model đã có `Thumbnail`
+     (`ChildRefModel`/`RelatedRefModel`?) — kiểm tra rồi áp `DestinationCardThumbnailUrl`.
+   - `Views/Shared/_DestinationListDetail.cshtml`, `Views/Destination/_DestinationList.cshtml`,
+     `Views/Destination/_RelatedDestinationGrid.cshtml` — cùng dạng, cần rà
+     model từng cái trước khi sửa.
+   - `src/ts/nav.ts` (dropdown gợi ý tìm kiếm header) — có sẵn field
+     `thumbnail` trong `DestinationSuggestionModel`, sửa tương tự `destination.ts`.
+   - Bổ sung: nên rà xem `_ChildDestination.cshtml`/`DestinationShortModel`
+     còn được dùng thật không (có thể là code cũ trước redesign, đã bị thay
+     bằng `ChildRefModel`/`_RelatedDestinationGrid` — Detail.cshtml dùng cả 2
+     đường, cần xác nhận đường nào đang active).
+
 ## D) Đã làm rõ / không còn là việc mở (tránh làm lại)
 
 - ~~Bộ `DestinationType` chuẩn~~ → đã thành 2 tầng thật trong DB
