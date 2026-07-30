@@ -16,7 +16,11 @@ export class ActivatePromptVersionUseCase {
     private readonly repo: PromptTemplateRepository,
   ) {}
 
-  async execute(key: string, version: number): Promise<{ activeVersion: number }> {
+  async execute(
+    key: string,
+    version: number,
+    expectedActiveVersion: number | null,
+  ): Promise<{ activeVersion: number }> {
     if (!findCatalogEntry(key)) {
       throw new DomainRuleError(`Không tìm thấy prompt template "${key}"`);
     }
@@ -24,7 +28,16 @@ export class ActivatePromptVersionUseCase {
     if (!versions.some((v) => v.version === version)) {
       throw new DomainRuleError(`Prompt "${key}" không có version ${version}`);
     }
-    await this.repo.activateVersion(key, version);
+    const activated = await this.repo.activateVersion(
+      key,
+      version,
+      expectedActiveVersion,
+    );
+    if (!activated) {
+      throw new DomainRuleError(
+        `Prompt "${key}" đã được người khác kích hoạt version mới; hãy tải lại trước khi tiếp tục`,
+      );
+    }
     return { activeVersion: version };
   }
 }

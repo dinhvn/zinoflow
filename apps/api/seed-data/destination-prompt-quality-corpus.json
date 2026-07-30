@@ -1,0 +1,79 @@
+{
+  "version": 2,
+  "description": "Corpus pilot QA prompt từ mirror local sau taxonomy redesign; không lưu raw page hoặc nội dung có bản quyền.",
+  "coverageGaps": [
+    "POI thương mại đủ dịch vụ",
+    "POI văn hóa/di tích",
+    "POI đô thị",
+    "POI miễn phí có nguồn xác minh"
+  ],
+  "rubric": {
+    "scale": "1-5",
+    "dimensions": [
+      "usefulness",
+      "grounding",
+      "redundancy",
+      "scanability",
+      "voice",
+      "editEffort"
+    ]
+  },
+  "cases": [
+    {
+      "id": "poi-thien-nhien-co-summary",
+      "slug": "thac-trieu-hai",
+      "tier": "standard",
+      "profile": "POI thiên nhiên hẻo lánh",
+      "expectedMissing": ["ticket-price"]
+    },
+    {
+      "id": "poi-thien-nhien-summary-mot-phan",
+      "slug": "thac-xuan-dai",
+      "tier": "standard",
+      "profile": "POI thiên nhiên có summary nhưng thiếu facts cấu trúc",
+      "expectedMissing": ["opening-hours", "ticket-price"]
+    },
+    {
+      "id": "poi-trekking-thieu-nguon",
+      "slug": "deo-con-o",
+      "tier": "standard",
+      "profile": "POI đèo/trekking thiếu nguồn",
+      "expectedMissing": ["opening-hours", "ticket-price", "food", "souvenirs"]
+    },
+    {
+      "id": "poi-ho-cam-trai-thieu-nguon",
+      "slug": "ho-da-teh",
+      "tier": "standard",
+      "profile": "POI hồ/cắm trại thiếu nguồn",
+      "expectedMissing": ["opening-hours", "ticket-price", "food", "souvenirs"]
+    },
+    {
+      "id": "poi-thac-cam-trai-thieu-nguon",
+      "slug": "thac-7-tang-da-pal",
+      "tier": "standard",
+      "profile": "POI thác/cắm trại thiếu nguồn",
+      "expectedMissing": ["opening-hours", "ticket-price", "food", "souvenirs"]
+    },
+    {
+      "id": "poi-check-in-thieu-nguon",
+      "slug": "cau-treo-da-oai",
+      "tier": "standard",
+      "profile": "POI check-in/cầu treo thiếu nguồn",
+      "expectedMissing": ["opening-hours", "ticket-price", "food", "souvenirs"]
+    },
+    {
+      "id": "flagship-do-thi-du-lich",
+      "slug": "da-lat",
+      "tier": "flagship",
+      "profile": "Flagship đô thị du lịch",
+      "expectedMissing": ["single-opening-hours", "single-ticket-price"]
+    },
+    {
+      "id": "flagship-cluster",
+      "slug": "bao-loc",
+      "tier": "flagship",
+      "profile": "Flagship cluster vùng",
+      "expectedMissing": ["single-opening-hours", "single-ticket-price"]
+    }
+  ]
+}

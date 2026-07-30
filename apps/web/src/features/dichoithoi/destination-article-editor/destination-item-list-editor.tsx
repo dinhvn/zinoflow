@@ -6,8 +6,7 @@ import { Input } from "@/shared/ui/input";
 
 /**
  * Editor danh sach co cau truc {ten, moTa} — dung cho khoi "Ăn gì đặc trưng" va
- * "Quà mang về" (redesign luong viet bai §Phase 3). Toi thieu 3 muc theo gate
- * structure (MIN_LIST_ITEMS) — nut Xoá bi khoa khi con dung 3 muc.
+ * "Quà mang về". Muc B cho phep rong khi khong co du lieu xac minh.
  */
 export function DestinationItemListEditor({
   items,
@@ -21,8 +20,17 @@ export function DestinationItemListEditor({
 
   return (
     <div className="space-y-2">
+      {items.length === 0 && (
+        <p className="text-xs text-zinc-500">
+          Chưa có mục đã xác minh. Có thể để trống thay vì thêm nội dung chung
+          chung.
+        </p>
+      )}
       {items.map((item, i) => (
-        <div key={i} className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_2fr_auto]">
+        <div
+          key={i}
+          className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_2fr_auto]"
+        >
           <Input
             value={item.ten}
             onChange={(e) => update(i, { ten: e.target.value })}
@@ -37,8 +45,6 @@ export function DestinationItemListEditor({
             size="sm"
             variant="ghost"
             className="px-2 py-1 text-xs"
-            disabled={items.length <= 3}
-            title={items.length <= 3 ? "Cần tối thiểu 3 mục" : undefined}
             onClick={() => onChange(items.filter((_, idx) => idx !== i))}
           >
             Xoá

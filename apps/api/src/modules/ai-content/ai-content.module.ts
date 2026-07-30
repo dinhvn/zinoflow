@@ -58,6 +58,10 @@ import { AI_PROVIDER_SETTINGS } from "./application/ports/ai-provider-settings.p
 import { TypeOrmAiProviderSettings } from "./infrastructure/repositories/typeorm-ai-provider-settings";
 import { ORIGINALITY_CORPUS_REPOSITORY } from "./application/ports/originality-corpus.repository";
 import { TypeOrmOriginalityCorpusRepository } from "./infrastructure/repositories/typeorm-originality-corpus.repository";
+import { DismissQualityWarningUseCase } from "./application/use-cases/dismiss-quality-warning.usecase";
+import { QUALITY_WARNING_FEEDBACK_REPOSITORY } from "./application/ports/quality-warning-feedback.repository";
+import { TypeOrmQualityWarningFeedbackRepository } from "./infrastructure/repositories/typeorm-quality-warning-feedback.repository";
+import { QualityWarningFeedbackEntity } from "./infrastructure/entities/quality-warning-feedback.entity";
 
 @Module({
   imports: [
@@ -70,6 +74,7 @@ import { TypeOrmOriginalityCorpusRepository } from "./infrastructure/repositorie
       AiUsageLogEntity,
       AiProviderSettingEntity,
       ContentGenerationCheckpointEntity,
+      QualityWarningFeedbackEntity,
     ]),
   ],
   controllers: [ContentController],
@@ -91,6 +96,7 @@ import { TypeOrmOriginalityCorpusRepository } from "./infrastructure/repositorie
     GetPromptTemplateUseCase,
     CreatePromptVersionUseCase,
     ActivatePromptVersionUseCase,
+    DismissQualityWarningUseCase,
     GetAiUsageSummaryUseCase,
     PromptBuilder,
     ContentGenerateWorker,
@@ -102,7 +108,10 @@ import { TypeOrmOriginalityCorpusRepository } from "./infrastructure/repositorie
     MockProductCatalog,
     CmsHttpProductCatalog,
     { provide: CONTENT_JOB_REPOSITORY, useClass: TypeOrmContentJobRepository },
-    { provide: CONTENT_DRAFT_REPOSITORY, useClass: TypeOrmContentDraftRepository },
+    {
+      provide: CONTENT_DRAFT_REPOSITORY,
+      useClass: TypeOrmContentDraftRepository,
+    },
     { provide: AI_USAGE_RECORDER, useClass: TypeOrmAiUsageRecorder },
     { provide: AI_USAGE_READER, useClass: TypeOrmAiUsageReader },
     {
@@ -110,10 +119,26 @@ import { TypeOrmOriginalityCorpusRepository } from "./infrastructure/repositorie
       useClass: TypeOrmContentGenerationCheckpointRepository,
     },
     { provide: AI_PROVIDER_SETTINGS, useClass: TypeOrmAiProviderSettings },
-    { provide: PROMPT_TEMPLATE_REPOSITORY, useClass: TypeOrmPromptTemplateRepository },
-    { provide: QUALITY_RESULT_REPOSITORY, useClass: TypeOrmQualityResultRepository },
-    { provide: REVIEW_RECORD_REPOSITORY, useClass: TypeOrmReviewRecordRepository },
-    { provide: ORIGINALITY_CORPUS_REPOSITORY, useClass: TypeOrmOriginalityCorpusRepository },
+    {
+      provide: PROMPT_TEMPLATE_REPOSITORY,
+      useClass: TypeOrmPromptTemplateRepository,
+    },
+    {
+      provide: QUALITY_RESULT_REPOSITORY,
+      useClass: TypeOrmQualityResultRepository,
+    },
+    {
+      provide: REVIEW_RECORD_REPOSITORY,
+      useClass: TypeOrmReviewRecordRepository,
+    },
+    {
+      provide: ORIGINALITY_CORPUS_REPOSITORY,
+      useClass: TypeOrmOriginalityCorpusRepository,
+    },
+    {
+      provide: QUALITY_WARNING_FEEDBACK_REPOSITORY,
+      useClass: TypeOrmQualityWarningFeedbackRepository,
+    },
     {
       provide: PRODUCT_CATALOG,
       // CMS_BASE_URL co gia tri -> goi CMS that; chua co -> mock (du lieu mau theo site)

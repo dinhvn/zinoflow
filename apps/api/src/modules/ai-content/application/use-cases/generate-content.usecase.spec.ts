@@ -10,7 +10,10 @@ import type {
   ContentAiProvider,
   StructuredGenerationRequest,
 } from "../ports/content-ai-provider.port";
-import type { ContentDraftRepository, DraftRecord } from "../ports/content-draft.repository";
+import type {
+  ContentDraftRepository,
+  DraftRecord,
+} from "../ports/content-draft.repository";
 import type { AiUsageRecorder } from "../ports/ai-usage-recorder.port";
 import type {
   ContentGenerationCheckpointRepository,
@@ -49,7 +52,9 @@ class InMemoryDraftRepository implements ContentDraftRepository {
     return (await this.listByJobId(jobId))[0] ?? null;
   }
   async listByJobId(jobId: string): Promise<DraftRecord[]> {
-    return this.saved.filter((d) => d.jobId === jobId).sort((a, b) => b.version - a.version);
+    return this.saved
+      .filter((d) => d.jobId === jobId)
+      .sort((a, b) => b.version - a.version);
   }
 }
 
@@ -72,7 +77,9 @@ class FlakyProvider implements ContentAiProvider {
     if (request.operation === "content") {
       this.contentCalls++;
       if (this.contentCalls <= this.failFirstNContentCalls) {
-        throw new AiProviderError("Loi tam thoi (gia lap) khi generate content");
+        throw new AiProviderError(
+          "Loi tam thoi (gia lap) khi generate content",
+        );
       }
     }
     return this.stub.generateStructured(request, schema);
@@ -100,7 +107,9 @@ class FailAfterOutlineProvider implements ContentAiProvider {
     if (request.operation === "content") {
       this.contentCalls++;
       if (this.shouldFailContent) {
-        throw new AiProviderError("Loi vinh vien (gia lap) khi generate content");
+        throw new AiProviderError(
+          "Loi vinh vien (gia lap) khi generate content",
+        );
       }
     }
     return this.stub.generateStructured(request, schema);
@@ -120,11 +129,15 @@ function buildUseCase(provider: ContentAiProvider) {
   const prompts = new PromptBuilder({
     findActive: async () => null,
     findActiveMany: async () => [],
+    findLatestMany: async () => [],
     findVersions: async () => [],
     createVersion: async () => {
       throw new Error("not used");
     },
-    activateVersion: async () => {},
+    createInactiveVersion: async () => {
+      throw new Error("not used");
+    },
+    activateVersion: async () => true,
   });
   const checkpoints = new InMemoryCheckpointRepository();
   const useCase = new GenerateContentUseCase(
@@ -137,7 +150,9 @@ function buildUseCase(provider: ContentAiProvider) {
     prompts,
   );
   // Bo delay giua cac lan retry de test chay nhanh
-  jest.spyOn(useCase as unknown as { delay: () => Promise<void> }, "delay").mockResolvedValue();
+  jest
+    .spyOn(useCase as unknown as { delay: () => Promise<void> }, "delay")
+    .mockResolvedValue();
   return { useCase, jobs, drafts, usageRecords, checkpoints };
 }
 
@@ -211,11 +226,15 @@ describe("GenerateContentUseCase (Option 3 - 2 buoc: outline -> content gop)", (
     const prompts = new PromptBuilder({
       findActive: async () => null,
       findActiveMany: async () => [],
+      findLatestMany: async () => [],
       findVersions: async () => [],
       createVersion: async () => {
         throw new Error("not used");
       },
-      activateVersion: async () => {},
+      createInactiveVersion: async () => {
+        throw new Error("not used");
+      },
+      activateVersion: async () => true,
     });
     const job = createJob();
     await jobs.save(job);
@@ -231,7 +250,9 @@ describe("GenerateContentUseCase (Option 3 - 2 buoc: outline -> content gop)", (
       checkpoints,
       prompts,
     );
-    jest.spyOn(useCase1 as unknown as { delay: () => Promise<void> }, "delay").mockResolvedValue();
+    jest
+      .spyOn(useCase1 as unknown as { delay: () => Promise<void> }, "delay")
+      .mockResolvedValue();
     await expect(useCase1.execute(job.id)).rejects.toThrow(AiProviderError);
     expect((await jobs.findById(job.id))?.status).toBe("Failed");
 
@@ -252,7 +273,9 @@ describe("GenerateContentUseCase (Option 3 - 2 buoc: outline -> content gop)", (
       checkpoints,
       prompts,
     );
-    jest.spyOn(useCase2 as unknown as { delay: () => Promise<void> }, "delay").mockResolvedValue();
+    jest
+      .spyOn(useCase2 as unknown as { delay: () => Promise<void> }, "delay")
+      .mockResolvedValue();
     await useCase2.execute(job.id);
 
     expect((await jobs.findById(job.id))?.status).toBe("DraftReady");
@@ -307,7 +330,9 @@ describe("GenerateContentUseCase — bai diem den ep cung 7 chu de co dinh (fix 
     await useCase.execute(job.id);
 
     expect((await jobs.findById(job.id))?.status).toBe("DraftReady");
-    const article = drafts.saved[0]?.article as { sections: Array<{ blockKey?: string | null }> };
+    const article = drafts.saved[0]?.article as {
+      sections: Array<{ blockKey?: string | null }>;
+    };
     expect(article.sections.map((s) => s.blockKey)).toEqual([
       "tong-quan",
       "trai-nghiem",

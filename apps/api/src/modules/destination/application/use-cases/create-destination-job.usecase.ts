@@ -8,14 +8,23 @@ import {
 } from "@zinoflow/contracts";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 import { CreateContentJobUseCase } from "../../../ai-content/application/use-cases/create-content-job.usecase";
-import { PromptBuilder, type PromptJobContext } from "../../../ai-content/application/services/prompt-builder";
+import {
+  PromptBuilder,
+  type PromptJobContext,
+} from "../../../ai-content/application/services/prompt-builder";
 import {
   CONTENT_JOB_REPOSITORY,
   type ContentJobRepository,
 } from "../../../ai-content/application/ports/content-job.repository";
-import { REFERENCE_FETCHER, type ReferenceFetcher } from "../ports/reference-fetcher.port";
+import {
+  REFERENCE_FETCHER,
+  type ReferenceFetcher,
+} from "../ports/reference-fetcher.port";
 import { stripHtml } from "../../../shared/text/strip-html";
-import { DICHOITHOI_SITE_DB, type DichoithoiSiteDb } from "../ports/dichoithoi-site-db.port";
+import {
+  DICHOITHOI_SITE_DB,
+  type DichoithoiSiteDb,
+} from "../ports/dichoithoi-site-db.port";
 import {
   DESTINATION_MIRROR_REPOSITORY,
   type DestinationMirrorRepository,
@@ -33,6 +42,10 @@ import {
 import { RecomputeRelatedService } from "../services/recompute-related.service";
 import { KIND_LABELS } from "../../domain/destination-mirror";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
+import {
+  buildDestinationWritingContext,
+  wrapExternalSource,
+} from "../services/destination-writing-context";
 
 const SITE_CODE = "dichoithoi";
 /** Gioi han content cu dua vao prompt (token budget) */
@@ -63,7 +76,8 @@ function toCandidate(d: DestinationMirrorEntity): RelatedCandidate {
     siteStatus: d.siteStatus,
     priority: d.priority,
     order: d.order,
-    distanceFromCenter: d.distanceFromCenter === null ? null : Number(d.distanceFromCenter),
+    distanceFromCenter:
+      d.distanceFromCenter === null ? null : Number(d.distanceFromCenter),
     types: d.types,
     tags: d.tags,
     contentTier: d.contentTier,
@@ -85,8 +99,10 @@ export class CreateDestinationJobUseCase {
     @Inject(DESTINATION_MIRROR_REPOSITORY)
     private readonly mirrorRepo: DestinationMirrorRepository,
     @Inject(DICHOITHOI_SITE_DB) private readonly siteDb: DichoithoiSiteDb,
-    @Inject(CONTENT_JOB_REPOSITORY) private readonly jobRepo: ContentJobRepository,
-    @Inject(REFERENCE_FETCHER) private readonly referenceFetcher: ReferenceFetcher,
+    @Inject(CONTENT_JOB_REPOSITORY)
+    private readonly jobRepo: ContentJobRepository,
+    @Inject(REFERENCE_FETCHER)
+    private readonly referenceFetcher: ReferenceFetcher,
     @Inject(POI_DISTANCE_REPOSITORY)
     private readonly poiDistanceRepo: PoiDistanceRepository,
     private readonly createContentJob: CreateContentJobUseCase,
@@ -102,9 +118,15 @@ export class CreateDestinationJobUseCase {
   ): Promise<void> {
     const existing = await this.mirrorRepo.findBySlug(slug);
     if (!existing) {
-      throw new DomainRuleError(`Không tìm thấy điểm đến "${slug}" trong mirror`);
+      throw new DomainRuleError(
+        `Không tìm thấy điểm đến "${slug}" trong mirror`,
+      );
     }
-    await this.mirrorRepo.saveAiInputs(slug, notes?.trim() ? notes.trim() : null, referenceUrls);
+    await this.mirrorRepo.saveAiInputs(
+      slug,
+      notes?.trim() ? notes.trim() : null,
+      referenceUrls,
+    );
     this.logger.log(`Luu thong tin AI cho diem den ${slug}`);
   }
 
@@ -115,14 +137,17 @@ export class CreateDestinationJobUseCase {
     const all = await this.mirrorRepo.findAll();
     const destination = all.find((d) => d.slug === slug);
     if (!destination) {
-      throw new DomainRuleError(`Không tìm thấy điểm đến "${slug}" trong mirror`, [
-        "Bấm Đồng bộ từ website rồi thử lại",
-      ]);
+      throw new DomainRuleError(
+        `Không tìm thấy điểm đến "${slug}" trong mirror`,
+        ["Bấm Đồng bộ từ website rồi thử lại"],
+      );
     }
     if (destination.activeContentJobId) {
       // Job Failed/Rejected la ngo cut (terminal hoac can lam lai) — cho phep
       // tao job moi thay the de diem den khong bi ket vinh vien
-      const activeJob = await this.jobRepo.findById(destination.activeContentJobId);
+      const activeJob = await this.jobRepo.findById(
+        destination.activeContentJobId,
+      );
       const stuckStatus = activeJob?.toSnapshot().status;
       if (activeJob && stuckStatus !== "Failed" && stuckStatus !== "Rejected") {
         throw new DomainRuleError(
@@ -140,7 +165,11 @@ export class CreateDestinationJobUseCase {
       request.referenceUrls ?? [],
     );
 
-    const sourceContext = await this.buildSourceContext(destination, all, request);
+    const sourceContext = await this.buildSourceContext(
+      destination,
+      all,
+      request,
+    );
 
     const result = await this.createContentJob.execute({
       siteCode: SITE_CODE,
@@ -181,12 +210,17 @@ export class CreateDestinationJobUseCase {
     const all = await this.mirrorRepo.findAll();
     const destination = all.find((d) => d.slug === slug);
     if (!destination) {
-      throw new DomainRuleError(`Không tìm thấy điểm đến "${slug}" trong mirror`, [
-        "Bấm Đồng bộ từ website rồi thử lại",
-      ]);
+      throw new DomainRuleError(
+        `Không tìm thấy điểm đến "${slug}" trong mirror`,
+        ["Bấm Đồng bộ từ website rồi thử lại"],
+      );
     }
 
-    const sourceContext = await this.buildSourceContext(destination, all, request);
+    const sourceContext = await this.buildSourceContext(
+      destination,
+      all,
+      request,
+    );
     const ctx: PromptJobContext = {
       model: request.aiModel ?? "preview",
       articleType: "guide-diem-den",
@@ -227,22 +261,74 @@ export class CreateDestinationJobUseCase {
   ): Promise<string> {
     const parts: string[] = [];
 
+    const parent = destination.parentSlug
+      ? (all.find((item) => item.slug === destination.parentSlug) ?? null)
+      : null;
+    const [provinces, taxonomy] = await Promise.all([
+      this.mirrorRepo.listProvinces(),
+      this.resolveTaxonomyLabels(destination),
+    ]);
+    const provinceName =
+      provinces.find((item) => item.provinceCode === destination.provinceCode)
+        ?.shortName ?? null;
+    parts.push(
+      buildDestinationWritingContext({
+        identity: {
+          name: destination.name,
+          slug: destination.slug,
+          kindLabel: KIND_LABELS[destination.kind] ?? destination.kind,
+          contentTier: destination.contentTier,
+        },
+        hierarchy: {
+          parentSlug: destination.parentSlug,
+          parentName: parent?.name ?? null,
+          provinceCode: destination.provinceCode,
+          provinceName,
+        },
+        taxonomy,
+        verifiedFacts: {
+          addressNew: destination.addressNew,
+          addressOld: destination.addressOld,
+          coordinates:
+            destination.lat && destination.lng
+              ? `${destination.lat}, ${destination.lng}`
+              : null,
+          contactPhone: destination.contactPhone,
+          contactWebsite: destination.contactWebsite,
+          openingHours: destination.openingHours?.note ?? null,
+          ticketPrice: destination.ticketPrice,
+        },
+        hasReviewedSummary: Boolean(
+          destination.aiReferenceSummary || destination.aiReferenceSummaryGsg,
+        ),
+      }),
+    );
+
     parts.push("## Dữ liệu điểm đến (nguồn sự thật)");
     parts.push(`- Tên: ${destination.name}`);
-    parts.push(`- Loại điểm đến: ${KIND_LABELS[destination.kind] ?? destination.kind}`);
+    parts.push(
+      `- Loại điểm đến: ${KIND_LABELS[destination.kind] ?? destination.kind}`,
+    );
     parts.push(`- Slug hiện tại: ${destination.slug}`);
-    if (destination.addressNew) parts.push(`- Địa chỉ mới (sau sáp nhập): ${destination.addressNew}`);
-    if (destination.addressOld) parts.push(`- Địa chỉ cũ (trước sáp nhập): ${destination.addressOld}`);
+    if (destination.addressNew)
+      parts.push(`- Địa chỉ mới (sau sáp nhập): ${destination.addressNew}`);
+    if (destination.addressOld)
+      parts.push(`- Địa chỉ cũ (trước sáp nhập): ${destination.addressOld}`);
     if (destination.lat && destination.lng) {
       parts.push(`- Tọa độ: ${destination.lat}, ${destination.lng}`);
     }
-    if (destination.contactPhone) parts.push(`- Điện thoại: ${destination.contactPhone}`);
-    if (destination.contactWebsite) parts.push(`- Website chính thức: ${destination.contactWebsite}`);
+    if (destination.contactPhone)
+      parts.push(`- Điện thoại: ${destination.contactPhone}`);
+    if (destination.contactWebsite)
+      parts.push(`- Website chính thức: ${destination.contactWebsite}`);
 
     // Tai 1 lan, dung chung cho ca khoi "lien quan" (fallback) lan khoi "gan nhat" ben duoi.
     const poiDistancePairs = await this.poiDistanceRepo.findAll();
     const poiDistances = new Map(
-      poiDistancePairs.map((p) => [clusterDistanceKey(p.poiASlug, p.poiBSlug), p.distanceMeters]),
+      poiDistancePairs.map((p) => [
+        clusterDistanceKey(p.poiASlug, p.poiBSlug),
+        p.distanceMeters,
+      ]),
     );
 
     const relatedJson = await this.siteDb.fetchRelatedJson(destination.slug);
@@ -265,7 +351,10 @@ export class CreateDestinationJobUseCase {
       });
     }
     if (relatedLines.length > 0) {
-      parts.push("", "## Điểm đến liên quan cùng khu vực (dùng đúng TÊN CHUẨN khi nhắc tới)");
+      parts.push(
+        "",
+        "## Điểm đến liên quan cùng khu vực (dùng đúng TÊN CHUẨN khi nhắc tới)",
+      );
       parts.push(relatedLines.join("\n"));
     }
 
@@ -276,13 +365,19 @@ export class CreateDestinationJobUseCase {
     const bySlug = new Map(all.map((d) => [d.slug, d]));
     // includeDrafts: true — ngu canh van ban cho AI, khong phai link that
     // (xem ly do o khoi fallback tren).
-    const nearbyLines = computeNearby(toCandidate(destination), all.map(toCandidate), {
-      includeDrafts: true,
-    })
+    const nearbyLines = computeNearby(
+      toCandidate(destination),
+      all.map(toCandidate),
+      {
+        includeDrafts: true,
+      },
+    )
       .filter((n) => !includedSlugs.has(n.slug))
       .slice(0, MAX_NEARBY_IN_PROMPT)
       .map((n) => {
-        const meters = poiDistances.get(clusterDistanceKey(destination.slug, n.slug)) ?? n.distanceMeters;
+        const meters =
+          poiDistances.get(clusterDistanceKey(destination.slug, n.slug)) ??
+          n.distanceMeters;
         const name = bySlug.get(n.slug)?.name ?? n.slug;
         return `- ${name} (${formatDistanceBadge(meters)})`;
       });
@@ -304,16 +399,27 @@ export class CreateDestinationJobUseCase {
     );
 
     if (request.mode === "update" && destination.siteId !== null) {
-      const current = await this.siteDb.fetchDestinationContent(destination.siteId);
+      const current = await this.siteDb.fetchDestinationContent(
+        destination.siteId,
+      );
       if (current) {
-        parts.push("", "## Nội dung hiện tại trên website (viết lại tốt hơn, giữ thông tin đúng)");
-        if (current.openingTime) parts.push(`- Giờ mở cửa hiện ghi: ${current.openingTime}`);
-        if (current.ticketPrice) parts.push(`- Giá vé hiện ghi: ${current.ticketPrice}`);
-        if (current.transport) parts.push(`- Di chuyển hiện ghi: ${stripHtml(current.transport)}`);
-        if (current.tip) parts.push(`- Mẹo hiện ghi: ${stripHtml(current.tip)}`);
+        parts.push(
+          "",
+          "## Nội dung hiện tại trên website (viết lại tốt hơn, giữ thông tin đúng)",
+        );
+        if (current.openingTime)
+          parts.push(`- Giờ mở cửa hiện ghi: ${current.openingTime}`);
+        if (current.ticketPrice)
+          parts.push(`- Giá vé hiện ghi: ${current.ticketPrice}`);
+        if (current.transport)
+          parts.push(`- Di chuyển hiện ghi: ${stripHtml(current.transport)}`);
+        if (current.tip)
+          parts.push(`- Mẹo hiện ghi: ${stripHtml(current.tip)}`);
         if (!hasExtractedSummary) {
           parts.push("", "### Thân bài hiện tại (đã bỏ HTML):");
-          parts.push(stripHtml(current.contentHtml).slice(0, MAX_OLD_CONTENT_CHARS));
+          parts.push(
+            stripHtml(current.contentHtml).slice(0, MAX_OLD_CONTENT_CHARS),
+          );
         }
       }
     }
@@ -344,7 +450,12 @@ export class CreateDestinationJobUseCase {
         try {
           const text = await this.referenceFetcher.fetchText(ref.url);
           parts.push("", `## Nguồn tham khảo cho "${ref.label}" (${ref.url})`);
-          parts.push(text || "(trang không có nội dung text)");
+          parts.push(
+            wrapExternalSource(
+              ref.label,
+              text || "(trang không có nội dung text)",
+            ),
+          );
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           this.logger.warn(`Bo qua nguon tham khao ${ref.url}: ${message}`);
@@ -358,5 +469,43 @@ export class CreateDestinationJobUseCase {
     }
 
     return parts.join("\n");
+  }
+
+  private async resolveTaxonomyLabels(
+    destination: DestinationMirrorEntity,
+  ): Promise<{
+    types: Array<{ slug: string; label: string }>;
+    tags: Array<{ slug: string; label: string }>;
+  }> {
+    const fallback = {
+      types: destination.types.map((slug) => ({ slug, label: slug })),
+      tags: destination.tags.map((slug) => ({ slug, label: slug })),
+    };
+    if (!this.siteDb.isConfigured()) return fallback;
+    try {
+      const [content, tags] = await Promise.all([
+        this.siteDb.fetchTaxonomyContent(),
+        this.siteDb.fetchTags(),
+      ]);
+      const typeLabels = new Map(
+        content.types.map((item) => [item.slug, item.name]),
+      );
+      const tagLabels = new Map(tags.map((item) => [item.slug, item.name]));
+      return {
+        types: destination.types.map((slug) => ({
+          slug,
+          label: typeLabels.get(slug) ?? slug,
+        })),
+        tags: destination.tags.map((slug) => ({
+          slug,
+          label: tagLabels.get(slug) ?? slug,
+        })),
+      };
+    } catch (error) {
+      this.logger.warn(
+        `Khong resolve duoc taxonomy label cho ${destination.slug}: ${error instanceof Error ? error.message : error}`,
+      );
+      return fallback;
+    }
   }
 }

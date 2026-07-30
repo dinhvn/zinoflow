@@ -87,7 +87,7 @@ việc đã bị bác lại tưởng còn phải làm).
 - ✅ **Bài loại `cam-nang` tạo bằng AI — ĐÃ XONG (Phase 22, 07/2026, dòng
   "không thể" ở trên đã lỗi thời)**: nút "🤖 Tạo bằng AI" ở form
   `/dichoithoi/articles/new` (prompt pack `cam-nang.outline/section/frame.vi`)
-  + ô "Tư liệu tham khảo" — xem Phase 22.
+  - ô "Tư liệu tham khảo" — xem Phase 22.
 - ✅ **Auto-link — 2 rào an toàn ĐÃ XONG (xác nhận qua code 23/07/2026, dòng
   "thiếu" ở trên đã lỗi thời)**: `shared/text/auto-link.ts` — hằng số
   `MAX_AUTO_LINKS_PER_ARTICLE = 10` chặn spam link/bài, và
@@ -196,7 +196,7 @@ việc đã bị bác lại tưởng còn phải làm).
   PEXELS API THẬT (17/07/2026)** — `dichoithoi-auto-image-search-plan.md`.
   Quét bài cẩm nang thiếu ảnh → sinh từ khoá thuần chuỗi (không AI) → gọi
   Pexels thật → lưu `pending` → tab "Chờ duyệt" trong `/dichoithoi/
-  thu-vien-anh` (Duyệt/Từ chối, nhớ từ khoá bị từ chối). Đã verify full
+thu-vien-anh` (Duyệt/Từ chối, nhớ từ khoá bị từ chối). Đã verify full
   vòng đời với `PEXELS_API_KEY` thật do người dùng cung cấp: Pexels trả
   đúng ảnh khớp chủ đề, duyệt/từ chối cập nhật DB đúng. 2 nguyên tắc bắt
   buộc (chỉ Pexels có giấy phép thương mại; chỉ tìm ảnh minh hoạ CHUNG,
@@ -279,6 +279,15 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- ✅ **Nâng chất lượng prompt + bài viết điểm đến — ĐÃ BUILD GĐ0-5 (29/07/2026),
+  GĐ6 CHỜ REVIEW/ACTIVATE THỦ CÔNG** — plan ở
+  `dichoithoi-destination-prompt-quality-plan.md`: audit job Thác Triệu Hải, prompt active DB,
+  source context, contract/gate/editor/renderer và đề xuất Gemini. Ưu tiên bảo vệ prompt version
+  khỏi bị migration ghi đè, bổ sung Type/Tag/hierarchy/provenance, tách strategy POI/Flagship,
+  bỏ mục tiêu 800 từ rập khuôn và thêm gate style/redundancy/grounding. Đã chọn Mức B, migration
+  local và full test/build pass; bốn prompt candidate vẫn inactive, chờ chạy corpus bằng provider
+  thật + blind review trước khi activate batch nhỏ. Không tự publish hoặc tự activate.
+
 - ✅ **Redesign toàn bộ Nhóm/Type/Tag điểm đến — ĐÃ MIGRATE + ĐÃ GÁN DỮ LIỆU
   THẬT (24/07/2026)**: audit dữ liệu thật trên `dichoithoi_dev` phát hiện
   overlap nặng `cong-trinh-kien-truc`/`di-tich-lich-su` (18/49 và 18/32 điểm
@@ -348,9 +357,9 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   `DescriptionHtml` (bản đã auto-link, server tự sinh lại mỗi lần lưu, chỉ link
   tới điểm đến đã gán cho đúng Type/Tag đó) và `MetaDescription` (field riêng
   cho `<meta>`, không bao giờ dính markup — đúng tiền lệ `Destination.
-  MetaDescription`). Verify end-to-end qua HTTP thật: PATCH type `bien-dao` và
+MetaDescription`). Verify end-to-end qua HTTP thật: PATCH type `bien-dao` và
   tag `phu-hop-gia-dinh` → 6/6 và 2/2 tên điểm đến tự thành `<a href="/diem-den/
-  ...">`, meta description trên trang live đọc đúng `MetaDescription` riêng
+...">`, meta description trên trang live đọc đúng `MetaDescription` riêng
   (không đọc `DescriptionHtml`). CMS `/dichoithoi/danh-muc` (dòng Loại) và
   `/dichoithoi/chu-de` đều có thêm ô nhập Meta description + ghi chú auto-link.
   Cùng đợt phát hiện + sửa 1 bug route có từ trước: `PATCH /destinations/:slug`
@@ -366,8 +375,7 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   (phát hiện 24/07/2026 khi làm SEO trang danh mục): 2 tỉnh này có POI thật
   (Lào Cai 18, Khánh Hoà 12) nhưng `v2.Province.DestinationId` NULL vì chưa
   từng có node tỉnh trong cây `v2.Destination` — nội dung đang treo dưới
-  cluster nằm ở root (`sapa` id 218, `mu-cang-chai` id 171, `nha-trang` id
-  187) + 7 POI Yên Bái cũ mồ côi (`ParentId` NULL: Hồ Thác Bà, La Pán Tẩn,
+  cluster nằm ở root (`sapa` id 218, `mu-cang-chai` id 171, `nha-trang` id 187) + 7 POI Yên Bái cũ mồ côi (`ParentId` NULL: Hồ Thác Bà, La Pán Tẩn,
   Tú Lệ, Mường Lò, Lìm Mông, Suối Giàng, Thác Pú Nhu). Hệ quả: trang
   `/tinh/lao-cai`, `/tinh/khanh-hoa` rỗng (đang noindex đúng), mất 2 landing
   tỉnh giá trị cao. Việc cần làm: INSERT 2 node `Kind=1` (chú ý ChildrenJson/
@@ -407,11 +415,11 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 - ✅ **Nút "Xem trên Google Maps" — ĐÃ XONG (23/07/2026, repo `dichoithoi`
   commit `1ff637d`)**: thêm property `GoogleMapsUrl` vào `V2Destination.cs`
-  + `DestinationDetailModel`, hiện link gốc (giữ Place ID đầy đủ) cạnh link
-  "Chỉ đường" (chỉ Lat/Lng) ở cả `_QuickDecisionCard` (POI/cluster có
-  `HasOwnVisitInfo`) và khối "Vị trí" độc lập (cluster không có visit info).
-  Verify thật qua `dotnet run` trên `dichoithoi_dev`: POI có `GoogleMapsUrl`
-  hiện đúng link Place ID, POI/cluster không có ẩn đúng nút, không lỗi log.
+  - `DestinationDetailModel`, hiện link gốc (giữ Place ID đầy đủ) cạnh link
+    "Chỉ đường" (chỉ Lat/Lng) ở cả `_QuickDecisionCard` (POI/cluster có
+    `HasOwnVisitInfo`) và khối "Vị trí" độc lập (cluster không có visit info).
+    Verify thật qua `dotnet run` trên `dichoithoi_dev`: POI có `GoogleMapsUrl`
+    hiện đúng link Place ID, POI/cluster không có ẩn đúng nút, không lỗi log.
 
 - **Bản đồ minh hoạ "điểm đến liên quan" trên website công khai** (ý tưởng
   21/07/2026, TÍNH NĂNG NÂNG CAO — xem xét/phân tích/làm SAU, chưa lên plan):
@@ -419,11 +427,11 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   (điểm đang xem + các điểm liên quan) trên trang chi tiết `dichoithoi.com`
   để khách du lịch dễ lên lộ trình. Đã phân tích sơ bộ (chưa chốt hướng):
   - Lợi ích thật: khác bản đồ 1-điểm đã CHỦ Ý bỏ trước đó (`content-seo-ux-
-    plan.md` — "GeoCoordinates đã có sẵn JSON-LD, iframe không thêm giá trị
+plan.md` — "GeoCoordinates đã có sẵn JSON-LD, iframe không thêm giá trị
     SEO mà tốn Core Web Vitals"), bản đồ NHIỀU điểm phục vụ đúng nhu cầu
     trip-planning (không chỉ "ở đâu") — không tự động áp lại kết luận cũ.
   - Chi phí thật: `RelatedItem` (`packages/contracts/src/dichoithoi/
-    destination.ts`) hiện KHÔNG mang lat/lng (bị loại bỏ lúc build JSON,
+destination.ts`) hiện KHÔNG mang lat/lng (bị loại bỏ lúc build JSON,
     xem `related-builder.ts` — `RelatedCandidate` nội bộ có toạ độ nhưng
     `RelatedItem` cuối cùng thì không) — cần mở schema trước. Website hiện
     tại 0 dependency ngoài (`Detail.cshtml` chỉ 1 file JS nội bộ) — thêm thư
@@ -443,15 +451,12 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   theo checklist SEO-owner (`dichoithoi-seo-principles.md`) phát hiện 5 lỗ
   hổng, đã CHỐT hướng sửa. **#2/#3/#5 ĐÃ XONG (xác nhận qua code 23/07/2026,
   dòng "chưa code" ở trên đã lỗi thời — làm ở `ff384d5`/`c2fa3b3` bên repo
-  `dichoithoi`, chỉ chưa cập nhật doc này lúc đó)**:
-  2. ✅ **Structured data đủ ảnh** — MỌI `<img>` server-render trong gallery
-     (carousel mobile, collage desktop, dải "Hình ảnh {tên}") đều đã có
-     `itemprop="image"` (`Detail.cshtml`), không chỉ hero gốc.
-  3. ✅ **Caption/credit hiện đủ** — caption hiện inline trên cả carousel
-     mobile (đè trên ảnh, giống hero) lẫn lightbox/collage desktop.
-  5. ✅ **Responsive `srcset`** — ảnh gallery mới có 3 size (`ThumbUrl`/
-     `MediumUrl`/`HeroUrl`) qua `srcset`, ảnh cũ (1 size, chưa backfill) vẫn
-     dùng `<img>` đơn, không lỗi.
+  `dichoithoi`, chỉ chưa cập nhật doc này lúc đó)**: 2. ✅ **Structured data đủ ảnh** — MỌI `<img>` server-render trong gallery
+  (carousel mobile, collage desktop, dải "Hình ảnh {tên}") đều đã có
+  `itemprop="image"` (`Detail.cshtml`), không chỉ hero gốc. 3. ✅ **Caption/credit hiện đủ** — caption hiện inline trên cả carousel
+  mobile (đè trên ảnh, giống hero) lẫn lightbox/collage desktop. 5. ✅ **Responsive `srcset`** — ảnh gallery mới có 3 size (`ThumbUrl`/
+  `MediumUrl`/`HeroUrl`) qua `srcset`, ảnh cũ (1 size, chưa backfill) vẫn
+  dùng `<img>` đơn, không lỗi.
 
   Còn mở, **cần bàn UX/luồng nhập liệu trước khi code**:
   1. **Alt text sẽ gần như luôn trùng nhau** — CMS mặc định `altText: null`
@@ -461,7 +466,7 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
      "Lưu thư viện ảnh" nếu còn ảnh thiếu alt riêng, hoặc gợi ý placeholder
      theo ngữ cảnh thay vì để trống. Rủi ro: ép nhập alt có thể gây khó chịu
      nếu người dùng chỉ muốn upload nhanh nhiều ảnh — cần quyết định trước.
-  4. **Tên file ảnh gallery không mang từ khoá** — `{slug}-{timestamp}.webp`
+  2. **Tên file ảnh gallery không mang từ khoá** — `{slug}-{timestamp}.webp`
      (vd. `da-lat-1752345678901.webp`), Google có tính (yếu nhưng có thật) tên
      file mô tả nội dung. Sửa: slug hoá từ alt text lúc lưu — phụ thuộc #1
      (cần có alt thật trước khi slug hoá được).
@@ -550,13 +555,13 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   Giai đoạn 1-3 ĐÃ XONG (21/07/2026)** — `dichoithoi-poi-distance-plan.md`.
   Thay/bổ sung Haversine bằng ORS cho `DistanceFromCenter` (con→cha) + bảng
   mới `dichoithoi_poi_distances` (con↔con) — verify thật với API key ORS thật
-  + dữ liệu Đà Lạt (45 con, 990 cặp = C(45,2), cascade Postgres+SQL Server
-  khớp nhau). Nút "Tính khoảng cách" theo cụm/tỉnh (Công cụ, chọn Select) +
-  nút riêng 1 điểm ở tab "Quan hệ" (bán kính vật lý, tự relink điểm đó ngay).
-  `related-builder.ts` ưu tiên đọc `poiDistances` trước Haversine (fallback
-  graceful). 64 suites/402 test jest sạch, `tsc --noEmit` sạch. **Còn lại
-  Giai đoạn 4 (TUỲ CHỌN, chưa chốt)**: nối khoảng cách vào `sourceContext` khi
-  tạo job AI viết bài — cần bạn xác nhận trước khi code.
+  - dữ liệu Đà Lạt (45 con, 990 cặp = C(45,2), cascade Postgres+SQL Server
+    khớp nhau). Nút "Tính khoảng cách" theo cụm/tỉnh (Công cụ, chọn Select) +
+    nút riêng 1 điểm ở tab "Quan hệ" (bán kính vật lý, tự relink điểm đó ngay).
+    `related-builder.ts` ưu tiên đọc `poiDistances` trước Haversine (fallback
+    graceful). 64 suites/402 test jest sạch, `tsc --noEmit` sạch. **Còn lại
+    Giai đoạn 4 (TUỲ CHỌN, chưa chốt)**: nối khoảng cách vào `sourceContext` khi
+    tạo job AI viết bài — cần bạn xác nhận trước khi code.
 - ✅ **Giai đoạn 5 — Khoảng cách cụm↔cụm/tỉnh↔tỉnh sang ORS thật — ĐÃ XONG
   (23/07/2026)** — cùng file `dichoithoi-poi-distance-plan.md`. Đổi
   `RecomputeClusterDistancesUseCase` từ Haversine sang gọi
@@ -632,7 +637,7 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   Xem chi tiết content-seo-ux-plan §5.4-§5.7.
 
 - **Layout mobile-first — đập đi làm lại toàn bộ** (`dichoithoi-content-seo-
-  ux-plan.md` §10, phân tích 07/2026): thiết kế mới hoàn toàn cho menu (drawer +
+ux-plan.md` §10, phân tích 07/2026): thiết kế mới hoàn toàn cho menu (drawer +
   mega-menu), trang chủ, trang danh mục (Loại/Tỉnh), trang chi tiết điểm đến —
   mobile-first (CSS base cho mobile, desktop thêm bằng `min-width`), có wireframe
   ASCII chi tiết từng loại trang, thanh CTA dính đáy trên mobile ở trang chi
@@ -671,21 +676,21 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 - **`AncestorsJson`/`ChildrenJson` cho cây phân cấp tỉnh → khu vực → điểm con**
   (`dichoithoi-database-redesign.md` §3.4/§4.3, phân tích 07/2026, vd Lâm Đồng →
   Đà Lạt/Di Linh/Đức Trọng → điểm cụ thể): cây `kind`(`province`/`cluster`/`poi`)
-  + `ParentId`/`ProvinceId` hiện có đã đủ mô hình hoá đúng, KHÔNG cần đổi cấu
-  trúc — chỉ thêm 2 cột precompute mới tính trong `RecomputeRelatedService`:
-  `AncestorsJson` (breadcrumb, không query đệ quy) và `ChildrenJson` (danh sách
-  đầy đủ con trực tiếp, khác `RelatedJson` chỉ cắt 8 mục gợi ý). 1 điểm đến chỉ
-  thuộc 1 cha duy nhất ở trục địa lý (đúng bản chất vật lý); trục phân loại
-  (`DestinationTypeMap`) đã hỗ trợ nhiều-nhiều sẵn. ~~Tag tự do: chưa cần~~ →
-  **ĐÃ MỞ LẠI 07/2026** — nhu cầu chủ đề cắt ngang (vd "Kiến trúc") đã phát
-  sinh thật: chốt bảng `DestinationTag`/`DestinationTagMap` + trang
-  `/chu-de/{slug}` (bộ từ vựng ĐÓNG quản lý trong CMS, không phải tag nhập tự
-  do — database-redesign §3.2.1, destination-spec §2.4). ✅ **Toàn bộ đã build
-  và xác nhận qua DB thật (07/2026)**: cột `AncestorsJson`/`ChildrenJson` ĐÃ
-  có trên `v2.DestinationContent` (builder `ancestors-children-builder.ts`,
-  ghi khi publish/relink — chỉ cần chạy `relink` để backfill cho các điểm
-  cũ chưa có); bảng `DestinationTag`/`DestinationTagMap` + trang `/chu-de`
-  đã build (xem Phase B/C). Dòng "CHƯA thêm vào DDL" trước đó đã lỗi thời.
+  - `ParentId`/`ProvinceId` hiện có đã đủ mô hình hoá đúng, KHÔNG cần đổi cấu
+    trúc — chỉ thêm 2 cột precompute mới tính trong `RecomputeRelatedService`:
+    `AncestorsJson` (breadcrumb, không query đệ quy) và `ChildrenJson` (danh sách
+    đầy đủ con trực tiếp, khác `RelatedJson` chỉ cắt 8 mục gợi ý). 1 điểm đến chỉ
+    thuộc 1 cha duy nhất ở trục địa lý (đúng bản chất vật lý); trục phân loại
+    (`DestinationTypeMap`) đã hỗ trợ nhiều-nhiều sẵn. ~~Tag tự do: chưa cần~~ →
+    **ĐÃ MỞ LẠI 07/2026** — nhu cầu chủ đề cắt ngang (vd "Kiến trúc") đã phát
+    sinh thật: chốt bảng `DestinationTag`/`DestinationTagMap` + trang
+    `/chu-de/{slug}` (bộ từ vựng ĐÓNG quản lý trong CMS, không phải tag nhập tự
+    do — database-redesign §3.2.1, destination-spec §2.4). ✅ **Toàn bộ đã build
+    và xác nhận qua DB thật (07/2026)**: cột `AncestorsJson`/`ChildrenJson` ĐÃ
+    có trên `v2.DestinationContent` (builder `ancestors-children-builder.ts`,
+    ghi khi publish/relink — chỉ cần chạy `relink` để backfill cho các điểm
+    cũ chưa có); bảng `DestinationTag`/`DestinationTagMap` + trang `/chu-de`
+    đã build (xem Phase B/C). Dòng "CHƯA thêm vào DDL" trước đó đã lỗi thời.
 
 - **URL điểm đến giữ PHẲNG, không theo cấp bậc** (`content-seo-ux-plan.md`
   §10.7, **CHỐT 07/2026**): `/diem-den/{slug}` giữ nguyên như hiện tại, KHÔNG
@@ -719,7 +724,7 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   trên `Destination` (không còn `.Average()` mỗi lần render).
 
 - **Tối ưu hạ tầng cho hosting SmarterASP .NET Advance** (`content-seo-ux-
-  plan.md` §10.5.1, `system-design.md` §5 mục 9, phân tích 07/2026 — rà soát
+plan.md` §10.5.1, `system-design.md` §5 mục 9, phân tích 07/2026 — rà soát
   toàn diện thêm sau khi đã có thiết kế precompute/mobile-first/stack nhẹ):
   (1) cache 2 tầng — `OutputCache` in-memory + Cloudflare free làm CDN/edge
   cache (bắt buộc vì IIS App Pool recycle làm mất cache tầng 1 trên shared
@@ -792,24 +797,25 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## A) Quyết định CẦN BẠN CHỐT trước khi code (không phải việc kỹ thuật thuần)
 
-| # | Việc | Ảnh hưởng | Nguồn |
-|---|---|---|---|
-| 1 | ~~CHỐT — URL bài cẩm nang = `/blog/{slug}`~~ → **SỬA LẠI (07/2026)**: quyết định ban đầu SAI, `/blog` là route legacy v1 đang chạy thật (`BlogController`), không thể đè lên. Route thật đã build = `/cam-nang/{slug}` (`ArticleController.cs`, entity `V2Article`) — xem Phase D mục 1 | Route website + SEO | article-spec §10.1, implementation-plan Phase D#1 |
-| 2 | ✅ **ĐÃ XONG (Phase 21.1, 07/2026)** — khối `food-spots` (tái dùng bảng `products` lọc theo `FOOD_SPOT_CATEGORIES`: Quán ăn/Ẩm thực/Nhà hàng/Đặc sản, tham số `tag=` bắt buộc) đã có đủ trong compiler (`article-block-compiler.service.ts`) + UI palette (`insert-dynamic-block-panel.tsx`) — dòng này trước đây bị ghi nhầm "chưa code", commit `243b5ee` đã làm | Độ phức tạp compile engine | article-spec §3.1/§10.3 |
-| 3 | ✅ **ĐÃ XONG (Phase 22, 07/2026)** — thêm 3 prompt `cam-nang.outline/section/frame.vi` (`default-prompts.ts`, dạy AI cú pháp `[[block:...]]` + liệt kê kind khả dụng), form Article `/dichoithoi/articles/new` thêm nút "🤖 Tạo bằng AI" (Select provider/model, giữ nguyên nút "Viết tay"). Test thật qua Playwright: tạo job AI thành công (DraftReady, gemini-2.5-flash-lite, ~12s). **Quan sát thêm**: model nhỏ (flash-lite) có xu hướng THẬN TRỌNG, không tự chèn token dù có gợi ý rõ trong "Tư liệu tham khảo" — không phải bug (cơ chế parse/compile token đã test đúng ở Phase 21.1), có thể cần model mạnh hơn (pro) hoặc tinh chỉnh prompt thêm nếu muốn AI chèn khối tích cực hơn. | Độ phức tạp prompt pack | article-spec §10.4, product-spec §7 |
-| 4 | Chọn OTA nào cào khách sạn trước (Booking.com/Agoda/Traveloka) | Parser đầu tiên cần build | hotel-spec §7.1 |
-| 5 | Chọn nguồn cào tour trước (Klook/TripVision/khác) | Parser đầu tiên cần build | tour-spec §7.1 |
-| 6 | Mạng affiliate đang/sẽ tham gia đã cấp rule/deep-link dạng nào (theo từng khách sạn/tour hay chỉ link chung)? | Thiết kế `affiliate_link_rules`, ảnh hưởng CTA | hotel-spec §7.2, tour-spec §7.2, affiliate-conversion-spec §2 |
-| 7 | Ngưỡng khối lượng khách sạn/tour cần có trước khi đáng xây job cào tự động | MVP nhập tay hay xây crawler ngay | hotel-spec §7.3, tour-spec §7.3 |
-| 8 | ✅ **XONG (07/2026, vòng 2)** — rà lại TOÀN BỘ 246 điểm published (không chỉ "Di tích lịch sử" như vòng 1 ở Phase B bước 1) → phát hiện + sửa 5 lỗi gán sai/thiếu thật: Cao nguyên đá Đồng Văn (gán nhầm "Di tích lịch sử" cho cảnh quan tự nhiên, cùng loại lỗi Bãi đá cổ Sa Pa), Khu di chỉ Óc Eo An Giang (gán "Khu vui chơi" cho 1 di chỉ khảo cổ — sai hoàn toàn), Khu Thất Sơn An Giang (thiếu "Núi - Cao nguyên"), Nhà thờ Lớn Hà Nội (thiếu type "Nhà thờ"), Phố cổ Đồng Văn (thiếu "Phố cổ - phố đi bộ"). Script `scripts/address-migration/phase-b-04-fix-typemap-round2.sql`, đã chạy + xác nhận idempotent trên `dichoithoi_dev`. 3 case khác (Chùa Cầu Hội An/Ga Hà Nội/Chợ Đồng Xuân) độ tin cậy thấp hơn, để ngỏ chưa sửa. | Chất lượng taxonomy ảnh hưởng trang `/loai` (SEO) + khối động theo `type` | destination-spec §2.4 |
-| 9 | ✅ **ĐÃ XONG (Phase 22, 07/2026)** — ô "Tư liệu tham khảo" (textarea, map vào `sourceContext`) đã thêm vào form `/dichoithoi/articles/new`, đi kèm nút "🤖 Tạo bằng AI" mới. | Chất lượng bài Article + tín hiệu Who/How/Why | article-spec §1.2 |
-| 10 | ✅ **CHỐT 07/2026** — Khoá phụ UPSERT = slug + tên chuẩn hoá (bỏ dấu, lowercase) + tỉnh/tuyến; nghi trùng → để nháp chờ người dùng xác nhận gộp, KHÔNG tự động ghi đè | Import sheet không tạo trùng với data nhập tay | product-spec §5.1 |
-| 11 | Chọn sàn TMĐT nào cấu hình affiliate rule trước (Shopee/Lazada/Tiki...) — sẽ có NHIỀU sàn, chưa chọn thứ tự cụ thể (không chặn build phần còn lại, `affiliate_link_rules` đã hỗ trợ nhiều provider sẵn) | Thứ tự cấu hình rule Product | product-spec §8.4 |
+| #   | Việc                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ảnh hưởng                                                                 | Nguồn                                                         |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 1   | ~~CHỐT — URL bài cẩm nang = `/blog/{slug}`~~ → **SỬA LẠI (07/2026)**: quyết định ban đầu SAI, `/blog` là route legacy v1 đang chạy thật (`BlogController`), không thể đè lên. Route thật đã build = `/cam-nang/{slug}` (`ArticleController.cs`, entity `V2Article`) — xem Phase D mục 1                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Route website + SEO                                                       | article-spec §10.1, implementation-plan Phase D#1             |
+| 2   | ✅ **ĐÃ XONG (Phase 21.1, 07/2026)** — khối `food-spots` (tái dùng bảng `products` lọc theo `FOOD_SPOT_CATEGORIES`: Quán ăn/Ẩm thực/Nhà hàng/Đặc sản, tham số `tag=` bắt buộc) đã có đủ trong compiler (`article-block-compiler.service.ts`) + UI palette (`insert-dynamic-block-panel.tsx`) — dòng này trước đây bị ghi nhầm "chưa code", commit `243b5ee` đã làm                                                                                                                                                                                                                                                                                                                                                                        | Độ phức tạp compile engine                                                | article-spec §3.1/§10.3                                       |
+| 3   | ✅ **ĐÃ XONG (Phase 22, 07/2026)** — thêm 3 prompt `cam-nang.outline/section/frame.vi` (`default-prompts.ts`, dạy AI cú pháp `[[block:...]]` + liệt kê kind khả dụng), form Article `/dichoithoi/articles/new` thêm nút "🤖 Tạo bằng AI" (Select provider/model, giữ nguyên nút "Viết tay"). Test thật qua Playwright: tạo job AI thành công (DraftReady, gemini-2.5-flash-lite, ~12s). **Quan sát thêm**: model nhỏ (flash-lite) có xu hướng THẬN TRỌNG, không tự chèn token dù có gợi ý rõ trong "Tư liệu tham khảo" — không phải bug (cơ chế parse/compile token đã test đúng ở Phase 21.1), có thể cần model mạnh hơn (pro) hoặc tinh chỉnh prompt thêm nếu muốn AI chèn khối tích cực hơn.                                           | Độ phức tạp prompt pack                                                   | article-spec §10.4, product-spec §7                           |
+| 4   | Chọn OTA nào cào khách sạn trước (Booking.com/Agoda/Traveloka)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Parser đầu tiên cần build                                                 | hotel-spec §7.1                                               |
+| 5   | Chọn nguồn cào tour trước (Klook/TripVision/khác)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Parser đầu tiên cần build                                                 | tour-spec §7.1                                                |
+| 6   | Mạng affiliate đang/sẽ tham gia đã cấp rule/deep-link dạng nào (theo từng khách sạn/tour hay chỉ link chung)?                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Thiết kế `affiliate_link_rules`, ảnh hưởng CTA                            | hotel-spec §7.2, tour-spec §7.2, affiliate-conversion-spec §2 |
+| 7   | Ngưỡng khối lượng khách sạn/tour cần có trước khi đáng xây job cào tự động                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | MVP nhập tay hay xây crawler ngay                                         | hotel-spec §7.3, tour-spec §7.3                               |
+| 8   | ✅ **XONG (07/2026, vòng 2)** — rà lại TOÀN BỘ 246 điểm published (không chỉ "Di tích lịch sử" như vòng 1 ở Phase B bước 1) → phát hiện + sửa 5 lỗi gán sai/thiếu thật: Cao nguyên đá Đồng Văn (gán nhầm "Di tích lịch sử" cho cảnh quan tự nhiên, cùng loại lỗi Bãi đá cổ Sa Pa), Khu di chỉ Óc Eo An Giang (gán "Khu vui chơi" cho 1 di chỉ khảo cổ — sai hoàn toàn), Khu Thất Sơn An Giang (thiếu "Núi - Cao nguyên"), Nhà thờ Lớn Hà Nội (thiếu type "Nhà thờ"), Phố cổ Đồng Văn (thiếu "Phố cổ - phố đi bộ"). Script `scripts/address-migration/phase-b-04-fix-typemap-round2.sql`, đã chạy + xác nhận idempotent trên `dichoithoi_dev`. 3 case khác (Chùa Cầu Hội An/Ga Hà Nội/Chợ Đồng Xuân) độ tin cậy thấp hơn, để ngỏ chưa sửa. | Chất lượng taxonomy ảnh hưởng trang `/loai` (SEO) + khối động theo `type` | destination-spec §2.4                                         |
+| 9   | ✅ **ĐÃ XONG (Phase 22, 07/2026)** — ô "Tư liệu tham khảo" (textarea, map vào `sourceContext`) đã thêm vào form `/dichoithoi/articles/new`, đi kèm nút "🤖 Tạo bằng AI" mới.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Chất lượng bài Article + tín hiệu Who/How/Why                             | article-spec §1.2                                             |
+| 10  | ✅ **CHỐT 07/2026** — Khoá phụ UPSERT = slug + tên chuẩn hoá (bỏ dấu, lowercase) + tỉnh/tuyến; nghi trùng → để nháp chờ người dùng xác nhận gộp, KHÔNG tự động ghi đè                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Import sheet không tạo trùng với data nhập tay                            | product-spec §5.1                                             |
+| 11  | Chọn sàn TMĐT nào cấu hình affiliate rule trước (Shopee/Lazada/Tiki...) — sẽ có NHIỀU sàn, chưa chọn thứ tự cụ thể (không chặn build phần còn lại, `affiliate_link_rules` đã hỗ trợ nhiều provider sẵn)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Thứ tự cấu hình rule Product                                              | product-spec §8.4                                             |
 
 ## B) Lộ trình thực hiện theo PHASE (viết lại 07/2026 sau đợt rà toàn bộ — thứ tự theo PHỤ THUỘC, không theo thứ tự nghĩ ra)
 
 **Phase A — Làm được NGAY, không chờ code gì** (toàn bộ là việc phân tích/
 dữ liệu, output đổ vào migration Phase B — làm sau là phải migrate 2 lần):
+
 1. ✅ **ĐÃ DUYỆT 07/2026 — Thiết kế bộ chủ đề (tag) + rà taxonomy Type**: đọc
    thật 271 điểm đến từ `dichoithoi_dev`, phát hiện 10 điểm chưa có Type +
    loại "Di tích lịch sử" bị gán quá rộng (35 điểm, lẫn cả Vịnh Hạ Long/Biệt
@@ -836,6 +842,7 @@ dữ liệu, output đổ vào migration Phase B — làm sau là phải migrate
    module đó (Phase C bước 3), không phải việc phân tích giấy giải quyết được.
 
 **Phase B — Đại tu nền** (`system-overview.md` §5):
+
 1. ✅ **XONG (07/2026) — Gộp output Phase A vào schema v2 trên `dichoithoi_dev`**
    (LocalDB, KHÔNG đụng production). Phát hiện lúc bắt tay: core migration
    §7 bước 1-5 (bảng `v2.Destination`/`DestinationContent`/`Province`/
@@ -852,8 +859,7 @@ dữ liệu, output đổ vào migration Phase B — làm sau là phải migrate
      Hạ Long/Bãi đá cổ Sa Pa (Bãi đá cổ được gán thay bằng "Núi - Cao
      nguyên" vì nếu gỡ suông sẽ về 0 type). Kết quả: 239→247/271 điểm có
      `PrimaryTypeId`.
-   - `UPDATE AddressNew/AddressOld` từ `dry-run-report-v2.csv` (Phase A bước
-     2) cho 235/271 dòng (114 match tự tin + 121 chấp nhận cấp tỉnh) — 36
+   - `UPDATE AddressNew/AddressOld` từ `dry-run-report-v2.csv` (Phase A bước 2) cho 235/271 dòng (114 match tự tin + 121 chấp nhận cấp tỉnh) — 36
      dòng "nhiều phường/xã trùng" CHỦ Ý để `AddressNew=NULL`, chờ người dùng
      xem tay từng dòng trước khi ghi (đúng quyết định đã chốt, không tự
      đoán ward có rủi ro sai).
@@ -908,7 +914,7 @@ dữ liệu, output đổ vào migration Phase B — làm sau là phải migrate
    "điểm liên quan", dùng `extras.Types` (v2, cùng vocabulary với candidate)
    thay `detail.Type` CSV khi so khớp `type1`/`type2`, fallback CSV nếu điểm
    chưa có Type nào ở v2. Build sạch, test dev server thật: `/diem-den/biet-
-   thu-hang-nga-dalat` (cụm Đà Lạt, 45 con → rơi đúng nhánh >9 ứng viên cần
+thu-hang-nga-dalat` (cụm Đà Lạt, 45 con → rơi đúng nhánh >9 ứng viên cần
    sắp xếp) trả về đúng 8 điểm liên quan hợp lệ, không lỗi.
 
    ✅ **Đợt 3 cùng ngày — migrate nốt phần "còn lại" nêu trên sang v2**:
@@ -940,7 +946,7 @@ dữ liệu, output đổ vào migration Phase B — làm sau là phải migrate
      `ContentHtml` (v2) trên mẫu 5 dòng + đếm coverage 271/271 cả 2 bên —
      giống hệt nhau (v2 là bản mirror copy của v1 từ lần migrate trước, chưa
      rõ thời điểm). NHƯNG `CmsDiChoiThoi.Service/Repositories/Destination/
-     DestinationRepository.cs` (CMS cũ) vẫn còn nguyên luồng import Google
+DestinationRepository.cs` (CMS cũ) vẫn còn nguyên luồng import Google
      Sheet kiểu xoá-trắng-rồi-nạp-lại (`DeleteAllAsync`+`AddListAsync`+
      `AddDetailListAsync`) nhắm thẳng vào `dbo.Destination`/`DestinationDetail`
      (v1) — module Destination CMS cũ CHƯA tắt (kế hoạch tắt nằm ở Phase D
@@ -970,12 +976,12 @@ dữ liệu, output đổ vào migration Phase B — làm sau là phải migrate
      quản lý Phượt qua Google Sheet import) nên phải gỡ tiếp bên đó để cả
      solution build sạch (không có Ad trong CMS, chỉ Phuot). Tiện thể sửa 1
      bug copy-paste có sẵn từ trước lộ ra khi gỡ: `CmsDiChoiThoi.Web/Views/
-     Tour/Index.cshtml` có form search trỏ nhầm `asp-controller="Phuot"` (đáng
+Tour/Index.cshtml` có form search trỏ nhầm `asp-controller="Phuot"` (đáng
      lẽ "Tour") và include nhầm bundle JS `phuotList.js` — sửa cả hai vì nếu
      không sẽ vỡ khi Phuot bị xoá. Build cả `dichoithoi.sln` sạch (0 lỗi), test
      dev server thật: `/map`, `/map/{slug}`, `/update-sitemap`, `/diem-den`,
      trang chủ đều 200. Phát hiện thêm khi test `/blog`: lỗi 500 `Invalid
-     object name 'Post'` — bảng `Post`/`PostDetail` (nội dung blog cũ) CŨNG
+object name 'Post'` — bảng `Post`/`PostDetail` (nội dung blog cũ) CŨNG
      không tồn tại trong `dichoithoi_dev`, CÙNG loại gap script clone như
      Ad/Phuot trước đây, không liên quan tới đợt xoá này — để ngoài phạm vi,
      ghi nhận thêm vào danh sách gap của `pnpm clone:dichoithoi`.
@@ -993,15 +999,15 @@ tương tự trước đó trong phiên này: schema v2 "đã migrate từ trư�
 xong", KHÔNG dùng mục Phase C này nữa.** Giữ lại bảng dưới chỉ để tra cứu
 lịch sử + 2 gap thật còn sót:
 
-| # | Việc | Trạng thái thật (audit 07/2026) |
-|---|---|---|
-| 1 | M4 destination: mirror + generate + review + publisher | ✅ XONG — `publish-destination.usecase.ts` UPSERT thẳng vào `v2.Destination`/`DestinationContent` qua `mssql-site-db.adapter.ts`, có auto-link + cache purge + RelatedJson. |
-| 2 | Affiliate link conversion trước/cùng Hotel/Tour | ✅ XONG — module `affiliate/` đầy đủ, Hotel/Tour upsert gọi `ResolveAffiliateLinkUseCase` khi lưu. |
-| 3 | Hotel+Tour+Product kèm pipeline ảnh (sharp/FTP) + import Google Sheet | ✅ **XONG (07/2026, đợt tự động)** — pipeline ảnh + Sheet import (dry-run/upsert/fallback) VÀ trang web UI paste-link-Sheet cho cả 3 module đều đã build. Xem chi tiết ngay dưới bảng. |
-| 4 | "Viết tay thủ công" (`sourceType=Manual`) trong `ai-content` | ✅ XONG — `create-manual-draft.usecase.ts`, đi qua đủ gate review/publish như bài AI. |
-| 5 | Article: khối động + publisher + auto-link engine DÙNG CHUNG với destination | ✅ **XONG (07/2026, đợt tự động)** — xem chi tiết ngay dưới bảng. |
-| 6 | UI Chủ đề (tag) + Coverage Score | ✅ **XONG (07/2026, đợt tự động)** — xem chi tiết ngay dưới bảng. Flight/Bus vẫn CHƯA XÂY (lý do dưới, spec tự ghi chưa chốt). |
-| 7 | Khối "Việc cần làm" trên hub | ✅ XONG — `dashboard-home.tsx` có block `Card title="Việc cần làm"` + `get-dashboard-summary.usecase.ts`. |
+| #   | Việc                                                                         | Trạng thái thật (audit 07/2026)                                                                                                                                                        |
+| --- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | M4 destination: mirror + generate + review + publisher                       | ✅ XONG — `publish-destination.usecase.ts` UPSERT thẳng vào `v2.Destination`/`DestinationContent` qua `mssql-site-db.adapter.ts`, có auto-link + cache purge + RelatedJson.            |
+| 2   | Affiliate link conversion trước/cùng Hotel/Tour                              | ✅ XONG — module `affiliate/` đầy đủ, Hotel/Tour upsert gọi `ResolveAffiliateLinkUseCase` khi lưu.                                                                                     |
+| 3   | Hotel+Tour+Product kèm pipeline ảnh (sharp/FTP) + import Google Sheet        | ✅ **XONG (07/2026, đợt tự động)** — pipeline ảnh + Sheet import (dry-run/upsert/fallback) VÀ trang web UI paste-link-Sheet cho cả 3 module đều đã build. Xem chi tiết ngay dưới bảng. |
+| 4   | "Viết tay thủ công" (`sourceType=Manual`) trong `ai-content`                 | ✅ XONG — `create-manual-draft.usecase.ts`, đi qua đủ gate review/publish như bài AI.                                                                                                  |
+| 5   | Article: khối động + publisher + auto-link engine DÙNG CHUNG với destination | ✅ **XONG (07/2026, đợt tự động)** — xem chi tiết ngay dưới bảng.                                                                                                                      |
+| 6   | UI Chủ đề (tag) + Coverage Score                                             | ✅ **XONG (07/2026, đợt tự động)** — xem chi tiết ngay dưới bảng. Flight/Bus vẫn CHƯA XÂY (lý do dưới, spec tự ghi chưa chốt).                                                         |
+| 7   | Khối "Việc cần làm" trên hub                                                 | ✅ XONG — `dashboard-home.tsx` có block `Card title="Việc cần làm"` + `get-dashboard-summary.usecase.ts`.                                                                              |
 
 **✅ Mục 5 — Auto-link Article (07/2026, tự động, không cần hỏi lại):**
 `shared/text/auto-link.ts` (dọn từ `destination/domain/auto-link.ts`, dùng
@@ -1015,6 +1021,7 @@ Build + test sạch (`article-auto-link.service.spec.ts` — 2 case: có link, b
 qua điểm chưa publish).
 
 **🔄 Mục 3 — Pipeline ảnh Hotel/Tour/Product (07/2026, tự động — nửa đầu xong):**
+
 - ✅ Đã xây: pipeline ảnh dùng chung (`shared/media/` — dọn từ `destination/`:
   `image-processor.port.ts`/`SharpImageProcessor`, `image-uploader.port.ts`/
   `FtpsImageUploader` nay nhận thêm `baseDirEnvVar` để mỗi module dùng 1 thư
@@ -1029,7 +1036,7 @@ qua điểm chưa publish).
   `1782000000000-HotelTourProductImageSourceUrls.ts`). Ingest lỗi → log cảnh
   báo + giữ tạm URL ngoài, KHÔNG chặn lưu bản ghi (never-block, đúng tinh
   thần "MVP trước" của hotel-spec/tour-spec §7). Test: `upsert-hotel.usecase.
-  spec.ts` (3 case: ingest thành công/bỏ qua path nội bộ/ingest lỗi vẫn lưu
+spec.ts` (3 case: ingest thành công/bỏ qua path nội bộ/ingest lỗi vẫn lưu
   được) + `ingest-external-image.usecase.spec.ts` (4 case biên: HTTP lỗi,
   sai content-type, ảnh quá nhỏ, thành công). Toàn bộ 266 test + typecheck
   API/web sạch.
@@ -1051,17 +1058,17 @@ qua điểm chưa publish).
   - `ImportHotelsUseCase`/`ImportToursUseCase`/`ImportProductsUseCase` +
     contracts (`import{Hotels,Tours,Products}RequestSchema`/`...ResultSchema`
     trong `packages/contracts`) + endpoint `POST /hotels|tours|products/
-    {fetch-sheet,import}` — cùng hình dạng response với destination (dry-run
+{fetch-sheet,import}` — cùng hình dạng response với destination (dry-run
     trả báo cáo create/update/needsConfirm/lỗi từng dòng, `dryRun=false` mới
     ghi thật; dòng `needsConfirm` CHỈ ghi khi client gửi kèm
     `confirmMergeIds[sourceUrl] = matchedId` đúng — không bao giờ âm thầm ghi
     đè bản ghi nhập tay trước đó). Test: `import-hotels.usecase.spec.ts` (4
     case) + `import-tours.usecase.spec.ts` (2 case) + `import-products.
-    usecase.spec.ts` (2 case) + `import-matcher.spec.ts` (4 case). Toàn bộ
+usecase.spec.ts` (2 case) + `import-matcher.spec.ts` (4 case). Toàn bộ
     278 test + typecheck API/web sạch.
 - ✅ **XONG (07/2026, cùng đợt tự động) — trang web UI paste-link-Sheet cho cả
   3 module**: `apps/web/src/app/dichoithoi/{khach-san,tour,san-pham}/nhap/
-  page.tsx` — dán link Google Sheet (hoặc CSV/JSON), gọi `POST .../fetch-sheet`
+page.tsx` — dán link Google Sheet (hoặc CSV/JSON), gọi `POST .../fetch-sheet`
   rồi `POST .../import` với `dryRun:true` để xem trước từng dòng (badge Tạo
   mới/Cập nhật/Cần xác nhận + lý do), tick xác nhận riêng cho dòng
   `needsConfirm` (Hotel/Tour) rồi mới `dryRun:false` ghi thật — không bao giờ
@@ -1077,6 +1084,7 @@ Xây đủ 3 bước destination-spec §2.4, đọc/ghi thẳng SQL Server (bả
 `v2.DestinationTag`/`DestinationTagMap` đã tạo + seed 7 tag từ trước qua
 `phase-b-01-seed-tags.sql` — không cần mirror Postgres riêng, giống pattern
 taxonomy group/type/province).
+
 - Contracts: `packages/contracts/src/dichoithoi/destination-tag.ts` (tag,
   suggestion, apply, reverse-check, generate/update description).
 - `dichoithoi-site-db.port.ts` + `mssql-site-db.adapter.ts` thêm
@@ -1115,6 +1123,7 @@ taxonomy group/type/province).
 §2.2.2 tự ghi "trọng số/ngưỡng chốt lúc build, không chốt cứng ở spec" — nên
 xây thẳng thay vì hỏi lại. Phạm vi ĐÃ làm (dùng đúng dữ liệu có thật trong
 code, không bịa schema mới):
+
 - Domain thuần `destination/domain/coverage-score.ts` (`computeCoverageScore`)
   — 10 mục checklist chung (địa chỉ/toạ độ/ảnh/nội dung chính/giờ mở cửa/giá
   vé/FAQ/mẹo thực tế/link vé/chủ đề) + 1 mục riêng tier "flagship" (có điểm
@@ -1146,6 +1155,7 @@ muốn — để nguyên, chờ người dùng xem lại và chốt spec trướ
 tiếp theo.
 
 **Phase D — Website .NET (routes/views mới):**
+
 1. Route/view: ~~Article `/blog/`~~, `/chu-de/{slug}`, khối Flight/Bus trên
    detail — ưu tiên theo SEO ROI (landing loại/tỉnh đã build Phase 18).
    **Sửa lại (07/2026)**: mục "`/blog/`" trong dòng này bị SAI — website đã có
@@ -1206,26 +1216,26 @@ người dùng sẽ RA LỆNH khi tới lúc, không tự khởi động). Mục
 mẫu đầy đủ mọi khối đã thiết kế (article gắn topic, vé xe/máy bay,
 hotel/tour/product, tag chủ đề, coverage score đạt ngưỡng...) để duyệt chất
 lượng trước khi scale. Claude làm giúp, KHÔNG cần người dùng tự tạo/tự viết:
-    a. **Rà + tự tạo dữ liệu còn thiếu** cho 2 điểm: chạy checklist Coverage
-       Score (destination-spec §2.2.2), field nào thiếu thì Claude tự điền
-       bằng suy luận + tra cứu thật — field SỰ THẬT (giá vé, giờ mở cửa,
-       địa chỉ, SĐT) phải lấy từ nguồn thật (website chính thức qua cơ chế
-       §2.2.1, Google Maps), KHÔNG bịa; field nội dung (mô tả, ghi chú tham
-       khảo) dùng kiến thức thật của Claude. Mọi thứ ghi ở trạng thái
-       nháp/chờ duyệt.
-    b. **Viết sẵn bộ bài cẩm nang mặc định** cho 2 điểm (đủ các topic
-       article-spec §8.1: lịch trình, ẩm thực, quà lưu niệm, buổi tối,
-       poi-guide...) qua pipeline ai-content → dừng ở trạng thái CHỜ DUYỆT,
-       người dùng chỉ việc review/sửa/approve — không tự publish.
-    c. **Ảnh còn thiếu: tự tìm → tải → cập nhật**, NHƯNG chỉ từ nguồn giấy
-       phép an toàn (Wikimedia Commons, Flickr CC, Unsplash... — ghi rõ
-       nguồn + license vào caption/credit `destination_images` §14.4);
-       KHÔNG lấy ảnh bản quyền báo chí/blog cá nhân. Ảnh nào không tìm được
-       nguồn sạch → liệt kê ra cho người dùng tự chụp/tự tạo. Ảnh vào DB ở
-       trạng thái chờ duyệt trước khi lên web.
-    d. Kết thúc pilot: báo cáo 2 trang đạt bao nhiêu % coverage, mục nào
-       còn chờ người dùng quyết — làm chuẩn mẫu (playbook) để scale các
-       điểm còn lại.
+a. **Rà + tự tạo dữ liệu còn thiếu** cho 2 điểm: chạy checklist Coverage
+Score (destination-spec §2.2.2), field nào thiếu thì Claude tự điền
+bằng suy luận + tra cứu thật — field SỰ THẬT (giá vé, giờ mở cửa,
+địa chỉ, SĐT) phải lấy từ nguồn thật (website chính thức qua cơ chế
+§2.2.1, Google Maps), KHÔNG bịa; field nội dung (mô tả, ghi chú tham
+khảo) dùng kiến thức thật của Claude. Mọi thứ ghi ở trạng thái
+nháp/chờ duyệt.
+b. **Viết sẵn bộ bài cẩm nang mặc định** cho 2 điểm (đủ các topic
+article-spec §8.1: lịch trình, ẩm thực, quà lưu niệm, buổi tối,
+poi-guide...) qua pipeline ai-content → dừng ở trạng thái CHỜ DUYỆT,
+người dùng chỉ việc review/sửa/approve — không tự publish.
+c. **Ảnh còn thiếu: tự tìm → tải → cập nhật**, NHƯNG chỉ từ nguồn giấy
+phép an toàn (Wikimedia Commons, Flickr CC, Unsplash... — ghi rõ
+nguồn + license vào caption/credit `destination_images` §14.4);
+KHÔNG lấy ảnh bản quyền báo chí/blog cá nhân. Ảnh nào không tìm được
+nguồn sạch → liệt kê ra cho người dùng tự chụp/tự tạo. Ảnh vào DB ở
+trạng thái chờ duyệt trước khi lên web.
+d. Kết thúc pilot: báo cáo 2 trang đạt bao nhiêu % coverage, mục nào
+còn chờ người dùng quyết — làm chuẩn mẫu (playbook) để scale các
+điểm còn lại.
 
 **Phase F — Scale sau pilot**: trước khi nhân rộng playbook ra các điểm còn
 lại, build **gate "originality"** (mục 0 đầu tài liệu — so trùng lặp nội bộ
@@ -1245,6 +1255,7 @@ FAQ + JSON-LD FAQPage~~ (✅ đã có, `SchemaUtil.cs`/`Detail.cshtml`); ~~rende
 `Detail.cshtml` render thẳng `_HotelCardList.cshtml`/`_TourCardList.cshtml`
 qua `Html.PartialAsync`, không phải AJAX). → **Toàn bộ mục "Cao" của §7 đã
 xong, không còn gì mở ở mức ưu tiên này.**
+
 - Trung bình: ~~gallery ảnh (`GalleryJson` + bảng `destination_images`)~~
   (✅ đã có, `Detail.cshtml` đọc `extras.Gallery` cho hero + lightbox);
   ~~`rel=sponsored`~~ (✅ đã có trên mọi link affiliate — hotel/tour/vé/sản
@@ -1427,7 +1438,7 @@ xong, không còn gì mở ở mức ưu tiên này.**
   cần tên điểm đến thật) — sửa lại đúng yêu cầu + truyền kèm danh sách điểm
   đến đã gán tag (fetchDestinationsForTag) để AI không bịa tên.
 - .cshtml wrapper ngoài của `DescriptionHtml` đổi từ `<p>` sang `<div
-  class="rich-content">` (Type: `TypeList.cshtml`, Tag: `Topic/Detail.cshtml`)
+class="rich-content">` (Type: `TypeList.cshtml`, Tag: `Topic/Detail.cshtml`)
   — nội dung giờ tự chứa nhiều `<p>`/`<ul>` riêng, lồng trong `<p>` ngoài là
   sai HTML. CSS `.rich-content > * + * { margin-top }` đã có sẵn, không cần
   thêm CSS mới cho khoảng cách đoạn/list.
@@ -1496,15 +1507,15 @@ xong, không còn gì mở ở mức ưu tiên này.**
      domain layer (`destination-mirror.ts`) dùng CHUNG giữa 2 use-case, tránh
      drift lần 3. Verify qua log prompt thật.
   6. Trang facet lọc `noindex` (`/diem-den?tinh=...`) vẫn phát `<link
-     rel="canonical">` trỏ về `/diem-den` (không filter) — tín hiệu mâu thuẫn.
+rel="canonical">` trỏ về `/diem-den` (không filter) — tín hiệu mâu thuẫn.
      Sửa `_Layout.cshtml`: trang noindex không tự đặt Canonical thì BỎ HẲN thẻ
      canonical thay vì tự fallback về URL hiện tại.
   7. `robots.txt` thiếu dòng `Sitemap:` (tiện thể bỏ luôn BOM đầu file).
-  ⚠️ **Sự cố phụ khi sửa**: 2 lần vô tình làm gián đoạn `dotnet watch` của
-  DiChoiThoi.Web (lần 1: kill nhầm process cũ không tự restart; lần 2: 2 lần
-  sửa liên tiếp cùng `_Layout.cshtml` làm hot-reload corrupt state, phải
-  restart cứng) — cả 2 lần đã tự phát hiện + khôi phục qua `run-watch.ps1`,
-  không mất code, chỉ gián đoạn tạm thời quá trình verify.
+     ⚠️ **Sự cố phụ khi sửa**: 2 lần vô tình làm gián đoạn `dotnet watch` của
+     DiChoiThoi.Web (lần 1: kill nhầm process cũ không tự restart; lần 2: 2 lần
+     sửa liên tiếp cùng `_Layout.cshtml` làm hot-reload corrupt state, phải
+     restart cứng) — cả 2 lần đã tự phát hiện + khôi phục qua `run-watch.ps1`,
+     không mất code, chỉ gián đoạn tạm thời quá trình verify.
 
 - ✅ **6 việc SEO/security nhỏ còn treo — ĐÃ BUILD + verify sống 25/07/2026**
   (repo dichoithoi, tiếp nối đợt audit ở trên):
@@ -1525,8 +1536,8 @@ xong, không còn gì mở ở mức ưu tiên này.**
      trong schema — không sửa được nếu không thêm migration DB (ghi nhận,
      chưa làm).
   4. **`/vung/{slug}` thiếu JSON-LD** — thêm `BreadcrumbUtils.CreateRegionBreadcrumb`
-     + `SchemaUtil.CreateDestinationListJsonLD` (tái dùng đúng pattern
-     `ProvinceController`). Verify sống: có cả `BreadcrumbList` lẫn `ItemList`.
+     - `SchemaUtil.CreateDestinationListJsonLD` (tái dùng đúng pattern
+       `ProvinceController`). Verify sống: có cả `BreadcrumbList` lẫn `ItemList`.
   5. **Sanitize HTML cho `Html.Raw`** — thêm package `HtmlSanitizer` 9.0.967
      (bản mới nhất, tránh bản 8.1.870 có CVE mức trung bình) + util
      `HtmlContentSanitizer.Sanitize()` (cấu hình mặc định — chặn
@@ -1535,7 +1546,7 @@ xong, không còn gì mở ở mức ưu tiên này.**
      `DestinationController.Content/Food/Transport/Tip/Hotel`,
      `DestinationTypeController.Type.DescriptionHtml`,
      `TopicController.Tag.DescriptionHtml`, `SimController.TopContent/
-     TopGoiCuocContent/GoiCuocs[].Content/NhaMangs[].Content`. Tiện thể phát
+TopGoiCuocContent/GoiCuocs[].Content/NhaMangs[].Content`. Tiện thể phát
      hiện + sửa thêm: `_Layout.cshtml` dùng `Html.Raw` cho `<title>`/meta
      description (field text thuần, không nên bypass encode) — đổi về Razor
      encode bình thường. Verify sống: nội dung rich-content vẫn hiển thị
@@ -1545,10 +1556,10 @@ xong, không còn gì mở ở mức ưu tiên này.**
      `CacheVaryByRules.QueryKeys = Array.Empty<string>()` tường minh (trang
      chi tiết không đọc query param nào, tránh phân mảnh cache vì link có
      UTM/tracking param).
-  Build sạch 0 lỗi (`dotnet build`), verify qua trang chạy `dotnet watch`
-  thật (không chỉ đọc code) cho cả 6 mục. Mật khẩu DB production bị commit
-  plaintext trong `appsettings.Release.json` VẪN CÒN MỞ — cần người dùng tự
-  đổi, không phải việc code sửa được.
+     Build sạch 0 lỗi (`dotnet build`), verify qua trang chạy `dotnet watch`
+     thật (không chỉ đọc code) cho cả 6 mục. Mật khẩu DB production bị commit
+     plaintext trong `appsettings.Release.json` VẪN CÒN MỞ — cần người dùng tự
+     đổi, không phải việc code sửa được.
 
 - ✅ **Trang `/content` — bỏ tạo bài trực tiếp, thêm filter — ĐÃ BUILD
   (25/07/2026)**:
@@ -1568,15 +1579,15 @@ xong, không còn gì mở ở mức ưu tiên này.**
   (25/07/2026)**: thêm link `/content/{activeContentJobId}` cạnh dòng trạng
   thái (`[slug]/page.tsx`). Verify: trang `/content/[id]` load 200 cho job
   thật của `dalat-fairytale-land`.
-- ✅ **Cho phép gán Tag/Type/xem quan hệ cho điểm đến CHƯA publish — ĐÃ BUILD
-  + verify sống 26/07/2026** (phát hiện qua cụm "Đạ Tẻh" mới tạo, siteId=null):
-  Tag Kanban, Type Kanban, gợi ý+xem trước prompt AI, list tổng trang Chủ đề,
-  rà soát ngược, trang chi tiết điểm đến (badge Tag/Type), tab "Quan hệ" —
-  tất cả trước đây chỉ đọc SQL Server (`WHERE Status=1`) nên bỏ sót/hiện sai
-  điểm draft. Gán Tag/Type cho điểm draft giờ lưu tạm vào mirror Postgres
-  (cột `tags`/`types`), tự động đẩy sang `DestinationTagMap`/`TypeMap` thật
-  khi publish lần đầu. Xem chi tiết code tại commit `8606009`.
-  - ✅ **2/3 việc phụ còn lại — ĐÃ BUILD + verify sống 26/07/2026**:
+- ✅ \*\*Cho phép gán Tag/Type/xem quan hệ cho điểm đến CHƯA publish — ĐÃ BUILD
+  - verify sống 26/07/2026\*\* (phát hiện qua cụm "Đạ Tẻh" mới tạo, siteId=null):
+    Tag Kanban, Type Kanban, gợi ý+xem trước prompt AI, list tổng trang Chủ đề,
+    rà soát ngược, trang chi tiết điểm đến (badge Tag/Type), tab "Quan hệ" —
+    tất cả trước đây chỉ đọc SQL Server (`WHERE Status=1`) nên bỏ sót/hiện sai
+    điểm draft. Gán Tag/Type cho điểm draft giờ lưu tạm vào mirror Postgres
+    (cột `tags`/`types`), tự động đẩy sang `DestinationTagMap`/`TypeMap` thật
+    khi publish lần đầu. Xem chi tiết code tại commit `8606009`.
+  * ✅ **2/3 việc phụ còn lại — ĐÃ BUILD + verify sống 26/07/2026**:
     1. `generate-tag-description.usecase.ts` — prompt AI soạn mô tả
        `/chu-de/{slug}` giờ gồm cả điểm draft đã gán tag qua mirror.tags, để
        AI biết đủ ngữ cảnh khi viết. **Không đổi** `preview-tag-description.usecase.ts`/
@@ -1585,7 +1596,7 @@ xong, không còn gì mở ở mức ưu tiên này.**
        trong mô tả KHÔNG bị biến thành link (đúng, tránh 404).
     2. `get-dichoithoi-dashboard-alerts.usecase.ts` — đếm "chủ đề dưới ngưỡng"
        giờ gồm cả điểm draft gán tag qua mirror, khớp đúng số trang Rà soát ngược.
-  - ❌ **1/3 việc phụ — XÁC NHẬN KHÔNG PHẢI BUG, giữ nguyên**: `manage-taxonomy-content.usecase.ts`
+  * ❌ **1/3 việc phụ — XÁC NHẬN KHÔNG PHẢI BUG, giữ nguyên**: `manage-taxonomy-content.usecase.ts`
     (auto-link mô tả Type/Group/Tỉnh) dùng cùng cơ chế sinh link thật với mục
     1 phần preview/update ở trên — PHẢI giữ published-only để không tạo link
     chết trên trang `/loai`, `/tinh` công khai. Đánh giá "cosmetic gap" trong

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Put, Query } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+} from "@nestjs/common";
 import {
   activatePromptVersionRequestSchema,
   aiProviderKeySchema,
@@ -7,6 +17,7 @@ import {
   createContentJobRequestSchema,
   createManualDraftRequestSchema,
   createPromptVersionRequestSchema,
+  dismissQualityWarningRequestSchema,
   reviewDraftRequestSchema,
   updateAiProviderSettingRequestSchema,
   updateContentJobRequestSchema,
@@ -23,6 +34,8 @@ import {
   type CreateContentJobRequest,
   type CreateContentJobResponse,
   type CreateManualDraftRequest,
+  type DismissQualityWarningRequest,
+  type DismissQualityWarningResponse,
   listContentJobsQuerySchema,
   type ListAiProvidersResponse,
   type ListAiUsageLogsQuery,
@@ -51,6 +64,7 @@ import { ListPromptTemplatesUseCase } from "../application/use-cases/list-prompt
 import { GetPromptTemplateUseCase } from "../application/use-cases/get-prompt-template.usecase";
 import { CreatePromptVersionUseCase } from "../application/use-cases/create-prompt-version.usecase";
 import { ActivatePromptVersionUseCase } from "../application/use-cases/activate-prompt-version.usecase";
+import { DismissQualityWarningUseCase } from "../application/use-cases/dismiss-quality-warning.usecase";
 import { GetAiUsageSummaryUseCase } from "../application/use-cases/get-ai-usage-summary.usecase";
 import {
   QUALITY_RESULT_REPOSITORY,
@@ -73,22 +87,42 @@ import {
   AI_PROVIDER_SETTINGS,
   type AiProviderSettings,
 } from "../application/ports/ai-provider-settings.port";
-import { AI_USAGE_READER, type AiUsageReader } from "../application/ports/ai-usage-reader.port";
+import {
+  AI_USAGE_READER,
+  type AiUsageReader,
+} from "../application/ports/ai-usage-reader.port";
 import { Inject } from "@nestjs/common";
 
 /**
  * Catalog provider/model cho UI — isConfigured doc tu env, isEnabled doc tu DB.
  * Them provider moi: them entry o day + adapter + registry.
  */
-const PROVIDER_CATALOG: Array<Omit<AiProviderInfo, "isConfigured" | "isEnabled"> & { envKey: string }> = [
+const PROVIDER_CATALOG: Array<
+  Omit<AiProviderInfo, "isConfigured" | "isEnabled"> & { envKey: string }
+> = [
   {
     key: "anthropic",
     displayName: "Anthropic (Claude)",
     envKey: "ANTHROPIC_API_KEY",
     models: [
-      { id: "claude-opus-4-8", displayName: "Claude Opus 4.8", tier: "quality", costNote: "$5/$25 per 1M tokens" },
-      { id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6", tier: "balanced", costNote: "$3/$15 per 1M tokens" },
-      { id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5", tier: "light", costNote: "$1/$5 per 1M tokens" },
+      {
+        id: "claude-opus-4-8",
+        displayName: "Claude Opus 4.8",
+        tier: "quality",
+        costNote: "$5/$25 per 1M tokens",
+      },
+      {
+        id: "claude-sonnet-4-6",
+        displayName: "Claude Sonnet 4.6",
+        tier: "balanced",
+        costNote: "$3/$15 per 1M tokens",
+      },
+      {
+        id: "claude-haiku-4-5",
+        displayName: "Claude Haiku 4.5",
+        tier: "light",
+        costNote: "$1/$5 per 1M tokens",
+      },
     ],
   },
   {
@@ -102,9 +136,24 @@ const PROVIDER_CATALOG: Array<Omit<AiProviderInfo, "isConfigured" | "isEnabled">
     displayName: "Google (Gemini)",
     envKey: "GEMINI_API_KEY",
     models: [
-      { id: "gemini-3.1-pro-preview", displayName: "Gemini 3.1 Pro", tier: "quality", costNote: "$2/$12 per 1M tokens" },
-      { id: "gemini-3.6-flash", displayName: "Gemini 3.6 Flash", tier: "balanced", costNote: "$1.50/$7.50 per 1M tokens" },
-      { id: "gemini-3.1-flash-lite", displayName: "Gemini 3.1 Flash Lite", tier: "light", costNote: "$0.25/$1.50 per 1M tokens" },
+      {
+        id: "gemini-3.1-pro-preview",
+        displayName: "Gemini 3.1 Pro",
+        tier: "quality",
+        costNote: "$2/$12 per 1M tokens",
+      },
+      {
+        id: "gemini-3.6-flash",
+        displayName: "Gemini 3.6 Flash",
+        tier: "balanced",
+        costNote: "$1.50/$7.50 per 1M tokens",
+      },
+      {
+        id: "gemini-3.1-flash-lite",
+        displayName: "Gemini 3.1 Flash Lite",
+        tier: "light",
+        costNote: "$0.25/$1.50 per 1M tokens",
+      },
     ],
   },
 ];
@@ -126,12 +175,18 @@ export class ContentController {
     private readonly getPromptTemplate: GetPromptTemplateUseCase,
     private readonly createPromptVersion: CreatePromptVersionUseCase,
     private readonly activatePromptVersion: ActivatePromptVersionUseCase,
+    private readonly dismissQualityWarning: DismissQualityWarningUseCase,
     private readonly getAiUsageSummary: GetAiUsageSummaryUseCase,
-    @Inject(QUALITY_RESULT_REPOSITORY) private readonly qualityResults: QualityResultRepository,
-    @Inject(REVIEW_RECORD_REPOSITORY) private readonly reviewRecords: ReviewRecordRepository,
-    @Inject(CONTENT_JOB_REPOSITORY) private readonly repository: ContentJobRepository,
-    @Inject(CONTENT_DRAFT_REPOSITORY) private readonly drafts: ContentDraftRepository,
-    @Inject(AI_PROVIDER_SETTINGS) private readonly providerSettings: AiProviderSettings,
+    @Inject(QUALITY_RESULT_REPOSITORY)
+    private readonly qualityResults: QualityResultRepository,
+    @Inject(REVIEW_RECORD_REPOSITORY)
+    private readonly reviewRecords: ReviewRecordRepository,
+    @Inject(CONTENT_JOB_REPOSITORY)
+    private readonly repository: ContentJobRepository,
+    @Inject(CONTENT_DRAFT_REPOSITORY)
+    private readonly drafts: ContentDraftRepository,
+    @Inject(AI_PROVIDER_SETTINGS)
+    private readonly providerSettings: AiProviderSettings,
     @Inject(AI_USAGE_READER) private readonly usageReader: AiUsageReader,
   ) {}
 
@@ -141,6 +196,15 @@ export class ContentController {
     request: CreateContentJobRequest,
   ): Promise<CreateContentJobResponse> {
     return this.createContentJob.execute(request);
+  }
+
+  /** Ghi audit ly do dismiss warning; khong doi ket qua gate thanh pass. */
+  @Post("quality-warnings/dismiss")
+  dismissWarning(
+    @Body(new ZodValidationPipe(dismissQualityWarningRequestSchema))
+    request: DismissQualityWarningRequest,
+  ): Promise<DismissQualityWarningResponse> {
+    return this.dismissQualityWarning.execute(request);
   }
 
   /** Tao draft VIET TAY, khong qua AI (dichoithoi-article-spec.md §1.1) */
@@ -154,7 +218,9 @@ export class ContentController {
 
   /** Retry job Failed / generate lai job DraftReady — trang thai khac bi 422 (state machine). */
   @Post("jobs/:id/retry")
-  async retry(@Param("id") id: string): Promise<{ jobId: string; status: string }> {
+  async retry(
+    @Param("id") id: string,
+  ): Promise<{ jobId: string; status: string }> {
     return this.retryContentJob.execute(id);
   }
 
@@ -164,7 +230,9 @@ export class ContentController {
    * Sau khi huy co the bam Retry lai binh thuong.
    */
   @Post("jobs/:id/cancel")
-  async cancel(@Param("id") id: string): Promise<{ jobId: string; status: string }> {
+  async cancel(
+    @Param("id") id: string,
+  ): Promise<{ jobId: string; status: string }> {
     return this.cancelContentJob.execute(id);
   }
 
@@ -176,7 +244,8 @@ export class ContentController {
   @Patch("jobs/:id")
   async edit(
     @Param("id") id: string,
-    @Body(new ZodValidationPipe(updateContentJobRequestSchema)) request: UpdateContentJobRequest,
+    @Body(new ZodValidationPipe(updateContentJobRequestSchema))
+    request: UpdateContentJobRequest,
   ): Promise<ContentJobDto> {
     const job = await this.editContentJob.execute(id, request);
     return this.toDto(job);
@@ -185,7 +254,8 @@ export class ContentController {
   /** Filter that o backend (khong loc phia client) — dung cho man /content quan ly (backlog 25/07/2026). */
   @Get("jobs")
   async list(
-    @Query(new ZodValidationPipe(listContentJobsQuerySchema)) query: ListContentJobsQuery,
+    @Query(new ZodValidationPipe(listContentJobsQuerySchema))
+    query: ListContentJobsQuery,
   ): Promise<ContentJobDto[]> {
     const jobs = await this.repository.findAll(query);
     return jobs.map((job) => this.toDto(job));
@@ -208,7 +278,9 @@ export class ContentController {
 
   /** Gui draft vao review: DraftReady -> InReview. */
   @Post("jobs/:id/submit-review")
-  async submitReview(@Param("id") id: string): Promise<{ jobId: string; status: string }> {
+  async submitReview(
+    @Param("id") id: string,
+  ): Promise<{ jobId: string; status: string }> {
     return this.submitForReview.execute(id);
   }
 
@@ -242,7 +314,9 @@ export class ContentController {
 
   /** Chay 4 quality gates va luu ket qua — spec §7.4. */
   @Post("drafts/:draftId/quality-checks")
-  async runChecks(@Param("draftId") draftId: string): Promise<RunQualityChecksResponse> {
+  async runChecks(
+    @Param("draftId") draftId: string,
+  ): Promise<RunQualityChecksResponse> {
     return this.runQualityChecks.execute(draftId);
   }
 
@@ -250,14 +324,19 @@ export class ContentController {
   @Get("drafts/:draftId/quality-checks")
   async getChecks(@Param("draftId") draftId: string) {
     const checks = await this.qualityResults.findByDraftId(draftId);
-    return { draftId, checks, allPassed: checks.length > 0 && checks.every((c) => c.passed) };
+    return {
+      draftId,
+      checks,
+      allPassed: checks.length > 0 && checks.every((c) => c.passed),
+    };
   }
 
   /** Review action: Approve (chan khi gate fail) / RequestChange / Reject (can ly do). */
   @Post("drafts/:draftId/review")
   async review(
     @Param("draftId") draftId: string,
-    @Body(new ZodValidationPipe(reviewDraftRequestSchema)) request: ReviewDraftRequest,
+    @Body(new ZodValidationPipe(reviewDraftRequestSchema))
+    request: ReviewDraftRequest,
   ): Promise<{ newStatus: string }> {
     return this.reviewDraft.execute(draftId, request);
   }
@@ -266,14 +345,17 @@ export class ContentController {
   @Put("drafts/:draftId")
   async update(
     @Param("draftId") draftId: string,
-    @Body(new ZodValidationPipe(updateDraftRequestSchema)) request: UpdateDraftRequest,
+    @Body(new ZodValidationPipe(updateDraftRequestSchema))
+    request: UpdateDraftRequest,
   ): Promise<DraftRecord> {
     return this.updateDraft.execute(draftId, request);
   }
 
   /** Export HTML sach (sanitize chong XSS) tu draft markdown. */
   @Get("drafts/:draftId/html")
-  async exportHtml(@Param("draftId") draftId: string): Promise<{ draftId: string; html: string }> {
+  async exportHtml(
+    @Param("draftId") draftId: string,
+  ): Promise<{ draftId: string; html: string }> {
     return this.exportDraftHtml.execute(draftId);
   }
 
@@ -283,7 +365,9 @@ export class ContentController {
    */
   @Get("ai-providers")
   async listAiProviders(): Promise<ListAiProvidersResponse> {
-    const enabledMap = await this.providerSettings.getAll(PROVIDER_CATALOG.map((p) => p.key));
+    const enabledMap = await this.providerSettings.getAll(
+      PROVIDER_CATALOG.map((p) => p.key),
+    );
     return {
       providers: PROVIDER_CATALOG.map(({ envKey, ...provider }) => ({
         ...provider,
@@ -296,7 +380,8 @@ export class ContentController {
   /** Tong hop chi phi AI (ai_usage_logs) cho man /usage — mac dinh 30 ngay gan nhat. */
   @Get("ai-usage/summary")
   aiUsageSummary(
-    @Query(new ZodValidationPipe(aiUsageSummaryQuerySchema)) query: AiUsageSummaryQuery,
+    @Query(new ZodValidationPipe(aiUsageSummaryQuerySchema))
+    query: AiUsageSummaryQuery,
   ): Promise<AiUsageSummaryResponse> {
     return this.getAiUsageSummary.execute(query);
   }
@@ -310,16 +395,19 @@ export class ContentController {
    */
   @Get("ai-usage/logs")
   async listAiUsageLogs(
-    @Query(new ZodValidationPipe(listAiUsageLogsQuerySchema)) query: ListAiUsageLogsQuery,
+    @Query(new ZodValidationPipe(listAiUsageLogsQuerySchema))
+    query: ListAiUsageLogsQuery,
   ): Promise<ListAiUsageLogsResponse> {
-    const { rows, total, operations } = await this.usageReader.listRecent(query);
+    const { rows, total, operations } =
+      await this.usageReader.listRecent(query);
     return { rows, total, page: query.page, limit: query.limit, operations };
   }
 
   /** Bat/tat provider tu Settings page. */
   @Patch("ai-providers/:key")
   async updateAiProviderSetting(
-    @Param("key", new ZodValidationPipe(aiProviderKeySchema)) key: AiProviderKey,
+    @Param("key", new ZodValidationPipe(aiProviderKeySchema))
+    key: AiProviderKey,
     @Body(new ZodValidationPipe(updateAiProviderSettingRequestSchema))
     request: UpdateAiProviderSettingRequest,
   ): Promise<{ key: AiProviderKey; isEnabled: boolean }> {
@@ -341,7 +429,7 @@ export class ContentController {
     return this.getPromptTemplate.execute(key);
   }
 
-  /** Luu version moi (= active luon). Tra ve canh bao placeholder la neu co. */
+  /** Luu candidate inactive. Reviewer phai xem diff va kich hoat bang endpoint rieng. */
   @Post("prompt-templates/:key/versions")
   createPromptVersionEndpoint(
     @Param("key") key: string,
@@ -358,10 +446,16 @@ export class ContentController {
     @Body(new ZodValidationPipe(activatePromptVersionRequestSchema))
     request: ActivatePromptVersionRequest,
   ): Promise<{ activeVersion: number }> {
-    return this.activatePromptVersion.execute(key, request.version);
+    return this.activatePromptVersion.execute(
+      key,
+      request.version,
+      request.expectedActiveVersion,
+    );
   }
 
-  private toDto(job: import("../domain/content-job").ContentJob): ContentJobDto {
+  private toDto(
+    job: import("../domain/content-job").ContentJob,
+  ): ContentJobDto {
     const s = job.toSnapshot();
     return {
       id: s.id,

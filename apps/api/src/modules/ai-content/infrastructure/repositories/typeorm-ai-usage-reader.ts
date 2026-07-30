@@ -21,8 +21,12 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
   ) {}
 
   async summarize(from: Date, toExclusive: Date): Promise<AiUsageSummaryData> {
-    const range = (qb: ReturnType<Repository<AiUsageLogEntity>["createQueryBuilder"]>) =>
-      qb.where("u.created_at >= :from", { from }).andWhere("u.created_at < :to", { to: toExclusive });
+    const range = (
+      qb: ReturnType<Repository<AiUsageLogEntity>["createQueryBuilder"]>,
+    ) =>
+      qb
+        .where("u.created_at >= :from", { from })
+        .andWhere("u.created_at < :to", { to: toExclusive });
 
     const totalsRow = await range(this.repo.createQueryBuilder("u"))
       .select("COUNT(*)", "calls")
@@ -47,7 +51,7 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
       .addSelect("COALESCE(SUM(u.cost_usd),0)", "costUsd")
       .groupBy("u.provider")
       .addGroupBy("u.model")
-      .orderBy("\"costUsd\"", "DESC")
+      .orderBy('"costUsd"', "DESC")
       .getRawMany<Record<string, string>>();
 
     const byOperationRows = await range(this.repo.createQueryBuilder("u"))
@@ -55,7 +59,7 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
       .addSelect("COUNT(*)", "calls")
       .addSelect("COALESCE(SUM(u.cost_usd),0)", "costUsd")
       .groupBy("u.operation")
-      .orderBy("\"costUsd\"", "DESC")
+      .orderBy('"costUsd"', "DESC")
       .getRawMany<Record<string, string>>();
 
     const dailyRows = await range(this.repo.createQueryBuilder("u"))
@@ -96,7 +100,10 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
   }
 
   async listByJobId(jobId: string): Promise<AiUsageLogEntry[]> {
-    const rows = await this.repo.find({ where: { jobId }, order: { createdAt: "ASC" } });
+    const rows = await this.repo.find({
+      where: { jobId },
+      order: { createdAt: "ASC" },
+    });
     return rows.map((r) => ({
       id: r.id,
       operation: r.operation,
@@ -108,6 +115,10 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
       latencyMs: r.latencyMs,
       promptText: r.promptText,
       responseText: r.responseText,
+      promptKey: r.promptKey,
+      promptVersion: r.promptVersion,
+      promptSource: r.promptSource as "db" | "default" | null,
+      sourceContextHash: r.sourceContextHash,
       createdAt: r.createdAt.toISOString(),
     }));
   }
@@ -116,9 +127,14 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
     filter: ListAiUsageLogsFilter,
   ): Promise<{ rows: AiUsageLogRow[]; total: number; operations: string[] }> {
     let qb = this.repo.createQueryBuilder("u").orderBy("u.created_at", "DESC");
-    if (filter.provider) qb = qb.andWhere("u.provider = :provider", { provider: filter.provider });
-    if (filter.operation) qb = qb.andWhere("u.operation = :operation", { operation: filter.operation });
-    if (filter.from) qb = qb.andWhere("u.created_at >= :from", { from: filter.from });
+    if (filter.provider)
+      qb = qb.andWhere("u.provider = :provider", { provider: filter.provider });
+    if (filter.operation)
+      qb = qb.andWhere("u.operation = :operation", {
+        operation: filter.operation,
+      });
+    if (filter.from)
+      qb = qb.andWhere("u.created_at >= :from", { from: filter.from });
     if (filter.to) qb = qb.andWhere("u.created_at < :to", { to: filter.to });
 
     const [entities, total] = await qb
@@ -145,6 +161,10 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
         latencyMs: r.latencyMs,
         promptText: r.promptText,
         responseText: r.responseText,
+        promptKey: r.promptKey,
+        promptVersion: r.promptVersion,
+        promptSource: r.promptSource as "db" | "default" | null,
+        sourceContextHash: r.sourceContextHash,
         createdAt: r.createdAt.toISOString(),
       })),
       total,

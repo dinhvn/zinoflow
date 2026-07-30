@@ -44,6 +44,28 @@ export class AiUsageLogEntity {
   @Column({ name: "response_text", type: "text", nullable: true })
   responseText!: string | null;
 
+  @Column({ name: "prompt_key", type: "varchar", length: 100, nullable: true })
+  promptKey!: string | null;
+
+  @Column({ name: "prompt_version", type: "int", nullable: true })
+  promptVersion!: number | null;
+
+  @Column({
+    name: "prompt_source",
+    type: "varchar",
+    length: 16,
+    nullable: true,
+  })
+  promptSource!: string | null;
+
+  @Column({
+    name: "source_context_hash",
+    type: "varchar",
+    length: 64,
+    nullable: true,
+  })
+  sourceContextHash!: string | null;
+
   @Index()
   @Column({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;

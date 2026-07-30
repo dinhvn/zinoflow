@@ -31,6 +31,13 @@ export interface StructuredGenerationRequest {
   system: string;
   prompt: string;
   maxTokens: number;
+  /** Trace rollout; provider bo qua, usage recorder persist de audit output. */
+  promptTrace?: {
+    key: string;
+    version: number | null;
+    source: "db" | "default";
+    sourceContextHash: string | null;
+  };
   vars: Readonly<Record<string, unknown>>;
   /**
    * CHI Gemini doc field nay — Anthropic (Opus 4.8) cam truyen temperature/top_p/

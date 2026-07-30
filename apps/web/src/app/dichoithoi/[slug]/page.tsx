@@ -35,6 +35,7 @@ import {
   type RelatedSpotlightItem,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
+import { QualityWarningDismiss } from "@/features/quality-warning-dismiss";
 import {
   DestinationMetadataForm,
   type DestinationMetaValues,
@@ -77,7 +78,14 @@ function emptyDraftArticle(name: string): DestinationArticle {
   return {
     title: name,
     intro: "",
-    quickFacts: { openingTime: "", ticketPrice: "", transport: "", food: "", hotel: "", tip: "" },
+    quickFacts: {
+      openingTime: "",
+      ticketPrice: "",
+      transport: "",
+      food: "",
+      hotel: "",
+      tip: "",
+    },
     faq: [],
     metadata: {
       name,
@@ -106,22 +114,32 @@ function normalizeDraftArticle(raw: unknown, name: string): DestinationArticle {
   if (!raw || typeof raw !== "object") return empty;
   const r = raw as Partial<DestinationArticle>;
 
-  const rawSections: unknown[] = Array.isArray(r.sections) ? (r.sections as unknown[]) : [];
+  const rawSections: unknown[] = Array.isArray(r.sections)
+    ? (r.sections as unknown[])
+    : [];
   const isRecord = (s: unknown): s is Record<string, unknown> =>
     Boolean(s) && typeof s === "object";
   // Bai cu (truoc pivot blockKey) khong gan blockKey cho section nao — neu match
   // theo blockKey thi TOAN BO noi dung that se "bien mat" khoi editor (hien 6 o
   // rong) du van con nguyen o BE, rat de bi ghi de mat khi bam Luu. Fallback:
   // khong section nao co blockKey -> gan theo THU TU vi tri (index) thay vi bo trong.
-  const hasAnyBlockKey = rawSections.some((s) => isRecord(s) && typeof s.blockKey === "string");
+  const hasAnyBlockKey = rawSections.some(
+    (s) => isRecord(s) && typeof s.blockKey === "string",
+  );
   const sections = DESTINATION_SECTION_ORDER.map((blockKey, index) => {
     const existing = hasAnyBlockKey
-      ? rawSections.find((s): s is Record<string, unknown> => isRecord(s) && s.blockKey === blockKey)
+      ? rawSections.find(
+          (s): s is Record<string, unknown> =>
+            isRecord(s) && s.blockKey === blockKey,
+        )
       : (rawSections[index] as Record<string, unknown> | undefined);
     const fallback = empty.sections.find((s) => s.blockKey === blockKey)!;
     if (!existing || !isRecord(existing)) return fallback;
     return {
-      heading: typeof existing.heading === "string" ? existing.heading : fallback.heading,
+      heading:
+        typeof existing.heading === "string"
+          ? existing.heading
+          : fallback.heading,
       content: typeof existing.content === "string" ? existing.content : "",
       blockKey,
       items: DESTINATION_LIST_BLOCK_KEYS.includes(blockKey)
@@ -168,11 +186,15 @@ const CONTENT_STATE_LABELS: Record<DestinationContentState, string> = {
 };
 
 const CONTENT_STATE_STYLES: Record<DestinationContentState, string> = {
-  "chua-co-bai": "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  "chua-co-bai":
+    "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   "bai-tay": "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  "dang-soan": "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  "da-duyet": "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
-  "da-publish": "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  "dang-soan":
+    "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  "da-duyet":
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  "da-publish":
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
 };
 
 /**
@@ -193,13 +215,22 @@ function aiStatusInfo(
 ): AiStatusInfo | null {
   if (!jobStatus) return null;
   if (jobStatus === "Created" || jobStatus === "GeneratingOutline") {
-    return { label: "🤖 AI: Đang soạn", tone: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" };
+    return {
+      label: "🤖 AI: Đang soạn",
+      tone: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+    };
   }
   if (jobStatus === "Failed") {
-    return { label: "🤖 AI: Lỗi, cần tạo lại", tone: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300" };
+    return {
+      label: "🤖 AI: Lỗi, cần tạo lại",
+      tone: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+    };
   }
   if (jobStatus === "Approved") {
-    return { label: "🤖 AI: Đã duyệt", tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" };
+    return {
+      label: "🤖 AI: Đã duyệt",
+      tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+    };
   }
   // DraftReady / InReview / Rejected — tinh theo so muc (khoi + nhom thong tin
   // chung) da ap dung goi y thuc te, chinh xac hon la doan theo status tho cua job.
@@ -212,7 +243,10 @@ function aiStatusInfo(
   const total = sectionProgress.total + frameProgress.total;
   const applied = sectionProgress.applied + frameProgress.applied;
   if (total === 0 || applied === 0) {
-    return { label: "🤖 AI: Chờ duyệt", tone: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300" };
+    return {
+      label: "🤖 AI: Chờ duyệt",
+      tone: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+    };
   }
   if (applied < total) {
     return {
@@ -220,7 +254,10 @@ function aiStatusInfo(
       tone: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
     };
   }
-  return { label: "🤖 AI: Đã duyệt", tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" };
+  return {
+    label: "🤖 AI: Đã duyệt",
+    tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  };
 }
 
 const SITE_BASE_URL = "https://dichoithoi.com";
@@ -233,6 +270,9 @@ const GATE_LABELS: Record<string, string> = {
   policy: "Chính sách nội dung",
   data: "Dữ liệu thực tế",
   originality: "Trùng lặp nội dung (cảnh báo)",
+  style: "Văn phong rập khuôn (cảnh báo)",
+  redundancy: "Lặp ý chéo trường (cảnh báo)",
+  grounding: "Số liệu so với nguồn (cảnh báo)",
 };
 
 /**
@@ -308,12 +348,17 @@ function detailToFormValues(d: DestinationDetail): DestinationMetaValues {
 }
 
 /** Trang chi tiet diem den (spec §7.3) — moi diem (moi/cu) deu mo duoc, gom theo nhom. */
-export default function DestinationDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default function DestinationDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = use(params);
   const queryClient = useQueryClient();
-  const [actionError, setActionError] = useState<{ message: string; details: string[] } | null>(
-    null,
-  );
+  const [actionError, setActionError] = useState<{
+    message: string;
+    details: string[];
+  } | null>(null);
 
   const detailQuery = useQuery({
     queryKey: ["destination-detail", slug],
@@ -328,7 +373,10 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   const relatedSpotlightQuery = useQuery({
     queryKey: ["related-spotlight", slug],
     queryFn: () =>
-      apiGet(`/destinations/${slug}/related-spotlight`, getRelatedSpotlightResponseSchema),
+      apiGet(
+        `/destinations/${slug}/related-spotlight`,
+        getRelatedSpotlightResponseSchema,
+      ),
   });
 
   function toActionError(error: unknown) {
@@ -337,7 +385,9 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       : { message: String(error), details: [] };
   }
   function invalidate() {
-    void queryClient.invalidateQueries({ queryKey: ["destination-detail", slug] });
+    void queryClient.invalidateQueries({
+      queryKey: ["destination-detail", slug],
+    });
   }
 
   // Tab dang mo — menu doc ben phai (thay scrollspy cu, xem ghi chu o TABS).
@@ -348,7 +398,9 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
-  const activeTab: TabId = TABS.some((t) => t.id === tabFromUrl) ? (tabFromUrl as TabId) : TABS[0].id;
+  const activeTab: TabId = TABS.some((t) => t.id === tabFromUrl)
+    ? (tabFromUrl as TabId)
+    : TABS[0].id;
   function setActiveTab(next: TabId) {
     const qs = new URLSearchParams(searchParams.toString());
     qs.set("tab", next);
@@ -360,23 +412,30 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   const [model, setModel] = useState("");
   const providersQuery = useQuery({
     queryKey: ["ai-providers"],
-    queryFn: () => apiGet("/content/ai-providers", listAiProvidersResponseSchema),
+    queryFn: () =>
+      apiGet("/content/ai-providers", listAiProvidersResponseSchema),
   });
   // Provider kha dung: co key + dang bat + co model. Provider dau tien lam default.
   const usableProviders = (providersQuery.data?.providers ?? []).filter(
     (p) => p.isConfigured && p.isEnabled && p.models.length > 0,
   );
   const selectedProvider =
-    usableProviders.find((p) => p.key === provider) ?? usableProviders[0] ?? null;
+    usableProviders.find((p) => p.key === provider) ??
+    usableProviders[0] ??
+    null;
   const selectedModel =
-    selectedProvider?.models.find((m) => m.id === model) ?? selectedProvider?.models[0] ?? null;
+    selectedProvider?.models.find((m) => m.id === model) ??
+    selectedProvider?.models[0] ??
+    null;
 
   // --- Tao / cap nhat bai AI (spec §7.4) ---
   const [userNotes, setUserNotes] = useState("");
-  const [refUrls, setRefUrls] = useState<Array<{ label: string; url: string }>>([
-    { label: "Giá vé", url: "" },
-    { label: "Giờ mở cửa", url: "" },
-  ]);
+  const [refUrls, setRefUrls] = useState<Array<{ label: string; url: string }>>(
+    [
+      { label: "Giá vé", url: "" },
+      { label: "Giờ mở cửa", url: "" },
+    ],
+  );
   const [inputsSaved, setInputsSaved] = useState(false);
   // Tu dien lai thong tin AI da luu khi mo trang (chay 1 lan khi co data)
   useEffect(() => {
@@ -400,7 +459,8 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
 
   // Luu thong tin cho AI ma chua tao bai
   const saveInputs = useMutation({
-    mutationFn: () => apiSend("POST", `/destinations/${slug}/ai-inputs`, aiInputsBody()),
+    mutationFn: () =>
+      apiSend("POST", `/destinations/${slug}/ai-inputs`, aiInputsBody()),
     onSuccess: () => {
       setActionError(null);
       setInputsSaved(true);
@@ -418,7 +478,9 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         await apiSend("POST", `/destinations/${slug}/jobs`, {
           mode: d?.contentState === "chua-co-bai" ? "create" : "update",
           userNotes: body.userNotes,
-          referenceUrls: body.referenceUrls.length ? body.referenceUrls : undefined,
+          referenceUrls: body.referenceUrls.length
+            ? body.referenceUrls
+            : undefined,
           aiProvider: selectedProvider?.key,
           aiModel: selectedModel?.id,
         }),
@@ -437,7 +499,9 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   const [promptPreviewOpen, setPromptPreviewOpen] = useState(false);
 
   // --- Ban nhap bai viet (draft_article) — pivot gop editor vao trang detail ---
-  const [draftArticle, setDraftArticle] = useState<DestinationArticle | null>(null);
+  const [draftArticle, setDraftArticle] = useState<DestinationArticle | null>(
+    null,
+  );
   const [savedDraftJson, setSavedDraftJson] = useState<string | null>(null);
   useEffect(() => {
     if (!d) return;
@@ -446,11 +510,14 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     setSavedDraftJson(JSON.stringify(initial));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d?.slug]);
-  const isDraftDirty = draftArticle !== null && JSON.stringify(draftArticle) !== savedDraftJson;
+  const isDraftDirty =
+    draftArticle !== null && JSON.stringify(draftArticle) !== savedDraftJson;
 
   const saveDraftArticle = useMutation({
     mutationFn: async (article: DestinationArticle) => {
-      await apiSend("PATCH", `/destinations/${slug}/draft-article`, { draftArticle: article });
+      await apiSend("PATCH", `/destinations/${slug}/draft-article`, {
+        draftArticle: article,
+      });
       return article;
     },
     onSuccess: (article) => {
@@ -468,21 +535,40 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   const resetDraft = useMutation({
     mutationFn: async () => {
       if (!d) throw new Error("Chưa tải xong dữ liệu điểm đến");
-      if (d.activeContentJobId && jobStatus && ["Created", "GeneratingOutline"].includes(jobStatus)) {
-        throw new Error("AI đang xử lý bài — đợi xong (hoặc Failed) rồi mới làm lại được");
+      if (
+        d.activeContentJobId &&
+        jobStatus &&
+        ["Created", "GeneratingOutline"].includes(jobStatus)
+      ) {
+        throw new Error(
+          "AI đang xử lý bài — đợi xong (hoặc Failed) rồi mới làm lại được",
+        );
       }
-      if (d.activeContentJobId && jobStatus && !["Failed", "Rejected"].includes(jobStatus)) {
+      if (
+        d.activeContentJobId &&
+        jobStatus &&
+        !["Failed", "Rejected"].includes(jobStatus)
+      ) {
         if (jobStatus === "DraftReady" || jobStatus === "Approved") {
-          await apiSend("POST", `/content/jobs/${d.activeContentJobId}/submit-review`, {});
+          await apiSend(
+            "POST",
+            `/content/jobs/${d.activeContentJobId}/submit-review`,
+            {},
+          );
         }
-        const draft = await apiGet(`/content/jobs/${d.activeContentJobId}/draft`, jobDraftSchema);
+        const draft = await apiGet(
+          `/content/jobs/${d.activeContentJobId}/draft`,
+          jobDraftSchema,
+        );
         await apiSend("POST", `/content/drafts/${draft.id}/review`, {
           action: "Reject",
           note: "Người dùng chọn Làm lại từ đầu",
         });
       }
       const empty = emptyDraftArticle(d.name);
-      await apiSend("PATCH", `/destinations/${slug}/draft-article`, { draftArticle: empty });
+      await apiSend("PATCH", `/destinations/${slug}/draft-article`, {
+        draftArticle: empty,
+      });
       return empty;
     },
     onSuccess: (empty) => {
@@ -500,23 +586,35 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   });
 
   // --- Goi y AI theo tung block (pivot: AI ho tro doc lap, khong tu ghi de) ---
-  const [suggestions, setSuggestions] = useState<Partial<Record<DestinationBlockKey, ContentSection>>>({});
-  const [suggestLoading, setSuggestLoading] = useState<Set<DestinationBlockKey>>(new Set());
+  const [suggestions, setSuggestions] = useState<
+    Partial<Record<DestinationBlockKey, ContentSection>>
+  >({});
+  const [suggestLoading, setSuggestLoading] = useState<
+    Set<DestinationBlockKey>
+  >(new Set());
   // Khoi dang duoc ap dung (PATCH dang chay) — chi 1 khoi tai 1 thoi diem, cac
   // nut "Ap dung" khac bi disable trong luc nay de dam bao luon merge tren
   // draftArticle moi nhat, tranh 2 PATCH song song ghi de nhau (bug 07/2026:
   // duyet xong reload lai mat du lieu — nguyen nhan that la schema AI sai, da
   // fix o destinationSectionSchema, day chi la chot an toan them).
-  const [applyingBlockKey, setApplyingBlockKey] = useState<DestinationBlockKey | null>(null);
+  const [applyingBlockKey, setApplyingBlockKey] =
+    useState<DestinationBlockKey | null>(null);
 
   async function requestBlockSuggestion(blockKey: DestinationBlockKey) {
     setSuggestLoading((prev) => new Set(prev).add(blockKey));
     try {
-      const section = await apiSend("POST", `/destinations/${slug}/blocks/${blockKey}/suggest`, {
-        aiProvider: selectedProvider?.key,
-        aiModel: selectedModel?.id,
-      });
-      setSuggestions((prev) => ({ ...prev, [blockKey]: section as ContentSection }));
+      const section = await apiSend(
+        "POST",
+        `/destinations/${slug}/blocks/${blockKey}/suggest`,
+        {
+          aiProvider: selectedProvider?.key,
+          aiModel: selectedModel?.id,
+        },
+      );
+      setSuggestions((prev) => ({
+        ...prev,
+        [blockKey]: section as ContentSection,
+      }));
       setActionError(null);
     } catch (e) {
       setActionError(toActionError(e));
@@ -567,14 +665,22 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   // co che "Xem thong tin AI trich xuat": khong tu dong hien inline, khong tu an
   // sau khi ap dung, ap dung lai duoc bat ky luc nao ke ca sau khi reload trang
   // (fix bug 07/2026: truoc day hien inline va nap lai moi lan reload). ---
-  const [jobSuggestions, setJobSuggestions] = useState<Partial<Record<DestinationBlockKey, ContentSection>>>({});
+  const [jobSuggestions, setJobSuggestions] = useState<
+    Partial<Record<DestinationBlockKey, ContentSection>>
+  >({});
   // Phan "frame" (tieu de/mo bai/quickFacts/faq/metadata) AI cung sinh ra cung luc
   // voi 7 khoi noi dung nhung truoc day bi bo qua hoan toan trong popup — nguoi
   // dung phai go tay lai tu dau du AI da viet san (phat hien 07/2026).
-  const [jobFrameSuggestion, setJobFrameSuggestion] = useState<DestinationArticleFrame | null>(null);
-  const [applyingAllJobSuggestions, setApplyingAllJobSuggestions] = useState(false);
-  const [applyingFrameGroup, setApplyingFrameGroup] = useState<FrameGroupKey | null>(null);
-  const anyJobSuggestionBusy = applyingBlockKey !== null || applyingAllJobSuggestions || applyingFrameGroup !== null;
+  const [jobFrameSuggestion, setJobFrameSuggestion] =
+    useState<DestinationArticleFrame | null>(null);
+  const [applyingAllJobSuggestions, setApplyingAllJobSuggestions] =
+    useState(false);
+  const [applyingFrameGroup, setApplyingFrameGroup] =
+    useState<FrameGroupKey | null>(null);
+  const anyJobSuggestionBusy =
+    applyingBlockKey !== null ||
+    applyingAllJobSuggestions ||
+    applyingFrameGroup !== null;
 
   async function applyJobSuggestion(blockKey: DestinationBlockKey) {
     if (anyJobSuggestionBusy || !draftArticle) return;
@@ -643,13 +749,18 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     queryFn: () => apiGet(`/content/jobs/${jobId}`, contentJobSchema),
     enabled: Boolean(jobId),
     refetchInterval: (q) =>
-      q.state.data && ["Created", "GeneratingOutline"].includes(q.state.data.status) ? 3000 : false,
+      q.state.data &&
+      ["Created", "GeneratingOutline"].includes(q.state.data.status)
+        ? 3000
+        : false,
   });
   const jobStatus = jobStatusQuery.data?.status ?? null;
   // Key theo jobId + status: job co the CHAY LAI (giu nguyen jobId, tao draft version moi) —
   // neu chi gate theo jobId thi lan chay thu 2/3 tro di se KHONG bao gio fetch lai goi y moi,
   // nut Ap dung/status AI bien mat sau khi chay lai (bug 07/2026, phat hien qua lan chay 3).
-  const [loadedSuggestionsForJob, setLoadedSuggestionsForJob] = useState<string | null>(null);
+  const [loadedSuggestionsForJob, setLoadedSuggestionsForJob] = useState<
+    string | null
+  >(null);
   useEffect(() => {
     if (!jobId || !jobStatus) return;
     if (jobStatus === "Created" || jobStatus === "GeneratingOutline") {
@@ -663,7 +774,10 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
     setLoadedSuggestionsForJob(loadKey);
     void (async () => {
       try {
-        const draft = await apiGet(`/content/jobs/${jobId}/draft`, jobDraftSchema);
+        const draft = await apiGet(
+          `/content/jobs/${jobId}/draft`,
+          jobDraftSchema,
+        );
         if (!draft.article) return;
         const next: Partial<Record<DestinationBlockKey, ContentSection>> = {};
         // Canh bao neu bai AI co blockKey khong hop le (khoi cu "meo-luu-y"/"khac")
@@ -674,7 +788,12 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         const invalidHeadings: string[] = [];
         const duplicateHeadings: string[] = [];
         for (const s of draft.article.sections) {
-          if (!s.blockKey || !(DESTINATION_SECTION_ORDER as readonly string[]).includes(s.blockKey)) {
+          if (
+            !s.blockKey ||
+            !(DESTINATION_SECTION_ORDER as readonly string[]).includes(
+              s.blockKey,
+            )
+          ) {
             invalidHeadings.push(s.heading);
             continue;
           }
@@ -686,13 +805,18 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         if (invalidHeadings.length > 0 || duplicateHeadings.length > 0) {
           const parts = [];
           if (invalidHeadings.length > 0) {
-            parts.push(`không gán đúng khối chuẩn: ${invalidHeadings.join(", ")}`);
+            parts.push(
+              `không gán đúng khối chuẩn: ${invalidHeadings.join(", ")}`,
+            );
           }
           if (duplicateHeadings.length > 0) {
-            parts.push(`trùng khối với mục khác (chỉ giữ bản sau): ${duplicateHeadings.join(", ")}`);
+            parts.push(
+              `trùng khối với mục khác (chỉ giữ bản sau): ${duplicateHeadings.join(", ")}`,
+            );
           }
           setActionError({
-            message: "AI tạo bài nhưng một số khối không hiển thị được để duyệt — bấm \"🤖 Tạo lại bằng AI\" riêng cho khối đó.",
+            message:
+              'AI tạo bài nhưng một số khối không hiển thị được để duyệt — bấm "🤖 Tạo lại bằng AI" riêng cho khối đó.',
             details: parts,
           });
         }
@@ -714,9 +838,11 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   const qualityQuery = useQuery({
     queryKey: ["destination-draft-quality", slug],
     queryFn: () =>
-      apiSend("POST", `/destinations/${slug}/draft-article/quality-checks`, {}).then((r) =>
-        destinationDraftQualityChecksResponseSchema.parse(r),
-      ),
+      apiSend(
+        "POST",
+        `/destinations/${slug}/draft-article/quality-checks`,
+        {},
+      ).then((r) => destinationDraftQualityChecksResponseSchema.parse(r)),
     enabled: Boolean(d),
   });
 
@@ -725,7 +851,11 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   const previewPublish = useMutation({
     mutationFn: async () =>
       previewDestinationPublishHtmlResponseSchema.parse(
-        await apiSend("POST", `/destinations/${slug}/draft-article/preview-publish-html`, {}),
+        await apiSend(
+          "POST",
+          `/destinations/${slug}/draft-article/preview-publish-html`,
+          {},
+        ),
       ),
     onSuccess: () => {
       setActionError(null);
@@ -752,10 +882,13 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   // AI phan loai ContentHtml sau publish CHI la goi y (pendingContentClassification) —
   // bien tap vien phai bam 1 trong 2 nut de that su ghi ContentUpdatedAt, tranh phai
   // "lat lai" 1 gia tri da ghi neu AI doan sai.
-  const [contentClassificationResolved, setContentClassificationResolved] = useState(false);
+  const [contentClassificationResolved, setContentClassificationResolved] =
+    useState(false);
   const confirmContentUpdate = useMutation({
     mutationFn: async (isMeaningful: boolean) => {
-      await apiSend("POST", `/destinations/${slug}/confirm-content-update`, { isMeaningful });
+      await apiSend("POST", `/destinations/${slug}/confirm-content-update`, {
+        isMeaningful,
+      });
     },
     onSuccess: () => {
       setActionError(null);
@@ -793,14 +926,21 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   const deletePreviewQuery = useQuery({
     queryKey: ["destination-delete-preview", slug],
     queryFn: () =>
-      apiGet(`/destinations/${slug}/delete-preview`, previewDeleteDestinationResponseSchema),
+      apiGet(
+        `/destinations/${slug}/delete-preview`,
+        previewDeleteDestinationResponseSchema,
+      ),
     enabled: deleteOpen,
   });
   const deleteDestination = useMutation({
     mutationFn: async () =>
-      deleteDestinationResponseSchema.parse(await apiSend("DELETE", `/destinations/${slug}`)),
+      deleteDestinationResponseSchema.parse(
+        await apiSend("DELETE", `/destinations/${slug}`),
+      ),
     onSuccess: () => {
-      window.location.href = d?.parent ? `/dichoithoi/${d.parent.slug}` : "/dichoithoi";
+      window.location.href = d?.parent
+        ? `/dichoithoi/${d.parent.slug}`
+        : "/dichoithoi";
     },
     onError: (e) => setActionError(toActionError(e)),
   });
@@ -810,7 +950,11 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
   const recomputeNearbyDistances = useMutation({
     mutationFn: async () =>
       recomputeNearbyDistancesReportSchema.parse(
-        await apiSend("POST", `/destinations/${slug}/recompute-nearby-distances`, {}),
+        await apiSend(
+          "POST",
+          `/destinations/${slug}/recompute-nearby-distances`,
+          {},
+        ),
       ),
     onSuccess: () => {
       setActionError(null);
@@ -829,7 +973,9 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           ← Quay lại danh sách
         </a>
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-          {detailQuery.error instanceof Error ? detailQuery.error.message : "Lỗi tải điểm đến"}
+          {detailQuery.error instanceof Error
+            ? detailQuery.error.message
+            : "Lỗi tải điểm đến"}
         </div>
       </div>
     );
@@ -864,12 +1010,23 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               <span className="rounded bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
                 {KIND_LABELS[d.kind]}
               </span>
-              <span className={`rounded px-2 py-0.5 ${CONTENT_STATE_STYLES[d.contentState]}`}>
+              <span
+                className={`rounded px-2 py-0.5 ${CONTENT_STATE_STYLES[d.contentState]}`}
+              >
                 {CONTENT_STATE_LABELS[d.contentState]}
               </span>
               {(() => {
-                const ai = aiStatusInfo(jobStatus, jobSuggestions, jobFrameSuggestion, draftArticle);
-                return ai ? <span className={`rounded px-2 py-0.5 ${ai.tone}`}>{ai.label}</span> : null;
+                const ai = aiStatusInfo(
+                  jobStatus,
+                  jobSuggestions,
+                  jobFrameSuggestion,
+                  draftArticle,
+                );
+                return ai ? (
+                  <span className={`rounded px-2 py-0.5 ${ai.tone}`}>
+                    {ai.label}
+                  </span>
+                ) : null;
               })()}
               <span className="font-mono text-zinc-400">{d.slug}</span>
             </div>
@@ -880,11 +1037,17 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
               {d.assignedTypes.length === 0 && d.assignedTags.length === 0 ? (
                 <span className="text-zinc-400">
                   Chưa phân loại — gán ở{" "}
-                  <a href="/dichoithoi/phan-loai" className="underline hover:text-zinc-600">
+                  <a
+                    href="/dichoithoi/phan-loai"
+                    className="underline hover:text-zinc-600"
+                  >
                     Loại hình
                   </a>{" "}
                   /{" "}
-                  <a href="/dichoithoi/chu-de" className="underline hover:text-zinc-600">
+                  <a
+                    href="/dichoithoi/chu-de"
+                    className="underline hover:text-zinc-600"
+                  >
                     Chủ đề
                   </a>
                 </span>
@@ -959,13 +1122,14 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                   ? qualityQuery.error.message
                   : "Chưa kiểm tra được — nội dung chưa đủ để phân tích"}
               </p>
-              {qualityQuery.error instanceof ApiError && qualityQuery.error.details.length > 0 && (
-                <ul className="mt-1 list-inside list-disc">
-                  {qualityQuery.error.details.map((detail, i) => (
-                    <li key={i}>{detail}</li>
-                  ))}
-                </ul>
-              )}
+              {qualityQuery.error instanceof ApiError &&
+                qualityQuery.error.details.length > 0 && (
+                  <ul className="mt-1 list-inside list-disc">
+                    {qualityQuery.error.details.map((detail, i) => (
+                      <li key={i}>{detail}</li>
+                    ))}
+                  </ul>
+                )}
             </div>
           ) : qualityChecks.length === 0 ? (
             <p className="text-zinc-400">Chưa chạy kiểm tra.</p>
@@ -973,7 +1137,10 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
             qualityChecks.map((check) => {
               const isWarning = !check.passed && check.severity === "warning";
               return (
-                <div key={check.gateName} className="flex items-start justify-between gap-3">
+                <div
+                  key={check.gateName}
+                  className="flex items-start justify-between gap-3"
+                >
                   <span>{GATE_LABELS[check.gateName] ?? check.gateName}</span>
                   {check.passed ? (
                     <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
@@ -1008,33 +1175,47 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
                 ))}
             </ul>
           )}
-          {qualityChecks.some((c) => !c.passed && c.severity === "warning") && (
-            <ul className="mt-2 list-inside list-disc rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
-              {qualityChecks
-                .filter((c) => !c.passed && c.severity === "warning")
-                .flatMap((c) => c.details)
-                .map((detail, i) => (
-                  <li key={i}>{detail}</li>
-                ))}
-            </ul>
-          )}
+          {qualityChecks
+            .filter((check) => !check.passed && check.severity === "warning")
+            .map((check) => (
+              <div
+                key={`warning-${check.gateName}`}
+                className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+              >
+                <ul className="list-inside list-disc">
+                  {check.details.map((detail, index) => (
+                    <li key={index}>{detail}</li>
+                  ))}
+                </ul>
+                <QualityWarningDismiss
+                  targetType="destination"
+                  targetId={slug}
+                  gateName={check.gateName}
+                  details={check.details}
+                />
+              </div>
+            ))}
         </div>
 
         {missingThumbnail && (
           <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
-            ⚠️ Chưa có <strong>ảnh đại diện</strong> — bắt buộc phải có ảnh mới đăng lên web được.
-            Thêm ảnh ở tab &quot;🖼️ Hình ảnh&quot; bên phải.
+            ⚠️ Chưa có <strong>ảnh đại diện</strong> — bắt buộc phải có ảnh mới
+            đăng lên web được. Thêm ảnh ở tab &quot;🖼️ Hình ảnh&quot; bên phải.
           </div>
         )}
         {isDraftDirty && (
           <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
-            Có thay đổi chưa lưu — bấm &quot;Lưu bản nháp&quot; (tab &quot;📝 Nội dung&quot;) trước
-            khi kiểm tra/đăng.
+            Có thay đổi chưa lưu — bấm &quot;Lưu bản nháp&quot; (tab &quot;📝
+            Nội dung&quot;) trước khi kiểm tra/đăng.
           </p>
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Button size="sm" loading={qualityQuery.isFetching} onClick={() => qualityQuery.refetch()}>
+          <Button
+            size="sm"
+            loading={qualityQuery.isFetching}
+            onClick={() => qualityQuery.refetch()}
+          >
             Chạy kiểm tra
           </Button>
           <Button
@@ -1077,59 +1258,67 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         </div>
         {verifyContentStillAccurate.isSuccess && (
           <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
-            Đã ghi nhận — trang chi tiết sẽ hiện &quot;Đã kiểm tra &amp; xác nhận thông tin&quot; kèm tháng hiện tại.
+            Đã ghi nhận — trang chi tiết sẽ hiện &quot;Đã kiểm tra &amp; xác
+            nhận thông tin&quot; kèm tháng hiện tại.
           </p>
         )}
 
         {publish.data && (
           <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
-            ✅ Đã đăng lên dichoithoi ({(publish.data.durationMs / 1000).toFixed(1)}s) — cập nhật khối
-            liên quan cho {publish.data.relatedRecomputed} điểm.
+            ✅ Đã đăng lên dichoithoi (
+            {(publish.data.durationMs / 1000).toFixed(1)}s) — cập nhật khối liên
+            quan cho {publish.data.relatedRecomputed} điểm.
             {publish.data.addedLinks.length > 0 &&
               ` Link nội bộ: ${publish.data.addedLinks.map((l) => l.targetName).join(", ")}.`}
           </div>
         )}
 
-        {publish.data?.pendingContentClassification && !contentClassificationResolved && (
-          <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
-            <p>
-              🤖 AI nhận định lần sửa này{" "}
-              <strong>
-                {publish.data.pendingContentClassification.isMeaningful
-                  ? "LÀ cập nhật nội dung thực sự"
-                  : "CHỈ là sửa câu chữ/chính tả"}
-              </strong>
-              : {publish.data.pendingContentClassification.reason}
-            </p>
-            <p className="mt-2 flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                loading={confirmContentUpdate.isPending}
-                onClick={() =>
-                  confirmContentUpdate.mutate(publish.data!.pendingContentClassification!.isMeaningful)
-                }
-              >
-                Đồng ý
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                loading={confirmContentUpdate.isPending}
-                onClick={() =>
-                  confirmContentUpdate.mutate(!publish.data!.pendingContentClassification!.isMeaningful)
-                }
-              >
-                Không đúng, đổi lại
-              </Button>
-            </p>
-            <p className="mt-2 text-xs text-amber-700/80 dark:text-amber-400/80">
-              Vì sao quan trọng cho SEO: đánh dấu đúng giúp badge &quot;Cập nhật tháng...&quot; +
-              tín hiệu <code>dateModified</code>/sitemap gửi cho Google phản ánh đúng sự thật —
-              đánh dấu sai (nói &quot;cập nhật&quot; dù không đổi gì) bị Google coi là spam ngày
-              tháng và có thể bị bỏ qua tín hiệu freshness của cả trang.
-            </p>
-          </div>
-        )}
+        {publish.data?.pendingContentClassification &&
+          !contentClassificationResolved && (
+            <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+              <p>
+                🤖 AI nhận định lần sửa này{" "}
+                <strong>
+                  {publish.data.pendingContentClassification.isMeaningful
+                    ? "LÀ cập nhật nội dung thực sự"
+                    : "CHỈ là sửa câu chữ/chính tả"}
+                </strong>
+                : {publish.data.pendingContentClassification.reason}
+              </p>
+              <p className="mt-2 flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  loading={confirmContentUpdate.isPending}
+                  onClick={() =>
+                    confirmContentUpdate.mutate(
+                      publish.data!.pendingContentClassification!.isMeaningful,
+                    )
+                  }
+                >
+                  Đồng ý
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  loading={confirmContentUpdate.isPending}
+                  onClick={() =>
+                    confirmContentUpdate.mutate(
+                      !publish.data!.pendingContentClassification!.isMeaningful,
+                    )
+                  }
+                >
+                  Không đúng, đổi lại
+                </Button>
+              </p>
+              <p className="mt-2 text-xs text-amber-700/80 dark:text-amber-400/80">
+                Vì sao quan trọng cho SEO: đánh dấu đúng giúp badge &quot;Cập
+                nhật tháng...&quot; + tín hiệu <code>dateModified</code>/sitemap
+                gửi cho Google phản ánh đúng sự thật — đánh dấu sai (nói
+                &quot;cập nhật&quot; dù không đổi gì) bị Google coi là spam ngày
+                tháng và có thể bị bỏ qua tín hiệu freshness của cả trang.
+              </p>
+            </div>
+          )}
       </Group>
 
       {/* Layout tab: noi dung ben trai, menu doc CO DINH ben phai (redesign 07/2026 —
@@ -1138,7 +1327,10 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
       <div className="grid grid-cols-[1fr_190px] items-start gap-5">
         <div className="min-w-0 space-y-4">
           <div className={activeTab === "images" ? "space-y-4" : "hidden"}>
-            <PanelHead title="🖼️ Hình ảnh" hint="Ảnh đại diện dùng cho card/thumbnail và thư viện ảnh hiển thị ở hero + dải ảnh vuốt trên web." />
+            <PanelHead
+              title="🖼️ Hình ảnh"
+              hint="Ảnh đại diện dùng cho card/thumbnail và thư viện ảnh hiển thị ở hero + dải ảnh vuốt trên web."
+            />
             <DestinationImageUploader
               slug={d.slug}
               imageUrl={d.imageUrl}
@@ -1155,886 +1347,1072 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
           </div>
 
           <div className={activeTab === "ai-tools" ? "space-y-4" : "hidden"}>
-            <PanelHead title="🤖 AI hỗ trợ" hint="Trích xuất dữ liệu điểm đến từ Google Maps/web tham khảo, và nhập thông tin để AI viết bài — kết quả dùng ở tab &quot;📝 Nội dung&quot; và &quot;ℹ️ Thông tin cơ bản&quot;/&quot;💰 Thương mại & bổ trợ&quot;." />
+            <PanelHead
+              title="🤖 AI hỗ trợ"
+              hint='Trích xuất dữ liệu điểm đến từ Google Maps/web tham khảo, và nhập thông tin để AI viết bài — kết quả dùng ở tab "📝 Nội dung" và "ℹ️ Thông tin cơ bản"/"💰 Thương mại & bổ trợ".'
+            />
 
-      {/* Trich xuat AI tu Google Maps + web tham khao (dichoithoi-destination-ai-extraction-plan
+            {/* Trich xuat AI tu Google Maps + web tham khao (dichoithoi-destination-ai-extraction-plan
           §2.3) — tach tab rieng (07/2026, theo yeu cau nguoi dung): ket qua trich xuat ghi
           vao CA 3 tab (Thong tin co ban: ten/dia chi/SDT/website/mo ta/meta title; Thuong mai:
           gio mo cua/gia/danh gia bien tap/link review; va aiReferenceSummary lam ngu canh nen
           cho AI viet bai ngay duoi day) — khong thuoc rieng 1 tab do nen gom chung voi phan
           nhap thong tin AI vao 1 tab "AI ho tro". */}
-      <Group title="🔎 Trích xuất AI (Google Maps + web tham khảo)">
-        <DestinationAiExtractionPanel slug={d.slug} onAccepted={() => invalidate()} />
-      </Group>
+            <Group title="🔎 Trích xuất AI (Google Maps + web tham khảo)">
+              <DestinationAiExtractionPanel
+                slug={d.slug}
+                onAccepted={() => invalidate()}
+              />
+            </Group>
 
-      {d.kind === "cluster" && (
-        <Group title="🧭 Tìm điểm con trong cụm (AI)">
-          <ClusterPoiCandidatesPanel clusterSlug={d.slug} onAccepted={() => invalidate()} />
-        </Group>
-      )}
+            {d.kind === "cluster" && (
+              <Group title="🧭 Tìm điểm con trong cụm (AI)">
+                <ClusterPoiCandidatesPanel
+                  clusterSlug={d.slug}
+                  onAccepted={() => invalidate()}
+                />
+              </Group>
+            )}
 
-      <Group title="✍️ Viết bài bằng AI">
-        {!d.hasDistanceData && (
-          <p className="mb-3 text-xs text-amber-600 dark:text-amber-400">
-            ⚠️ Điểm này chưa có dữ liệu khoảng cách thực tế (chưa bấm nút &quot;Tính khoảng
-            cách&quot; ở tab bản đồ) — AI sẽ chỉ nhắc TÊN các điểm liên quan, không kèm số km. Bấm
-            tính khoảng cách trước nếu muốn bài viết có số km chính xác.
-          </p>
-        )}
-        {/* Trang thai job AI toan bai (neu co) — TACH RIENG khoi form nhap ben duoi:
+            <Group title="✍️ Viết bài bằng AI">
+              {!d.hasDistanceData && (
+                <p className="mb-3 text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ Điểm này chưa có dữ liệu khoảng cách thực tế (chưa bấm nút
+                  &quot;Tính khoảng cách&quot; ở tab bản đồ) — AI sẽ chỉ nhắc
+                  TÊN các điểm liên quan, không kèm số km. Bấm tính khoảng cách
+                  trước nếu muốn bài viết có số km chính xác.
+                </p>
+              )}
+              {/* Trang thai job AI toan bai (neu co) — TACH RIENG khoi form nhap ben duoi:
             truoc day form nay bi AN HOAN TOAN mien co activeContentJobId (ke ca job
             da xong DraftReady), khien nguoi dung khong con thay lai ghi chu/link
             nguon da nhap (bug phat hien 07/2026, khong lien quan redesign tab). Gio
             form nhap LUON hien, chi disable rieng nut "Tao bai AI" khi co job dang chay. */}
-        {d.activeContentJobId && (
-          <div className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
-            <p className="flex items-center gap-2">
-              {(jobStatus === "Created" || jobStatus === "GeneratingOutline") && (
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-violet-300 border-t-violet-600" />
-              )}
-              🤖 AI đang xử lý bài cho điểm này — trạng thái:{" "}
-              <span className="font-medium">{jobStatus ?? d.activeJobStatus ?? "..."}</span>
-              {" · "}
-              <a href={`/content/${d.activeContentJobId}`} className="text-violet-600 hover:underline dark:text-violet-400">
-                Xem chi tiết job →
-              </a>
-            </p>
-            {jobStatus && !["Created", "GeneratingOutline"].includes(jobStatus) && (
-              <p className="mt-1 text-emerald-700 dark:text-emerald-400">
-                ✅ Đã có gợi ý AI cho các khối nội dung — qua tab &quot;📝 Nội dung&quot;, mở từng khối
-                bấm &quot;Áp dụng&quot; để lưu ngay khối đó, hoặc Bỏ qua.
-              </p>
-            )}
-          </div>
-        )}
-        {(() => {
-          const jobBlocking =
-            Boolean(d.activeContentJobId) && jobStatus !== "Failed" && jobStatus !== "Rejected";
-          return (
-          <div className="space-y-4">
-            <p className="rounded bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-900">
-              AI tự dùng dữ liệu điểm đến ở tab &quot;ℹ️ Thông tin cơ bản&quot; (tên, địa chỉ, tọa độ, điểm
-              lân cận) làm nền.
-              Phần dưới đây là nơi bạn <strong>bổ sung thông tin chính xác</strong> và{" "}
-              <strong>website để AI đọc thêm</strong> — AI không bịa giá vé / giờ mở cửa, sẽ ưu tiên
-              dữ liệu bạn cung cấp.
-            </p>
-
-            {/* 2 khoi TACH RIENG (Skill/GSG), khong gop — dung 3 nguon song song
-                dua vao prompt viet bai (dichoithoi-destination-ai-extraction-plan §6 D1/C4). */}
-            {d.aiReferenceSummary && (
-              <div className="rounded border border-violet-200 bg-violet-50 p-3 dark:border-violet-900 dark:bg-violet-950/40">
-                <p className="mb-1 text-sm font-medium text-violet-700 dark:text-violet-300">
-                  Tóm tắt nguồn tham khảo — Skill (từ khung &quot;Trích xuất AI&quot; phía trên)
-                </p>
-                <p className="mb-1 text-xs text-zinc-500">
-                  Tự động đưa vào ngữ cảnh khi tạo bài, KHÔNG cần nhập lại ở ô bên dưới. Muốn sửa/làm
-                  mới, chạy lại skill trích xuất rồi chấp nhận lại ở khung &quot;Trích xuất AI&quot; phía trên.
-                  {d.aiReferenceSummaryUpdatedAt &&
-                    ` Cập nhật lúc ${new Date(d.aiReferenceSummaryUpdatedAt).toLocaleString("vi-VN")}.`}
-                </p>
-                <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
-                  {d.aiReferenceSummary}
-                </p>
-              </div>
-            )}
-            {d.aiReferenceSummaryGsg && (
-              <div className="rounded border border-sky-200 bg-sky-50 p-3 dark:border-sky-900 dark:bg-sky-950/40">
-                <p className="mb-1 text-sm font-medium text-sky-700 dark:text-sky-300">
-                  Tóm tắt nguồn tham khảo — Google Search (tự động, chưa xác minh theo từng URL cụ thể)
-                </p>
-                <p className="mb-1 text-xs text-zinc-500">
-                  Tự động đưa vào ngữ cảnh khi tạo bài, TÁCH BIỆT với tóm tắt Skill ở trên. Muốn làm mới,
-                  bấm &quot;Chạy trích xuất GSG&quot; rồi chấp nhận lại ở khung &quot;Trích xuất AI&quot; phía trên.
-                  {d.aiReferenceSummaryGsgUpdatedAt &&
-                    ` Cập nhật lúc ${new Date(d.aiReferenceSummaryGsgUpdatedAt).toLocaleString("vi-VN")}.`}
-                </p>
-                <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
-                  {d.aiReferenceSummaryGsg}
-                </p>
-              </div>
-            )}
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Thông tin bạn cung cấp thêm cho AI
-              </label>
-              <p className="mb-1 text-xs text-zinc-500">
-                Ví dụ: giá vé người lớn 70.000đ / trẻ em 30.000đ, mở cửa 6h–18h, đặc sản gần đó,
-                điểm nên nhấn mạnh, lưu ý mùa cao điểm...
-              </p>
-              <textarea
-                value={userNotes}
-                onChange={(e) => setUserNotes(e.target.value)}
-                rows={4}
-                placeholder="Nhập thông tin chính xác bạn muốn AI dùng trong bài..."
-                className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Website nguồn để AI đọc thêm
-              </label>
-              <p className="mb-2 text-xs text-zinc-500">
-                Dán link trang chính thức (giá vé, giờ mở cửa, giới thiệu...). AI sẽ đọc nội dung
-                trang và dùng làm dữ liệu, ghi chú nguồn. Tối đa 5 nguồn.
-              </p>
-              <div className="space-y-2">
-                {refUrls.map((row, i) => (
-                  <div key={i} className="flex gap-2">
-                    <Input
-                      value={row.label}
-                      onChange={(e) =>
-                        setRefUrls((rows) =>
-                          rows.map((r, j) => (j === i ? { ...r, label: e.target.value } : r)),
-                        )
-                      }
-                      placeholder="Nhãn (vd Giá vé)"
-                      className="w-36"
-                    />
-                    <Input
-                      value={row.url}
-                      onChange={(e) =>
-                        setRefUrls((rows) =>
-                          rows.map((r, j) => (j === i ? { ...r, url: e.target.value } : r)),
-                        )
-                      }
-                      placeholder="https://trang-nguon.vn/..."
-                      className="flex-1"
-                    />
-                    {refUrls.length > 1 && (
-                      <Button onClick={() => setRefUrls((rows) => rows.filter((_, j) => j !== i))}>
-                        ✕
-                      </Button>
+              {d.activeContentJobId && (
+                <div className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
+                  <p className="flex items-center gap-2">
+                    {(jobStatus === "Created" ||
+                      jobStatus === "GeneratingOutline") && (
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-violet-300 border-t-violet-600" />
                     )}
+                    🤖 AI đang xử lý bài cho điểm này — trạng thái:{" "}
+                    <span className="font-medium">
+                      {jobStatus ?? d.activeJobStatus ?? "..."}
+                    </span>
+                    {" · "}
+                    <a
+                      href={`/content/${d.activeContentJobId}`}
+                      className="text-violet-600 hover:underline dark:text-violet-400"
+                    >
+                      Xem chi tiết job →
+                    </a>
+                  </p>
+                  {jobStatus &&
+                    !["Created", "GeneratingOutline"].includes(jobStatus) && (
+                      <p className="mt-1 text-emerald-700 dark:text-emerald-400">
+                        ✅ Đã có gợi ý AI cho các khối nội dung — qua tab
+                        &quot;📝 Nội dung&quot;, mở từng khối bấm &quot;Áp
+                        dụng&quot; để lưu ngay khối đó, hoặc Bỏ qua.
+                      </p>
+                    )}
+                </div>
+              )}
+              {(() => {
+                const jobBlocking =
+                  Boolean(d.activeContentJobId) &&
+                  jobStatus !== "Failed" &&
+                  jobStatus !== "Rejected";
+                return (
+                  <div className="space-y-4">
+                    <p className="rounded bg-zinc-50 p-3 text-xs text-zinc-500 dark:bg-zinc-900">
+                      AI tự dùng dữ liệu điểm đến ở tab &quot;ℹ️ Thông tin cơ
+                      bản&quot; (tên, địa chỉ, tọa độ, điểm lân cận) làm nền.
+                      Phần dưới đây là nơi bạn{" "}
+                      <strong>bổ sung thông tin chính xác</strong> và{" "}
+                      <strong>website để AI đọc thêm</strong> — AI không bịa giá
+                      vé / giờ mở cửa, sẽ ưu tiên dữ liệu bạn cung cấp.
+                    </p>
+
+                    {/* 2 khoi TACH RIENG (Skill/GSG), khong gop — dung 3 nguon song song
+                dua vao prompt viet bai (dichoithoi-destination-ai-extraction-plan §6 D1/C4). */}
+                    {d.aiReferenceSummary && (
+                      <div className="rounded border border-violet-200 bg-violet-50 p-3 dark:border-violet-900 dark:bg-violet-950/40">
+                        <p className="mb-1 text-sm font-medium text-violet-700 dark:text-violet-300">
+                          Tóm tắt nguồn tham khảo — Skill (từ khung &quot;Trích
+                          xuất AI&quot; phía trên)
+                        </p>
+                        <p className="mb-1 text-xs text-zinc-500">
+                          Tự động đưa vào ngữ cảnh khi tạo bài, KHÔNG cần nhập
+                          lại ở ô bên dưới. Muốn sửa/làm mới, chạy lại skill
+                          trích xuất rồi chấp nhận lại ở khung &quot;Trích xuất
+                          AI&quot; phía trên.
+                          {d.aiReferenceSummaryUpdatedAt &&
+                            ` Cập nhật lúc ${new Date(d.aiReferenceSummaryUpdatedAt).toLocaleString("vi-VN")}.`}
+                        </p>
+                        <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
+                          {d.aiReferenceSummary}
+                        </p>
+                      </div>
+                    )}
+                    {d.aiReferenceSummaryGsg && (
+                      <div className="rounded border border-sky-200 bg-sky-50 p-3 dark:border-sky-900 dark:bg-sky-950/40">
+                        <p className="mb-1 text-sm font-medium text-sky-700 dark:text-sky-300">
+                          Tóm tắt nguồn tham khảo — Google Search (tự động, chưa
+                          xác minh theo từng URL cụ thể)
+                        </p>
+                        <p className="mb-1 text-xs text-zinc-500">
+                          Tự động đưa vào ngữ cảnh khi tạo bài, TÁCH BIỆT với
+                          tóm tắt Skill ở trên. Muốn làm mới, bấm &quot;Chạy
+                          trích xuất GSG&quot; rồi chấp nhận lại ở khung
+                          &quot;Trích xuất AI&quot; phía trên.
+                          {d.aiReferenceSummaryGsgUpdatedAt &&
+                            ` Cập nhật lúc ${new Date(d.aiReferenceSummaryGsgUpdatedAt).toLocaleString("vi-VN")}.`}
+                        </p>
+                        <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
+                          {d.aiReferenceSummaryGsg}
+                        </p>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">
+                        Thông tin bạn cung cấp thêm cho AI
+                      </label>
+                      <p className="mb-1 text-xs text-zinc-500">
+                        Ví dụ: giá vé người lớn 70.000đ / trẻ em 30.000đ, mở cửa
+                        6h–18h, đặc sản gần đó, điểm nên nhấn mạnh, lưu ý mùa
+                        cao điểm...
+                      </p>
+                      <textarea
+                        value={userNotes}
+                        onChange={(e) => setUserNotes(e.target.value)}
+                        rows={4}
+                        placeholder="Nhập thông tin chính xác bạn muốn AI dùng trong bài..."
+                        className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">
+                        Website nguồn để AI đọc thêm
+                      </label>
+                      <p className="mb-2 text-xs text-zinc-500">
+                        Dán link trang chính thức (giá vé, giờ mở cửa, giới
+                        thiệu...). AI sẽ đọc nội dung trang và dùng làm dữ liệu,
+                        ghi chú nguồn. Tối đa 5 nguồn.
+                      </p>
+                      <div className="space-y-2">
+                        {refUrls.map((row, i) => (
+                          <div key={i} className="flex gap-2">
+                            <Input
+                              value={row.label}
+                              onChange={(e) =>
+                                setRefUrls((rows) =>
+                                  rows.map((r, j) =>
+                                    j === i
+                                      ? { ...r, label: e.target.value }
+                                      : r,
+                                  ),
+                                )
+                              }
+                              placeholder="Nhãn (vd Giá vé)"
+                              className="w-36"
+                            />
+                            <Input
+                              value={row.url}
+                              onChange={(e) =>
+                                setRefUrls((rows) =>
+                                  rows.map((r, j) =>
+                                    j === i ? { ...r, url: e.target.value } : r,
+                                  ),
+                                )
+                              }
+                              placeholder="https://trang-nguon.vn/..."
+                              className="flex-1"
+                            />
+                            {refUrls.length > 1 && (
+                              <Button
+                                onClick={() =>
+                                  setRefUrls((rows) =>
+                                    rows.filter((_, j) => j !== i),
+                                  )
+                                }
+                              >
+                                ✕
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {refUrls.length < 5 && (
+                        <button
+                          onClick={() =>
+                            setRefUrls((rows) => [
+                              ...rows,
+                              { label: "", url: "" },
+                            ])
+                          }
+                          className="mt-2 text-sm text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          + Thêm nguồn
+                        </button>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">
+                        AI Provider / Model
+                      </label>
+                      <details className="mb-2 rounded border border-zinc-200 text-xs dark:border-zinc-800">
+                        <summary className="cursor-pointer select-none bg-zinc-50 px-2 py-1 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+                          💡 Chọn model Gemini nào cho phù hợp?
+                        </summary>
+                        <div className="space-y-1 px-2 py-2 text-zinc-500 dark:text-zinc-400">
+                          <p>
+                            <strong>Gemini 3.6 Flash / 3.5 Flash</strong> — dùng
+                            làm mô hình chính khi tạo hàng loạt bài điểm đến:
+                            tốc độ nhanh, chi phí rẻ, xuất dữ liệu có cấu trúc
+                            (JSON/Markdown) chuẩn để đưa thẳng vào database.
+                          </p>
+                          <p>
+                            <strong>Gemini 3.1 Pro</strong> — chỉ dùng cho bài
+                            "Key/Featured" cần văn phong mượt, sâu (vd tổng quan
+                            Đà Lạt, TP.HCM, Hạ Long); chi phí cao hơn Flash.
+                          </p>
+                          <p>
+                            <strong>Nhiệt độ (temperature)</strong> khác nhau
+                            theo thao tác, không chỉnh tay được:{" "}
+                            <strong>trích xuất thông tin</strong> dùng 0.1 (ưu
+                            tiên chính xác/ nhất quán, không "sáng tạo" số liệu)
+                            — <strong>viết bài</strong> dùng 0.5 (câu từ mềm
+                            mại, giàu cảm xúc hơn nhưng vẫn bám sát dữ liệu
+                            nguồn).
+                          </p>
+                        </div>
+                      </details>
+                      {usableProviders.length === 0 ? (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          Chưa có AI provider khả dụng — kiểm tra API key và bật
+                          provider trong trang Settings.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <Select
+                            value={selectedProvider?.key ?? ""}
+                            onChange={(e) => {
+                              setProvider(e.target.value);
+                              setModel(""); // reset model khi doi provider
+                            }}
+                          >
+                            {usableProviders.map((p) => (
+                              <option key={p.key} value={p.key}>
+                                {p.displayName}
+                              </option>
+                            ))}
+                          </Select>
+                          <Select
+                            value={selectedModel?.id ?? ""}
+                            onChange={(e) => setModel(e.target.value)}
+                          >
+                            {(selectedProvider?.models ?? []).map((m) => (
+                              <option
+                                key={m.id}
+                                value={m.id}
+                                title={m.costNote}
+                              >
+                                {m.displayName}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                      )}
+                      {selectedModel?.costNote && (
+                        <span className="mt-1 block text-xs text-zinc-400">
+                          {selectedModel.costNote}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="primary"
+                        loading={createJob.isPending}
+                        disabled={
+                          !selectedProvider || !selectedModel || jobBlocking
+                        }
+                        title={
+                          jobBlocking
+                            ? "Đang có bài soạn/duyệt dở — hoàn tất hoặc từ chối job hiện tại trước"
+                            : undefined
+                        }
+                        onClick={() => createJob.mutate()}
+                      >
+                        {createJob.isPending
+                          ? "Đang tạo bài..."
+                          : d.contentState === "chua-co-bai"
+                            ? "Tạo bài AI"
+                            : "Viết lại / cập nhật bài"}
+                      </Button>
+                      <Button
+                        loading={saveInputs.isPending}
+                        onClick={() => saveInputs.mutate()}
+                      >
+                        {saveInputs.isPending
+                          ? "Đang lưu..."
+                          : "Lưu thông tin (chưa tạo bài)"}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setPromptPreviewOpen(true)}
+                      >
+                        👁️ Xem trước prompt
+                      </Button>
+                      {inputsSaved && !saveInputs.isPending && (
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                          ✅ Đã lưu — sẽ tự điền lại lần sau
+                        </span>
+                      )}
+                    </div>
+                    {jobBlocking && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        ⚠️ Đang có bài soạn/duyệt dở nên chưa tạo job AI mới
+                        được — vẫn có thể sửa/lưu ghi chú ở đây, và dùng
+                        &quot;🤖 Tạo lại bằng AI&quot; ở từng khối trong tab
+                        &quot;📝 Nội dung&quot;. Hoặc bấm &quot;Làm lại từ
+                        đầu&quot; bên dưới để bỏ hẳn job/bài cũ.
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                        loading={resetDraft.isPending}
+                        disabled={
+                          Boolean(d.activeContentJobId) &&
+                          Boolean(jobStatus) &&
+                          ["Created", "GeneratingOutline"].includes(
+                            jobStatus ?? "",
+                          )
+                        }
+                        title={
+                          Boolean(d.activeContentJobId) &&
+                          ["Created", "GeneratingOutline"].includes(
+                            jobStatus ?? "",
+                          )
+                            ? "AI đang xử lý — đợi xong rồi mới làm lại được"
+                            : undefined
+                        }
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Làm lại từ đầu: từ chối job AI đang dở (nếu có) và XOÁ SẠCH bản nháp bài viết hiện tại (không thể hoàn tác). Tiếp tục?",
+                            )
+                          ) {
+                            resetDraft.mutate();
+                          }
+                        }}
+                      >
+                        {resetDraft.isPending
+                          ? "Đang làm lại..."
+                          : "🗑️ Làm lại từ đầu"}
+                      </Button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                      <span className="text-xs text-zinc-500">
+                        Đã có sẵn nội dung viết ở nơi khác (ChatGPT/Gemini...)?
+                      </span>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setPasteModalOpen(true)}
+                      >
+                        📋 Dán bài có sẵn
+                      </Button>
+                    </div>
                   </div>
-                ))}
-              </div>
-              {refUrls.length < 5 && (
-                <button
-                  onClick={() => setRefUrls((rows) => [...rows, { label: "", url: "" }])}
-                  className="mt-2 text-sm text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  + Thêm nguồn
-                </button>
-              )}
-            </div>
+                );
+              })()}
+            </Group>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium">AI Provider / Model</label>
-              <details className="mb-2 rounded border border-zinc-200 text-xs dark:border-zinc-800">
-                <summary className="cursor-pointer select-none bg-zinc-50 px-2 py-1 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
-                  💡 Chọn model Gemini nào cho phù hợp?
-                </summary>
-                <div className="space-y-1 px-2 py-2 text-zinc-500 dark:text-zinc-400">
-                  <p>
-                    <strong>Gemini 3.6 Flash / 3.5 Flash</strong> — dùng làm mô hình chính khi tạo
-                    hàng loạt bài điểm đến: tốc độ nhanh, chi phí rẻ, xuất dữ liệu có cấu trúc
-                    (JSON/Markdown) chuẩn để đưa thẳng vào database.
-                  </p>
-                  <p>
-                    <strong>Gemini 3.1 Pro</strong> — chỉ dùng cho bài "Key/Featured" cần văn
-                    phong mượt, sâu (vd tổng quan Đà Lạt, TP.HCM, Hạ Long); chi phí cao hơn Flash.
-                  </p>
-                  <p>
-                    <strong>Nhiệt độ (temperature)</strong> khác nhau theo thao tác, không chỉnh
-                    tay được: <strong>trích xuất thông tin</strong> dùng 0.1 (ưu tiên chính xác/
-                    nhất quán, không "sáng tạo" số liệu) — <strong>viết bài</strong> dùng 0.5 (câu
-                    từ mềm mại, giàu cảm xúc hơn nhưng vẫn bám sát dữ liệu nguồn).
-                  </p>
-                </div>
-              </details>
-              {usableProviders.length === 0 ? (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Chưa có AI provider khả dụng — kiểm tra API key và bật provider trong trang
-                  Settings.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  <Select
-                    value={selectedProvider?.key ?? ""}
-                    onChange={(e) => {
-                      setProvider(e.target.value);
-                      setModel(""); // reset model khi doi provider
-                    }}
-                  >
-                    {usableProviders.map((p) => (
-                      <option key={p.key} value={p.key}>
-                        {p.displayName}
-                      </option>
-                    ))}
-                  </Select>
-                  <Select value={selectedModel?.id ?? ""} onChange={(e) => setModel(e.target.value)}>
-                    {(selectedProvider?.models ?? []).map((m) => (
-                      <option key={m.id} value={m.id} title={m.costNote}>
-                        {m.displayName}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
-              {selectedModel?.costNote && (
-                <span className="mt-1 block text-xs text-zinc-400">{selectedModel.costNote}</span>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="primary"
-                loading={createJob.isPending}
-                disabled={!selectedProvider || !selectedModel || jobBlocking}
-                title={jobBlocking ? "Đang có bài soạn/duyệt dở — hoàn tất hoặc từ chối job hiện tại trước" : undefined}
-                onClick={() => createJob.mutate()}
-              >
-                {createJob.isPending
-                  ? "Đang tạo bài..."
-                  : d.contentState === "chua-co-bai"
-                    ? "Tạo bài AI"
-                    : "Viết lại / cập nhật bài"}
-              </Button>
-              <Button loading={saveInputs.isPending} onClick={() => saveInputs.mutate()}>
-                {saveInputs.isPending ? "Đang lưu..." : "Lưu thông tin (chưa tạo bài)"}
-              </Button>
-              <Button variant="secondary" onClick={() => setPromptPreviewOpen(true)}>
-                👁️ Xem trước prompt
-              </Button>
-              {inputsSaved && !saveInputs.isPending && (
-                <span className="text-xs text-emerald-600 dark:text-emerald-400">
-                  ✅ Đã lưu — sẽ tự điền lại lần sau
-                </span>
-              )}
-            </div>
-            {jobBlocking && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                ⚠️ Đang có bài soạn/duyệt dở nên chưa tạo job AI mới được — vẫn có thể sửa/lưu ghi
-                chú ở đây, và dùng &quot;🤖 Tạo lại bằng AI&quot; ở từng khối trong tab &quot;📝 Nội
-                dung&quot;. Hoặc bấm &quot;Làm lại từ đầu&quot; bên dưới để bỏ hẳn job/bài cũ.
-              </p>
+            {promptPreviewOpen && (
+              <DestinationPromptPreviewModal
+                slug={slug}
+                requestBody={{
+                  mode: d?.contentState === "chua-co-bai" ? "create" : "update",
+                  userNotes: aiInputsBody().userNotes,
+                  referenceUrls: aiInputsBody().referenceUrls.length
+                    ? aiInputsBody().referenceUrls
+                    : undefined,
+                  aiProvider: selectedProvider?.key,
+                  aiModel: selectedModel?.id,
+                }}
+                onClose={() => setPromptPreviewOpen(false)}
+              />
             )}
 
-            <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
-                loading={resetDraft.isPending}
-                disabled={
-                  Boolean(d.activeContentJobId) &&
-                  Boolean(jobStatus) &&
-                  ["Created", "GeneratingOutline"].includes(jobStatus ?? "")
-                }
-                title={
-                  Boolean(d.activeContentJobId) &&
-                  ["Created", "GeneratingOutline"].includes(jobStatus ?? "")
-                    ? "AI đang xử lý — đợi xong rồi mới làm lại được"
-                    : undefined
-                }
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      "Làm lại từ đầu: từ chối job AI đang dở (nếu có) và XOÁ SẠCH bản nháp bài viết hiện tại (không thể hoàn tác). Tiếp tục?",
-                    )
-                  ) {
-                    resetDraft.mutate();
-                  }
+            {pasteModalOpen && (
+              <DestinationPasteContentModal
+                name={d.name}
+                onClose={() => setPasteModalOpen(false)}
+                onApplied={(article) => {
+                  setDraftArticle(article);
+                  setActionError(null);
                 }}
-              >
-                {resetDraft.isPending ? "Đang làm lại..." : "🗑️ Làm lại từ đầu"}
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-              <span className="text-xs text-zinc-500">
-                Đã có sẵn nội dung viết ở nơi khác (ChatGPT/Gemini...)?
-              </span>
-              <Button variant="secondary" onClick={() => setPasteModalOpen(true)}>
-                📋 Dán bài có sẵn
-              </Button>
-            </div>
-          </div>
-          );
-        })()}
-      </Group>
-
-      {promptPreviewOpen && (
-        <DestinationPromptPreviewModal
-          slug={slug}
-          requestBody={{
-            mode: d?.contentState === "chua-co-bai" ? "create" : "update",
-            userNotes: aiInputsBody().userNotes,
-            referenceUrls: aiInputsBody().referenceUrls.length
-              ? aiInputsBody().referenceUrls
-              : undefined,
-            aiProvider: selectedProvider?.key,
-            aiModel: selectedModel?.id,
-          }}
-          onClose={() => setPromptPreviewOpen(false)}
-        />
-      )}
-
-      {pasteModalOpen && (
-        <DestinationPasteContentModal
-          name={d.name}
-          onClose={() => setPasteModalOpen(false)}
-          onApplied={(article) => {
-            setDraftArticle(article);
-            setActionError(null);
-          }}
-        />
-      )}
+              />
+            )}
           </div>
 
           <div className={activeTab === "content" ? "space-y-4" : "hidden"}>
-            <PanelHead title="📝 Nội dung" hint="Soạn/duyệt từng khối nội dung bài viết. Trích xuất AI + nhập thông tin cho AI viết bài xem ở tab &quot;🤖 AI hỗ trợ&quot;. Trạng thái gate/nút đăng bài xem ở khung phía trên đầu trang." />
+            <PanelHead
+              title="📝 Nội dung"
+              hint='Soạn/duyệt từng khối nội dung bài viết. Trích xuất AI + nhập thông tin cho AI viết bài xem ở tab "🤖 AI hỗ trợ". Trạng thái gate/nút đăng bài xem ở khung phía trên đầu trang.'
+            />
 
-      {/* Noi dung bai viet — sua truc tiep tai day (pivot gop editor vao trang detail).
+            {/* Noi dung bai viet — sua truc tiep tai day (pivot gop editor vao trang detail).
           KHONG boc trong <Group> (card lien nhau se thanh 3 cap long nhau: panel >
           card > tung block ben trong editor) — o day chi can 1 cap: tung block cua
           editor tu la 1 khoi ro rang, khong can them 1 lop card ngoai nua. */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-medium">Nội dung bài viết</h3>
-          {/* Link sang job AI tao/cap nhat bai gan nhat — dung latestContentJobId
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-medium">Nội dung bài viết</h3>
+                {/* Link sang job AI tao/cap nhat bai gan nhat — dung latestContentJobId
               (qua bien jobId da tinh o tren) nen van bam duoc CA khi dang chay LAN
               khi da xong (publish khong xoa latestContentJobId, khac activeContentJobId).
               Nguoi dung yeu cau 29/07/2026: dang o tab Noi dung cung can xem chi tiet
               job, khong chi tab AI ho tro. */}
-          {jobId && (
-            <a
-              href={`/content/${jobId}`}
-              className="flex items-center gap-1 text-xs text-violet-600 hover:underline dark:text-violet-400"
-            >
-              {jobStatus === "Created" || jobStatus === "GeneratingOutline" ? (
-                <>
-                  <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-violet-300 border-t-violet-600" />
-                  AI đang soạn — xem job →
-                </>
-              ) : (
-                "🤖 Xem chi tiết job AI →"
+                {jobId && (
+                  <a
+                    href={`/content/${jobId}`}
+                    className="flex items-center gap-1 text-xs text-violet-600 hover:underline dark:text-violet-400"
+                  >
+                    {jobStatus === "Created" ||
+                    jobStatus === "GeneratingOutline" ? (
+                      <>
+                        <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-violet-300 border-t-violet-600" />
+                        AI đang soạn — xem job →
+                      </>
+                    ) : (
+                      "🤖 Xem chi tiết job AI →"
+                    )}
+                  </a>
+                )}
+              </div>
+              {draftArticle && (
+                <DestinationJobSuggestionsModal
+                  jobSuggestions={jobSuggestions}
+                  frameSuggestion={jobFrameSuggestion}
+                  currentArticle={draftArticle}
+                  applyingBlockKey={applyingBlockKey}
+                  applyingFrameGroup={applyingFrameGroup}
+                  applyingAll={applyingAllJobSuggestions}
+                  onApply={(blockKey) => void applyJobSuggestion(blockKey)}
+                  onApplyFrameGroup={(group) => void applyJobFrameGroup(group)}
+                  onApplyAll={() => void applyAllJobSuggestions()}
+                />
               )}
-            </a>
-          )}
-        </div>
-        {draftArticle && (
-          <DestinationJobSuggestionsModal
-            jobSuggestions={jobSuggestions}
-            frameSuggestion={jobFrameSuggestion}
-            currentArticle={draftArticle}
-            applyingBlockKey={applyingBlockKey}
-            applyingFrameGroup={applyingFrameGroup}
-            applyingAll={applyingAllJobSuggestions}
-            onApply={(blockKey) => void applyJobSuggestion(blockKey)}
-            onApplyFrameGroup={(group) => void applyJobFrameGroup(group)}
-            onApplyAll={() => void applyAllJobSuggestions()}
-          />
-        )}
-      </div>
-      {draftArticle && (
-        <DestinationArticleEditor
-          article={draftArticle}
-          onChange={setDraftArticle}
-          suggestions={suggestions}
-          suggestLoading={suggestLoading}
-          onRequestSuggestion={requestBlockSuggestion}
-          onApplySuggestion={(blockKey) => void applySuggestion(blockKey)}
-          applyingBlockKey={applyingBlockKey}
-          onDismissSuggestion={dismissBlockSuggestion}
-        />
-      )}
-      <div className="flex items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-        <Button
-          variant="primary"
-          loading={saveDraftArticle.isPending}
-          disabled={!isDraftDirty}
-          onClick={() => draftArticle && saveDraftArticle.mutate(draftArticle)}
-        >
-          {saveDraftArticle.isPending ? "Đang lưu..." : "Lưu bản nháp"}
-        </Button>
-        {!isDraftDirty && !saveDraftArticle.isPending && (
-          <span className="text-xs text-zinc-400">Đã lưu</span>
-        )}
-      </div>
+            </div>
+            {draftArticle && (
+              <DestinationArticleEditor
+                article={draftArticle}
+                onChange={setDraftArticle}
+                suggestions={suggestions}
+                suggestLoading={suggestLoading}
+                onRequestSuggestion={requestBlockSuggestion}
+                onApplySuggestion={(blockKey) => void applySuggestion(blockKey)}
+                applyingBlockKey={applyingBlockKey}
+                onDismissSuggestion={dismissBlockSuggestion}
+              />
+            )}
+            <div className="flex items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+              <Button
+                variant="primary"
+                loading={saveDraftArticle.isPending}
+                disabled={!isDraftDirty}
+                onClick={() =>
+                  draftArticle && saveDraftArticle.mutate(draftArticle)
+                }
+              >
+                {saveDraftArticle.isPending ? "Đang lưu..." : "Lưu bản nháp"}
+              </Button>
+              {!isDraftDirty && !saveDraftArticle.isPending && (
+                <span className="text-xs text-zinc-400">Đã lưu</span>
+              )}
+            </div>
           </div>
 
           <div className={activeTab === "basic-info" ? "space-y-4" : "hidden"}>
-            <PanelHead title="ℹ️ Thông tin cơ bản" hint="Metadata điểm đến (tên, toạ độ, địa chỉ, liên hệ...) và Meta Title SEO. Đổi slug/xoá điểm đến chuyển sang tab &quot;⚙️ Cài đặt&quot;. Trích xuất AI từ Google Maps/web tham khảo xem ở khung phía trên đầu trang." />
+            <PanelHead
+              title="ℹ️ Thông tin cơ bản"
+              hint='Metadata điểm đến (tên, toạ độ, địa chỉ, liên hệ...) và Meta Title SEO. Đổi slug/xoá điểm đến chuyển sang tab "⚙️ Cài đặt". Trích xuất AI từ Google Maps/web tham khảo xem ở khung phía trên đầu trang.'
+            />
 
-      <Group title="Thông tin điểm đến">
-        <p className="mb-3 text-xs text-zinc-500">
-          {d.siteId === null
-            ? "Điểm tạo trong AI tool, chưa có trên web — sửa tại đây, sẽ ghi lên website khi publish bài."
-            : "Sửa và lưu sẽ cập nhật thẳng lên website (metadata, không cần publish lại bài)."}
-        </p>
-        <DestinationMetadataForm
-          initial={detailToFormValues(d)}
-          isNew={false}
-          onSaved={() => invalidate()}
-        />
-      </Group>
+            <Group title="Thông tin điểm đến">
+              <p className="mb-3 text-xs text-zinc-500">
+                {d.siteId === null
+                  ? "Điểm tạo trong AI tool, chưa có trên web — sửa tại đây, sẽ ghi lên website khi publish bài."
+                  : "Sửa và lưu sẽ cập nhật thẳng lên website (metadata, không cần publish lại bài)."}
+              </p>
+              <DestinationMetadataForm
+                initial={detailToFormValues(d)}
+                isNew={false}
+                onSaved={() => invalidate()}
+              />
+            </Group>
 
-      {/* Meta title thu cong — them cach cho bulk-edit CSV. Ghi thang len site (nhu
+            {/* Meta title thu cong — them cach cho bulk-edit CSV. Ghi thang len site (nhu
           DestinationMetadataForm o tren), khong lien quan "Thuong mai" nen chuyen ve
           day (07/2026). */}
-      <Group title="Meta Title (thẻ <title> SEO)">
-        <DestinationMetaTitleEditor
-          slug={d.slug}
-          metaTitle={d.metaTitle}
-          onSaved={() => invalidate()}
-        />
-      </Group>
-
+            <Group title="Meta Title (thẻ <title> SEO)">
+              <DestinationMetaTitleEditor
+                slug={d.slug}
+                metaTitle={d.metaTitle}
+                onSaved={() => invalidate()}
+              />
+            </Group>
           </div>
 
           <div className={activeTab === "commerce" ? "space-y-4" : "hidden"}>
-            <PanelHead title="💰 Thương mại & bổ trợ" hint="Vé/giá, lưu ý thực tế, đánh giá biên tập và link đánh giá ngoài đi kèm bài viết." />
+            <PanelHead
+              title="💰 Thương mại & bổ trợ"
+              hint="Vé/giá, lưu ý thực tế, đánh giá biên tập và link đánh giá ngoài đi kèm bài viết."
+            />
 
-      {/* Link mua ve (affiliate-link-conversion-spec §5) — sua tap trung o
+            {/* Link mua ve (affiliate-link-conversion-spec §5) — sua tap trung o
           /dichoithoi/ve (07/2026, thay the editor nhung ngay tai day). */}
-      <Group title="Link mua vé">
-        {d.ticketLinks.length > 0 ? (
-          <div className="space-y-2">
-            <ul className="space-y-1 text-sm">
-              {d.ticketLinks.map((link, i) => (
-                <li key={i} className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{link.label || link.provider}</span>
-                  {link.price != null && (
-                    <span className="text-xs text-zinc-500">{link.price.toLocaleString("vi-VN")}đ</span>
-                  )}
-                  <a
-                    href={link.affiliateUrl}
-                    target="_blank"
-                    rel="noopener noreferrer sponsored"
-                    className="max-w-xs truncate text-blue-600 hover:underline dark:text-blue-400"
+            <Group title="Link mua vé">
+              {d.ticketLinks.length > 0 ? (
+                <div className="space-y-2">
+                  <ul className="space-y-1 text-sm">
+                    {d.ticketLinks.map((link, i) => (
+                      <li key={i} className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">
+                          {link.label || link.provider}
+                        </span>
+                        {link.price != null && (
+                          <span className="text-xs text-zinc-500">
+                            {link.price.toLocaleString("vi-VN")}đ
+                          </span>
+                        )}
+                        <a
+                          href={link.affiliateUrl}
+                          target="_blank"
+                          rel="noopener noreferrer sponsored"
+                          className="max-w-xs truncate text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {link.affiliateUrl}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/dichoithoi/ve?q=${encodeURIComponent(d.name)}`}
+                    className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
                   >
-                    {link.affiliateUrl}
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href={`/dichoithoi/ve?q=${encodeURIComponent(d.name)}`}
-              className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-            >
-              Quản lý vé cho {d.name} →
-            </Link>
-          </div>
-        ) : (
-          <p className="text-sm text-zinc-500">
-            Chưa có link mua vé nào — thêm link để bắt đầu nhận hoa hồng khi khách mua online.{" "}
-            <Link
-              href={`/dichoithoi/ve?q=${encodeURIComponent(d.name)}`}
-              className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-            >
-              Thêm link vé cho {d.name} →
-            </Link>
-          </p>
-        )}
-      </Group>
+                    Quản lý vé cho {d.name} →
+                  </Link>
+                </div>
+              ) : (
+                <p className="text-sm text-zinc-500">
+                  Chưa có link mua vé nào — thêm link để bắt đầu nhận hoa hồng
+                  khi khách mua online.{" "}
+                  <Link
+                    href={`/dichoithoi/ve?q=${encodeURIComponent(d.name)}`}
+                    className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                  >
+                    Thêm link vé cho {d.name} →
+                  </Link>
+                </p>
+              )}
+            </Group>
 
-      {/* Gia ve theo doi tuong (content-seo-ux-plan §5.5a, Phase 12) */}
-      <Group title="Giá vé theo đối tượng">
-        <DestinationPriceBreakdownEditor
-          slug={d.slug}
-          priceBreakdown={d.priceBreakdown}
-          ticketPriceText={d.content?.ticketPrice ?? d.ticketPrice}
-          onSaved={() => invalidate()}
-        />
-      </Group>
+            {/* Gia ve theo doi tuong (content-seo-ux-plan §5.5a, Phase 12) */}
+            <Group title="Giá vé theo đối tượng">
+              <DestinationPriceBreakdownEditor
+                slug={d.slug}
+                priceBreakdown={d.priceBreakdown}
+                ticketPriceText={d.content?.ticketPrice ?? d.ticketPrice}
+                onSaved={() => invalidate()}
+              />
+            </Group>
 
-      {/* Luu y thuc te (content-seo-ux-plan §5.7, Phase 12) */}
-      <Group title="Lưu ý thực tế">
-        <DestinationPracticalNotesEditor
-          slug={d.slug}
-          practicalNotes={d.practicalNotes}
-          onSaved={() => invalidate()}
-        />
-      </Group>
+            {/* Luu y thuc te (content-seo-ux-plan §5.7, Phase 12) */}
+            <Group title="Lưu ý thực tế">
+              <DestinationPracticalNotesEditor
+                slug={d.slug}
+                practicalNotes={d.practicalNotes}
+                onSaved={() => invalidate()}
+              />
+            </Group>
 
-      {/* Danh gia bien tap (content-seo-ux-plan §10.6.2, Phase 28.0) */}
-      <Group title="Đánh giá biên tập">
-        <DestinationEditorialReviewEditor
-          slug={d.slug}
-          editorialReview={d.editorialReview}
-          onSaved={() => invalidate()}
-        />
-      </Group>
+            {/* Danh gia bien tap (content-seo-ux-plan §10.6.2, Phase 28.0) */}
+            <Group title="Đánh giá biên tập">
+              <DestinationEditorialReviewEditor
+                slug={d.slug}
+                editorialReview={d.editorialReview}
+                onSaved={() => invalidate()}
+              />
+            </Group>
 
-      {/* Link "Xem them tren" (destination-spec §2.2 khoi #10/#15, Phase 28.0) */}
-      <Group title="Xem thêm trên (TripAdvisor/Facebook...)">
-        <DestinationExternalReviewUrlsEditor
-          slug={d.slug}
-          externalReviewUrls={d.externalReviewUrls}
-          onSaved={() => invalidate()}
-        />
-      </Group>
+            {/* Link "Xem them tren" (destination-spec §2.2 khoi #10/#15, Phase 28.0) */}
+            <Group title="Xem thêm trên (TripAdvisor/Facebook...)">
+              <DestinationExternalReviewUrlsEditor
+                slug={d.slug}
+                externalReviewUrls={d.externalReviewUrls}
+                onSaved={() => invalidate()}
+              />
+            </Group>
           </div>
 
-          <div className={activeTab === "recommendations" ? "space-y-4" : "hidden"}>
-            <PanelHead title="🔗 Gợi ý liên quan" hint="Khách sạn và tour gợi ý gắn với điểm đến này." />
+          <div
+            className={activeTab === "recommendations" ? "space-y-4" : "hidden"}
+          >
+            <PanelHead
+              title="🔗 Gợi ý liên quan"
+              hint="Khách sạn và tour gợi ý gắn với điểm đến này."
+            />
 
-      {/* Khach san goi y (hotel-spec §6) */}
-      <Group title="Khách sạn gợi ý">
-        <DestinationHotelPanel slug={d.slug} />
-      </Group>
+            {/* Khach san goi y (hotel-spec §6) */}
+            <Group title="Khách sạn gợi ý">
+              <DestinationHotelPanel slug={d.slug} />
+            </Group>
 
-      {/* Tour goi y (tour-spec §6) */}
-      <Group title="Tour gợi ý">
-        <DestinationTourPanel slug={d.slug} />
-      </Group>
+            {/* Tour goi y (tour-spec §6) */}
+            <Group title="Tour gợi ý">
+              <DestinationTourPanel slug={d.slug} />
+            </Group>
           </div>
 
           <div className={activeTab === "relations" ? "space-y-4" : "hidden"}>
-            <PanelHead title="🧭 Quan hệ & đồng bộ" hint="Liên kết với điểm đến khác và trạng thái đồng bộ mirror ↔ site." />
+            <PanelHead
+              title="🧭 Quan hệ & đồng bộ"
+              hint="Liên kết với điểm đến khác và trạng thái đồng bộ mirror ↔ site."
+            />
 
-      <FeatureIntro
-        summary={
-          <>
-            Khối &quot;Điểm đến liên quan&quot; trên trang công khai (website) được{" "}
-            <strong>tự động tính sẵn</strong> theo thuật toán chấm điểm — không phải danh sách
-            cố định. Số lượng hiển thị biến thiên (tối đa 12), tuỳ điểm đến này có bao nhiêu ứng
-            viên thực sự liên quan.
-          </>
-        }
-        details={
-          <div className="space-y-2">
-            <p>
-              <strong>Thứ tự ưu tiên chọn</strong> (từ cứng → theo điểm số):
-            </p>
-            <ol className="list-decimal space-y-1 pl-4">
-              <li>
-                <strong>Con trực tiếp</strong> (nếu đây là tỉnh/cụm) — tối đa 4 mục, luôn đứng đầu.
-              </li>
-              <li>
-                <strong>Liên quan (curated)</strong> — quan hệ bạn tự gán tay ở khối &quot;Quan
-                hệ&quot; bên dưới hoặc trên trang bản đồ, override thuật toán.
-              </li>
-              <li>
-                <strong>Chấm điểm tự động</strong> — toàn bộ điểm đến còn lại, yếu tố chi phối{" "}
-                <strong>khác nhau tuỳ có cùng cụm hay không</strong> (26/07/2026):
-                <ul className="mt-1 list-disc space-y-0.5 pl-4">
-                  <li>
-                    <strong>Cùng cụm trực tiếp:</strong> Cùng <strong>Tag</strong> (chủ đề/trải
-                    nghiệm phù hợp) là yếu tố chi phối chính — khớp <em>toàn bộ</em> tag → 3000
-                    điểm; khớp ≥2 tag → 2000; khớp 1 tag → 1000; không khớp → 0. Loại hình (Type)
-                    lúc này chỉ là yếu tố phụ (tối đa 50 điểm) — lý do: cùng 1 cụm thì việc ghép
-                    lịch trình đã chắc chắn, nên "phù hợp trải nghiệm gì" (Tag) quan trọng hơn
-                    "là gì" (Type).
-                  </li>
-                  <li>
-                    <strong>Khác cụm</strong> (kể cả cùng tỉnh khác cụm): đảo lại — cùng{" "}
-                    <strong>Loại hình</strong> là yếu tố chi phối chính (khớp toàn bộ/≥2/1 loại →
-                    3000/2000/1000, tương tự Tag ở trên); tiếp theo là{" "}
-                    <strong>khoảng cách giữa 2 cụm</strong> — cụm càng gần càng ưu tiên hơn (2 điểm
-                    cùng bậc Loại hình thì điểm ở cụm gần hơn luôn thắng); Tag lúc này chỉ còn là
-                    yếu tố phụ nhẹ nhất (tối đa 50 điểm).
-                  </li>
-                  <li>Cùng cụm/tỉnh cha: +200 (cùng cụm) hoặc +100 (cùng tỉnh).</li>
-                  <li>
-                    Càng gần càng nhiều điểm (tối đa 100 trong cụm; nhân 3 lần — tối đa ~300 —
-                    khi khác cụm, vì lúc đó khoảng cách là yếu tố phụ thứ 2 quan trọng hơn).
-                  </li>
-                  <li>Độ ưu tiên tay (Priority 1–5): +4 đến +20.</li>
-                  <li>Điểm đến hạng Flagship: +10.</li>
-                </ul>
-              </li>
-            </ol>
-            <p>
-              <strong>Rào chặn khoảng cách (100km)</strong>: nếu 1 điểm đến KHÁC cụm VÀ khác tỉnh,
-              nó chỉ được gợi ý khi biết chắc khoảng cách thật ≤ 100km — dù khớp Tag/Loại hình
-              nhiều đến đâu cũng không vượt qua được rào này (tránh gợi ý sai kiểu &quot;cùng loại
-              công viên nhưng cách nhau 400km&quot;, vô dụng cho người lên lịch trình 1 chuyến đi).
-            </p>
-            <p>
-              Bạn có thể <strong>loại trừ</strong> 1 gợi ý sai hoặc <strong>gán curated</strong> tay
-              từ trang bản đồ <code>/dichoithoi/ban-do</code> — 2 việc này luôn thắng thuật toán.
-            </p>
-          </div>
-        }
-      />
+            <FeatureIntro
+              summary={
+                <>
+                  Khối &quot;Điểm đến liên quan&quot; trên trang công khai
+                  (website) được <strong>tự động tính sẵn</strong> theo thuật
+                  toán chấm điểm — không phải danh sách cố định. Số lượng hiển
+                  thị biến thiên (tối đa 12), tuỳ điểm đến này có bao nhiêu ứng
+                  viên thực sự liên quan.
+                </>
+              }
+              details={
+                <div className="space-y-2">
+                  <p>
+                    <strong>Thứ tự ưu tiên chọn</strong> (từ cứng → theo điểm
+                    số):
+                  </p>
+                  <ol className="list-decimal space-y-1 pl-4">
+                    <li>
+                      <strong>Con trực tiếp</strong> (nếu đây là tỉnh/cụm) — tối
+                      đa 4 mục, luôn đứng đầu.
+                    </li>
+                    <li>
+                      <strong>Liên quan (curated)</strong> — quan hệ bạn tự gán
+                      tay ở khối &quot;Quan hệ&quot; bên dưới hoặc trên trang
+                      bản đồ, override thuật toán.
+                    </li>
+                    <li>
+                      <strong>Chấm điểm tự động</strong> — toàn bộ điểm đến còn
+                      lại, yếu tố chi phối{" "}
+                      <strong>khác nhau tuỳ có cùng cụm hay không</strong>{" "}
+                      (26/07/2026):
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                        <li>
+                          <strong>Cùng cụm trực tiếp:</strong> Cùng{" "}
+                          <strong>Tag</strong> (chủ đề/trải nghiệm phù hợp) là
+                          yếu tố chi phối chính — khớp <em>toàn bộ</em> tag →
+                          3000 điểm; khớp ≥2 tag → 2000; khớp 1 tag → 1000;
+                          không khớp → 0. Loại hình (Type) lúc này chỉ là yếu tố
+                          phụ (tối đa 50 điểm) — lý do: cùng 1 cụm thì việc ghép
+                          lịch trình đã chắc chắn, nên "phù hợp trải nghiệm gì"
+                          (Tag) quan trọng hơn "là gì" (Type).
+                        </li>
+                        <li>
+                          <strong>Khác cụm</strong> (kể cả cùng tỉnh khác cụm):
+                          đảo lại — cùng <strong>Loại hình</strong> là yếu tố
+                          chi phối chính (khớp toàn bộ/≥2/1 loại →
+                          3000/2000/1000, tương tự Tag ở trên); tiếp theo là{" "}
+                          <strong>khoảng cách giữa 2 cụm</strong> — cụm càng gần
+                          càng ưu tiên hơn (2 điểm cùng bậc Loại hình thì điểm ở
+                          cụm gần hơn luôn thắng); Tag lúc này chỉ còn là yếu tố
+                          phụ nhẹ nhất (tối đa 50 điểm).
+                        </li>
+                        <li>
+                          Cùng cụm/tỉnh cha: +200 (cùng cụm) hoặc +100 (cùng
+                          tỉnh).
+                        </li>
+                        <li>
+                          Càng gần càng nhiều điểm (tối đa 100 trong cụm; nhân 3
+                          lần — tối đa ~300 — khi khác cụm, vì lúc đó khoảng
+                          cách là yếu tố phụ thứ 2 quan trọng hơn).
+                        </li>
+                        <li>Độ ưu tiên tay (Priority 1–5): +4 đến +20.</li>
+                        <li>Điểm đến hạng Flagship: +10.</li>
+                      </ul>
+                    </li>
+                  </ol>
+                  <p>
+                    <strong>Rào chặn khoảng cách (100km)</strong>: nếu 1 điểm
+                    đến KHÁC cụm VÀ khác tỉnh, nó chỉ được gợi ý khi biết chắc
+                    khoảng cách thật ≤ 100km — dù khớp Tag/Loại hình nhiều đến
+                    đâu cũng không vượt qua được rào này (tránh gợi ý sai kiểu
+                    &quot;cùng loại công viên nhưng cách nhau 400km&quot;, vô
+                    dụng cho người lên lịch trình 1 chuyến đi).
+                  </p>
+                  <p>
+                    Bạn có thể <strong>loại trừ</strong> 1 gợi ý sai hoặc{" "}
+                    <strong>gán curated</strong> tay từ trang bản đồ{" "}
+                    <code>/dichoithoi/ban-do</code> — 2 việc này luôn thắng
+                    thuật toán.
+                  </p>
+                </div>
+              }
+            />
 
-      <Group
-        title={`Xem trước: Điểm đến liên quan trên website${
-          relatedSpotlightQuery.data ? ` (${relatedSpotlightQuery.data.items.length})` : ""
-        }`}
-      >
-        {relatedSpotlightQuery.data?.isPreview ? (
-          <p className="text-xs text-amber-600 dark:text-amber-400">
-            ⚠️ Điểm này <strong>chưa publish</strong> — đây là kết quả tính LIVE (bao gồm cả điểm
-            lân cận chưa publish) để xem trước, chưa phải dữ liệu đã ghi vào website. Số liệu có
-            thể đổi chút ít khi publish thật (lúc đó chỉ tính trên các điểm đã lên site).
-          </p>
-        ) : (
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Đọc thẳng kết quả thuật toán đã tính sẵn (không tính lại) — đúng y hệt khối &quot;Điểm
-            đến liên quan&quot; sẽ hiện trên trang công khai. Khác với &quot;Gần đây&quot;/&quot;Liên
-            quan (curated)&quot; bên dưới (2 khối đó chỉ phục vụ gán quan hệ tay).
-          </p>
-        )}
-        {relatedSpotlightQuery.isLoading && (
-          <p className="text-xs text-zinc-400">Đang tải...</p>
-        )}
-        {relatedSpotlightQuery.data && relatedSpotlightQuery.data.items.length === 0 && (
-          <p className="text-xs text-zinc-400">
-            Chưa có gợi ý nào — có thể do chưa recompute, hoặc không đủ ứng viên liên quan thật.
-          </p>
-        )}
-        {relatedSpotlightQuery.data && relatedSpotlightQuery.data.items.length > 0 && (
-          <ul className="grid grid-cols-1 gap-1.5 text-sm md:grid-cols-2">
-            {relatedSpotlightQuery.data.items.map((item) => (
-              <li
-                key={item.slug}
-                className="flex items-center justify-between gap-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-800"
+            <Group
+              title={`Xem trước: Điểm đến liên quan trên website${
+                relatedSpotlightQuery.data
+                  ? ` (${relatedSpotlightQuery.data.items.length})`
+                  : ""
+              }`}
+            >
+              {relatedSpotlightQuery.data?.isPreview ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ Điểm này <strong>chưa publish</strong> — đây là kết quả
+                  tính LIVE (bao gồm cả điểm lân cận chưa publish) để xem trước,
+                  chưa phải dữ liệu đã ghi vào website. Số liệu có thể đổi chút
+                  ít khi publish thật (lúc đó chỉ tính trên các điểm đã lên
+                  site).
+                </p>
+              ) : (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Đọc thẳng kết quả thuật toán đã tính sẵn (không tính lại) —
+                  đúng y hệt khối &quot;Điểm đến liên quan&quot; sẽ hiện trên
+                  trang công khai. Khác với &quot;Gần đây&quot;/&quot;Liên quan
+                  (curated)&quot; bên dưới (2 khối đó chỉ phục vụ gán quan hệ
+                  tay).
+                </p>
+              )}
+              {relatedSpotlightQuery.isLoading && (
+                <p className="text-xs text-zinc-400">Đang tải...</p>
+              )}
+              {relatedSpotlightQuery.data &&
+                relatedSpotlightQuery.data.items.length === 0 && (
+                  <p className="text-xs text-zinc-400">
+                    Chưa có gợi ý nào — có thể do chưa recompute, hoặc không đủ
+                    ứng viên liên quan thật.
+                  </p>
+                )}
+              {relatedSpotlightQuery.data &&
+                relatedSpotlightQuery.data.items.length > 0 && (
+                  <ul className="grid grid-cols-1 gap-1.5 text-sm md:grid-cols-2">
+                    {relatedSpotlightQuery.data.items.map((item) => (
+                      <li
+                        key={item.slug}
+                        className="flex items-center justify-between gap-2 rounded border border-zinc-200 px-2 py-1 dark:border-zinc-800"
+                      >
+                        <Link
+                          href={`/dichoithoi/${item.slug}`}
+                          className="truncate text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {item.name}
+                        </Link>
+                        <span className="flex shrink-0 items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                          {item.score !== undefined && (
+                            <span
+                              className="rounded bg-indigo-50 px-1.5 py-0.5 font-mono text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                              title="Điểm số thuật toán (chỉ hiện trong CMS, không có trên website công khai)"
+                            >
+                              {Math.round(item.score)}đ
+                            </span>
+                          )}
+                          {item.badge && <span>{item.badge}</span>}
+                          <span className="rounded bg-zinc-100 px-1.5 py-0.5 dark:bg-zinc-800">
+                            {relatedCriterionLabel(item.criterion)}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+            </Group>
+
+            {/* Quan he (spec §7.3 tab 3) */}
+            <Group title="Quan hệ">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Khoảng cách &quot;Gần đây&quot; mặc định tính theo đường chim
+                bay (Haversine — nhanh, ước lượng). Bấm nút để tính khoảng cách
+                đường bộ thật (OpenRouteService) tới các điểm gần đó — sau khi
+                tính, cả khối &quot;Gần đây&quot; dưới đây lẫn gợi ý &quot;điểm
+                đến liên quan&quot; trên website đều tự đổi sang số đường bộ
+                thật.
+              </p>
+              <Button
+                size="sm"
+                loading={recomputeNearbyDistances.isPending}
+                onClick={() => recomputeNearbyDistances.mutate()}
               >
-                <Link
-                  href={`/dichoithoi/${item.slug}`}
-                  className="truncate text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  {item.name}
-                </Link>
-                <span className="flex shrink-0 items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  {item.score !== undefined && (
-                    <span
-                      className="rounded bg-indigo-50 px-1.5 py-0.5 font-mono text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                      title="Điểm số thuật toán (chỉ hiện trong CMS, không có trên website công khai)"
-                    >
-                      {Math.round(item.score)}đ
-                    </span>
-                  )}
-                  {item.badge && <span>{item.badge}</span>}
-                  <span className="rounded bg-zinc-100 px-1.5 py-0.5 dark:bg-zinc-800">
-                    {relatedCriterionLabel(item.criterion)}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Group>
+                {recomputeNearbyDistances.isPending
+                  ? "Đang tính..."
+                  : "Tính khoảng cách đường bộ tới điểm gần đó"}
+              </Button>
+              {recomputeNearbyDistances.data && (
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                  ✅ Đã tính {recomputeNearbyDistances.data.candidates} điểm gần
+                  đó
+                  {recomputeNearbyDistances.data.relatedUpdated
+                    ? " — gợi ý điểm liên quan đã cập nhật."
+                    : " — gợi ý điểm liên quan không đổi."}
+                </p>
+              )}
+              <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+                <RefList
+                  title={`Trực thuộc (${d.children.length})`}
+                  refs={d.children}
+                />
+                <RefList
+                  title={`Gần đây (${d.nearby.length})`}
+                  refs={d.nearby}
+                  showDistance
+                />
+                <RefList
+                  title={`Liên quan (curated, ${d.relatedCurated.length})`}
+                  refs={d.relatedCurated}
+                />
+                <RefList
+                  title={`Được nhắc trong bài (${d.mentionedBy.length})`}
+                  refs={d.mentionedBy}
+                />
+              </div>
+            </Group>
 
-      {/* Quan he (spec §7.3 tab 3) */}
-      <Group title="Quan hệ">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Khoảng cách &quot;Gần đây&quot; mặc định tính theo đường chim bay (Haversine — nhanh, ước
-          lượng). Bấm nút để tính khoảng cách đường bộ thật (OpenRouteService) tới các điểm gần đó
-          — sau khi tính, cả khối &quot;Gần đây&quot; dưới đây lẫn gợi ý &quot;điểm đến liên
-          quan&quot; trên website đều tự đổi sang số đường bộ thật.
-        </p>
-        <Button
-          size="sm"
-          loading={recomputeNearbyDistances.isPending}
-          onClick={() => recomputeNearbyDistances.mutate()}
-        >
-          {recomputeNearbyDistances.isPending
-            ? "Đang tính..."
-            : "Tính khoảng cách đường bộ tới điểm gần đó"}
-        </Button>
-        {recomputeNearbyDistances.data && (
-          <p className="text-xs text-emerald-700 dark:text-emerald-400">
-            ✅ Đã tính {recomputeNearbyDistances.data.candidates} điểm gần đó
-            {recomputeNearbyDistances.data.relatedUpdated
-              ? " — gợi ý điểm liên quan đã cập nhật."
-              : " — gợi ý điểm liên quan không đổi."}
-          </p>
-        )}
-        <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-          <RefList title={`Trực thuộc (${d.children.length})`} refs={d.children} />
-          <RefList title={`Gần đây (${d.nearby.length})`} refs={d.nearby} showDistance />
-          <RefList title={`Liên quan (curated, ${d.relatedCurated.length})`} refs={d.relatedCurated} />
-          <RefList title={`Được nhắc trong bài (${d.mentionedBy.length})`} refs={d.mentionedBy} />
-        </div>
-      </Group>
-
-      {/* Dong bo */}
-      <Group title="Đồng bộ">
-        <Field label="Cảnh báo">
-          {d.syncFlags.length === 0 ? "Không" : d.syncFlags.join(", ")}
-        </Field>
-        <Field label="Web cập nhật lúc">
-          {d.siteUpdatedAt ? new Date(d.siteUpdatedAt).toLocaleString("vi-VN") : "—"}
-        </Field>
-        <Field label="Đồng bộ mirror lúc">
-          {d.syncedAt ? new Date(d.syncedAt).toLocaleString("vi-VN") : "—"}
-        </Field>
-        <Field label="Site ID">{d.siteId ?? "— (chưa có trên web)"}</Field>
-      </Group>
+            {/* Dong bo */}
+            <Group title="Đồng bộ">
+              <Field label="Cảnh báo">
+                {d.syncFlags.length === 0 ? "Không" : d.syncFlags.join(", ")}
+              </Field>
+              <Field label="Web cập nhật lúc">
+                {d.siteUpdatedAt
+                  ? new Date(d.siteUpdatedAt).toLocaleString("vi-VN")
+                  : "—"}
+              </Field>
+              <Field label="Đồng bộ mirror lúc">
+                {d.syncedAt
+                  ? new Date(d.syncedAt).toLocaleString("vi-VN")
+                  : "—"}
+              </Field>
+              <Field label="Site ID">
+                {d.siteId ?? "— (chưa có trên web)"}
+              </Field>
+            </Group>
           </div>
 
           <div className={activeTab === "settings" ? "space-y-4" : "hidden"}>
-            <PanelHead title="⚙️ Cài đặt" hint="Thao tác nâng cao/nguy hiểm cho điểm đến này — đổi slug, xoá vĩnh viễn." />
+            <PanelHead
+              title="⚙️ Cài đặt"
+              hint="Thao tác nâng cao/nguy hiểm cho điểm đến này — đổi slug, xoá vĩnh viễn."
+            />
 
-      {/* Doi slug — thao tac RIENG, tach khoi form sua thuong (Phase 24 chieu ghi).
+            {/* Doi slug — thao tac RIENG, tach khoi form sua thuong (Phase 24 chieu ghi).
           Chuyen tu tab "Thong tin co ban" sang day (07/2026, theo yeu cau nguoi dung)
           cung "Xoa diem den" — ca 2 la thao tac nang cao/nguy hiem, khong phai sua
           metadata thuong xuyen nen tach rieng khoi "basic-info". */}
-      <Group title="⚠️ Đổi slug (nâng cao)">
-        {!renameOpen ? (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-zinc-500">
-              Đổi URL <code className="font-mono">/{d.slug}</code> — chỉ dùng khi thật cần (vd sai
-              chính tả). Con cháu + link nội bộ sẽ tự cập nhật, URL cũ tự chuyển hướng.
-            </p>
-            <Button size="sm" variant="secondary" onClick={() => setRenameOpen(true)}>
-              Đổi slug
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="rounded border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
-              <p className="font-medium">Đọc kỹ trước khi đổi:</p>
-              <ul className="mt-1 list-inside list-disc space-y-0.5">
-                <li>URL cũ tự động chuyển hướng (301) sang URL mới — không lo mất khách/SEO.</li>
-                <li>Toàn bộ điểm con, link nội bộ trong bài khác tự cập nhật theo.</li>
-                <li>
-                  Ảnh trên hosting <strong>không</strong> tự đổi tên thư mục — vẫn hiển thị đúng,
-                  chỉ là path không còn khớp slug mới (không phải lỗi).
-                </li>
-              </ul>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm text-zinc-400">/diem-den/</span>
-              <Input
-                value={newSlugInput}
-                onChange={(e) => setNewSlugInput(e.target.value)}
-                placeholder="slug-moi"
-                className="flex-1"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-amber-600 text-white hover:bg-amber-700"
-                loading={renameSlug.isPending}
-                disabled={!newSlugInput.trim() || newSlugInput.trim() === d.slug}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Đổi slug "${d.slug}" → "${newSlugInput.trim()}"? Không thể tự hoàn tác.`,
-                    )
-                  ) {
-                    renameSlug.mutate();
-                  }
-                }}
-              >
-                {renameSlug.isPending ? "Đang đổi..." : "Xác nhận đổi"}
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setRenameOpen(false);
-                  setNewSlugInput("");
-                }}
-              >
-                Huỷ
-              </Button>
-            </div>
-          </div>
-        )}
-      </Group>
-
-      {/* Xoa han diem den/cum — thao tac nguy hiem NHAT trang, canh bao ro pham
-          vi anh huong (con chau neu la cum) truoc khi xoa that (27/07/2026) */}
-      <Group title="🗑️ Xoá điểm đến (nguy hiểm)">
-        {!deleteOpen ? (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-zinc-500">
-              Xoá hẳn{" "}
-              {d.kind === "cluster"
-                ? "cụm này VÀ TOÀN BỘ điểm đến bên trong"
-                : "điểm đến này"}{" "}
-              khỏi hệ thống — không thể tự hoàn tác.
-            </p>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
-              onClick={() => setDeleteOpen(true)}
-            >
-              Xoá...
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {deletePreviewQuery.isLoading && (
-              <p className="text-xs text-zinc-400">Đang kiểm tra phạm vi ảnh hưởng...</p>
-            )}
-            {deletePreviewQuery.isError && (
-              <p className="text-xs text-red-600 dark:text-red-400">
-                {deletePreviewQuery.error instanceof Error
-                  ? deletePreviewQuery.error.message
-                  : "Lỗi kiểm tra phạm vi ảnh hưởng"}
-              </p>
-            )}
-            {deletePreviewQuery.data && (
-              <div className="rounded border border-red-300 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                <p className="font-medium">
-                  Sắp xoá: {deletePreviewQuery.data.target.name}
-                  {deletePreviewQuery.data.target.isPublished && (
-                    <span className="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-white">
-                      ĐÃ PUBLISH
-                    </span>
-                  )}
-                </p>
-                {deletePreviewQuery.data.descendants.length > 0 && (
-                  <>
-                    <p className="mt-2 font-medium">
-                      Cùng với {deletePreviewQuery.data.descendants.length} điểm bên trong cụm
-                      này:
-                    </p>
-                    <ul className="mt-1 max-h-40 list-inside list-disc space-y-0.5 overflow-y-auto">
-                      {deletePreviewQuery.data.descendants.map((item) => (
-                        <li key={item.slug}>
-                          {item.name}
-                          {item.isPublished && (
-                            <span className="ml-1 rounded bg-red-600 px-1 py-0.5 text-[10px] text-white">
-                              ĐÃ PUBLISH
-                            </span>
-                          )}
-                        </li>
-                      ))}
+            <Group title="⚠️ Đổi slug (nâng cao)">
+              {!renameOpen ? (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-zinc-500">
+                    Đổi URL <code className="font-mono">/{d.slug}</code> — chỉ
+                    dùng khi thật cần (vd sai chính tả). Con cháu + link nội bộ
+                    sẽ tự cập nhật, URL cũ tự chuyển hướng.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setRenameOpen(true)}
+                  >
+                    Đổi slug
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="rounded border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                    <p className="font-medium">Đọc kỹ trước khi đổi:</p>
+                    <ul className="mt-1 list-inside list-disc space-y-0.5">
+                      <li>
+                        URL cũ tự động chuyển hướng (301) sang URL mới — không
+                        lo mất khách/SEO.
+                      </li>
+                      <li>
+                        Toàn bộ điểm con, link nội bộ trong bài khác tự cập nhật
+                        theo.
+                      </li>
+                      <li>
+                        Ảnh trên hosting <strong>không</strong> tự đổi tên thư
+                        mục — vẫn hiển thị đúng, chỉ là path không còn khớp slug
+                        mới (không phải lỗi).
+                      </li>
                     </ul>
-                  </>
-                )}
-                <p className="mt-2">
-                  {deletePreviewQuery.data.target.isPublished ||
-                  deletePreviewQuery.data.descendants.some((item) => item.isPublished)
-                    ? "⚠️ Có điểm ĐÃ PUBLISH trong danh sách này — xoá sẽ mất vĩnh viễn khỏi website đang chạy (404, mất SEO)."
-                    : "Chưa publish — chỉ xoá trong công cụ này, không ảnh hưởng website."}
-                </p>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-red-600 text-white hover:bg-red-700"
-                loading={deleteDestination.isPending}
-                disabled={!deletePreviewQuery.data}
-                onClick={() => {
-                  const preview = deletePreviewQuery.data;
-                  if (!preview) return;
-                  const total = 1 + preview.descendants.length;
-                  if (
-                    window.confirm(
-                      `Xoá "${preview.target.name}"${
-                        preview.descendants.length > 0
-                          ? ` + ${preview.descendants.length} điểm bên trong`
-                          : ""
-                      } (tổng ${total})? KHÔNG THỂ hoàn tác.`,
-                    )
-                  ) {
-                    deleteDestination.mutate();
-                  }
-                }}
-              >
-                {deleteDestination.isPending ? "Đang xoá..." : "Xác nhận xoá vĩnh viễn"}
-              </Button>
-              <Button size="sm" onClick={() => setDeleteOpen(false)}>
-                Huỷ
-              </Button>
-            </div>
-          </div>
-        )}
-      </Group>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm text-zinc-400">
+                      /diem-den/
+                    </span>
+                    <Input
+                      value={newSlugInput}
+                      onChange={(e) => setNewSlugInput(e.target.value)}
+                      placeholder="slug-moi"
+                      className="flex-1"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-amber-600 text-white hover:bg-amber-700"
+                      loading={renameSlug.isPending}
+                      disabled={
+                        !newSlugInput.trim() || newSlugInput.trim() === d.slug
+                      }
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Đổi slug "${d.slug}" → "${newSlugInput.trim()}"? Không thể tự hoàn tác.`,
+                          )
+                        ) {
+                          renameSlug.mutate();
+                        }
+                      }}
+                    >
+                      {renameSlug.isPending ? "Đang đổi..." : "Xác nhận đổi"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setRenameOpen(false);
+                        setNewSlugInput("");
+                      }}
+                    >
+                      Huỷ
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Group>
+
+            {/* Xoa han diem den/cum — thao tac nguy hiem NHAT trang, canh bao ro pham
+          vi anh huong (con chau neu la cum) truoc khi xoa that (27/07/2026) */}
+            <Group title="🗑️ Xoá điểm đến (nguy hiểm)">
+              {!deleteOpen ? (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-zinc-500">
+                    Xoá hẳn{" "}
+                    {d.kind === "cluster"
+                      ? "cụm này VÀ TOÀN BỘ điểm đến bên trong"
+                      : "điểm đến này"}{" "}
+                    khỏi hệ thống — không thể tự hoàn tác.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                    onClick={() => setDeleteOpen(true)}
+                  >
+                    Xoá...
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {deletePreviewQuery.isLoading && (
+                    <p className="text-xs text-zinc-400">
+                      Đang kiểm tra phạm vi ảnh hưởng...
+                    </p>
+                  )}
+                  {deletePreviewQuery.isError && (
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                      {deletePreviewQuery.error instanceof Error
+                        ? deletePreviewQuery.error.message
+                        : "Lỗi kiểm tra phạm vi ảnh hưởng"}
+                    </p>
+                  )}
+                  {deletePreviewQuery.data && (
+                    <div className="rounded border border-red-300 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                      <p className="font-medium">
+                        Sắp xoá: {deletePreviewQuery.data.target.name}
+                        {deletePreviewQuery.data.target.isPublished && (
+                          <span className="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-white">
+                            ĐÃ PUBLISH
+                          </span>
+                        )}
+                      </p>
+                      {deletePreviewQuery.data.descendants.length > 0 && (
+                        <>
+                          <p className="mt-2 font-medium">
+                            Cùng với{" "}
+                            {deletePreviewQuery.data.descendants.length} điểm
+                            bên trong cụm này:
+                          </p>
+                          <ul className="mt-1 max-h-40 list-inside list-disc space-y-0.5 overflow-y-auto">
+                            {deletePreviewQuery.data.descendants.map((item) => (
+                              <li key={item.slug}>
+                                {item.name}
+                                {item.isPublished && (
+                                  <span className="ml-1 rounded bg-red-600 px-1 py-0.5 text-[10px] text-white">
+                                    ĐÃ PUBLISH
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                      <p className="mt-2">
+                        {deletePreviewQuery.data.target.isPublished ||
+                        deletePreviewQuery.data.descendants.some(
+                          (item) => item.isPublished,
+                        )
+                          ? "⚠️ Có điểm ĐÃ PUBLISH trong danh sách này — xoá sẽ mất vĩnh viễn khỏi website đang chạy (404, mất SEO)."
+                          : "Chưa publish — chỉ xoá trong công cụ này, không ảnh hưởng website."}
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-red-600 text-white hover:bg-red-700"
+                      loading={deleteDestination.isPending}
+                      disabled={!deletePreviewQuery.data}
+                      onClick={() => {
+                        const preview = deletePreviewQuery.data;
+                        if (!preview) return;
+                        const total = 1 + preview.descendants.length;
+                        if (
+                          window.confirm(
+                            `Xoá "${preview.target.name}"${
+                              preview.descendants.length > 0
+                                ? ` + ${preview.descendants.length} điểm bên trong`
+                                : ""
+                            } (tổng ${total})? KHÔNG THỂ hoàn tác.`,
+                          )
+                        ) {
+                          deleteDestination.mutate();
+                        }
+                      }}
+                    >
+                      {deleteDestination.isPending
+                        ? "Đang xoá..."
+                        : "Xác nhận xoá vĩnh viễn"}
+                    </Button>
+                    <Button size="sm" onClick={() => setDeleteOpen(false)}>
+                      Huỷ
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Group>
           </div>
         </div>
 
@@ -2062,15 +2440,23 @@ export default function DestinationDetailPage({ params }: { params: Promise<{ sl
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">👁️ Xem trước bản sẽ đăng</h3>
-              <Button size="sm" variant="ghost" onClick={() => setPreviewOpen(false)}>
+              <h3 className="text-lg font-semibold">
+                👁️ Xem trước bản sẽ đăng
+              </h3>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setPreviewOpen(false)}
+              >
                 Đóng
               </Button>
             </div>
             {previewPublish.data.addedLinks.length > 0 && (
               <p className="mb-3 rounded border border-violet-200 bg-violet-50 p-2 text-xs text-violet-700 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300">
                 Link nội bộ sẽ được tự động chèn:{" "}
-                {previewPublish.data.addedLinks.map((l) => l.targetName).join(", ")}
+                {previewPublish.data.addedLinks
+                  .map((l) => l.targetName)
+                  .join(", ")}
               </p>
             )}
             <div
@@ -2095,7 +2481,13 @@ function PanelHead({ title, hint }: { title: string; hint: string }) {
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
       <h3 className="mb-3 font-medium">{title}</h3>
@@ -2123,7 +2515,10 @@ function Field({
 
 function RefLink({ r }: { r: RelatedDestinationRef }) {
   return (
-    <a href={`/dichoithoi/${r.slug}`} className="text-blue-600 hover:underline dark:text-blue-400">
+    <a
+      href={`/dichoithoi/${r.slug}`}
+      className="text-blue-600 hover:underline dark:text-blue-400"
+    >
       {r.name}
     </a>
   );
@@ -2158,7 +2553,10 @@ function RefList({
               <li key={r.slug}>
                 <RefLink r={r} />
                 {showDistance && r.distanceMeters !== null && (
-                  <span className="text-zinc-400"> · cách {formatDistance(r.distanceMeters)}</span>
+                  <span className="text-zinc-400">
+                    {" "}
+                    · cách {formatDistance(r.distanceMeters)}
+                  </span>
                 )}
               </li>
             ))}

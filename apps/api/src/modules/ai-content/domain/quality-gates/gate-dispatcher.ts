@@ -1,9 +1,20 @@
-import type { ArticleType, DraftArticle, QualityCheck } from "@zinoflow/contracts";
+import type {
+  ArticleType,
+  DraftArticle,
+  QualityCheck,
+} from "@zinoflow/contracts";
 import { evaluateAllGates } from "./quality-gates";
 import { evaluateDestinationGates } from "./destination-gates";
 import { evaluateArticleCamNangGates } from "./article-camnang-gates";
-import { evaluateDestinationOriginalityGate, type SimilarDestinationExcerpt } from "./originality-gate";
-import type { Article, ArticleCamNang, DestinationArticle } from "@zinoflow/contracts";
+import {
+  evaluateDestinationOriginalityGate,
+  type SimilarDestinationExcerpt,
+} from "./originality-gate";
+import type {
+  Article,
+  ArticleCamNang,
+  DestinationArticle,
+} from "@zinoflow/contracts";
 
 /**
  * Chon bo quality gates theo loai bai (spec chinh §19.5):
@@ -26,6 +37,7 @@ export function evaluateGatesForArticle(input: {
    * allPassed KHONG bi anh huong boi gate nay (luon severity="warning").
    */
   originalitySimilarTo?: readonly SimilarDestinationExcerpt[];
+  sourceContext?: string | null;
 }): { checks: QualityCheck[]; allPassed: boolean } {
   if (input.articleType === "guide-diem-den") {
     const result = evaluateDestinationGates({
@@ -33,12 +45,16 @@ export function evaluateGatesForArticle(input: {
       draftMarkdown: input.draftMarkdown,
       keywordSeed: input.keywordSeed,
       contentTier: input.contentTier,
+      sourceContext: input.sourceContext,
     });
     if (input.originalitySimilarTo !== undefined) {
       const originalityCheck = evaluateDestinationOriginalityGate({
         similarTo: input.originalitySimilarTo,
       });
-      return { checks: [...result.checks, originalityCheck], allPassed: result.allPassed };
+      return {
+        checks: [...result.checks, originalityCheck],
+        allPassed: result.allPassed,
+      };
     }
     return result;
   }

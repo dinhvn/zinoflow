@@ -18,8 +18,13 @@ export class ListPromptTemplatesUseCase {
   ) {}
 
   async execute(): Promise<PromptTemplateListResponse> {
-    const active = await this.repo.findActiveMany(PROMPT_CATALOG.map((e) => e.key));
+    const keys = PROMPT_CATALOG.map((entry) => entry.key);
+    const [active, latest] = await Promise.all([
+      this.repo.findActiveMany(keys),
+      this.repo.findLatestMany(keys),
+    ]);
     const byKey = new Map(active.map((a) => [a.templateKey, a]));
+    const latestByKey = new Map(latest.map((row) => [row.templateKey, row]));
 
     return {
       templates: PROMPT_CATALOG.map((entry) => {
@@ -30,6 +35,7 @@ export class ListPromptTemplatesUseCase {
           articleType: entry.articleType,
           operation: entry.operation,
           activeVersion: row?.version ?? null,
+          latestVersion: latestByKey.get(entry.key)?.version ?? null,
           source: row ? ("db" as const) : ("default" as const),
           updatedAt: row?.createdAt.toISOString() ?? null,
         };

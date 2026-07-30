@@ -2,15 +2,23 @@ import { PromptBuilder, type PromptJobContext } from "./prompt-builder";
 import type { PromptTemplateRepository } from "../ports/prompt-template.repository";
 
 /** Fake repo: tra content cho dung 1 key cu the (de kiem tra phan giai key). */
-function repoWithKey(key: string | null, content = "SPECIFIC"): PromptTemplateRepository {
+function repoWithKey(
+  key: string | null,
+  content = "SPECIFIC",
+): PromptTemplateRepository {
   return {
-    findActive: async (k) => (k === key ? { id: "x", templateKey: k, version: 1, content } : null),
+    findActive: async (k) =>
+      k === key ? { id: "x", templateKey: k, version: 1, content } : null,
     findActiveMany: async () => [],
+    findLatestMany: async () => [],
     findVersions: async () => [],
     createVersion: async () => {
       throw new Error("nope");
     },
-    activateVersion: async () => {},
+    createInactiveVersion: async () => {
+      throw new Error("nope");
+    },
+    activateVersion: async () => true,
   };
 }
 
@@ -27,7 +35,9 @@ const kmCtx: PromptJobContext = {
 
 describe("PromptBuilder phan giai key (km site x postType)", () => {
   it("uu tien key cu the nhat <site>.<articleType>.<step>", async () => {
-    const b = new PromptBuilder(repoWithKey("dochoi3s.km-top-product.outline.vi"));
+    const b = new PromptBuilder(
+      repoWithKey("dochoi3s.km-top-product.outline.vi"),
+    );
     const req = await b.buildOutline(kmCtx);
     expect(req.prompt).toBe("SPECIFIC");
   });
@@ -48,7 +58,11 @@ describe("PromptBuilder phan giai key (km site x postType)", () => {
 
   it("bai thuong (toplist) van dung default <articleType>.<step>", async () => {
     const b = new PromptBuilder(repoWithKey(null));
-    const req = await b.buildOutline({ ...kmCtx, articleType: "toplist", products: [] });
+    const req = await b.buildOutline({
+      ...kmCtx,
+      articleType: "toplist",
+      products: [],
+    });
     expect(req.prompt).toContain("TOP-LIST");
   });
 });
@@ -67,21 +81,32 @@ const destinationCtx: PromptJobContext = {
 describe("PromptBuilder phan giai key theo ContentTier (Phase 28.3)", () => {
   it("contentTier=flagship -> uu tien key guide-diem-den-flagship (khong co DB -> dung DEFAULT)", async () => {
     const b = new PromptBuilder(repoWithKey(null));
-    const req = await b.buildOutline({ ...destinationCtx, contentTier: "flagship" });
+    const req = await b.buildOutline({
+      ...destinationCtx,
+      contentTier: "flagship",
+    });
     expect(req.prompt).toContain("mùa");
     expect(req.prompt).toContain("ĐÚNG 7 mục H2 theo THỨ TỰ CỐ ĐỊNH");
   });
 
   it("contentTier=standard/null -> dung khung 7 khoi co dinh (redesign luong viet bai)", async () => {
     const b = new PromptBuilder(repoWithKey(null));
-    const req = await b.buildOutline({ ...destinationCtx, contentTier: "standard" });
+    const req = await b.buildOutline({
+      ...destinationCtx,
+      contentTier: "standard",
+    });
     expect(req.prompt).toContain("ĐÚNG 7 mục H2 theo THỨ TỰ CỐ ĐỊNH");
     expect(req.prompt).toContain("Quà mang về");
   });
 
   it("contentTier=flagship uu tien override DB rieng cho site truoc default chung", async () => {
-    const b = new PromptBuilder(repoWithKey("dichoithoi.guide-diem-den-flagship.outline.vi"));
-    const req = await b.buildOutline({ ...destinationCtx, contentTier: "flagship" });
+    const b = new PromptBuilder(
+      repoWithKey("dichoithoi.guide-diem-den-flagship.outline.vi"),
+    );
+    const req = await b.buildOutline({
+      ...destinationCtx,
+      contentTier: "flagship",
+    });
     expect(req.prompt).toBe("SPECIFIC");
   });
 });

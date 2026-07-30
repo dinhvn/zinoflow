@@ -40,7 +40,11 @@ export interface OutlineLike {
 }
 
 /** Bai viet cua bat ky loai nao — luu jsonb trong content_drafts.article. */
-export type AnyArticle = Article | DestinationArticle | CmsArticle | ArticleCamNang;
+export type AnyArticle =
+  | Article
+  | DestinationArticle
+  | CmsArticle
+  | ArticleCamNang;
 
 export interface ArticleTypeProfile {
   /** Schema buoc 1 — phai chua title + sectionHeadings */
@@ -86,6 +90,11 @@ export interface ArticleTypeProfile {
    * tranh truong hop AI gan sai/trung blockKey khi noi dung headings da bi ep dung roi.
    */
   normalizeSection?(section: ContentSection, index: number): ContentSection;
+  /** Ap dung invariant phu thuoc nguon sau khi AI tra ve toan bai. */
+  normalizeArticle?(
+    article: AnyArticle,
+    sourceContext: string | null,
+  ): AnyArticle;
 }
 
 /** Placeholder ro rang de nguoi viet tay biet can thay the — khong bia du lieu that. */
@@ -108,11 +117,16 @@ const affiliateProfile: ArticleTypeProfile = {
       hero: {
         title: padTitle(topic, 10),
         subtitle: PLACEHOLDER_NOTE,
-        affiliateDisclosure: "Bài viết có chứa liên kết affiliate — chúng tôi có thể nhận hoa hồng.",
+        affiliateDisclosure:
+          "Bài viết có chứa liên kết affiliate — chúng tôi có thể nhận hoa hồng.",
       },
       intent: { forWho: PLACEHOLDER_NOTE, problem: PLACEHOLDER_NOTE },
-      quickAnswer: { bullets: [PLACEHOLDER_NOTE, PLACEHOLDER_NOTE, PLACEHOLDER_NOTE] },
-      sections: [{ heading: PLACEHOLDER_NOTE, content: PLACEHOLDER_NOTE.repeat(2) }],
+      quickAnswer: {
+        bullets: [PLACEHOLDER_NOTE, PLACEHOLDER_NOTE, PLACEHOLDER_NOTE],
+      },
+      sections: [
+        { heading: PLACEHOLDER_NOTE, content: PLACEHOLDER_NOTE.repeat(2) },
+      ],
       productRecommendations: [
         {
           name: PLACEHOLDER_NOTE,
@@ -146,7 +160,9 @@ const affiliateProfile: ArticleTypeProfile = {
  * vi tin AI tu dat dung 7 tieu de theo dung thu tu (bug 07/2026: AI de lac de, bo qua
  * "lich-trinh"/"an-gi"/"qua-mang-ve" de thay bang chu de tuy hung khac).
  */
-const DESTINATION_HEADING_TEMPLATES: Partial<Record<DestinationBlockKey, (topic: string) => string>> = {
+const DESTINATION_HEADING_TEMPLATES: Partial<
+  Record<DestinationBlockKey, (topic: string) => string>
+> = {
   "tong-quan": (topic) => `Tổng quan / giới thiệu về ${topic}`,
   "trai-nghiem": (topic) => `Trải nghiệm gì ở ${topic}`,
   "mua-nao": (topic) => `Nên đi ${topic} vào mùa nào`,
@@ -156,6 +172,68 @@ const DESTINATION_HEADING_TEMPLATES: Partial<Record<DestinationBlockKey, (topic:
   "qua-mang-ve": (topic) => `Quà mang về từ ${topic}`,
 };
 
+const MISSING_SOURCE_LIST_BLOCKS: ReadonlyArray<
+  readonly [string, DestinationBlockKey]
+> = [
+  ["activities", "trai-nghiem"],
+  ["food", "an-gi"],
+  ["souvenirs", "qua-mang-ve"],
+];
+
+const MISSING_SOURCE_BLOCK_CONTENT: Partial<
+  Record<DestinationBlockKey, string>
+> = {
+  "trai-nghiem":
+    "Hiện chưa có dữ liệu đã xác minh về các hoạt động cụ thể tại điểm đến.",
+  "an-gi": "Hiện chưa có dữ liệu đã xác minh về dịch vụ ăn uống tại điểm đến.",
+  "qua-mang-ve":
+    "Hiện chưa có dữ liệu đã xác minh về quà lưu niệm hoặc đặc sản bán tại điểm đến.",
+};
+
+const MISSING_SOURCE_FAQ_PATTERNS: Partial<
+  Record<DestinationBlockKey, RegExp>
+> = {
+  "trai-nghiem": /dịch vụ|cho thuê|cứu hộ|chuẩn bị|tiện ích/i,
+  "an-gi": /ăn uống|thực phẩm|nước uống|hàng quán|nhà hàng|quán ăn/i,
+  "qua-mang-ve": /quà|lưu niệm|đặc sản|mua sắm/i,
+};
+
+function normalizeDestinationArticle(
+  article: DestinationArticle,
+  sourceContext: string | null,
+): DestinationArticle {
+  const blocksWithoutSource = new Set(
+    MISSING_SOURCE_LIST_BLOCKS.filter(([flag]) =>
+      sourceContext?.includes(`- ${flag}: missing-structured-source`),
+    ).map(([, blockKey]) => blockKey),
+  );
+  if (blocksWithoutSource.size === 0) return article;
+
+  const unsupportedFaqPatterns = [...blocksWithoutSource]
+    .map((blockKey) => MISSING_SOURCE_FAQ_PATTERNS[blockKey])
+    .filter((pattern): pattern is RegExp => pattern !== undefined);
+
+  return {
+    ...article,
+    quickFacts: blocksWithoutSource.has("an-gi")
+      ? { ...article.quickFacts, food: MISSING_SOURCE_BLOCK_CONTENT["an-gi"]! }
+      : article.quickFacts,
+    sections: article.sections.map((section) =>
+      section.blockKey && blocksWithoutSource.has(section.blockKey)
+        ? {
+            ...section,
+            content: MISSING_SOURCE_BLOCK_CONTENT[section.blockKey]!,
+            items: [],
+          }
+        : section,
+    ),
+    faq: article.faq.filter((item) => {
+      const faqText = `${item.question} ${item.answer}`;
+      return unsupportedFaqPatterns.every((pattern) => !pattern.test(faqText));
+    }),
+  };
+}
+
 const destinationProfile: ArticleTypeProfile = {
   outlineSchema: destinationOutlineSchema as z.ZodType<OutlineLike>,
   // Section schema RIENG (khac 3 profile con lai) — gioi han blockKey dung 7 gia
@@ -164,19 +242,24 @@ const destinationProfile: ArticleTypeProfile = {
   // duyet (bug 07/2026, xem ghi chu o destinationSectionSchema).
   sectionSchema: destinationSectionSchema,
   contentSchema: destinationArticleSchema as unknown as z.ZodType<AnyArticle>,
-  renderMarkdown: (article) => renderDestinationMarkdown(article as DestinationArticle),
+  renderMarkdown: (article) =>
+    renderDestinationMarkdown(article as DestinationArticle),
   extractTitle: (article) => (article as DestinationArticle).title,
   usesProductCatalog: false,
   normalizeOutline: (outline, topic) => ({
     ...outline,
     sectionHeadings: DESTINATION_SECTION_ORDER.map(
-      (key) => DESTINATION_HEADING_TEMPLATES[key]?.(topic) ?? DESTINATION_BLOCK_LABELS[key],
+      (key) =>
+        DESTINATION_HEADING_TEMPLATES[key]?.(topic) ??
+        DESTINATION_BLOCK_LABELS[key],
     ),
   }),
   normalizeSection: (section, index) => ({
     ...section,
     blockKey: DESTINATION_SECTION_ORDER[index] ?? section.blockKey,
   }),
+  normalizeArticle: (article, sourceContext) =>
+    normalizeDestinationArticle(article as DestinationArticle, sourceContext),
   createManualSkeleton: (topic) =>
     destinationArticleSchema.parse({
       title: padTitle(topic, 10),
@@ -213,7 +296,11 @@ const destinationProfile: ArticleTypeProfile = {
                 moTa: PLACEHOLDER_NOTE,
               })),
             }
-          : { heading: DESTINATION_BLOCK_LABELS[blockKey], content: PLACEHOLDER_NOTE.repeat(2), blockKey },
+          : {
+              heading: DESTINATION_BLOCK_LABELS[blockKey],
+              content: PLACEHOLDER_NOTE.repeat(2),
+              blockKey,
+            },
       ),
     }),
 };
@@ -277,12 +364,15 @@ const PROFILES: Record<string, ArticleTypeProfile> = {
   "cam-nang": camNangProfile,
 };
 
-export function getArticleTypeProfile(articleType: ArticleType): ArticleTypeProfile {
+export function getArticleTypeProfile(
+  articleType: ArticleType,
+): ArticleTypeProfile {
   // Moi articleType km-<postType> dung chung cmsProfile (output schema giong nhau);
   // khac biet nam o PROMPT (site x postType) resolve trong prompt-builder.
   if (articleType.startsWith("km-")) return cmsProfile;
   const profile = PROFILES[articleType];
-  if (!profile) throw new Error(`Khong co profile cho articleType "${articleType}"`);
+  if (!profile)
+    throw new Error(`Khong co profile cho articleType "${articleType}"`);
   return profile;
 }
 

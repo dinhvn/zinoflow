@@ -5,7 +5,16 @@ import { reviewActionSchema } from "./review-action";
  * Quality gates — spec §9 + §17.5. 4 gate bat buoc truoc khi Approve.
  * Ket qua tung gate luu bang content_quality_results.
  */
-export const qualityGateNameSchema = z.enum(["structure", "seo", "policy", "data", "originality"]);
+export const qualityGateNameSchema = z.enum([
+  "structure",
+  "seo",
+  "policy",
+  "data",
+  "style",
+  "redundancy",
+  "grounding",
+  "originality",
+]);
 export type QualityGateName = z.infer<typeof qualityGateNameSchema>;
 
 /**
@@ -28,13 +37,35 @@ export const qualityCheckSchema = z.object({
 });
 export type QualityCheck = z.infer<typeof qualityCheckSchema>;
 
+/** Ghi feedback false-positive/chap nhan warning; KHONG doi warning thanh pass. */
+export const dismissQualityWarningRequestSchema = z.object({
+  targetType: z.enum(["content-job", "destination"]),
+  targetId: z.string().min(1).max(128),
+  gateName: qualityGateNameSchema,
+  detail: z.string().min(1).max(2000),
+  reason: z.string().trim().min(3, "Cần ghi lý do ít nhất 3 ký tự").max(1000),
+});
+export type DismissQualityWarningRequest = z.infer<
+  typeof dismissQualityWarningRequestSchema
+>;
+
+export const dismissQualityWarningResponseSchema = z.object({
+  id: z.string().uuid(),
+  createdAt: z.string(),
+});
+export type DismissQualityWarningResponse = z.infer<
+  typeof dismissQualityWarningResponseSchema
+>;
+
 export const runQualityChecksResponseSchema = z.object({
   draftId: z.string().uuid(),
   checks: z.array(qualityCheckSchema),
   /** true khi ca 4 gate pass — dieu kien de Approve. */
   allPassed: z.boolean(),
 });
-export type RunQualityChecksResponse = z.infer<typeof runQualityChecksResponseSchema>;
+export type RunQualityChecksResponse = z.infer<
+  typeof runQualityChecksResponseSchema
+>;
 
 /** Request review action — spec §7.5. Reject bat buoc note (enforce o use case). */
 export const reviewDraftRequestSchema = z.object({

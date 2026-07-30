@@ -11,6 +11,7 @@ import {
   draftArticleSchema,
   listAiProvidersResponseSchema,
   listContentImagesResponseSchema,
+  promptTemplateListResponseSchema,
   previewArticleResultSchema,
   publishArticleResultSchema,
   publishDestinationResultSchema,
@@ -26,11 +27,17 @@ import {
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
+import { Badge } from "@/shared/ui/badge";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
 import { InsertDynamicBlockPanel } from "@/features/dichoithoi/insert-dynamic-block-panel";
 import { ArticleDestinationMapPanel } from "@/features/dichoithoi/article-destination-map-panel";
 import { DestinationArticleEditor } from "@/features/dichoithoi/destination-article-editor/destination-article-editor";
+import { QualityWarningDismiss } from "@/features/quality-warning-dismiss";
+import {
+  formatPromptVersion,
+  isLatestPromptVersion,
+} from "@/shared/prompt-version";
 
 /** Draft response tu GET /content/jobs/:id/draft (DraftRecord phia API). */
 const draftSchema = z.object({
@@ -70,7 +77,10 @@ const versionsSchema = z.array(
  * "section:1" trơ trụi thi hien "section:1 · Tổng quan" (parse tu responseText
  * da luu, khong goi API them). Parse loi/thieu field thi fallback ve operation goc.
  */
-function describeUsageLogOperation(operation: string, responseText: string | null): string {
+function describeUsageLogOperation(
+  operation: string,
+  responseText: string | null,
+): string {
   if (!responseText) return operation;
   let parsed: unknown;
   try {
@@ -86,7 +96,11 @@ function describeUsageLogOperation(operation: string, responseText: string | nul
   if (operation === "outline" && typeof record.title === "string") {
     return `${operation} · ${record.title}`;
   }
-  if (operation === "frame" && typeof record.hero === "object" && record.hero !== null) {
+  if (
+    operation === "frame" &&
+    typeof record.hero === "object" &&
+    record.hero !== null
+  ) {
     const hero = record.hero as Record<string, unknown>;
     if (typeof hero.title === "string") return `${operation} · ${hero.title}`;
   }
@@ -127,12 +141,33 @@ function findVersionForRun(
   return match?.version ?? null;
 }
 
+/** Nhan prompt ngan gon de hien ngay tren header moi lan chay AI. */
+function describePromptVersion(
+  log: AiUsageLogEntry | undefined,
+  latestVersions: ReadonlyMap<string, number>,
+): { label: string; isLatest: boolean } | null {
+  if (!log?.promptKey) return null;
+  const step = log.operation === "outline" ? "Outline" : "Content";
+  const latestVersion = latestVersions.get(log.promptKey) ?? null;
+  return {
+    label: `${step}: ${formatPromptVersion(log.promptSource, log.promptVersion)}`,
+    isLatest: isLatestPromptVersion(
+      log.promptSource,
+      log.promptVersion,
+      latestVersion,
+    ),
+  };
+}
+
 const GATE_LABELS: Record<string, string> = {
   structure: "Cấu trúc bài viết",
   seo: "SEO",
   policy: "Chính sách nội dung",
   data: "Dữ liệu sản phẩm",
   originality: "Trùng lặp nội dung (cảnh báo)",
+  style: "Văn phong rập khuôn (cảnh báo)",
+  redundancy: "Lặp ý chéo trường (cảnh báo)",
+  grounding: "Số liệu so với nguồn (cảnh báo)",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -141,16 +176,23 @@ const ACTION_LABELS: Record<string, string> = {
   Reject: "Từ chối",
 };
 
-export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function JobDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const queryClient = useQueryClient();
   const [editorText, setEditorText] = useState("");
-  const [articleDraft, setArticleDraft] = useState<DestinationArticle | null>(null);
-  const editorRef = useRef<HTMLTextAreaElement>(null);
-  const [reviewNote, setReviewNote] = useState("");
-  const [actionError, setActionError] = useState<{ message: string; details: string[] } | null>(
+  const [articleDraft, setArticleDraft] = useState<DestinationArticle | null>(
     null,
   );
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const [reviewNote, setReviewNote] = useState("");
+  const [actionError, setActionError] = useState<{
+    message: string;
+    details: string[];
+  } | null>(null);
 
   // Form sua tham so sinh bai (chi mo khi job Failed/DraftReady)
   const [editOpen, setEditOpen] = useState(false);
@@ -164,36 +206,44 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     queryFn: () => apiGet(`/content/jobs/${id}`, contentJobSchema),
     // Poll khi dang generate de tu hien draft luc xong
     refetchInterval: (query) =>
-      query.state.data && ["Created", "GeneratingOutline"].includes(query.state.data.status)
+      query.state.data &&
+      ["Created", "GeneratingOutline"].includes(query.state.data.status)
         ? 3000
         : false,
   });
 
   const job = jobQuery.data;
-  const hasDraft = job && !["Created", "GeneratingOutline", "Failed"].includes(job.status);
+  const hasDraft =
+    job && !["Created", "GeneratingOutline", "Failed"].includes(job.status);
 
   // Gate thumbnail (redesign luong viet bai §Phase 4) — publish-destination.usecase.ts bat buoc
   // co thumbnail, truoc day chi bao loi runtime; gio kiem tra + hien ro tren UI truoc khi cho bam.
-  const isDestinationApproved = job?.articleType === "guide-diem-den" && job.status === "Approved";
+  const isDestinationApproved =
+    job?.articleType === "guide-diem-den" && job.status === "Approved";
   const destinationQuery = useQuery({
     queryKey: ["destination-detail-thumbnail", job?.sourceRef],
-    queryFn: () => apiGet(`/destinations/${job!.sourceRef}`, destinationDetailSchema),
+    queryFn: () =>
+      apiGet(`/destinations/${job!.sourceRef}`, destinationDetailSchema),
     enabled: Boolean(isDestinationApproved),
   });
-  const missingThumbnail = isDestinationApproved && !destinationQuery.data?.thumbnail;
+  const missingThumbnail =
+    isDestinationApproved && !destinationQuery.data?.thumbnail;
   // Chi sua tham so + chay lai duoc khi job Failed hoac DraftReady (dong bo state machine BE)
   const canEditParams = job && ["Failed", "DraftReady"].includes(job.status);
 
   const providersQuery = useQuery({
     queryKey: ["ai-providers"],
-    queryFn: () => apiGet("/content/ai-providers", listAiProvidersResponseSchema),
+    queryFn: () =>
+      apiGet("/content/ai-providers", listAiProvidersResponseSchema),
     enabled: Boolean(canEditParams),
   });
   const usableProviders = (providersQuery.data?.providers ?? []).filter(
     (p) => p.isConfigured && p.isEnabled && p.models.length > 0,
   );
   const editSelectedProvider =
-    usableProviders.find((p) => p.key === editProvider) ?? usableProviders[0] ?? null;
+    usableProviders.find((p) => p.key === editProvider) ??
+    usableProviders[0] ??
+    null;
   const editSelectedModel =
     editSelectedProvider?.models.find((m) => m.id === editModel) ??
     editSelectedProvider?.models[0] ??
@@ -214,7 +264,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     queryKey: ["content-draft", id],
     queryFn: () => apiGet(`/content/jobs/${id}/draft`, draftSchema),
     enabled: Boolean(hasDraft),
-    retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 2,
+    retry: (count, error) =>
+      !(error instanceof ApiError && error.status === 404) && count < 2,
   });
   const draft = draftQuery.data;
   const isDestination = job?.articleType === "guide-diem-den";
@@ -236,13 +287,15 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       apiSend("PUT", `/articles/${id}/cover-image`, {
         contentImageId: coverImageId || null,
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content-job", id] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["content-job", id] }),
   });
 
   // Dong bo editor moi khi load draft/version moi (khong ghi de khi dang go)
   useEffect(() => {
     if (draft?.draftMarkdown != null) setEditorText(draft.draftMarkdown);
-    if (draft?.article && "quickFacts" in draft.article) setArticleDraft(draft.article);
+    if (draft?.article && "quickFacts" in draft.article)
+      setArticleDraft(draft.article);
   }, [draft?.id, draft?.draftMarkdown, draft?.article]);
 
   const htmlQuery = useQuery({
@@ -253,7 +306,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   const checksQuery = useQuery({
     queryKey: ["draft-checks", draft?.id],
-    queryFn: () => apiGet(`/content/drafts/${draft!.id}/quality-checks`, runQualityChecksResponseSchema),
+    queryFn: () =>
+      apiGet(
+        `/content/drafts/${draft!.id}/quality-checks`,
+        runQualityChecksResponseSchema,
+      ),
     enabled: Boolean(draft?.id),
   });
 
@@ -274,10 +331,25 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   // bat song song voi jobQuery ngay ca luc dang GeneratingOutline, tu lam moi 3s toi khi xong.
   const usageLogsQuery = useQuery({
     queryKey: ["job-usage-logs", id],
-    queryFn: () => apiGet(`/content/jobs/${id}/usage-logs`, z.array(aiUsageLogEntrySchema)),
+    queryFn: () =>
+      apiGet(`/content/jobs/${id}/usage-logs`, z.array(aiUsageLogEntrySchema)),
     enabled: Boolean(job),
-    refetchInterval: () => (job && ["Created", "GeneratingOutline"].includes(job.status) ? 3000 : false),
+    refetchInterval: () =>
+      job && ["Created", "GeneratingOutline"].includes(job.status)
+        ? 3000
+        : false,
   });
+  const promptTemplatesQuery = useQuery({
+    queryKey: ["prompt-templates"],
+    queryFn: () =>
+      apiGet("/content/prompt-templates", promptTemplateListResponseSchema),
+    enabled: Boolean(job),
+  });
+  const latestPromptVersions = new Map(
+    (promptTemplatesQuery.data?.templates ?? [])
+      .filter((template) => template.latestVersion !== null)
+      .map((template) => [template.key, template.latestVersion!]),
+  );
 
   function invalidateAll() {
     void queryClient.invalidateQueries({ queryKey: ["content-job", id] });
@@ -297,8 +369,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const saveDraft = useMutation({
     mutationFn: () =>
       isDestination
-        ? apiSend("PUT", `/content/drafts/${draft!.id}`, { article: articleDraft })
-        : apiSend("PUT", `/content/drafts/${draft!.id}`, { draftMarkdown: editorText }),
+        ? apiSend("PUT", `/content/drafts/${draft!.id}`, {
+            article: articleDraft,
+          })
+        : apiSend("PUT", `/content/drafts/${draft!.id}`, {
+            draftMarkdown: editorText,
+          }),
     onSuccess: () => {
       setActionError(null);
       invalidateAll();
@@ -307,7 +383,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   });
 
   const runChecks = useMutation({
-    mutationFn: () => apiSend("POST", `/content/drafts/${draft!.id}/quality-checks`, {}),
+    mutationFn: () =>
+      apiSend("POST", `/content/drafts/${draft!.id}/quality-checks`, {}),
     onSuccess: () => {
       setActionError(null);
       void queryClient.invalidateQueries({ queryKey: ["draft-checks"] });
@@ -371,7 +448,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     onError: (error) => setActionError(toActionError(error)),
   });
 
-  const [publishResult, setPublishResult] = useState<PublishDestinationResult | null>(null);
+  const [publishResult, setPublishResult] =
+    useState<PublishDestinationResult | null>(null);
   // Gate thu cong thu 2 (Approve ≠ Publish): day bai da duyet xuong SQL Server dichoithoi
   const publishDichoithoi = useMutation({
     mutationFn: async () =>
@@ -386,10 +464,13 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     onError: (error) => setActionError(toActionError(error)),
   });
 
-  const [articleResult, setArticleResult] = useState<PublishArticleResult | null>(null);
+  const [articleResult, setArticleResult] =
+    useState<PublishArticleResult | null>(null);
   const publishArticle = useMutation({
     mutationFn: async () =>
-      publishArticleResultSchema.parse(await apiSend("POST", `/articles/${id}/publish`, {})),
+      publishArticleResultSchema.parse(
+        await apiSend("POST", `/articles/${id}/publish`, {}),
+      ),
     onSuccess: (result) => {
       setActionError(null);
       setArticleResult(result);
@@ -400,12 +481,13 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   // Xem truoc HTML se ghi luc Publish (dry-run, resolve khoi dong + auto-link that —
   // article-workflow-plan.md muc 2, khac htmlQuery ben duoi la sanitize thuan tuy).
-  const [previewArticleResult, setPreviewArticleResult] = useState<PreviewArticleResult | null>(
-    null,
-  );
+  const [previewArticleResult, setPreviewArticleResult] =
+    useState<PreviewArticleResult | null>(null);
   const previewArticle = useMutation({
     mutationFn: async () =>
-      previewArticleResultSchema.parse(await apiSend("POST", `/articles/${id}/preview`, {})),
+      previewArticleResultSchema.parse(
+        await apiSend("POST", `/articles/${id}/preview`, {}),
+      ),
     onSuccess: (result) => {
       setActionError(null);
       setPreviewArticleResult(result);
@@ -417,7 +499,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     setPreviewArticleResult(null);
   }, [draft?.id]);
 
-  const [refreshResult, setRefreshResult] = useState<RefreshDynamicBlocksResult | null>(null);
+  const [refreshResult, setRefreshResult] =
+    useState<RefreshDynamicBlocksResult | null>(null);
   const refreshBlocks = useMutation({
     mutationFn: async () =>
       refreshDynamicBlocksResultSchema.parse(
@@ -431,7 +514,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   });
 
   const isDirty = isDestination
-    ? articleDraft != null && JSON.stringify(articleDraft) !== JSON.stringify(draft?.article ?? null)
+    ? articleDraft != null &&
+      JSON.stringify(articleDraft) !== JSON.stringify(draft?.article ?? null)
     : draft?.draftMarkdown != null && editorText !== draft.draftMarkdown;
   const checks = checksQuery.data?.checks ?? [];
 
@@ -460,14 +544,19 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         ← Quay lại danh sách
       </a>
 
-      {jobQuery.isLoading && <p className="text-sm text-zinc-500">Đang tải...</p>}
+      {jobQuery.isLoading && (
+        <p className="text-sm text-zinc-500">Đang tải...</p>
+      )}
 
       {job && (
         <div className="rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
           <h2 className="mb-2 text-xl font-semibold">{job.topic}</h2>
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-zinc-500">
             <span>
-              Trạng thái: <strong className="text-zinc-900 dark:text-zinc-100">{job.status}</strong>
+              Trạng thái:{" "}
+              <strong className="text-zinc-900 dark:text-zinc-100">
+                {job.status}
+              </strong>
             </span>
             <span>Site: {job.siteCode}</span>
             <span>
@@ -480,7 +569,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     ? "Cẩm nang (dichoithoi)"
                     : "Điểm đến (dichoithoi)"}
             </span>
-            <span>AI: {job.aiProvider}/{job.aiModel}</span>
+            <span>
+              AI: {job.aiProvider}/{job.aiModel}
+            </span>
             {draft && <span>Version: v{draft.version}</span>}
           </div>
           {job.status === "GeneratingOutline" && (
@@ -501,12 +592,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           )}
           {job.status === "Failed" && (
             <p className="mt-2 text-red-600 dark:text-red-400">
-              Tạo bài thất bại — bấm Thử lại ở trang danh sách hoặc kiểm tra log API.
+              Tạo bài thất bại — bấm Thử lại ở trang danh sách hoặc kiểm tra log
+              API.
             </p>
           )}
           {job.status === "Approved" && (
             <p className="mt-2 text-emerald-600 dark:text-emerald-400">
-              Bài đã được duyệt. Sửa nội dung sẽ tạo version mới và phải duyệt lại.
+              Bài đã được duyệt. Sửa nội dung sẽ tạo version mới và phải duyệt
+              lại.
             </p>
           )}
 
@@ -520,7 +613,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               ) : (
                 <div className="space-y-3">
                   <label className="block text-sm">
-                    <span className="mb-1 block text-zinc-500">Chủ đề bài viết</span>
+                    <span className="mb-1 block text-zinc-500">
+                      Chủ đề bài viết
+                    </span>
                     <Input
                       value={editTopic}
                       onChange={(e) => setEditTopic(e.target.value)}
@@ -529,7 +624,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     />
                   </label>
                   <label className="block text-sm">
-                    <span className="mb-1 block text-zinc-500">Từ khóa SEO (phân cách bằng dấu phẩy)</span>
+                    <span className="mb-1 block text-zinc-500">
+                      Từ khóa SEO (phân cách bằng dấu phẩy)
+                    </span>
                     <Input
                       value={editKeywords}
                       onChange={(e) => setEditKeywords(e.target.value)}
@@ -538,7 +635,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     />
                   </label>
                   <label className="block text-sm">
-                    <span className="mb-1 block text-zinc-500">AI Provider / Model</span>
+                    <span className="mb-1 block text-zinc-500">
+                      AI Provider / Model
+                    </span>
                     <div className="flex gap-2">
                       <Select
                         value={editSelectedProvider?.key ?? ""}
@@ -577,10 +676,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       size="sm"
                       variant="primary"
                       loading={editAndRerun.isPending}
-                      disabled={editTopic.trim().length < 5 || !editSelectedModel}
+                      disabled={
+                        editTopic.trim().length < 5 || !editSelectedModel
+                      }
                       onClick={() => editAndRerun.mutate()}
                     >
-                      {editAndRerun.isPending ? "Đang lưu & chạy lại..." : "Lưu & chạy lại"}
+                      {editAndRerun.isPending
+                        ? "Đang lưu & chạy lại..."
+                        : "Lưu & chạy lại"}
                     </Button>
                     <Button
                       size="sm"
@@ -603,7 +706,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 <button
                   onClick={() => submitReview.mutate()}
                   disabled={submitReview.isPending || isDirty}
-                  title={isDirty ? "Lưu nội dung trước khi gửi duyệt" : undefined}
+                  title={
+                    isDirty ? "Lưu nội dung trước khi gửi duyệt" : undefined
+                  }
                   className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
                 >
                   Gửi duyệt
@@ -640,37 +745,42 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   />
                 </>
               )}
-              {job.status === "Approved" && job.articleType === "guide-diem-den" && (
-                <>
-                  <button
-                    onClick={() => publishDichoithoi.mutate()}
-                    disabled={publishDichoithoi.isPending || missingThumbnail}
-                    title={
-                      missingThumbnail
-                        ? "Chưa có ảnh đại diện — vào trang Điểm đến để thêm ảnh trước khi đăng"
-                        : undefined
-                    }
-                    className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {publishDichoithoi.isPending ? "Đang đăng..." : "Đăng lên dichoithoi"}
-                  </button>
-                  {missingThumbnail && (
-                    <a
-                      href={`/dichoithoi/${job.sourceRef}`}
-                      className="text-xs text-amber-600 hover:underline dark:text-amber-400"
+              {job.status === "Approved" &&
+                job.articleType === "guide-diem-den" && (
+                  <>
+                    <button
+                      onClick={() => publishDichoithoi.mutate()}
+                      disabled={publishDichoithoi.isPending || missingThumbnail}
+                      title={
+                        missingThumbnail
+                          ? "Chưa có ảnh đại diện — vào trang Điểm đến để thêm ảnh trước khi đăng"
+                          : undefined
+                      }
+                      className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                     >
-                      ⚠️ Chưa có ảnh đại diện — vào trang Điểm đến để thêm ảnh
-                    </a>
-                  )}
-                </>
-              )}
+                      {publishDichoithoi.isPending
+                        ? "Đang đăng..."
+                        : "Đăng lên dichoithoi"}
+                    </button>
+                    {missingThumbnail && (
+                      <a
+                        href={`/dichoithoi/${job.sourceRef}`}
+                        className="text-xs text-amber-600 hover:underline dark:text-amber-400"
+                      >
+                        ⚠️ Chưa có ảnh đại diện — vào trang Điểm đến để thêm ảnh
+                      </a>
+                    )}
+                  </>
+                )}
               {job.status === "Approved" && job.articleType === "cam-nang" && (
                 <Button
                   variant="primary"
                   loading={publishArticle.isPending}
                   onClick={() => publishArticle.mutate()}
                 >
-                  {publishArticle.isPending ? "Đang đăng..." : "Đăng bài cẩm nang"}
+                  {publishArticle.isPending
+                    ? "Đang đăng..."
+                    : "Đăng bài cẩm nang"}
                 </Button>
               )}
               {job.articleType === "cam-nang" && (
@@ -679,7 +789,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   loading={refreshBlocks.isPending}
                   onClick={() => refreshBlocks.mutate()}
                 >
-                  {refreshBlocks.isPending ? "Đang làm mới..." : "Làm mới khối động"}
+                  {refreshBlocks.isPending
+                    ? "Đang làm mới..."
+                    : "Làm mới khối động"}
                 </Button>
               )}
               {job.articleType === "cam-nang" && hasDraft && (
@@ -700,8 +812,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 Ảnh đại diện (og:image)
               </p>
               <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                Ảnh hiện khi chia sẻ bài lên mạng xã hội và trong kết quả tìm kiếm — chọn từ Thư
-                viện ảnh nội dung. Chưa chọn thì để trống (không chặn đăng bài).
+                Ảnh hiện khi chia sẻ bài lên mạng xã hội và trong kết quả tìm
+                kiếm — chọn từ Thư viện ảnh nội dung. Chưa chọn thì để trống
+                (không chặn đăng bài).
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Select
@@ -723,13 +836,19 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   disabled={coverImageId === (job?.coverImageId ?? "")}
                   onClick={() => saveCoverImage.mutate()}
                 >
-                  {saveCoverImage.isPending ? "Đang lưu..." : "Lưu ảnh đại diện"}
+                  {saveCoverImage.isPending
+                    ? "Đang lưu..."
+                    : "Lưu ảnh đại diện"}
                 </Button>
               </div>
               {coverImageId && contentImagesQuery.data && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={contentImagesQuery.data.images.find((img) => img.id === coverImageId)?.imageUrl}
+                  src={
+                    contentImagesQuery.data.images.find(
+                      (img) => img.id === coverImageId,
+                    )?.imageUrl
+                  }
                   alt=""
                   className="mt-2 h-24 w-40 rounded object-cover"
                 />
@@ -741,12 +860,13 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
               <p className="font-medium">
                 ✅ Đã đăng bài “{publishResult.slug}” lên dichoithoi (
-                {(publishResult.durationMs / 1000).toFixed(1)}s) — cập nhật khối liên quan cho{" "}
-                {publishResult.relatedRecomputed} điểm đến.
+                {(publishResult.durationMs / 1000).toFixed(1)}s) — cập nhật khối
+                liên quan cho {publishResult.relatedRecomputed} điểm đến.
               </p>
               {publishResult.addedLinks.length > 0 && (
                 <p className="mt-1">
-                  Link nội bộ đã chèn: {publishResult.addedLinks.map((l) => l.targetName).join(", ")}
+                  Link nội bộ đã chèn:{" "}
+                  {publishResult.addedLinks.map((l) => l.targetName).join(", ")}
                 </p>
               )}
             </div>
@@ -755,7 +875,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           {articleResult && (
             <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
               <p className="font-medium">
-                ✅ Đã đăng bài “{articleResult.slug}” ({(articleResult.durationMs / 1000).toFixed(1)}s) —{" "}
+                ✅ Đã đăng bài “{articleResult.slug}” (
+                {(articleResult.durationMs / 1000).toFixed(1)}s) —{" "}
                 {articleResult.blockCount} khối động.
               </p>
               {articleResult.warnings.length > 0 && (
@@ -769,13 +890,17 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           )}
 
           {articleResult && articleResult.addedLinks.length > 0 && (
-            <ArticleDestinationMapPanel jobId={id} suggestions={articleResult.addedLinks} />
+            <ArticleDestinationMapPanel
+              jobId={id}
+              suggestions={articleResult.addedLinks}
+            />
           )}
 
           {refreshResult && (
             <div className="mt-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
               <p className="font-medium">
-                ✅ Đã làm mới khối động cho “{refreshResult.slug}” — {refreshResult.blockCount} khối.
+                ✅ Đã làm mới khối động cho “{refreshResult.slug}” —{" "}
+                {refreshResult.blockCount} khối.
               </p>
               {refreshResult.warnings.length > 0 && (
                 <ul className="mt-1 list-inside list-disc text-amber-700 dark:text-amber-400">
@@ -817,8 +942,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           </div>
           {checks.length === 0 ? (
             <p className="text-sm text-zinc-500">
-              Chưa chạy kiểm tra cho version này. Bấm &quot;Chạy kiểm tra&quot; — bài chỉ duyệt được
-              khi các gate bắt buộc đạt (⚠️ chỉ là cảnh báo, không chặn duyệt).
+              Chưa chạy kiểm tra cho version này. Bấm &quot;Chạy kiểm tra&quot;
+              — bài chỉ duyệt được khi các gate bắt buộc đạt (⚠️ chỉ là cảnh
+              báo, không chặn duyệt).
             </p>
           ) : (
             <ul className="space-y-2 text-sm">
@@ -844,6 +970,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                           ))}
                         </ul>
                       )}
+                      {isWarning && (
+                        <QualityWarningDismiss
+                          targetType="content-job"
+                          targetId={id}
+                          gateName={check.gateName}
+                          details={check.details}
+                        />
+                      )}
                     </div>
                   </li>
                 );
@@ -859,7 +993,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center justify-between border-b border-zinc-200 p-3 dark:border-zinc-800">
               <h3 className="text-sm font-medium">
-                {isDestination ? "Soạn thảo (từng khối)" : "Soạn thảo (Markdown)"}
+                {isDestination
+                  ? "Soạn thảo (từng khối)"
+                  : "Soạn thảo (Markdown)"}
               </h3>
               <div className="flex items-center gap-2">
                 {job?.articleType === "cam-nang" && (
@@ -870,12 +1006,19 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   disabled={!isDirty || saveDraft.isPending}
                   className="rounded bg-zinc-900 px-3 py-1 text-xs font-medium text-white hover:bg-zinc-700 disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
                 >
-                  {saveDraft.isPending ? "Đang lưu..." : isDirty ? "Lưu (tạo version mới)" : "Đã lưu"}
+                  {saveDraft.isPending
+                    ? "Đang lưu..."
+                    : isDirty
+                      ? "Lưu (tạo version mới)"
+                      : "Đã lưu"}
                 </button>
               </div>
             </div>
             {isDestination && articleDraft ? (
-              <DestinationArticleEditor article={articleDraft} onChange={setArticleDraft} />
+              <DestinationArticleEditor
+                article={articleDraft}
+                onChange={setArticleDraft}
+              />
             ) : (
               <textarea
                 ref={editorRef}
@@ -889,14 +1032,18 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
           <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
             <div className="border-b border-zinc-200 p-3 dark:border-zinc-800">
-              <h3 className="text-sm font-medium">Xem trước (HTML đã làm sạch)</h3>
+              <h3 className="text-sm font-medium">
+                Xem trước (HTML đã làm sạch)
+              </h3>
             </div>
             <div
               className="prose prose-zinc dark:prose-invert h-[600px] max-w-none overflow-y-auto p-4 text-sm
                 [&_a]:text-blue-600 [&_a]:underline [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold
                 [&_h3]:mt-3 [&_h3]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
               // HTML da duoc sanitize phia API (sanitize-html) truoc khi tra ve
-              dangerouslySetInnerHTML={{ __html: htmlQuery.data?.html ?? "<p>Đang tải...</p>" }}
+              dangerouslySetInnerHTML={{
+                __html: htmlQuery.data?.html ?? "<p>Đang tải...</p>",
+              }}
             />
           </div>
         </div>
@@ -908,17 +1055,29 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
             <h3 className="mb-3 font-medium">Lịch sử review</h3>
             {(reviewsQuery.data ?? []).length === 0 ? (
-              <p className="text-sm text-zinc-500">Chưa có hành động review nào.</p>
+              <p className="text-sm text-zinc-500">
+                Chưa có hành động review nào.
+              </p>
             ) : (
               <ul className="space-y-2 text-sm">
                 {reviewsQuery.data!.map((r) => (
-                  <li key={r.id} className="border-b border-zinc-100 pb-2 last:border-0 dark:border-zinc-800">
-                    <span className="font-medium">{ACTION_LABELS[r.action] ?? r.action}</span>
+                  <li
+                    key={r.id}
+                    className="border-b border-zinc-100 pb-2 last:border-0 dark:border-zinc-800"
+                  >
+                    <span className="font-medium">
+                      {ACTION_LABELS[r.action] ?? r.action}
+                    </span>
                     <span className="text-zinc-500">
-                      {" "}· v{r.draftVersion} · {r.actor} ·{" "}
+                      {" "}
+                      · v{r.draftVersion} · {r.actor} ·{" "}
                       {new Date(r.createdAt).toLocaleString("vi-VN")}
                     </span>
-                    {r.note && <p className="mt-1 text-zinc-600 dark:text-zinc-400">“{r.note}”</p>}
+                    {r.note && (
+                      <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                        “{r.note}”
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -930,7 +1089,13 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             <ul className="space-y-1 text-sm">
               {(versionsQuery.data ?? []).map((v) => (
                 <li key={v.id} className="text-zinc-600 dark:text-zinc-400">
-                  <span className={v.id === draft?.id ? "font-semibold text-zinc-900 dark:text-zinc-100" : ""}>
+                  <span
+                    className={
+                      v.id === draft?.id
+                        ? "font-semibold text-zinc-900 dark:text-zinc-100"
+                        : ""
+                    }
+                  >
                     v{v.version}
                   </span>{" "}
                   · {new Date(v.createdAt).toLocaleString("vi-VN")}
@@ -954,20 +1119,23 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             {(usageLogsQuery.data ?? []).length > 0 && (
               <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                 Tổng chi phí: $
-                {usageLogsQuery.data!.reduce((sum, log) => sum + log.costUsd, 0).toFixed(4)}
+                {usageLogsQuery
+                  .data!.reduce((sum, log) => sum + log.costUsd, 0)
+                  .toFixed(4)}
               </span>
             )}
           </div>
           <p className="mb-3 text-xs text-zinc-500">
-            Mỗi lần AI được gọi (mỗi bước outline/từng khối/frame) — bấm mở để xem đúng nội dung
-            prompt đã gửi và response thô AI trả về, dùng để kiểm tra vì sao bài ra như vậy.
+            Mỗi lần AI được gọi (mỗi bước outline/từng khối/frame) — bấm mở để
+            xem đúng nội dung prompt đã gửi và response thô AI trả về, dùng để
+            kiểm tra vì sao bài ra như vậy.
           </p>
           {["Created", "GeneratingOutline"].includes(job.status) && (
             <p className="mb-3 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-300 border-t-blue-600" />
-              Đang chạy — đã xong {usageLogsQuery.data?.length ?? 0} lệnh gọi (outline + 7 khối +
-              frame = 9 lệnh cho bài điểm đến, ít hơn cho loại bài khác), danh sách bên dưới tự cập
-              nhật.
+              Đang chạy — đã xong {usageLogsQuery.data?.length ?? 0} lệnh gọi
+              (outline + 7 khối + frame = 9 lệnh cho bài điểm đến, ít hơn cho
+              loại bài khác), danh sách bên dưới tự cập nhật.
             </p>
           )}
           {(usageLogsQuery.data ?? []).length === 0 ? (
@@ -989,65 +1157,142 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       groups[i + 1]?.[0]?.createdAt,
                       versionsQuery.data ?? [],
                     ),
-                    groupCostUsd: group.reduce((sum, log) => sum + log.costUsd, 0),
+                    groupCostUsd: group.reduce(
+                      (sum, log) => sum + log.costUsd,
+                      0,
+                    ),
+                    outlinePrompt: describePromptVersion(
+                      group.find((log) => log.operation === "outline"),
+                      latestPromptVersions,
+                    ),
+                    contentPrompt: describePromptVersion(
+                      group.find((log) => log.operation === "content"),
+                      latestPromptVersions,
+                    ),
                   }))
                   .reverse();
-              })().map(({ group, runNumber, producedVersion, groupCostUsd }) => {
-                return (
-                  <div key={group[0]!.id}>
-                    <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                        Lần chạy {runNumber}
-                      </span>
-                      <span className="text-zinc-400">
-                        {new Date(group[0]!.createdAt).toLocaleString("vi-VN")}
-                      </span>
-                      <span className="text-zinc-500">${groupCostUsd.toFixed(4)}</span>
-                      {producedVersion !== null ? (
-                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                          → đã tạo v{producedVersion}
+              })().map(
+                ({
+                  group,
+                  runNumber,
+                  producedVersion,
+                  groupCostUsd,
+                  outlinePrompt,
+                  contentPrompt,
+                }) => {
+                  return (
+                    <div key={group[0]!.id}>
+                      <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                          Lần chạy {runNumber}
                         </span>
-                      ) : (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                          → không tạo được bản nháp (lỗi/dừng giữa chừng)
+                        <span className="text-zinc-400">
+                          {new Date(group[0]!.createdAt).toLocaleString(
+                            "vi-VN",
+                          )}
                         </span>
-                      )}
+                        <span className="text-zinc-500">
+                          ${groupCostUsd.toFixed(4)}
+                        </span>
+                        {producedVersion !== null ? (
+                          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                            → đã tạo v{producedVersion}
+                          </span>
+                        ) : (
+                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                            → không tạo được bản nháp (lỗi/dừng giữa chừng)
+                          </span>
+                        )}
+                        {[outlinePrompt, contentPrompt]
+                          .filter((promptVersion) => promptVersion !== null)
+                          .map((promptVersion) => (
+                            <span
+                              key={promptVersion.label}
+                              className="flex items-center gap-1 rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                            >
+                              {promptVersion.label}
+                              {promptVersion.isLatest && (
+                                <Badge tone="blue">latest</Badge>
+                              )}
+                            </span>
+                          ))}
+                      </div>
+                      <ul className="space-y-2">
+                        {group.map((log) => (
+                          <li
+                            key={log.id}
+                            className="rounded border border-zinc-200 dark:border-zinc-800"
+                          >
+                            <details>
+                              <summary className="cursor-pointer select-none p-2 text-sm">
+                                <span className="font-medium">
+                                  {describeUsageLogOperation(
+                                    log.operation,
+                                    log.responseText,
+                                  )}
+                                  {log.promptKey && (
+                                    <span className="ml-2 text-xs text-zinc-500">
+                                      {log.promptKey} ·{" "}
+                                      {formatPromptVersion(
+                                        log.promptSource,
+                                        log.promptVersion,
+                                      )}
+                                      {isLatestPromptVersion(
+                                        log.promptSource,
+                                        log.promptVersion,
+                                        latestPromptVersions.get(
+                                          log.promptKey,
+                                        ) ?? null,
+                                      ) && (
+                                        <Badge tone="blue" className="ml-1">
+                                          latest
+                                        </Badge>
+                                      )}
+                                      {log.sourceContextHash
+                                        ? ` · source ${log.sourceContextHash.slice(0, 8)}`
+                                        : ""}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-zinc-500">
+                                  {" "}
+                                  · {log.provider}/{log.model} ·{" "}
+                                  {log.inputTokens + log.outputTokens} tokens ·{" "}
+                                  ${log.costUsd.toFixed(4)} · {log.latencyMs}ms
+                                  ·{" "}
+                                  {new Date(log.createdAt).toLocaleString(
+                                    "vi-VN",
+                                  )}
+                                </span>
+                              </summary>
+                              <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
+                                <div>
+                                  <p className="mb-1 text-xs font-semibold text-zinc-500">
+                                    Prompt đã gửi
+                                  </p>
+                                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
+                                    {log.promptText ??
+                                      "(không có — job tạo trước khi bật ghi log)"}
+                                  </pre>
+                                </div>
+                                <div>
+                                  <p className="mb-1 text-xs font-semibold text-zinc-500">
+                                    Response nhận về
+                                  </p>
+                                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
+                                    {log.responseText ??
+                                      "(không có — job tạo trước khi bật ghi log)"}
+                                  </pre>
+                                </div>
+                              </div>
+                            </details>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-2">
-                      {group.map((log) => (
-                        <li key={log.id} className="rounded border border-zinc-200 dark:border-zinc-800">
-                          <details>
-                            <summary className="cursor-pointer select-none p-2 text-sm">
-                              <span className="font-medium">
-                                {describeUsageLogOperation(log.operation, log.responseText)}
-                              </span>
-                              <span className="text-zinc-500">
-                                {" "}· {log.provider}/{log.model} · {log.inputTokens + log.outputTokens} tokens ·{" "}
-                                ${log.costUsd.toFixed(4)} · {log.latencyMs}ms ·{" "}
-                                {new Date(log.createdAt).toLocaleString("vi-VN")}
-                              </span>
-                            </summary>
-                            <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
-                              <div>
-                                <p className="mb-1 text-xs font-semibold text-zinc-500">Prompt đã gửi</p>
-                                <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
-                                  {log.promptText ?? "(không có — job tạo trước khi bật ghi log)"}
-                                </pre>
-                              </div>
-                              <div>
-                                <p className="mb-1 text-xs font-semibold text-zinc-500">Response nhận về</p>
-                                <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
-                                  {log.responseText ?? "(không có — job tạo trước khi bật ghi log)"}
-                                </pre>
-                              </div>
-                            </div>
-                          </details>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
+                  );
+                },
+              )}
             </div>
           )}
         </div>
@@ -1058,13 +1303,19 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-semibold">👁️ Xem trước bài viết</h3>
-              <Button size="sm" variant="ghost" onClick={() => setPreviewArticleResult(null)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setPreviewArticleResult(null)}
+              >
                 Đóng
               </Button>
             </div>
             {previewArticleResult.errors.length > 0 && (
               <div className="mb-3 rounded border border-red-300 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                <p className="font-medium">Lỗi khối động — không dùng được nội dung dưới đây:</p>
+                <p className="font-medium">
+                  Lỗi khối động — không dùng được nội dung dưới đây:
+                </p>
                 <ul className="mt-1 list-inside list-disc">
                   {previewArticleResult.errors.map((e, i) => (
                     <li key={i}>{e.message}</li>
@@ -1082,7 +1333,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             {previewArticleResult.addedLinks.length > 0 && (
               <p className="mb-3 rounded border border-violet-200 bg-violet-50 p-2 text-xs text-violet-700 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300">
                 Link nội bộ sẽ được tự động chèn:{" "}
-                {previewArticleResult.addedLinks.map((l) => l.targetName).join(", ")}
+                {previewArticleResult.addedLinks
+                  .map((l) => l.targetName)
+                  .join(", ")}
               </p>
             )}
             <div

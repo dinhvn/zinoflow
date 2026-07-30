@@ -15,6 +15,7 @@ tài liệu spec khác dưới đây là THIẾT KẾ (data model/thuật toán/
 lại tracking trạng thái.
 
 **Bắt đầu từ đâu tuỳ mục đích:**
+
 - Quay lại code / hỏi "còn gì phải làm" → `dichoithoi-backlog.md` rồi
   `dichoithoi-implementation-plan.md`.
 - Thêm/sửa tính năng hiển thị công khai → đọc `dichoithoi-seo-principles.md`
@@ -23,6 +24,7 @@ lại tracking trạng thái.
 - Cần chi tiết 1 module → đúng file spec module đó (danh sách dưới).
 
 Đọc theo thứ tự (lần đầu tiếp cận dự án):
+
 1. Tài liệu này — vai trò + quan hệ giữa 3 thành phần, lộ trình.
 2. `dichoithoi-seo-principles.md` — nguyên tắc SEO tối thượng, ĐỌC TRƯỚC KHI
    CODE bất kỳ tính năng/field hiển thị nào (ưu tiên cao nhất, ghi trong CLAUDE.md).
@@ -47,24 +49,24 @@ lại tracking trạng thái.
     xem lại spec trước khi có đợt code tiếp theo).
 12. `dichoithoi-backlog.md` — **nguồn sự thật duy nhất** cho quyết định cần
     chốt + việc còn mở + rủi ro vận hành từ tất cả tài liệu trên.
-12b. `dichoithoi-destination-relations-plan.md` — plan CHƯA build (15/07/2026):
+    12b. `dichoithoi-destination-relations-plan.md` — plan CHƯA build (15/07/2026):
     nâng cấp gợi ý "Điểm đến liên quan" theo nhiều tiêu chí (thêm cùng loại
     hình, tách nhãn hiển thị, nối ArticleDestinationMap, JSON-LD) — đọc trước
     khi đụng vào `related-builder.ts`/khối liên quan trên trang detail.
-12c. `dichoithoi-article-workflow-plan.md` — plan CHƯA build (15/07/2026):
+    12c. `dichoithoi-article-workflow-plan.md` — plan CHƯA build (15/07/2026):
     field tag cho Article (dùng chung `V2DestinationTag`), preview resolve
     đầy đủ auto-link+khối động, audit SEO Article (thumbnail/JSON-LD/
     breadcrumb) — đọc trước khi đụng vào `ArticleController`/
     `ArticleBlockCompiler`/`PublishArticleUseCase`.
-12d. `dichoithoi-content-image-library-plan.md` — plan CHƯA build
+    12d. `dichoithoi-content-image-library-plan.md` — plan CHƯA build
     (15/07/2026): thư viện ảnh nội dung độc lập + token `[[block:image
-    id=...]]` chèn ảnh vào Article/Destination — đọc trước khi đụng vào
+ id=...]]` chèn ảnh vào Article/Destination — đọc trước khi đụng vào
     `ArticleBlockCompiler`/`block-token.ts`.
-12e. `dichoithoi-auto-image-search-plan.md` — plan CHƯA build (15/07/2026):
+    12e. `dichoithoi-auto-image-search-plan.md` — plan CHƯA build (15/07/2026):
     tự động tìm/tải ảnh minh hoạ qua API có giấy phép (Pexels), luôn ở
     trạng thái chờ duyệt — phụ thuộc 12d Mức A xong trước. Có kèm Claude
     Code skill `dichoithoi-find-content-images`.
-12f. `dichoithoi-destination-ai-extraction-plan.md` — Giai đoạn 1-3 ĐÃ BUILD
+    12f. `dichoithoi-destination-ai-extraction-plan.md` — Giai đoạn 1-3 ĐÃ BUILD
     (16/07/2026): Claude đọc Google Maps + website tham khảo, trích xuất
     11 field (tên/địa chỉ/SĐT/website/giờ mở cửa/mô tả ngắn/meta title/link
     đánh giá ngoài/tóm tắt cho AI viết bài/giá vé/đánh giá biên tập), lưu
@@ -76,37 +78,42 @@ lại tracking trạng thái.
     mở rộng thêm nhánh trích xuất TỰ ĐỘNG qua Gemini 3.x + Google Search
     Grounding chạy trong app (không cần Claude Code), song song với skill
     thủ công — đã lên plan triển khai theo giai đoạn A-E ở §6.
-12g. `dichoithoi-poi-distance-plan.md` — Giai đoạn 1-3 ĐÃ XONG (21/07/2026):
+    12g. `dichoithoi-poi-distance-plan.md` — Giai đoạn 1-3 ĐÃ XONG (21/07/2026):
     thay/bổ sung Haversine bằng khoảng cách đường bộ thật (OpenRouteService)
     cho `DistanceFromCenter` + bảng `poi_distances` (con↔con cùng cụm), nút
     theo cụm/tỉnh + nút riêng 1 điểm ở tab "Quan hệ". Giai đoạn 4 (nối vào
     AI sourceContext) còn tuỳ chọn, chưa chốt — đọc trước khi đụng vào
     `related-builder.ts`/`RecomputeRelatedService`/tab quan hệ.
-12h. `dichoithoi-map-cluster-view-plan.md` — plan CHƯA build (23/07/2026):
+    12h. `dichoithoi-map-cluster-view-plan.md` — plan CHƯA build (23/07/2026):
     thêm chế độ xem theo 1 cụm/tỉnh cụ thể trên `/dichoithoi/ban-do` (Select
     chọn cụm + tự fit bounds, tắt marker clustering, hiện tên marker thường
     trực, vẽ đường quan hệ con↔con từ `poi_distances`, bảng liệt kê cặp+km) —
     đọc trước khi đụng vào `ban-do/page.tsx`/`destination-map-*.tsx`.
-12i. `phan-tich/dichoithoi-taxonomy-chuan-hoa.md` — Nhóm/Type/Tag điểm đến
+    12i. `phan-tich/dichoithoi-taxonomy-chuan-hoa.md` — Nhóm/Type/Tag điểm đến
     ĐÃ MIGRATE 24/07/2026 (4 Nhóm/18 Type/17 Tag, thay hoàn toàn bộ cũ 3
     nhóm/16 type/9 tag mô tả trong `database-redesign.md` §3.2/§3.2.1, còn
     đó chỉ để tham khảo lịch sử). Đã chạy AI gán cho 247 POI thật
     (238 có Type/244 có Tag) — CHƯA rà theo luật cứng phân định `di-tich-
-    lich-su`/`cong-trinh-kiet-tac`, coi là dữ liệu khởi tạo cần rà dần qua
+ lich-su`/`cong-trinh-kiet-tac`, coi là dữ liệu khởi tạo cần rà dần qua
     `/dichoithoi/phan-loai`. `dichoithoi-taxonomy-overview.md` (hiện trạng
     TRƯỚC redesign, 23/07/2026) chỉ còn giá trị lịch sử/baseline map slug
     cũ→mới. Đọc trước khi đụng seed taxonomy hoặc prompt AI gán Type/Tag.
-12j. `dichoithoi-content-freshness-plan.md` — ĐÃ BUILD+VERIFY (29/07/2026):
+    12j. `dichoithoi-content-freshness-plan.md` — ĐÃ BUILD+VERIFY (29/07/2026):
     thay dòng `updateNotice` AI viết cứng lúc generate (đã xoá hẳn) bằng tín
     hiệu "cập nhật nội dung" thật (2 cột `ContentUpdatedAt`/`LastVerifiedAt`
     tách biệt, gate so sánh giá trị + AI Haiku phân loại `ContentHtml`, badge
     ẩn sau 6 tháng, tránh "date spam") — đọc trước khi đụng
     `PublishDestinationUseCase`/badge cập nhật trên trang detail.
-12k. `dichoithoi-google-seo-guidelines.md` — tổng hợp ĐẦY ĐỦ chính sách SEO
+    12k. `dichoithoi-google-seo-guidelines.md` — tổng hợp ĐẦY ĐỦ chính sách SEO
     chính thức Google (16 chính sách spam, structured data, sitemap
     `lastmod`, Core Web Vitals, duplicate content, cảnh báo date-spam
     nguyên văn) đọc trực tiếp 29/07/2026 — tra cứu khi cần trích dẫn chính
     xác, companion cho `dichoithoi-seo-principles.md`.
+    12l. `dichoithoi-destination-prompt-quality-plan.md` — ĐÃ BUILD GĐ0-5
+    (29/07/2026), GĐ6 chờ review/activate thủ công: nâng chất lượng bài
+    POI/Flagship từ source context tới prompt, contract Mức B, quality gates,
+    observability và QA rollout; đọc trước khi sửa prompt `guide-diem-den.*`
+    hoặc cardinality list/FAQ. Candidate hiện vẫn inactive theo chủ đích.
 13. `dichoithoi-system-design.md` — **đọc file này nếu chỉ có thời gian đọc 1
     file**: tổng hợp toàn bộ spec thành 1 bức tranh kỹ thuật đầy đủ (bảng dữ
     liệu 2 database, sơ đồ luồng, API surface, nguyên tắc xuyên suốt).
@@ -128,23 +135,23 @@ lại tracking trạng thái.
 
 ## 1) Ba thành phần và vai trò (đã chốt)
 
-| Thành phần | Công nghệ | Vai trò MỚI | Thay đổi so với hiện tại |
-|---|---|---|---|
-| **Website dichoithoi** | .NET (GIỮ NGUYÊN stack) | Renderer thuần đọc — đọc DB schema mới, render nhanh nhất có thể | Sửa lại tầng đọc theo schema mới (`dichoithoi-database-redesign.md` §5-6); KHÔNG quản lý nội dung |
+| Thành phần                     | Công nghệ                   | Vai trò MỚI                                                                                                                                                   | Thay đổi so với hiện tại                                                                                                                                                             |
+| ------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Website dichoithoi**         | .NET (GIỮ NGUYÊN stack)     | Renderer thuần đọc — đọc DB schema mới, render nhanh nhất có thể                                                                                              | Sửa lại tầng đọc theo schema mới (`dichoithoi-database-redesign.md` §5-6); KHÔNG quản lý nội dung                                                                                    |
 | **AI Content Tool (zinoflow)** | NestJS + Next.js + Postgres | **TRỞ THÀNH CMS** cho nội dung điểm đến, khách sạn, tour VÀ bài cẩm nang tổng hợp: soạn (AI generate/cào/nhập tay), duyệt, publish, quan hệ, re-link, đồng bộ | Thêm module destination (M4) + module hotel + module tour + module article (`dichoithoi-hotel-spec.md`, `dichoithoi-tour-spec.md`, `dichoithoi-article-spec.md`, quyết định 07/2026) |
-| **CMS dichoithoi (cũ)** | .NET trên Azure | Chỉ còn giữ các module CHƯA migrate: Sim, Phượt, Post (bài blog kiểu cũ, khác Article mới) | Module Destination TẮT vĩnh viễn; module Hotel + Tour migrate về zinoflow (nút import/crawl cũ vô hiệu hóa) |
+| **CMS dichoithoi (cũ)**        | .NET trên Azure             | Chỉ còn giữ các module CHƯA migrate: Sim, Phượt, Post (bài blog kiểu cũ, khác Article mới)                                                                    | Module Destination TẮT vĩnh viễn; module Hotel + Tour migrate về zinoflow (nút import/crawl cũ vô hiệu hóa)                                                                          |
 
 Nguyên tắc nền: **single-writer cho từng bảng** — mỗi bảng chỉ có đúng 1 hệ thống
 được ghi, không bao giờ 2 hệ cùng ghi 1 bảng:
 
-| Bảng (schema mới) | Ai ghi | Ai đọc |
-|---|---|---|
-| Destination, DestinationContent, DestinationRelation, DestinationType(+Map), DestinationTypeGroup, Province, SlugRedirect | **AI tool** (duy nhất) | Website |
-| Hotel, HotelGroup | **AI tool** (duy nhất — cào/nhập tay, xem `dichoithoi-hotel-spec.md`) | Website |
-| Tour, TourDestinationMap | **AI tool** (duy nhất — cào/nhập tay, xem `dichoithoi-tour-spec.md`) | Website |
-| Article (mới) | **AI tool** (duy nhất — bài cẩm nang có khối động, xem `dichoithoi-article-spec.md`) | Website |
-| DestinationReview | **Website** (khách viết review) | Website, AI tool (đếm/duyệt) |
-| Sim, Phượt, Post... | **CMS cũ** (như hiện tại) | Website |
+| Bảng (schema mới)                                                                                                         | Ai ghi                                                                               | Ai đọc                       |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------- |
+| Destination, DestinationContent, DestinationRelation, DestinationType(+Map), DestinationTypeGroup, Province, SlugRedirect | **AI tool** (duy nhất)                                                               | Website                      |
+| Hotel, HotelGroup                                                                                                         | **AI tool** (duy nhất — cào/nhập tay, xem `dichoithoi-hotel-spec.md`)                | Website                      |
+| Tour, TourDestinationMap                                                                                                  | **AI tool** (duy nhất — cào/nhập tay, xem `dichoithoi-tour-spec.md`)                 | Website                      |
+| Article (mới)                                                                                                             | **AI tool** (duy nhất — bài cẩm nang có khối động, xem `dichoithoi-article-spec.md`) | Website                      |
+| DestinationReview                                                                                                         | **Website** (khách viết review)                                                      | Website, AI tool (đếm/duyệt) |
+| Sim, Phượt, Post...                                                                                                       | **CMS cũ** (như hiện tại)                                                            | Website                      |
 
 ## 2) Sơ đồ quan hệ và luồng dữ liệu
 
@@ -172,6 +179,7 @@ Nguyên tắc nền: **single-writer cho từng bảng** — mỗi bảng chỉ 
 ```
 
 Các luồng:
+
 1. **AI tool → SQL Server**: publish bài đã Approved (upsert Destination +
    DestinationContent + Relation + SlugRedirect, transaction, không bao giờ wipe);
    cùng cơ chế cho Hotel/HotelGroup (`dichoithoi-hotel-spec.md`) và
@@ -196,11 +204,11 @@ Website → bảng điểm đến/hotel/tour (không ghi).
 
 Phân vai 2 database — dữ liệu KHÔNG bao giờ tồn tại "nửa này nửa kia":
 
-| | Postgres (zinoflow, local) | SQL Server (site4now, production) |
-|---|---|---|
-| Vai trò | **Xưởng soạn thảo** — nguồn sự thật của nội dung | **Read-model production** — chỉ chứa bản ĐÃ duyệt |
-| Chứa gì | job, draft (mọi version), review history, quality results, prompt, ai_usage_logs, mirror metadata, quan hệ đang soạn | Destination + Content (bản cuối đã render HTML), Relation, redirect — đúng những gì website cần để render |
-| Bài chưa duyệt | có (draft) | **KHÔNG BAO GIỜ** — không có khái niệm draft trên production |
+|                | Postgres (zinoflow, local)                                                                                           | SQL Server (site4now, production)                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Vai trò        | **Xưởng soạn thảo** — nguồn sự thật của nội dung                                                                     | **Read-model production** — chỉ chứa bản ĐÃ duyệt                                                         |
+| Chứa gì        | job, draft (mọi version), review history, quality results, prompt, ai_usage_logs, mirror metadata, quan hệ đang soạn | Destination + Content (bản cuối đã render HTML), Relation, redirect — đúng những gì website cần để render |
+| Bài chưa duyệt | có (draft)                                                                                                           | **KHÔNG BAO GIỜ** — không có khái niệm draft trên production                                              |
 
 Luồng từ lúc AI tạo xong → production (5 trạng thái, 2 chốt chặn TAY):
 
@@ -223,6 +231,7 @@ Luồng từ lúc AI tạo xong → production (5 trạng thái, 2 chốt chặn
 ```
 
 Hệ quả của thiết kế này:
+
 1. **Approve ≠ Publish** — 2 nút riêng, đều là người bấm. Duyệt xong 10 bài rồi
    publish dần từng bài cũng được.
 2. **Update bài cũ an toàn**: draft mới nằm ở Postgres, bài cũ trên web giữ nguyên
@@ -266,6 +275,7 @@ là cờ quyết định nhánh ở mọi bước.
 ### Cửa B — Viết lại NỘI DUNG bài đã có (mode=update)
 
 Giống Cửa A nhưng bỏ bước [0] (điểm đã có trong mirror, `siteId != null`):
+
 ```
 [1] POST /:slug/jobs  mode=update
       └─ nạp THÊM nội dung hiện tại trên web (fetchDestinationContent) vào prompt
@@ -280,20 +290,22 @@ Giống Cửa A nhưng bỏ bước [0] (điểm đã có trong mirror, `siteId 
 
 Đổi địa chỉ / lat-lng / bookingUrl (→ `ticketLinks[]` khi implement) / thumbnail /
 hotelGroup (→ `HotelDestinationMap` khi implement)... của điểm đã có:
+
 ```
 PATCH /api/destinations/:slug  (UpsertDestination.update)
       └─ cập nhật mirror; vì siteId != null → ghi metadata THẲNG SQL Server ngay
          (updateMetadata) → website phản ánh tức thì.
 ```
+
 Lý do bỏ qua 2 chốt: đây là **dữ liệu cứng người dùng nhập tay**, không phải nội
 dung AI sinh — không có gì để duyệt. Nội dung bài (Content HTML) thì luôn phải đi
 qua Cửa A/B. Sửa metadata của điểm `siteId=null` chỉ cập nhật mirror, chờ publish.
 
-| Cửa | siteId trước | Qua review/publish? | Tác động production |
-|---|---|---|---|
-| A — bài điểm mới | null | có (2 chốt) | INSERT shell + UPSERT nội dung |
-| B — viết lại bài cũ | != null | có (2 chốt) | UPSERT đè nội dung, giữ metadata |
-| C — sửa metadata | != null | KHÔNG | ghi thẳng metadata (updateMetadata) |
+| Cửa                 | siteId trước | Qua review/publish? | Tác động production                 |
+| ------------------- | ------------ | ------------------- | ----------------------------------- |
+| A — bài điểm mới    | null         | có (2 chốt)         | INSERT shell + UPSERT nội dung      |
+| B — viết lại bài cũ | != null      | có (2 chốt)         | UPSERT đè nội dung, giữ metadata    |
+| C — sửa metadata    | != null      | KHÔNG               | ghi thẳng metadata (updateMetadata) |
 
 ## 3) Vì sao sắp xếp như vậy (phân tích)
 
@@ -319,6 +331,7 @@ qua Cửa A/B. Sửa metadata của điểm `siteId=null` chỉ cập nhật mir
 ## 4) Trách nhiệm vận hành cụ thể của AI tool (vai CMS)
 
 Lúc publish 1 điểm đến (mọi việc nặng dồn về đây — render chỉ SELECT):
+
 1. Render ContentHtml hoàn chỉnh (markdown → HTML sạch + auto-link).
 2. Tính RelatedJson (trộn con/nearby/related/cùng loại), NameUnaccented.
 3. Upsert các bảng + SlugRedirect nếu đổi slug + cập nhật ChildCount.
@@ -326,6 +339,7 @@ Lúc publish 1 điểm đến (mọi việc nặng dồn về đây — render c
 5. Gọi invalidate cache website.
 
 Ngoài publish:
+
 - Nút "Re-link toàn bộ" + "Recompute related toàn bộ" (pg-boss job).
 - Nút "Đồng bộ mirror" (đọc lại từ SQL Server phòng sửa ngoài luồng).
 - Nút "Áp dụng lại affiliate rule" (`dichoithoi-affiliate-link-conversion-spec.md`
@@ -336,6 +350,7 @@ Ngoài publish:
 ## 5) Lộ trình 3 giai đoạn
 
 **Giai đoạn 1 — Đại tu nền (hiện tại):**
+
 1. Chạy migration schema mới (redesign doc §7) — bên repo dichoithoi, sau backup.
 2. Sửa website .NET đọc schema mới (repo dichoithoi, song song) — ✅ cập nhật
    07/2026: ghi chú "người dùng tự làm" trước đó chỉ là note cũ chưa cập
@@ -347,26 +362,29 @@ Ngoài publish:
 6. Build cơ chế affiliate link conversion dùng chung
    (`dichoithoi-affiliate-link-conversion-spec.md`) — làm TRƯỚC hoặc CÙNG lúc
    với Hotel/Tour vì cả 2 module đều phụ thuộc field `provider/sourceUrl/
-   affiliateUrl/linkStatus`.
+affiliateUrl/linkStatus`.
 7. Tắt module Destination + Hotel + Tour trên CMS cũ.
-Kết thúc khi: gate M4 pass (bài AI lên web thật, update đè bài cũ, re-link chạy ổn)
-VÀ khối gợi ý khách sạn/tour trên trang điểm đến đọc đúng data + link affiliate
-do zinoflow ghi.
+   Kết thúc khi: gate M4 pass (bài AI lên web thật, update đè bài cũ, re-link chạy ổn)
+   VÀ khối gợi ý khách sạn/tour trên trang điểm đến đọc đúng data + link affiliate
+   do zinoflow ghi.
 
 **Giai đoạn 2 — AI tool thành CMS đầy đủ cho điểm đến:**
+
 1. Duyệt review chuyển về AI tool.
 2. Tự động cập nhật content theo lịch (re-fetch nguồn tham khảo, so sánh, đề xuất).
 3. Quản lý taxonomy (Type, Province) có UI.
 4. Quản lý ảnh: tab "Ảnh" upload kéo thả → convert/resize → FTP lên hosting
    (destination-spec §14) + AI gợi ý danh sách ảnh/alt text khi generate bài
-   + remark trên ảnh (watermark/caption — §14.4).
+   - remark trên ảnh (watermark/caption — §14.4).
 
 **Giai đoạn 3 — Thu gọn CMS cũ:**
 Migrate dần Sim/Phượt/Post về zinoflow (hoặc quyết định giữ vĩnh viễn phần
 crawl bên CMS cũ nếu không bõ công) → CMS cũ chỉ còn crawler hoặc tắt hẳn. (Hotel
-+ Tour đã migrate ở Giai đoạn 1, không nằm trong phần "sau" này nữa.)
+
+- Tour đã migrate ở Giai đoạn 1, không nằm trong phần "sau" này nữa.)
 
 ## 6) Quy ước & ràng buộc chung
+
 1. Schema SQL Server thuộc sở hữu repo dichoithoi (migration script nằm đó);
    zinoflow không bao giờ tự migrate DB này — chỉ đọc/ghi data.
 2. Secret: `DICHOITHOI_DB_CONNECTION`, `DICHOITHOI_CACHE_REFRESH_KEY` — env vars

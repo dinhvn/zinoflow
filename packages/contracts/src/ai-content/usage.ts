@@ -7,8 +7,14 @@ import { z } from "zod/v4";
 
 /** Khoang ngay loc (YYYY-MM-DD). Bo trong -> mac dinh 30 ngay gan nhat (xu ly o use case). */
 export const aiUsageSummaryQuerySchema = z.object({
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 export type AiUsageSummaryQuery = z.infer<typeof aiUsageSummaryQuerySchema>;
 
@@ -55,7 +61,9 @@ export const aiUsageSummaryResponseSchema = z.object({
   byOperation: z.array(aiUsageOperationStatSchema),
   daily: z.array(aiUsageDailyStatSchema),
 });
-export type AiUsageSummaryResponse = z.infer<typeof aiUsageSummaryResponseSchema>;
+export type AiUsageSummaryResponse = z.infer<
+  typeof aiUsageSummaryResponseSchema
+>;
 
 /**
  * 1 lan goi AI cu the cua 1 job — gom ca prompt/response tho (yeu cau nguoi dung
@@ -73,6 +81,10 @@ export const aiUsageLogEntrySchema = z.object({
   latencyMs: z.number().int(),
   promptText: z.string().nullable(),
   responseText: z.string().nullable(),
+  promptKey: z.string().nullable(),
+  promptVersion: z.number().int().nullable(),
+  promptSource: z.enum(["db", "default"]).nullable(),
+  sourceContextHash: z.string().nullable(),
   createdAt: z.string(),
 });
 export type AiUsageLogEntry = z.infer<typeof aiUsageLogEntrySchema>;
@@ -93,8 +105,14 @@ export const listAiUsageLogsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   provider: z.string().optional(),
   operation: z.string().optional(),
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 export type ListAiUsageLogsQuery = z.infer<typeof listAiUsageLogsQuerySchema>;
 
@@ -106,4 +124,6 @@ export const listAiUsageLogsResponseSchema = z.object({
   /** Danh sach operation duy nhat tung xuat hien — dung cho dropdown loc, khong can query rieng */
   operations: z.array(z.string()),
 });
-export type ListAiUsageLogsResponse = z.infer<typeof listAiUsageLogsResponseSchema>;
+export type ListAiUsageLogsResponse = z.infer<
+  typeof listAiUsageLogsResponseSchema
+>;

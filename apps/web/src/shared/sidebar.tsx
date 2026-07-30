@@ -62,7 +62,11 @@ const DICHOITHOI_ITEMS: NavItem[] = [
 const DICHOITHOI_TOOL_ITEMS: NavItem[] = [
   { href: "/dichoithoi/dia-chi", label: "Tra cứu địa chỉ", icon: IconSearch },
   { href: "/dichoithoi/affiliate", label: "Quy tắc affiliate", icon: IconLink },
-  { href: "/dichoithoi/backup-con-lai", label: "Backup còn lại", icon: IconDoc },
+  {
+    href: "/dichoithoi/backup-con-lai",
+    label: "Backup còn lại",
+    icon: IconDoc,
+  },
 ];
 
 /** Khu CMS khuyenmai (laruki + dochoi3s) — tao content AI ghi vao CMS */
@@ -71,11 +75,14 @@ const KHUYENMAI_ITEMS: NavItem[] = [
   { href: "/dochoi3s", label: "Dochoi3s", icon: IconTag },
 ];
 
-const BOTTOM_ITEMS: NavItem[] = [{ href: "/settings", label: "Settings", icon: IconSettings }];
+const BOTTOM_ITEMS: NavItem[] = [
+  { href: "/settings", label: "Settings", icon: IconSettings },
+];
 
 function isActive(item: NavItem, pathname: string): boolean {
   if (item.exact) return pathname === item.href;
-  if (item.exclude?.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return false;
+  if (item.exclude?.some((p) => pathname === p || pathname.startsWith(`${p}/`)))
+    return false;
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
@@ -85,8 +92,9 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   return (
     <a
       href={item.href}
+      title={item.label}
       aria-current={active ? "page" : undefined}
-      className={`group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+      className={`group flex items-center justify-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors md:justify-start ${
         active
           ? "bg-indigo-50 font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"
           : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
@@ -94,10 +102,12 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
     >
       <Icon
         className={`h-[18px] w-[18px] shrink-0 ${
-          active ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400 group-hover:text-zinc-500 dark:group-hover:text-zinc-300"
+          active
+            ? "text-indigo-600 dark:text-indigo-400"
+            : "text-zinc-400 group-hover:text-zinc-500 dark:group-hover:text-zinc-300"
         }`}
       />
-      <span>{item.label}</span>
+      <span className="hidden md:inline">{item.label}</span>
     </a>
   );
 }
@@ -105,9 +115,9 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 export function Sidebar() {
   const pathname = usePathname();
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50/50 px-3 py-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+    <aside className="flex w-14 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50/50 px-1 py-4 md:w-60 md:px-3 dark:border-zinc-800 dark:bg-zinc-950/40">
       <div className="mb-6 px-2">
-        <ZinoFlowLogo />
+        <ZinoFlowLogo className="[&>span]:hidden md:[&>span]:inline" />
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5">
@@ -117,14 +127,14 @@ export function Sidebar() {
 
         {/* Khu Dichoithoi (spec dichoithoi-destination-spec §7.1) —
             Taxonomy / Review khach / Cong cu se hien khi sang giai doan 2 */}
-        <div className="mt-5 mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+        <div className="mt-5 mb-1 hidden px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 md:block dark:text-zinc-500">
           Dichoithoi
         </div>
         {DICHOITHOI_ITEMS.map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
 
-        <div className="mt-3 mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+        <div className="mt-3 mb-1 hidden px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 md:block dark:text-zinc-500">
           Công cụ
         </div>
         {DICHOITHOI_TOOL_ITEMS.map((item) => (
@@ -132,7 +142,7 @@ export function Sidebar() {
         ))}
 
         {/* Khu CMS khuyenmai (spec laruki-dochoi3s-content-spec §3.1) */}
-        <div className="mt-5 mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+        <div className="mt-5 mb-1 hidden px-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 md:block dark:text-zinc-500">
           Affiliate (CMS)
         </div>
         {KHUYENMAI_ITEMS.map((item) => (

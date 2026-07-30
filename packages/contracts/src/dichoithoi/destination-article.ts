@@ -1,5 +1,9 @@
 import { z } from "zod/v4";
-import { contentSectionSchema, faqItemSchema, type DestinationBlockKey } from "../ai-content/article";
+import {
+  contentSectionSchema,
+  faqItemSchema,
+  type DestinationBlockKey,
+} from "../ai-content/article";
 import { qualityCheckSchema } from "../ai-content/quality";
 
 /**
@@ -40,9 +44,15 @@ export const destinationArticleMetadataSchema = z.object({
   /** Goi y slug — nguoi dung xac nhan (mode create), bo qua khi update */
   slugSuggestion: z
     .string()
-    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Slug chỉ gồm chữ thường, số và dấu gạch ngang"),
+    .regex(
+      /^[a-z0-9]+(-[a-z0-9]+)*$/,
+      "Slug chỉ gồm chữ thường, số và dấu gạch ngang",
+    ),
   metaTitle: z.string().min(10).max(DESTINATION_FIELD_LIMITS.metaTitle),
-  metaDescription: z.string().min(50).max(DESTINATION_FIELD_LIMITS.metaDescription),
+  metaDescription: z
+    .string()
+    .min(50)
+    .max(DESTINATION_FIELD_LIMITS.metaDescription),
   /** Mo ta ngan — do vao Destination.ShortDescription */
   description: z.string().min(50).max(DESTINATION_FIELD_LIMITS.description),
   searchKeyword: z.string().min(2).max(DESTINATION_FIELD_LIMITS.searchKeyword),
@@ -60,10 +70,12 @@ export const destinationArticleFrameSchema = z.object({
   title: z.string().min(10).max(100),
   intro: z.string().min(80),
   quickFacts: destinationQuickFactsSchema,
-  faq: z.array(faqItemSchema).min(3).max(6),
+  faq: z.array(faqItemSchema).max(6),
   metadata: destinationArticleMetadataSchema,
 });
-export type DestinationArticleFrame = z.infer<typeof destinationArticleFrameSchema>;
+export type DestinationArticleFrame = z.infer<
+  typeof destinationArticleFrameSchema
+>;
 
 /** Bai diem den hoan chinh = frame + sections. */
 export const destinationArticleSchema = destinationArticleFrameSchema.extend({
@@ -87,7 +99,10 @@ export type DestinationArticle = z.infer<typeof destinationArticleSchema>;
  * canh nhau o #meo trong Detail.cshtml), them section thu 3 chi lam nang hon.
  * "Meo & luu y thuc te" gio CHI con qua PracticalNotesJson (nhom E).
  */
-export const DESTINATION_SECTION_ORDER: readonly Exclude<DestinationBlockKey, "khac">[] = [
+export const DESTINATION_SECTION_ORDER: readonly Exclude<
+  DestinationBlockKey,
+  "khac"
+>[] = [
   "tong-quan",
   "trai-nghiem",
   "mua-nao",
@@ -118,8 +133,8 @@ export const DESTINATION_LIST_BLOCK_KEYS: readonly DestinationBlockKey[] = [
   "qua-mang-ve",
 ];
 
-/** So muc toi thieu cho danh sach co cau truc (an-gi/qua-mang-ve) — dung o gate + skeleton. */
-export const MIN_LIST_ITEMS = 3;
+/** Muc B: khong ep item khi nguon khong co thong tin huu ich/xac minh duoc. */
+export const MIN_LIST_ITEMS = 0;
 
 /**
  * Outline buoc 1 — khong co plannedProducts (diem den khong co product).
@@ -131,7 +146,7 @@ export const MIN_LIST_ITEMS = 3;
 export const destinationOutlineSchema = z.object({
   title: z.string(),
   sectionHeadings: z.array(z.string()).length(DESTINATION_SECTION_ORDER.length),
-  plannedFaqQuestions: z.array(z.string()).min(3),
+  plannedFaqQuestions: z.array(z.string()).max(6),
 });
 export type DestinationOutline = z.infer<typeof destinationOutlineSchema>;
 
@@ -147,7 +162,9 @@ export const restructurePastedContentRequestSchema = z.object({
   aiProvider: z.string().optional(),
   aiModel: z.string().optional(),
 });
-export type RestructurePastedContentRequest = z.infer<typeof restructurePastedContentRequestSchema>;
+export type RestructurePastedContentRequest = z.infer<
+  typeof restructurePastedContentRequestSchema
+>;
 
 /**
  * Pivot gop editor vao trang detail — luu tay `draft_article` (redesign luong
@@ -167,7 +184,9 @@ export const generateDestinationBlockRequestSchema = z.object({
   aiProvider: z.string().optional(),
   aiModel: z.string().optional(),
 });
-export type GenerateDestinationBlockRequest = z.infer<typeof generateDestinationBlockRequestSchema>;
+export type GenerateDestinationBlockRequest = z.infer<
+  typeof generateDestinationBlockRequestSchema
+>;
 
 /**
  * Ket qua chay gate tren draft_article HIEN TAI cua 1 diem den, doc lap voi

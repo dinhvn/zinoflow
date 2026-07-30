@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import type { ArticleType } from "@zinoflow/contracts";
 import type { OutlineLike } from "./article-type-profiles";
 import type { StructuredGenerationRequest } from "../ports/content-ai-provider.port";
@@ -58,13 +59,18 @@ export class PromptBuilder {
     private readonly templates: PromptTemplateRepository,
   ) {}
 
-  async buildOutline(ctx: PromptJobContext): Promise<StructuredGenerationRequest> {
+  async buildOutline(
+    ctx: PromptJobContext,
+  ): Promise<StructuredGenerationRequest> {
     const vars = this.baseVars(ctx);
+    const system = await this.resolveTemplate(this.systemKeys(ctx));
+    const step = await this.resolveTemplate(this.stepKeys("outline", ctx));
     return {
       model: ctx.model,
       operation: "outline",
-      system: await this.resolveTemplate(this.systemKeys(ctx)),
-      prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("outline", ctx)), vars),
+      system: system.content,
+      prompt: renderPromptTemplate(step.content, vars),
+      promptTrace: this.toTrace(step, ctx.sourceContext),
       maxTokens: MAX_TOKENS.outline,
       vars,
       temperature: ctx.temperature,
@@ -82,11 +88,14 @@ export class PromptBuilder {
       outline,
       sectionHeading,
     };
+    const system = await this.resolveTemplate(this.systemKeys(ctx));
+    const step = await this.resolveTemplate(this.stepKeys("section", ctx));
     return {
       model: ctx.model,
       operation: "section",
-      system: await this.resolveTemplate(this.systemKeys(ctx)),
-      prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("section", ctx)), vars),
+      system: system.content,
+      prompt: renderPromptTemplate(step.content, vars),
+      promptTrace: this.toTrace(step, ctx.sourceContext),
       maxTokens: MAX_TOKENS.section,
       vars,
       temperature: ctx.temperature,
@@ -104,17 +113,23 @@ export class PromptBuilder {
    * dung no dang viet trong cung 1 luot, dong thoi giam manh token overhead
    * (system prompt chi gui 1 lan thay vi 7-9 lan).
    */
-  async buildContent(ctx: PromptJobContext, outline: OutlineLike): Promise<StructuredGenerationRequest> {
+  async buildContent(
+    ctx: PromptJobContext,
+    outline: OutlineLike,
+  ): Promise<StructuredGenerationRequest> {
     const vars = {
       ...this.baseVars(ctx),
       title: outline.title,
       outline,
     };
+    const system = await this.resolveTemplate(this.systemKeys(ctx));
+    const step = await this.resolveTemplate(this.stepKeys("content", ctx));
     return {
       model: ctx.model,
       operation: "content",
-      system: await this.resolveTemplate(this.systemKeys(ctx)),
-      prompt: renderPromptTemplate(await this.resolveTemplate(this.stepKeys("content", ctx)), vars),
+      system: system.content,
+      prompt: renderPromptTemplate(step.content, vars),
+      promptTrace: this.toTrace(step, ctx.sourceContext),
       maxTokens: MAX_TOKENS.content,
       vars,
       temperature: ctx.temperature,
@@ -129,7 +144,9 @@ export class PromptBuilder {
       keywords: ctx.keywordSeed.join(", ") || "(tự suy ra từ chủ đề)",
       siteCode: ctx.siteCode,
       toneProfile: ctx.toneProfile ?? "tự nhiên, gần gũi, trung thực",
-      sourceContext: ctx.sourceContext ?? "(không có — dùng kiến thức nền, ghi rõ chỗ cần kiểm chứng)",
+      sourceContext:
+        ctx.sourceContext ??
+        "(không có — dùng kiến thức nền, ghi rõ chỗ cần kiểm chứng)",
       products: ctx.products,
     };
   }
@@ -139,7 +156,10 @@ export class PromptBuilder {
    * <site>.<articleType>.<step> -> <articleType>.<step>
    * (bai km them: -> <site>.km-bai-viet.<step> -> km-bai-viet.<step>)
    */
-  private stepKeys(step: "outline" | "section" | "content", ctx: PromptJobContext): string[] {
+  private stepKeys(
+    step: "outline" | "section" | "content",
+    ctx: PromptJobContext,
+  ): string[] {
     const at = ctx.articleType;
     const site = ctx.siteCode;
     const keys: string[] = [];
@@ -148,7 +168,10 @@ export class PromptBuilder {
     // uu tien TRUOC cap key guide-diem-den binh thuong; tier != "flagship"
     // (standard/null) roi thang xuong cap duoi, khong doi hanh vi cu.
     if (at === "guide-diem-den" && ctx.contentTier === "flagship") {
-      keys.push(`${site}.guide-diem-den-flagship.${step}.vi`, `guide-diem-den-flagship.${step}.vi`);
+      keys.push(
+        `${site}.guide-diem-den-flagship.${step}.vi`,
+        `guide-diem-den-flagship.${step}.vi`,
+      );
     }
     keys.push(`${site}.${at}.${step}.vi`, `${at}.${step}.vi`);
     if (at.startsWith("km-")) {
@@ -165,10 +188,23 @@ export class PromptBuilder {
    * Phan giai 1 prompt theo danh sach key cu the->chung: uu tien DB (bat ky key nao),
    * roi den DEFAULT_PROMPTS. DB override luon thang baseline; trong cung nguon, key cu the thang.
    */
-  private async resolveTemplate(keys: string[]): Promise<string> {
+  private async resolveTemplate(
+    keys: string[],
+  ): Promise<{
+    key: string;
+    version: number | null;
+    source: "db" | "default";
+    content: string;
+  }> {
     for (const key of keys) {
       const record = await this.templates.findActive(key);
-      if (record) return record.content;
+      if (record)
+        return {
+          key,
+          version: record.version,
+          source: "db",
+          content: record.content,
+        };
     }
     for (const key of keys) {
       const fallback = DEFAULT_PROMPTS[key];
@@ -178,9 +214,23 @@ export class PromptBuilder {
         if (key !== keys[1]) {
           this.logger.warn(`Prompt "${keys[0]}" -> dung default "${key}"`);
         }
-        return fallback;
+        return { key, version: null, source: "default", content: fallback };
       }
     }
     throw new Error(`No prompt template for keys: ${keys.join(", ")}`);
+  }
+
+  private toTrace(
+    template: { key: string; version: number | null; source: "db" | "default" },
+    sourceContext: string | null,
+  ): NonNullable<StructuredGenerationRequest["promptTrace"]> {
+    return {
+      key: template.key,
+      version: template.version,
+      source: template.source,
+      sourceContextHash: sourceContext
+        ? createHash("sha256").update(sourceContext).digest("hex")
+        : null,
+    };
   }
 }

@@ -1,7 +1,10 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { type ContentSection } from "@zinoflow/contracts";
-import { getArticleTypeProfile, type AnyArticle } from "../services/article-type-profiles";
+import {
+  getArticleTypeProfile,
+  type AnyArticle,
+} from "../services/article-type-profiles";
 import {
   CONTENT_JOB_REPOSITORY,
   type ContentJobRepository,
@@ -17,13 +20,22 @@ import {
   type ContentAiProvider,
   type StructuredGenerationRequest,
 } from "../ports/content-ai-provider.port";
-import { PRODUCT_CATALOG, type ProductCatalog } from "../ports/product-catalog.port";
-import { AI_USAGE_RECORDER, type AiUsageRecorder } from "../ports/ai-usage-recorder.port";
+import {
+  PRODUCT_CATALOG,
+  type ProductCatalog,
+} from "../ports/product-catalog.port";
+import {
+  AI_USAGE_RECORDER,
+  type AiUsageRecorder,
+} from "../ports/ai-usage-recorder.port";
 import {
   CONTENT_GENERATION_CHECKPOINT_REPOSITORY,
   type ContentGenerationCheckpointRepository,
 } from "../ports/content-generation-checkpoint.repository";
-import { PromptBuilder, type PromptJobContext } from "../services/prompt-builder";
+import {
+  PromptBuilder,
+  type PromptJobContext,
+} from "../services/prompt-builder";
 import { buildPromptLogText } from "../services/prompt-log-text";
 import type { OutlineLike } from "../services/article-type-profiles";
 import type { ZodType } from "zod/v4";
@@ -69,8 +81,10 @@ export class GenerateContentUseCase {
 
   constructor(
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobs: ContentJobRepository,
-    @Inject(CONTENT_DRAFT_REPOSITORY) private readonly drafts: ContentDraftRepository,
-    @Inject(AI_PROVIDER_REGISTRY) private readonly providers: AiProviderRegistry,
+    @Inject(CONTENT_DRAFT_REPOSITORY)
+    private readonly drafts: ContentDraftRepository,
+    @Inject(AI_PROVIDER_REGISTRY)
+    private readonly providers: AiProviderRegistry,
     @Inject(PRODUCT_CATALOG) private readonly catalog: ProductCatalog,
     @Inject(AI_USAGE_RECORDER) private readonly usage: AiUsageRecorder,
     @Inject(CONTENT_GENERATION_CHECKPOINT_REPOSITORY)
@@ -86,7 +100,11 @@ export class GenerateContentUseCase {
     }
 
     // Idempotency: pg-boss co the giao lai job da xu ly xong
-    if (job.status === "DraftReady" || job.status === "InReview" || job.status === "Approved") {
+    if (
+      job.status === "DraftReady" ||
+      job.status === "InReview" ||
+      job.status === "Approved"
+    ) {
       this.logger.log(`Job ${job.id} already at ${job.status} - skipping`);
       return;
     }
@@ -122,7 +140,8 @@ export class GenerateContentUseCase {
         // Chi bai diem den (dichoithoi) — KHONG dat 1 gia tri chung cho ca site
         // laruki/dochoi3s (Muc B, dichoithoi-destination-ai-extraction-plan §6 D3).
         // 0.5: cau tu mem mai/giau cam xuc hon nhung van bam sat sourceContext that.
-        temperature: snapshot.articleType === "guide-diem-den" ? 0.5 : undefined,
+        temperature:
+          snapshot.articleType === "guide-diem-den" ? 0.5 : undefined,
       };
 
       // Resume: doc checkpoint truoc — co outline da xong thi khong goi lai AI cho buoc do.
@@ -135,10 +154,11 @@ export class GenerateContentUseCase {
         this.logger.log(`Job ${job.id} resume: dung lai outline tu checkpoint`);
       } else {
         const outlineRequest = await this.prompts.buildOutline(ctx);
-        const { output: rawOutline, usage: outlineUsage } = await provider.generateStructured(
-          outlineRequest,
-          profile.outlineSchema,
-        );
+        const { output: rawOutline, usage: outlineUsage } =
+          await provider.generateStructured(
+            outlineRequest,
+            profile.outlineSchema,
+          );
         await this.recordUsage(
           job.id,
           provider,
@@ -153,7 +173,9 @@ export class GenerateContentUseCase {
         // (destinationProfile.normalizeOutline) — khong tin AI tu dat dung tieu de/thu
         // tu, tranh lac de (bug 07/2026, xem ghi chu o ArticleTypeProfile.normalizeOutline).
         // Cac profile khac khong khai bao hook nay -> giu nguyen outline goc.
-        outline = profile.normalizeOutline ? profile.normalizeOutline(rawOutline, snapshot.topic) : rawOutline;
+        outline = profile.normalizeOutline
+          ? profile.normalizeOutline(rawOutline, snapshot.topic)
+          : rawOutline;
         await this.checkpoints.save({
           jobId: job.id,
           outline: outline as OutlineLike & Record<string, unknown>,
@@ -169,7 +191,8 @@ export class GenerateContentUseCase {
         snapshot.aiModel,
         contentRequest,
         profile.contentSchema,
-        () => provider.generateStructured(contentRequest, profile.contentSchema),
+        () =>
+          provider.generateStructured(contentRequest, profile.contentSchema),
       );
 
       // Ep cung blockKey theo DUNG VI TRI trong DESTINATION_SECTION_ORDER (bai diem
@@ -179,7 +202,16 @@ export class GenerateContentUseCase {
       const normalizedSections = profile.normalizeSection
         ? sections.map((s, i) => profile.normalizeSection!(s, i))
         : sections;
-      const article = { ...rawArticle, sections: normalizedSections } as AnyArticle;
+      const articleWithNormalizedSections = {
+        ...rawArticle,
+        sections: normalizedSections,
+      } as AnyArticle;
+      const article = profile.normalizeArticle
+        ? profile.normalizeArticle(
+            articleWithNormalizedSections,
+            snapshot.sourceContext,
+          )
+        : articleWithNormalizedSections;
 
       const latest = await this.drafts.findLatestByJobId(job.id);
       await this.drafts.save({
@@ -187,7 +219,10 @@ export class GenerateContentUseCase {
         jobId: job.id,
         version: (latest?.version ?? 0) + 1, // generate lai -> version moi, khong de unique conflict
         title: profile.extractTitle(article),
-        outline: outline as { title: string; sectionHeadings: string[] } & Record<string, unknown>,
+        outline: outline as {
+          title: string;
+          sectionHeadings: string[];
+        } & Record<string, unknown>,
         article,
         draftMarkdown: profile.renderMarkdown(article),
         createdAt: new Date(),
@@ -228,10 +263,23 @@ export class GenerateContentUseCase {
   ): Promise<AnyArticle> {
     let lastError: unknown;
 
-    for (let attempt = 1; attempt <= GenerateContentUseCase.CONTENT_MAX_ATTEMPTS; attempt++) {
+    for (
+      let attempt = 1;
+      attempt <= GenerateContentUseCase.CONTENT_MAX_ATTEMPTS;
+      attempt++
+    ) {
       try {
         const { output, usage } = await call();
-        await this.recordUsage(jobId, provider, model, "content", usage, request, schema, output);
+        await this.recordUsage(
+          jobId,
+          provider,
+          model,
+          "content",
+          usage,
+          request,
+          schema,
+          output,
+        );
         return output;
       } catch (error) {
         lastError = error;
@@ -240,7 +288,9 @@ export class GenerateContentUseCase {
             (error instanceof Error ? error.message : String(error)),
         );
         if (attempt < GenerateContentUseCase.CONTENT_MAX_ATTEMPTS) {
-          await this.delay(GenerateContentUseCase.CONTENT_RETRY_DELAY_MS * attempt);
+          await this.delay(
+            GenerateContentUseCase.CONTENT_RETRY_DELAY_MS * attempt,
+          );
         }
       }
     }
@@ -252,7 +302,12 @@ export class GenerateContentUseCase {
     provider: ContentAiProvider,
     model: string,
     operation: string,
-    usage: { inputTokens: number; outputTokens: number; costUsd: number; latencyMs: number },
+    usage: {
+      inputTokens: number;
+      outputTokens: number;
+      costUsd: number;
+      latencyMs: number;
+    },
     request: StructuredGenerationRequest,
     schema: ZodType,
     output: unknown,
@@ -265,6 +320,10 @@ export class GenerateContentUseCase {
       operation,
       promptText: buildPromptLogText(request.system, request.prompt, schema),
       responseText: JSON.stringify(output),
+      promptKey: request.promptTrace?.key ?? null,
+      promptVersion: request.promptTrace?.version ?? null,
+      promptSource: request.promptTrace?.source ?? null,
+      sourceContextHash: request.promptTrace?.sourceContextHash ?? null,
     });
   }
 

@@ -14,6 +14,10 @@ export interface AiUsageEntry extends AiCallUsage {
   promptText?: string | null;
   /** Response tho (structured output JSON) AI tra ve. */
   responseText?: string | null;
+  promptKey?: string | null;
+  promptVersion?: number | null;
+  promptSource?: "db" | "default" | null;
+  sourceContextHash?: string | null;
 }
 
 export interface AiUsageRecorder {

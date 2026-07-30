@@ -3,7 +3,10 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { randomUUID } from "node:crypto";
 import type { AiProviderKey } from "@zinoflow/contracts";
-import type { AiUsageEntry, AiUsageRecorder } from "../../application/ports/ai-usage-recorder.port";
+import type {
+  AiUsageEntry,
+  AiUsageRecorder,
+} from "../../application/ports/ai-usage-recorder.port";
 import { AiUsageLogEntity } from "../entities/ai-usage-log.entity";
 
 @Injectable()
@@ -27,6 +30,10 @@ export class TypeOrmAiUsageRecorder implements AiUsageRecorder {
     entity.latencyMs = entry.latencyMs;
     entity.promptText = entry.promptText ?? null;
     entity.responseText = entry.responseText ?? null;
+    entity.promptKey = entry.promptKey ?? null;
+    entity.promptVersion = entry.promptVersion ?? null;
+    entity.promptSource = entry.promptSource ?? null;
+    entity.sourceContextHash = entry.sourceContextHash ?? null;
     entity.createdAt = new Date();
     await this.repo.save(entity);
   }

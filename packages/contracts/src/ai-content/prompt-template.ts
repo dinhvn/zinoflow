@@ -9,7 +9,13 @@ import { z } from "zod/v4";
  * Buoc pipeline + system message dung chung. "frame" la buoc 3 CU — khong con
  * dung trong pipeline generate chinh (thay bang "content", Option 3 09/2026).
  */
-export const promptOperationSchema = z.enum(["system", "outline", "section", "frame", "content"]);
+export const promptOperationSchema = z.enum([
+  "system",
+  "outline",
+  "section",
+  "frame",
+  "content",
+]);
 export type PromptOperation = z.infer<typeof promptOperationSchema>;
 
 /** 1 dong trong man list (gom theo articleType) */
@@ -21,6 +27,8 @@ export const promptTemplateSummarySchema = z.object({
   operation: promptOperationSchema,
   /** Version active trong DB; null = dang dung noi dung mac dinh (chua co row) */
   activeVersion: z.number().int().nullable(),
+  /** Version lon nhat da luu, ke ca candidate chua active. */
+  latestVersion: z.number().int().nullable(),
   source: z.enum(["db", "default"]),
   updatedAt: z.string().nullable(),
 });
@@ -29,12 +37,15 @@ export type PromptTemplateSummary = z.infer<typeof promptTemplateSummarySchema>;
 export const promptTemplateListResponseSchema = z.object({
   templates: z.array(promptTemplateSummarySchema),
 });
-export type PromptTemplateListResponse = z.infer<typeof promptTemplateListResponseSchema>;
+export type PromptTemplateListResponse = z.infer<
+  typeof promptTemplateListResponseSchema
+>;
 
 /** 1 version trong lich su */
 export const promptTemplateVersionSchema = z.object({
   version: z.number().int(),
   content: z.string(),
+  contentHash: z.string(),
   isActive: z.boolean(),
   createdAt: z.string(),
 });
@@ -52,7 +63,10 @@ export const promptTemplateDetailSchema = z.object({
   defaultContent: z.string(),
   /** Noi dung dang dung = version active hoac defaultContent */
   activeContent: z.string(),
+  activeContentHash: z.string(),
+  defaultContentHash: z.string(),
   activeVersion: z.number().int().nullable(),
+  latestVersion: z.number().int().nullable(),
   source: z.enum(["db", "default"]),
   versions: z.array(promptTemplateVersionSchema),
 });
@@ -62,17 +76,26 @@ export type PromptTemplateDetail = z.infer<typeof promptTemplateDetailSchema>;
 export const createPromptVersionRequestSchema = z.object({
   content: z.string().min(1, "Nội dung prompt không được để trống"),
 });
-export type CreatePromptVersionRequest = z.infer<typeof createPromptVersionRequestSchema>;
+export type CreatePromptVersionRequest = z.infer<
+  typeof createPromptVersionRequestSchema
+>;
 
 export const createPromptVersionResponseSchema = z.object({
   version: z.number().int(),
+  contentHash: z.string(),
+  isActive: z.literal(false),
   /** Bien {{...}} khong nam trong danh sach hop le — canh bao, khong chan */
   unknownPlaceholders: z.array(z.string()),
 });
-export type CreatePromptVersionResponse = z.infer<typeof createPromptVersionResponseSchema>;
+export type CreatePromptVersionResponse = z.infer<
+  typeof createPromptVersionResponseSchema
+>;
 
 /** POST /content/prompt-templates/:key/activate */
 export const activatePromptVersionRequestSchema = z.object({
   version: z.number().int().positive(),
+  expectedActiveVersion: z.number().int().positive().nullable(),
 });
-export type ActivatePromptVersionRequest = z.infer<typeof activatePromptVersionRequestSchema>;
+export type ActivatePromptVersionRequest = z.infer<
+  typeof activatePromptVersionRequestSchema
+>;

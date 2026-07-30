@@ -17,7 +17,10 @@
     "check:dichoithoi": "ts-node scripts/check-dichoithoi-connection.ts",
     "check:khuyenmai": "ts-node scripts/check-khuyenmai-connection.ts",
     "clone:dichoithoi": "ts-node scripts/clone-dichoithoi-to-localdb.ts",
-    "render:smoke": "ts-node scripts/render-image-smoke.ts"
+    "render:smoke": "ts-node scripts/render-image-smoke.ts",
+    "prompt:baseline": "ts-node scripts/export-destination-prompt-baseline.ts",
+    "prompt:create-destination-candidates": "ts-node scripts/create-destination-prompt-candidates.ts",
+    "prompt:evaluate-destination-corpus": "ts-node --files scripts/evaluate-destination-prompt-corpus.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

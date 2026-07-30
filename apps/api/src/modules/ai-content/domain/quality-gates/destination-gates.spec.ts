@@ -5,15 +5,20 @@ import {
   evaluateDestinationGates,
   evaluateDestinationPolicyGate,
   evaluateDestinationSeoGate,
+  evaluateDestinationStyleGate,
+  evaluateDestinationRedundancyGate,
+  evaluateDestinationGroundingGate,
   evaluateDestinationStructureGate,
 } from "./destination-gates";
 
-// 18 tu/cau x 12 lan = 216 tu/section x 4 section + ~65 tu mo bai > 800 tu
-// (nguong MIN_TOTAL_WORDS o destination-gates.ts) de bai mac dinh hop le.
 const longContent = (topic: string): string =>
-  `${topic} là điểm dừng chân được nhiều người yêu thích khi ghé thăm khu vực này. `.repeat(12);
+  `${topic} là điểm dừng chân được nhiều người yêu thích khi ghé thăm khu vực này. `.repeat(
+    12,
+  );
 
-function validArticle(overrides: Partial<DestinationArticle> = {}): DestinationArticle {
+function validArticle(
+  overrides: Partial<DestinationArticle> = {},
+): DestinationArticle {
   return {
     title: "Vịnh Hạ Long: kinh nghiệm tham quan, giá vé, ăn gì 2026",
     intro:
@@ -24,21 +29,38 @@ function validArticle(overrides: Partial<DestinationArticle> = {}): DestinationA
     quickFacts: {
       openingTime: "Tuyến tham quan hoạt động 7:30 - 17:00 hằng ngày",
       ticketPrice: "Vé tuyến 1: 290.000đ/người lớn (có thể thay đổi)",
-      transport: "Từ Hà Nội đi cao tốc Hải Phòng - Hạ Long khoảng 2,5 giờ; có xe limousine đưa đón tận nơi.",
+      transport:
+        "Từ Hà Nội đi cao tốc Hải Phòng - Hạ Long khoảng 2,5 giờ; có xe limousine đưa đón tận nơi.",
       food: "Hải sản tươi tại chợ Hạ Long, chả mực giã tay là đặc sản nên thử.",
-      hotel: "Khu Bãi Cháy nhiều khách sạn mọi phân khúc, gần bến tàu tham quan.",
+      hotel:
+        "Khu Bãi Cháy nhiều khách sạn mọi phân khúc, gần bến tàu tham quan.",
       tip: "Mua vé tại bến chính thức; mang áo khoác mỏng vì trên vịnh gió mạnh.",
     },
     sections: [
       { heading: "Giới thiệu tổng quan", content: longContent("Vịnh Hạ Long") },
-      { heading: "Chơi gì ở Vịnh Hạ Long", content: longContent("Hang Sửng Sốt") },
+      {
+        heading: "Chơi gì ở Vịnh Hạ Long",
+        content: longContent("Hang Sửng Sốt"),
+      },
       { heading: "Thời điểm đẹp nhất để đi", content: longContent("Mùa thu") },
-      { heading: "Câu chuyện văn hoá - lịch sử Vịnh Hạ Long", content: longContent("Truyền thuyết rồng hạ") },
+      {
+        heading: "Câu chuyện văn hoá - lịch sử Vịnh Hạ Long",
+        content: longContent("Truyền thuyết rồng hạ"),
+      },
     ],
     faq: [
-      { question: "Đi Vịnh Hạ Long mùa nào đẹp?", answer: "Tháng 9-11 trời mát, biển lặng." },
-      { question: "Tham quan mất bao lâu?", answer: "Tuyến ngắn 4 tiếng, ngủ đêm 2 ngày 1 đêm." },
-      { question: "Có nên ngủ đêm trên du thuyền?", answer: "Nên, nếu ngân sách cho phép." },
+      {
+        question: "Đi Vịnh Hạ Long mùa nào đẹp?",
+        answer: "Tháng 9-11 trời mát, biển lặng.",
+      },
+      {
+        question: "Tham quan mất bao lâu?",
+        answer: "Tuyến ngắn 4 tiếng, ngủ đêm 2 ngày 1 đêm.",
+      },
+      {
+        question: "Có nên ngủ đêm trên du thuyền?",
+        answer: "Nên, nếu ngân sách cho phép.",
+      },
     ],
     metadata: {
       name: "Vịnh Hạ Long",
@@ -54,7 +76,10 @@ function validArticle(overrides: Partial<DestinationArticle> = {}): DestinationA
   };
 }
 
-function gateInput(article: DestinationArticle, existingSlugs: string[] | null = null) {
+function gateInput(
+  article: DestinationArticle,
+  existingSlugs: string[] | null = null,
+) {
   return {
     article,
     draftMarkdown: renderDestinationMarkdown(article),
@@ -65,8 +90,12 @@ function gateInput(article: DestinationArticle, existingSlugs: string[] | null =
 
 describe("destination gates (spec dichoithoi §6)", () => {
   it("passes all 4 gates voi bai hop le", () => {
-    const { allPassed, checks } = evaluateDestinationGates(gateInput(validArticle()));
-    expect(checks.filter((c) => !c.passed)).toEqual([]);
+    const { allPassed, checks } = evaluateDestinationGates(
+      gateInput(validArticle()),
+    );
+    expect(checks.filter((c) => !c.passed && c.severity === "error")).toEqual(
+      [],
+    );
     expect(allPassed).toBe(true);
   });
 
@@ -88,19 +117,23 @@ describe("destination gates (spec dichoithoi §6)", () => {
     expect(result.details.join(" ")).toContain("văn hoá - lịch sử");
   });
 
-  it("structure: fail khi bai qua ngan (duoi 800 tu toan bai)", () => {
+  it("structure: bai ngan nhung tung block co noi dung huu ich khong bi chan boi tong so tu", () => {
     const article = validArticle();
     const shortSections = article.sections.map((s) => ({
       ...s,
-      content: "Đoạn ngắn giới thiệu nhanh về địa điểm này, còn nhiều điều thú vị khác nữa.",
+      content:
+        "Đoạn ngắn giới thiệu nhanh về địa điểm này, còn nhiều điều thú vị khác nữa.",
     }));
-    const result = evaluateDestinationStructureGate(gateInput({ ...article, sections: shortSections }));
-    expect(result.passed).toBe(false);
-    expect(result.details.join(" ")).toContain("tối thiểu 800 từ toàn bài");
+    const result = evaluateDestinationStructureGate(
+      gateInput({ ...article, sections: shortSections }),
+    );
+    expect(result.passed).toBe(true);
   });
 
   it("seo: fail khi ten diem den khong co trong H1 (keyword mac dinh la ten)", () => {
-    const article = validArticle({ title: "Kinh nghiệm du lịch biển miền Bắc 2026" });
+    const article = validArticle({
+      title: "Kinh nghiệm du lịch biển miền Bắc 2026",
+    });
     const result = evaluateDestinationSeoGate(gateInput(article));
     expect(result.passed).toBe(false);
     expect(result.details.join(" ")).toContain("tiêu đề H1");
@@ -108,7 +141,10 @@ describe("destination gates (spec dichoithoi §6)", () => {
 
   it("policy: fail khi gia ve khong kem luu y thay doi", () => {
     const article = validArticle({
-      quickFacts: { ...validArticle().quickFacts, ticketPrice: "290.000đ/người lớn" },
+      quickFacts: {
+        ...validArticle().quickFacts,
+        ticketPrice: "290.000đ/người lớn",
+      },
     });
     const result = evaluateDestinationPolicyGate(gateInput(article));
     expect(result.passed).toBe(false);
@@ -118,6 +154,27 @@ describe("destination gates (spec dichoithoi §6)", () => {
   it("policy: chap nhan gia 'Mien phi' khong can luu y", () => {
     const article = validArticle({
       quickFacts: { ...validArticle().quickFacts, ticketPrice: "Miễn phí" },
+    });
+    expect(evaluateDestinationPolicyGate(gateInput(article)).passed).toBe(true);
+  });
+
+  it("policy: chap nhan ghi ro chua co thong tin thu phi", () => {
+    const article = validArticle({
+      quickFacts: {
+        ...validArticle().quickFacts,
+        ticketPrice:
+          "Điểm tham quan tự nhiên, hiện chưa có thông tin thu phí vào cửa.",
+      },
+    });
+    expect(evaluateDestinationPolicyGate(gateInput(article)).passed).toBe(true);
+  });
+
+  it("policy: chap nhan flagship co gia tuy tung diem con", () => {
+    const article = validArticle({
+      quickFacts: {
+        ...validArticle().quickFacts,
+        ticketPrice: "Tuỳ điểm tham quan cụ thể — xem trang từng điểm.",
+      },
     });
     expect(evaluateDestinationPolicyGate(gateInput(article)).passed).toBe(true);
   });
@@ -155,7 +212,10 @@ describe("destination gates — Flagship tier (Phase 28.3)", () => {
   it("structure: bai Flagship fail khi KHONG co section mua/thoi diem (du co van hoa - lich su)", () => {
     const article = validArticle();
     // Doi ca 2 section co the khop tu khoa "mua"/"thoi diem" thanh section khac
-    article.sections[2] = { heading: "Ăn gì khi tới đây", content: longContent("Đặc sản") };
+    article.sections[2] = {
+      heading: "Ăn gì khi tới đây",
+      content: longContent("Đặc sản"),
+    };
     const result = evaluateDestinationStructureGate({
       ...gateInput(article),
       contentTier: "flagship",
@@ -167,7 +227,10 @@ describe("destination gates — Flagship tier (Phase 28.3)", () => {
 
   it("structure: Flagship pass khi co section mua/thoi diem (khong can van hoa - lich su)", () => {
     const article = validArticle();
-    article.sections[3] = { heading: "Nên đi mùa nào đẹp nhất", content: longContent("Mùa khô") };
+    article.sections[3] = {
+      heading: "Nên đi mùa nào đẹp nhất",
+      content: longContent("Mùa khô"),
+    };
     const result = evaluateDestinationStructureGate({
       ...gateInput(article),
       contentTier: "flagship",
@@ -177,7 +240,10 @@ describe("destination gates — Flagship tier (Phase 28.3)", () => {
 
   it("structure: node Standard (contentTier khac flagship) giu nguyen yeu cau van hoa - lich su", () => {
     const article = validArticle();
-    article.sections[3] = { heading: "Nên đi mùa nào đẹp nhất", content: longContent("Mùa khô") };
+    article.sections[3] = {
+      heading: "Nên đi mùa nào đẹp nhất",
+      content: longContent("Mùa khô"),
+    };
     const result = evaluateDestinationStructureGate({
       ...gateInput(article),
       contentTier: "standard",
@@ -195,30 +261,69 @@ describe("destination gates — blockKey 7 khoi co dinh (redesign luong viet bai
     return {
       ...article,
       sections: [
-        { heading: "Tổng quan Vịnh Hạ Long", content: longContent("Vịnh Hạ Long"), blockKey: "tong-quan" },
-        { heading: "Trải nghiệm ở Vịnh Hạ Long", content: longContent("Chèo thuyền kayak"), blockKey: "trai-nghiem" },
-        { heading: "Nên đi mùa nào", content: longContent("Mùa thu"), blockKey: "mua-nao" },
-        { heading: "Lịch trình gợi ý", content: longContent("2 ngày 1 đêm"), blockKey: "lich-trinh" },
-        { heading: "Di chuyển tới Hạ Long", content: longContent("Cao tốc"), blockKey: "di-chuyen" },
+        {
+          heading: "Tổng quan Vịnh Hạ Long",
+          content: longContent("Vịnh Hạ Long"),
+          blockKey: "tong-quan",
+        },
+        {
+          heading: "Trải nghiệm ở Vịnh Hạ Long",
+          content: longContent("Chèo thuyền kayak"),
+          blockKey: "trai-nghiem",
+        },
+        {
+          heading: "Nên đi mùa nào",
+          content: longContent("Mùa thu"),
+          blockKey: "mua-nao",
+        },
+        {
+          heading: "Lịch trình gợi ý",
+          content: longContent("2 ngày 1 đêm"),
+          blockKey: "lich-trinh",
+        },
+        {
+          heading: "Di chuyển tới Hạ Long",
+          content: longContent("Cao tốc"),
+          blockKey: "di-chuyen",
+        },
         {
           heading: "Ăn gì đặc trưng",
           content: "Chả mực giã tay.\nSá sùng.\nSam biển.",
           blockKey: "an-gi",
           items: [
-            { ten: "Chả mực giã tay", moTa: "Đặc sản trứ danh, giã tay ngay tại chợ." },
+            {
+              ten: "Chả mực giã tay",
+              moTa: "Đặc sản trứ danh, giã tay ngay tại chợ.",
+            },
             { ten: "Sá sùng", moTa: "Hải sản quý, thường phơi khô làm quà." },
-            { ten: "Sam biển", moTa: "Chế biến nhiều món, mùa hè là ngon nhất." },
+            {
+              ten: "Sam biển",
+              moTa: "Chế biến nhiều món, mùa hè là ngon nhất.",
+            },
           ],
         },
-        { heading: "Mẹo & lưu ý", content: longContent("Mua vé"), blockKey: "meo-luu-y" },
+        {
+          heading: "Mẹo & lưu ý",
+          content: longContent("Mua vé"),
+          blockKey: "meo-luu-y",
+        },
         {
           heading: "Quà mang về",
           content: "Chả mực.\nRượu nếp.\nNước mắm.",
           blockKey: "qua-mang-ve",
           items: [
-            { ten: "Chả mực Hạ Long", moTa: "Mua tại chợ hải sản, đóng gói hút chân không." },
-            { ten: "Rượu nếp cái hoa vàng", moTa: "Đặc sản vùng biển Quảng Ninh." },
-            { ten: "Nước mắm Cái Rồng", moTa: "Thương hiệu nước mắm truyền thống địa phương." },
+            {
+              ten: "Chả mực Hạ Long",
+              moTa: "Mua tại chợ hải sản, đóng gói hút chân không.",
+            },
+            {
+              ten: "Rượu nếp cái hoa vàng",
+              moTa: "Đặc sản vùng biển Quảng Ninh.",
+            },
+            {
+              ten: "Nước mắm Cái Rồng",
+              moTa: "Thương hiệu nước mắm truyền thống địa phương.",
+            },
           ],
         },
       ],
@@ -257,16 +362,19 @@ describe("destination gates — blockKey 7 khoi co dinh (redesign luong viet bai
   it("structure: khoi an-gi voi items >= 3 muc thi pass du content ngan", () => {
     const article = articleWithBlockKeys();
     const result = evaluateDestinationStructureGate(gateInput(article));
-    expect(result.details.some((d) => d.includes("Ăn gì đặc trưng"))).toBe(false);
+    expect(result.details.some((d) => d.includes("Ăn gì đặc trưng"))).toBe(
+      false,
+    );
   });
 
-  it("structure: khoi qua-mang-ve fail khi items duoi 3 muc", () => {
+  it("structure: khoi qua-mang-ve cho phep items rong khi khong co du lieu xac minh", () => {
     const article = articleWithBlockKeys();
-    const quaMangVe = article.sections.find((s) => s.blockKey === "qua-mang-ve");
-    quaMangVe!.items = quaMangVe!.items!.slice(0, 2);
+    const quaMangVe = article.sections.find(
+      (s) => s.blockKey === "qua-mang-ve",
+    );
+    quaMangVe!.items = [];
     const result = evaluateDestinationStructureGate(gateInput(article));
-    expect(result.passed).toBe(false);
-    expect(result.details.join(" ")).toContain("ít nhất 3 mục");
+    expect(result.passed).toBe(true);
   });
 
   it("structure: khoi an-gi fail khi 1 muc chua co mo ta", () => {
@@ -280,7 +388,81 @@ describe("destination gates — blockKey 7 khoi co dinh (redesign luong viet bai
 
   it("regression: bai cu khong co blockKey nao van cham theo keyword-matching nhu truoc", () => {
     const article = validArticle(); // khong co blockKey
-    const result = evaluateDestinationStructureGate({ ...gateInput(article), contentTier: "standard" });
+    const result = evaluateDestinationStructureGate({
+      ...gateInput(article),
+      contentTier: "standard",
+    });
     expect(result.passed).toBe(true);
+  });
+});
+
+describe("destination warning gates", () => {
+  it("style: canh bao cau mo van mau nhung khong chan allPassed", () => {
+    const article = validArticle({
+      intro: `${validArticle().intro} Nếu bạn đang tìm kiếm một nơi nghỉ ngơi.`,
+    });
+    const style = evaluateDestinationStyleGate(gateInput(article));
+    expect(style.passed).toBe(false);
+    expect(style.severity).toBe("warning");
+    expect(evaluateDestinationGates(gateInput(article)).allPassed).toBe(true);
+  });
+
+  it("redundancy: canh bao cau dai gan trung, khong bat fact ngan", () => {
+    const repeated =
+      "Du khách nên mua vé tại quầy chính thức và mang áo khoác mỏng vì khu vực trên vịnh thường có gió mạnh vào cuối ngày";
+    const article = validArticle({
+      intro: `${repeated}. ${validArticle().intro}`,
+      quickFacts: {
+        ...validArticle().quickFacts,
+        tip: `${repeated} khi chuẩn bị lên tàu.`,
+      },
+    });
+    expect(evaluateDestinationRedundancyGate(gateInput(article)).passed).toBe(
+      false,
+    );
+
+    const shortFact = validArticle({
+      quickFacts: { ...validArticle().quickFacts, ticketPrice: "Miễn phí" },
+      sections: [
+        {
+          heading: "Một",
+          content:
+            "Nội dung riêng đủ dài để mô tả địa điểm mà không lặp lại trường thông tin khác.",
+        },
+        {
+          heading: "Hai",
+          content:
+            "Hướng dẫn tiếp cận khu vực theo dữ liệu đã được người quản trị kiểm tra.",
+        },
+        {
+          heading: "Ba",
+          content:
+            "Lưu ý chuẩn bị phù hợp với điều kiện thực tế được ghi nhận trong nguồn.",
+        },
+      ],
+    });
+    expect(evaluateDestinationRedundancyGate(gateInput(shortFact)).passed).toBe(
+      true,
+    );
+  });
+
+  it("grounding: canh bao gia khong co trong source, chap nhan gia co source", () => {
+    const input = {
+      ...gateInput(validArticle()),
+      sourceContext: "Giá vé 290.000đ, mở cửa 7:30 - 17:00",
+    };
+    expect(evaluateDestinationGroundingGate(input).passed).toBe(true);
+    const unsupported = validArticle({
+      quickFacts: {
+        ...validArticle().quickFacts,
+        ticketPrice: "Vé 450.000đ (có thể thay đổi)",
+      },
+    });
+    expect(
+      evaluateDestinationGroundingGate({
+        ...gateInput(unsupported),
+        sourceContext: input.sourceContext,
+      }).passed,
+    ).toBe(false);
   });
 });

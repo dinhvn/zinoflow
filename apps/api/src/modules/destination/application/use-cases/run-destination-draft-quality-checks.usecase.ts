@@ -24,9 +24,14 @@ export class RunDestinationDraftQualityChecksUseCase {
   async execute(slug: string): Promise<DestinationDraftQualityChecksResponse> {
     const destination = await this.mirrorRepo.findBySlug(slug);
     if (!destination) {
-      throw new DomainRuleError(`Không tìm thấy điểm đến "${slug}" trong mirror`);
+      throw new DomainRuleError(
+        `Không tìm thấy điểm đến "${slug}" trong mirror`,
+      );
     }
-    const article = parseDraftArticleOrThrow(destination.draftArticle, destination.name);
+    const article = parseDraftArticleOrThrow(
+      destination.draftArticle,
+      destination.name,
+    );
     const draftMarkdown = renderDestinationMarkdown(article);
 
     const { checks, allPassed } = evaluateGatesForArticle({
@@ -35,6 +40,15 @@ export class RunDestinationDraftQualityChecksUseCase {
       draftMarkdown,
       keywordSeed: [destination.name],
       contentTier: destination.contentTier,
+      sourceContext: JSON.stringify({
+        openingHours: destination.openingHours,
+        ticketPrice: destination.ticketPrice,
+        priceBreakdown: destination.priceBreakdown,
+        addressNew: destination.addressNew,
+        addressOld: destination.addressOld,
+        aiReferenceSummary: destination.aiReferenceSummary,
+        aiReferenceSummaryGsg: destination.aiReferenceSummaryGsg,
+      }),
     });
     return { checks, allPassed };
   }
