@@ -1,4 +1,13 @@
-# Dichoithoi — Cẩm nang gộp Tour/Vé/Vận chuyển khi vượt Top-N (31/07/2026, CHƯA BUILD)
+# Dichoithoi — Cẩm nang gộp Tour/Vé/Vận chuyển khi vượt Top-N (31/07/2026, ✅ ĐÃ BUILD phần còn áp dụng)
+
+**Cập nhật sau audit sâu hơn lúc code (31/07/2026)**: chỉ **Tour** có overflow
+thật — `TransportCardsJson` bake KHÔNG có `TOP`/giới hạn nào (khác Tour có
+`TOP (@take)` rõ ràng), tức Vận chuyển đã hiện toàn bộ từ trước, không có gì
+để "Xem thêm". Vé thăm quan cũng không có overflow (đã ghi ở §-1 cũ, giữ
+nguyên). CMS đã có sẵn khối động `[[block:tours destination=slug limit=12]]`
+(`ArticleBlockCompiler`) nên Giai đoạn 2-3 (query full-list + khối nhúng)
+**không cần code gì mới** — chỉ Giai đoạn 4 (nút "Xem thêm") là việc thật,
+đã build. Xem §7.
 
 Ghi lại từ thảo luận: điểm đến vẫn là trục SEO chính, Khách sạn/Tour/Vé/Vận
 chuyển chỉ là lớp affiliate lồng ghép — **không xây hub/search riêng cho
@@ -200,3 +209,23 @@ slug dự trữ" — rủi ro không đáng, đi ngược convention `/tinh`/`/v
 - DoD đã verify: `dotnet build DiChoiThoi.Web` — 0 lỗi CS (chỉ fail bước
   copy DLL cuối do dev server đang chạy khoá file, không phải lỗi code).
   Commit `ae17fd2` (dichoithoi, branch develop).
+
+## 7) Giai đoạn 4 (Tour) — ✅ ĐÃ BUILD (31/07/2026)
+
+Sau khi xác nhận chỉ Tour có overflow thật (xem đầu file) và CMS đã có sẵn
+`[[block:tours destination=slug limit=12]]` để nhúng full list vào bài
+(không cần build Giai đoạn 2-3), phần còn lại chỉ là hiển thị 2 chiều:
+
+- `DestinationExtrasModel.cs`: thêm `TourArticles` (List<ArticleLinkModel>)
+  — đúng pattern `FoodArticles`/`NightlifeArticles`/`SouvenirArticles`.
+- `DestinationExtrasRepository.cs`: query `articleLinksByTopic` (đã có sẵn
+  cho Food/Nightlife/Souvenir) lọc thêm `Topic == "tour"`.
+- `Detail.cshtml`: khối Tour thêm dòng "Xem thêm: {bài} →" khi
+  `TourArticles.Count > 0` — **không check `Tours.Count > 6`** vì
+  `extras.Tours` đọc từ `TourCardsJson` đã bị bake cắt Top-6 từ trước, phía
+  website không bao giờ biết số thật trong DB. Ngưỡng "chỉ viết bài khi
+  thật sự overflow" là kỷ luật THỦ CÔNG của người soạn bài (xem §4), không
+  phải check tự động — đúng cách Food/Nightlife/Souvenir đang vận hành.
+- DoD đã verify: `dotnet build DiChoiThoi.Service` — Build succeeded, 0 lỗi
+  (`DiChoiThoi.Web` không build được do dev server đang chạy khoá DLL, không
+  phải lỗi code — đã build `.Service` độc lập để xác nhận không lỗi C#).
