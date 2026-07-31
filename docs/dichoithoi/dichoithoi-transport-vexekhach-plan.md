@@ -189,6 +189,12 @@ Hotel/Tour — không JOIN `TransportStop` nào lúc render trang.
   → `needsConfirm`, không tự ghi đè. Xác nhận gộp theo INDEX dòng (không
   phải sourceUrl, vì có thể trùng rỗng). Đã verify qua API thật: dry-run,
   apply, phát hiện trùng, xác nhận gộp đều đúng.
+- ✅ **Bổ sung 31/07/2026 — xoá tuyến**: `DeleteTransportUseCase` xoá cả
+  Postgres lẫn SQL Server (`v2.Transport`/`v2.TransportStop`), tính lại
+  `TransportCardsJson` cho điểm đầu/cuối cũ sau khi xoá (card biến mất
+  đúng). Nút "Xoá" + `confirm()` trong trang CMS. Sheet URL mặc định đã
+  đặt sẵn trong modal Nhập từ Sheet (vẫn sửa được). Đã verify qua API
+  thật: tạo → xác nhận card bake → xoá → xác nhận card về rỗng.
 
 ### Giai đoạn 3 — dichoithoi: SQL Server schema + write path (phụ thuộc
 Giai đoạn 1 — cần shape dữ liệu Postgres đã chốt)
