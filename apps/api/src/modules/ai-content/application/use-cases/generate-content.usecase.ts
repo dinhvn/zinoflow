@@ -136,6 +136,7 @@ export class GenerateContentUseCase {
         toneProfile: snapshot.toneProfile,
         sourceContext: snapshot.sourceContext,
         contentTier: snapshot.contentTier,
+        nodeKind: snapshot.nodeKind,
         products,
         // Chi bai diem den (dichoithoi) — KHONG dat 1 gia tri chung cho ca site
         // laruki/dochoi3s (Muc B, dichoithoi-destination-ai-extraction-plan §6 D3).
@@ -200,7 +201,7 @@ export class GenerateContentUseCase {
       // GenerateDestinationBlockUseCase (xem ArticleTypeProfile.normalizeSection).
       const sections = (rawArticle as { sections: ContentSection[] }).sections;
       const normalizedSections = profile.normalizeSection
-        ? sections.map((s, i) => profile.normalizeSection!(s, i))
+        ? sections.map((s, i) => profile.normalizeSection!(s, i, outline))
         : sections;
       const articleWithNormalizedSections = {
         ...rawArticle,
