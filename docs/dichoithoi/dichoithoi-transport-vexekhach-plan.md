@@ -181,6 +181,14 @@ Hotel/Tour — không JOIN `TransportStop` nào lúc render trang.
 - **DoD**: thêm/sửa 1 nhà xe với đủ điểm đầu/cuối/1 điểm trung gian qua UI
   thật, danh sách hiện đúng tên 3 điểm, không lưu được nếu thiếu điểm
   đầu/cuối.
+- ✅ **Bổ sung 31/07/2026 — nhập hàng loạt từ Google Sheet**: modal cùng
+  luồng dry-run/apply/xác nhận gộp như Hotel/Tour/Vé (`ImportTransportsModal`,
+  `ImportTransportsUseCase`) — KHÔNG dùng chung matcher với Hotel vì
+  `sourceUrl` có thể RỖNG (nhiều nhà xe chỉ có SĐT): khớp theo `sourceUrl`
+  khi có, fallback tên nhà xe + tuyến (origin/destination slug) khi trùng
+  → `needsConfirm`, không tự ghi đè. Xác nhận gộp theo INDEX dòng (không
+  phải sourceUrl, vì có thể trùng rỗng). Đã verify qua API thật: dry-run,
+  apply, phát hiện trùng, xác nhận gộp đều đúng.
 
 ### Giai đoạn 3 — dichoithoi: SQL Server schema + write path (phụ thuộc
 Giai đoạn 1 — cần shape dữ liệu Postgres đã chốt)
