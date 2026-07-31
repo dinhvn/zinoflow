@@ -299,19 +299,17 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   `d1dd00b` (branch develop). Còn lại: chỉ Vé máy bay (mode=1) chưa build UI
   (bảng đã sẵn sàng nhận), và job cào tự động (MVP nhập tay).
 
-- ⏳ **Cẩm nang gộp Tour/Vé/Vận chuyển + Danh mục bài cẩm nang — MỘT PHẦN
-  ĐÃ BUILD (31/07/2026)**: plan ở `dichoithoi-camnang-affiliate-overflow-plan.md`.
+- ✅ **Cẩm nang gộp Tour overflow + Danh mục bài cẩm nang — ĐÃ BUILD XONG
+  (31/07/2026)**: plan ở `dichoithoi-camnang-affiliate-overflow-plan.md`.
   Quyết định chiến lược: không xây hub/search riêng cho Hotel/Tour/Vé/Vận
-  chuyển (sẽ phải đấu SEO trực diện với Klook/Traveloka/Vexere, site chưa
-  đủ authority) — điểm đến vẫn là trục SEO chính, phần overflow ngoài Top-N
-  bake sẵn gộp vào 1 bài cẩm nang có content biên tập thật + card list full.
-  Vận chuyển viết bài theo ĐIỂM ĐẾN (Mức A, không theo tuyến). **Giai đoạn
-  1-4 (query full-list Tour/Vé/Vận chuyển + CMS gắn card list + hiển thị
-  "Xem thêm" trên trang điểm đến) VẪN CHƯA BUILD.** Việc §6 (Danh mục bài
-  cẩm nang, độc lập với phần trên) **ĐÃ BUILD XONG HOÀN TOÀN** (schema+CMS
-  zinoflow + website dichoithoi: hub `/cam-nang/danh-muc/{slug}`, chip lọc
-  trên `/cam-nang`, badge + bài liên quan trên trang chi tiết). Commit
-  zinoflow (contracts/CMS) + dichoithoi `86acc32`+`ae17fd2` (branch develop).
+  chuyển (sẽ phải đấu SEO trực diện với Klook/Traveloka/Vexere) — điểm đến
+  vẫn là trục SEO chính. Audit sâu lúc code phát hiện **chỉ Tour có overflow
+  thật** (Vận chuyển/Vé không bake theo Top-N, đã hiện toàn bộ từ trước) —
+  và CMS đã có sẵn khối động `[[block:tours destination=slug limit=12]]` để
+  nhúng full list, nên chỉ cần build Giai đoạn 4 (nút "Xem thêm" trên trang
+  điểm đến khi có bài gắn Topic=tour). Danh mục bài cẩm nang (§6, 7 category)
+  đã build xong cả 2 repo trước đó. Commit dichoithoi `86acc32`+`ae17fd2`+`78183c6`
+  (branch develop) + zinoflow (contracts/CMS/docs).
 
 - ✅ **Nâng chất lượng prompt + bài viết điểm đến — ĐÃ BUILD GĐ0-5 (29/07/2026),
   GĐ6 CHỜ REVIEW/ACTIVATE THỦ CÔNG** — plan ở
