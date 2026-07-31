@@ -279,6 +279,24 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- ⏳ **Vé xe khách (CMS + hiển thị website) — PLAN CHỐT KIẾN TRÚC, CHƯA BUILD
+  (31/07/2026, cập nhật cùng ngày sang mô hình tuyến có điểm dừng)**: plan
+  đầy đủ ở `dichoithoi-transport-vexekhach-plan.md`, mở rộng
+  `dichoithoi-bus-spec.md`/`dichoithoi-flight-spec.md` (trước đó chỉ phân
+  tích, chưa chốt cách build). Quyết định: bảng Postgres `transports` hợp
+  nhất (cột `mode`, sẵn cho Flight sau) + bảng map `transport_stops`
+  (destination_slug + role: origin/destination/waypoint + seq_order) — 1
+  tuyến chọn **điểm đầu, điểm cuối, điểm trung gian** (mỗi điểm là 1 node
+  cụm/tỉnh có thật, không phải text tự do). Hiển thị: điểm đầu/cuối có card
+  "🚌 Vé xe khách", điểm trung gian KHÔNG hiện (chỉ lưu lộ trình), POI con
+  kế thừa card từ cụm cha qua `ParentId`. Publish thẳng SQL Server
+  `v2.Transport`+`v2.TransportStop` qua adapter mssql giống Hotel — có JOIN
+  qua bảng stop (khác nhận định sai ban đầu "không cần bảng map", đã sửa).
+  KHÔNG dùng DynamicBlocksJson (chưa build cho bất kỳ khối nào). 4 giai
+  đoạn: (1) schema+API zinoflow, (2) CMS UI (form nhà xe + 3 picker
+  đầu/cuối/trung gian) + sidebar "Vé xe", (3) SQL Server schema+write, (4)
+  hiển thị card bên website + kế thừa POI. Chưa bắt đầu code giai đoạn nào.
+
 - ✅ **Nâng chất lượng prompt + bài viết điểm đến — ĐÃ BUILD GĐ0-5 (29/07/2026),
   GĐ6 CHỜ REVIEW/ACTIVATE THỦ CÔNG** — plan ở
   `dichoithoi-destination-prompt-quality-plan.md`: audit job Thác Triệu Hải, prompt active DB,

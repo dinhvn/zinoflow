@@ -46,7 +46,10 @@ lại tracking trạng thái.
     có cơ chế "khối động" tự nhúng danh sách điểm đến/hotel/tour).
 11. `dichoithoi-flight-spec.md`, `dichoithoi-bus-spec.md` — vé máy bay/xe khách,
     ❌ CHỦ Ý CHƯA vào lộ trình build (tự ghi "phân tích, chưa chốt" — chờ bạn
-    xem lại spec trước khi có đợt code tiếp theo).
+    xem lại spec trước khi có đợt code tiếp theo). Kiến trúc build cụ thể
+    cho Vé xe (mode=2) đã chốt ở `dichoithoi-transport-vexekhach-plan.md`
+    (31/07/2026) — đọc file này trước khi bắt đầu code, không dùng lại field
+    `admin_provinces` FK ở bus-spec (đã xác nhận sai so với code thật).
 12. `dichoithoi-backlog.md` — **nguồn sự thật duy nhất** cho quyết định cần
     chốt + việc còn mở + rủi ro vận hành từ tất cả tài liệu trên.
     12b. `dichoithoi-destination-relations-plan.md` — plan CHƯA build (15/07/2026):
