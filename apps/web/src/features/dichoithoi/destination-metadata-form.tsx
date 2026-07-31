@@ -10,6 +10,7 @@ import {
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
+import { FeatureIntro } from "@/shared/ui/feature-intro";
 import { Select } from "@/shared/ui/select";
 
 /** Sinh slug tu ten: bo dau tieng Viet, d->d, ky tu khac -> gach ngang. */
@@ -208,6 +209,43 @@ export function DestinationMetadataForm({
             className={`${inputCls} ${!isNew ? "opacity-60" : ""} font-mono`}
           />
         </Field>
+        <div className="md:col-span-2">
+          <FeatureIntro
+            summary={
+              <>
+                3 field dưới đây (Cấp / Độ ưu tiên / Độ ưu tiên nội dung) là 3 khái
+                niệm ĐỘC LẬP nhau, không thay thế nhau được — dễ nhầm vì tên gần
+                giống nhau.
+              </>
+            }
+            details={
+              <div className="space-y-1.5">
+                <p>
+                  <strong>Cấp</strong> = vị trí trong cây (điểm lẻ / cụm / tỉnh) —
+                  gần như cố định, quyết định bố cục trang và bộ prompt AI dùng để
+                  viết bài.
+                </p>
+                <p>
+                  <strong>Độ ưu tiên (1-5)</strong> = thứ hạng SO VỚI ANH EM cùng
+                  cha (ai nổi bật hơn trong 1 cụm) — điểm ưu tiên 1-2 sẽ hiện ở khu
+                  "Nổi bật" trên trang cụm cha. KHÔNG liên quan tới việc điểm này có
+                  nhiều/ít dữ liệu hay không.
+                </p>
+                <p>
+                  <strong>Độ ưu tiên nội dung (Flagship/Standard)</strong> = chỉ áp
+                  cho tỉnh/cụm — có đầu tư viết bài tầm cả vùng (lịch trình nhiều
+                  ngày, layout 2 lớp điểm tham quan) hay không. Chỉ nên chọn Flagship
+                  cho vài chục tên tuổi lớn (Đà Lạt, Hội An, Phú Quốc...), KHÔNG phải
+                  cứ tỉnh/cụm lớn là chọn.
+                </p>
+                <p className="text-zinc-400">
+                  Ví dụ: Đà Lạt = cụm + flagship. Đạ Tẻh = cụm + standard. Thác Triệu
+                  Hải = điểm lẻ (không có field Độ ưu tiên nội dung).
+                </p>
+              </div>
+            }
+          />
+        </div>
         <Field label="Cấp">
           <Select value={v.kind} onChange={(e) => set("kind", e.target.value as DestinationKind)} className="w-full">
             {KIND_OPTIONS.map((o) => (

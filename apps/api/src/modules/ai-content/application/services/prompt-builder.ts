@@ -31,11 +31,22 @@ export interface PromptJobContext {
   sourceContext: string | null;
   products: readonly ProductContext[];
   /**
-   * flagship | standard | null — chi y nghia voi articleType guide-diem-den
-   * (Phase 28.3): chon prompt Flagship rieng khi = "flagship", fallback ve
-   * prompt guide-diem-den binh thuong voi moi gia tri khac.
+   * flagship | standard | null — chi y nghia voi articleType guide-diem-den.
+   * TRUOC 09/2026 dung de CHON BO PROMPT (Phase 28.3) — nay chi con la BIEN
+   * NOI DUNG ({{contentTier}}) truyen vao prompt Cum de chinh DO SAU muc
+   * "Lich trinh" (flagship = day du N-ngay, standard = 1 doan ngan). Viec
+   * CHON BO PROMPT nao (POI vs Cum) gio dua theo `nodeKind`, xem duoi.
    */
   contentTier?: "flagship" | "standard" | null;
+  /**
+   * poi | cluster | province | null — CHI y nghia voi articleType guide-diem-den
+   * (thay Phase 28.3, sua theo phan hoi nguoi dung ve mental model "di toi 1
+   * cum roi tim diem trong cum"): cluster/province luon dung bo prompt
+   * "guide-diem-den-cum" (tam vung, cho phep lich trinh nhieu ngay + nhac ten
+   * diem con), KHONG con phu thuoc contentTier nhu truoc. poi/null giu nguyen
+   * bo prompt "guide-diem-den" thuong (1 diem tham quan le).
+   */
+  nodeKind?: "poi" | "cluster" | "province" | null;
   /**
    * CHI Gemini doc (Anthropic bo qua — spec §5). Khong set = provider tu default.
    * Scope RIENG theo caller — KHONG set 1 gia tri chung cho ca pipeline, de
@@ -148,6 +159,9 @@ export class PromptBuilder {
         ctx.sourceContext ??
         "(không có — dùng kiến thức nền, ghi rõ chỗ cần kiểm chứng)",
       products: ctx.products,
+      // Dung trong prompt Cum ({{contentTier}}) de chinh do sau muc "Lich
+      // trinh" — mac dinh "standard" khi khong set (poi khong dung bien nay).
+      contentTier: ctx.contentTier ?? "standard",
     };
   }
 
@@ -163,14 +177,20 @@ export class PromptBuilder {
     const at = ctx.articleType;
     const site = ctx.siteCode;
     const keys: string[] = [];
-    // Phase 28.3 — diem den Flagship dung bo prompt rieng (mua/thoi diem, di
-    // chuyen 2 chieu, an gi dac trung, qua mang ve... thay vi khung POI thuong),
-    // uu tien TRUOC cap key guide-diem-den binh thuong; tier != "flagship"
-    // (standard/null) roi thang xuong cap duoi, khong doi hanh vi cu.
-    if (at === "guide-diem-den" && ctx.contentTier === "flagship") {
+    // Sua theo phan hoi nguoi dung (thay Phase 28.3): truoc day chon bo prompt
+    // "Cum" (tam vung, cho phep lich trinh nhieu ngay + nhac ten diem con) chi
+    // khi ContentTier=flagship — nghia la da so cum (standard) van dung nham
+    // bo prompt POI, vo tinh khang dinh sai "{{topic}} la 1 diem tham quan LE"
+    // len 1 cum thuc su co nhieu diem con. Gio route THANG theo nodeKind —
+    // MOI cluster/province deu dung bo prompt Cum, contentTier chi con la
+    // BIEN NOI DUNG chinh do sau ben trong prompt do (xem PromptJobContext).
+    if (
+      at === "guide-diem-den" &&
+      (ctx.nodeKind === "cluster" || ctx.nodeKind === "province")
+    ) {
       keys.push(
-        `${site}.guide-diem-den-flagship.${step}.vi`,
-        `guide-diem-den-flagship.${step}.vi`,
+        `${site}.guide-diem-den-cum.${step}.vi`,
+        `guide-diem-den-cum.${step}.vi`,
       );
     }
     keys.push(`${site}.${at}.${step}.vi`, `${at}.${step}.vi`);

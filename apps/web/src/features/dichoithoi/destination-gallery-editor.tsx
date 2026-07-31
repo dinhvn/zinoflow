@@ -165,7 +165,7 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
       </p>
 
       {items.length > 0 && (
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           {items.map((item, i) => (
             <div key={item.path} className="rounded border border-zinc-200 p-2 dark:border-zinc-800">
               {urlByPath[item.path] ? (
@@ -173,11 +173,11 @@ export function DestinationGalleryEditor({ slug, gallery, imageUrls, onSaved }: 
                 <img
                   src={urlByPath[item.path]}
                   alt={item.altText ?? ""}
-                  className="mb-2 h-24 w-full rounded object-cover"
+                  className="mb-2 h-48 w-full rounded bg-zinc-100 object-contain dark:bg-zinc-900"
                   onError={(e) => (e.currentTarget.style.display = "none")}
                 />
               ) : (
-                <div className="mb-2 flex h-24 w-full items-center justify-center rounded bg-zinc-100 text-xs text-zinc-400 dark:bg-zinc-900">
+                <div className="mb-2 flex h-48 w-full items-center justify-center rounded bg-zinc-100 text-xs text-zinc-400 dark:bg-zinc-900">
                   Chưa có preview
                 </div>
               )}

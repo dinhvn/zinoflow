@@ -7,6 +7,20 @@ tự, không bỏ bước.
 
 ## 1) Trước khi xoá production (chuẩn bị + lưới an toàn)
 
+- [ ] **Release gate bảo mật (bắt buộc trước cutover)** - ZinoFlow (`apps/api`, `apps/web`): chạy kiểm tra dependency
+      vulnerabilities mức High/Critical, xử lý hết hoặc lập biên bản risk
+      acceptance có người duyệt. - Dichoithoi (`DiChoiThoi.Web`, `DiChoiThoi.Service`,
+      `CmsDiChoiThoi.Web`): rà package vulnerable, rà cấu hình production
+      (không lộ secret, không bật cờ debug/dev, không để endpoint nội bộ
+      mở công khai ngoài ý muốn). - Rà nhanh bề mặt tấn công: auth/session/cookie flags, upload file,
+      input validate, logging không ghi lộ credential/token.
+- [ ] **Release gate tải (load/perf test) trên môi trường gần production** - Chạy kịch bản tải tối thiểu cho các route trọng yếu:
+      trang chủ, `/diem-den/{slug}`, danh sách `/tinh` hoặc `/loai`,
+      và các API chỉnh sửa nội dung từ zinoflow. - Tiêu chí pass đề xuất: error rate < 1%, p95 không tăng quá 30% so với
+      baseline trước release, không có memory leak/CPU spike kéo dài. - Lưu report benchmark kèm timestamp để đối chiếu sau release.
+- [ ] **Xác nhận cơ chế backup/restore cho CẢ 2 hệ thống (zinoflow + dichoithoi)** - Bắt buộc có backup dữ liệu + backup cấu hình + hướng dẫn restore
+      tương ứng; không đủ 3 phần thì chưa được cutover.
+
 - [ ] **Backup production hiện tại trước khi xoá** — dù sẽ xoá, vẫn backup
       để có đường lùi nếu phát hiện vấn đề sau release (DB + toàn bộ ảnh
       upload qua FTP thực tế trên production, không chỉ code).
@@ -39,6 +53,17 @@ tự, không bỏ bước.
       redirect ở bước 3. Không tự map bằng suy diễn máy móc — Claude đề xuất
       map (theo tên/toạ độ/nội dung), người dùng duyệt từng dòng trước khi
       áp dụng.
+
+### Bổ sung bắt buộc: Ma trận backup/restore trước release
+
+| Hệ thống     | Bắt buộc backup                                                                                                                                      | Ghi chú restore tối thiểu                                                                                             |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `zinoflow`   | PostgreSQL (toàn bộ schema app + pg-boss/job tables), file `.env` production của `apps/api` (lưu bản mã hoá), mọi config deploy liên quan domain/API | Có sẵn lệnh restore DB + checklist verify sau restore (đếm bảng chính, job queue còn nhất quán, API boot thành công). |
+| `dichoithoi` | SQL Server production (full backup + bản đối chiếu slug cũ), toàn bộ ảnh trên FTP production, `appsettings.*.json` production (lưu bản mã hoá)       | Có sẵn lệnh restore DB + quy trình restore ảnh FTP + smoke test URL/ảnh sau restore.                                  |
+
+- [ ] Chạy **1 lần diễn tập restore** trên môi trường không-production trước
+      ngày release (ít nhất restore DB + verify app khởi động), ghi biên bản
+      pass/fail.
 
 ## 2) Đưa code + database mới lên
 
@@ -73,21 +98,16 @@ tự, không bỏ bước.
 - [ ] robots.txt đúng cho production (không còn `Disallow: /` kiểu môi
       trường staging/dev).
 - [ ] **So DB cũ (backup) vs DB mới → danh sách slug mất → redirect** — quy
-      trình lúc release (yêu cầu Claude thực hiện):
-      1. Claude đọc bản backup DB cũ (giữ riêng ở bước 1) + DB mới, liệt kê
-         toàn bộ slug `/diem-den/{slug}` cũ không còn tồn tại ở DB mới.
-      2. Với mỗi slug mất, Claude đề xuất map sang URL mới tương ứng (match
-         theo tên/toạ độ/nội dung — không suy máy móc 1-1 vì kiến trúc đã
-         đổi); slug **map được** → redirect 301 sang URL điểm đến mới.
-      3. Slug **không map được** (điểm đến đã gộp/xoá hẳn trong đợt tổ chức
-         lại) → redirect 301 về trang danh mục/tỉnh gần nhất tương ứng (đã
-         chốt: ưu tiên giữ SEO equity ở mức tỉnh/loại thay vì về trang chủ
-         hoặc để 404 thật).
-      4. Toàn bộ danh sách map (kể cả bước 3) phải qua **người dùng duyệt
-         từng dòng** trước khi áp dụng redirect — Claude không tự publish.
-      - Việc này làm **trước khi** chạy mục "Redirect 301" ở phần Check SEO
-        bên dưới — mục đó chỉ verify lại redirect đã cấu hình còn hoạt động
-        đúng trên domain thật.
+      trình lúc release (yêu cầu Claude thực hiện): 1. Claude đọc bản backup DB cũ (giữ riêng ở bước 1) + DB mới, liệt kê
+      toàn bộ slug `/diem-den/{slug}` cũ không còn tồn tại ở DB mới. 2. Với mỗi slug mất, Claude đề xuất map sang URL mới tương ứng (match
+      theo tên/toạ độ/nội dung — không suy máy móc 1-1 vì kiến trúc đã
+      đổi); slug **map được** → redirect 301 sang URL điểm đến mới. 3. Slug **không map được** (điểm đến đã gộp/xoá hẳn trong đợt tổ chức
+      lại) → redirect 301 về trang danh mục/tỉnh gần nhất tương ứng (đã
+      chốt: ưu tiên giữ SEO equity ở mức tỉnh/loại thay vì về trang chủ
+      hoặc để 404 thật). 4. Toàn bộ danh sách map (kể cả bước 3) phải qua **người dùng duyệt
+      từng dòng** trước khi áp dụng redirect — Claude không tự publish. - Việc này làm **trước khi** chạy mục "Redirect 301" ở phần Check SEO
+      bên dưới — mục đó chỉ verify lại redirect đã cấu hình còn hoạt động
+      đúng trên domain thật.
 
 ## 4) Check SEO tổng quát
 
@@ -111,8 +131,8 @@ lại trên **domain production thật**, không chỉ trên local:
 - [ ] **Chấp nhận trước: ranking có thể dao động vài tuần đầu sau release,
       đây là hành vi bình thường, không phải dấu hiệu xấu** — trích Google
       (`developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes`):
-      *"visibility có thể dao động tạm thời trong lúc chuyển đổi... thứ hạng
-      sẽ ổn định dần theo thời gian"*; site cỡ vừa có thể mất "vài tuần" để
+      _"visibility có thể dao động tạm thời trong lúc chuyển đổi... thứ hạng
+      sẽ ổn định dần theo thời gian"_; site cỡ vừa có thể mất "vài tuần" để
       phần lớn trang được index lại đầy đủ. Không hoảng khi thấy traffic dip
       ngay sau release — chỉ cần lo lắng nếu KHÔNG hồi phục sau nhiều tuần
       (khi đó mới đi tìm lỗi kỹ thuật thật, ví dụ redirect sai/thiếu).

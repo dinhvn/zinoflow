@@ -78,33 +78,36 @@ const destinationCtx: PromptJobContext = {
   products: [],
 };
 
-describe("PromptBuilder phan giai key theo ContentTier (Phase 28.3)", () => {
-  it("contentTier=flagship -> uu tien key guide-diem-den-flagship (khong co DB -> dung DEFAULT)", async () => {
+describe("PromptBuilder phan giai key theo Kind (nodeKind chon khung, contentTier chi chinh do sau)", () => {
+  it("nodeKind=cluster -> uu tien key guide-diem-den-cum (khong co DB -> dung DEFAULT)", async () => {
     const b = new PromptBuilder(repoWithKey(null));
     const req = await b.buildOutline({
       ...destinationCtx,
+      nodeKind: "cluster",
       contentTier: "flagship",
     });
     expect(req.prompt).toContain("mùa");
-    expect(req.prompt).toContain("ĐÚNG 7 mục H2 theo THỨ TỰ CỐ ĐỊNH");
+    expect(req.prompt).toContain("5-7 mục H2 THEO THỨ TỰ CỐ ĐỊNH");
   });
 
-  it("contentTier=standard/null -> dung khung 7 khoi co dinh (redesign luong viet bai)", async () => {
+  it("nodeKind=poi (hoac khong co) -> dung khung guide-diem-den, khong phu thuoc contentTier", async () => {
     const b = new PromptBuilder(repoWithKey(null));
     const req = await b.buildOutline({
       ...destinationCtx,
+      nodeKind: "poi",
       contentTier: "standard",
     });
-    expect(req.prompt).toContain("ĐÚNG 7 mục H2 theo THỨ TỰ CỐ ĐỊNH");
+    expect(req.prompt).toContain("5-7 mục H2 THEO THỨ TỰ CỐ ĐỊNH");
     expect(req.prompt).toContain("Quà mang về");
   });
 
-  it("contentTier=flagship uu tien override DB rieng cho site truoc default chung", async () => {
+  it("nodeKind=cluster uu tien override DB rieng cho site truoc default chung", async () => {
     const b = new PromptBuilder(
-      repoWithKey("dichoithoi.guide-diem-den-flagship.outline.vi"),
+      repoWithKey("dichoithoi.guide-diem-den-cum.outline.vi"),
     );
     const req = await b.buildOutline({
       ...destinationCtx,
+      nodeKind: "cluster",
       contentTier: "flagship",
     });
     expect(req.prompt).toBe("SPECIFIC");

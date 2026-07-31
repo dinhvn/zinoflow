@@ -25,7 +25,7 @@ export type PromptArticleType =
   | "toplist"
   | "review"
   | "guide-diem-den"
-  | "guide-diem-den-flagship"
+  | "guide-diem-den-cum"
   | "cam-nang"
   | "km-bai-viet";
 
@@ -43,7 +43,7 @@ const ARTICLE_TYPES: PromptArticleType[] = [
   "toplist",
   "review",
   "guide-diem-den",
-  "guide-diem-den-flagship",
+  "guide-diem-den-cum",
   "cam-nang",
   "km-bai-viet",
 ];
@@ -51,8 +51,8 @@ const ARTICLE_TYPES: PromptArticleType[] = [
 export const ARTICLE_TYPE_LABELS: Record<PromptArticleType, string> = {
   toplist: "Top-list",
   review: "Review",
-  "guide-diem-den": "Điểm đến (dichoithoi)",
-  "guide-diem-den-flagship": "Điểm đến Flagship — tỉnh/cụm tổng hợp (dichoithoi)",
+  "guide-diem-den": "Điểm đến (dichoithoi) — POI đơn lẻ",
+  "guide-diem-den-cum": "Điểm đến (dichoithoi) — Cụm/Tỉnh tổng hợp (mọi ContentTier)",
   "cam-nang": "Cẩm nang tổng hợp (dichoithoi)",
   "km-bai-viet": "Khuyến mãi (laruki/dochoi3s)",
 };
@@ -73,6 +73,9 @@ const COMMON_VARS = [
   "toneProfile",
   "sourceContext",
   "products",
+  // Chi thuc su dung trong prompt Cum ({{contentTier}} chinh do sau Lich
+  // trinh) nhung baseVars() luon set (mac dinh "standard") nen liet ke chung.
+  "contentTier",
 ];
 
 /** Bien theo operation (= COMMON_VARS + extra moi buoc, theo PromptBuilder) */

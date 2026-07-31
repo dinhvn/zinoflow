@@ -180,6 +180,11 @@ export class CreateDestinationJobUseCase {
       keywordSeed: [destination.name],
       sourceContext,
       contentTier: destination.contentTier,
+      // Quyet dinh PromptBuilder chon bo prompt POI hay Cum (thay Phase 28.3 —
+      // xem prompt-builder.ts): MOI cluster/province deu dung bo prompt Cum,
+      // khong con phu thuoc contentTier nhu truoc. Entity.kind la varchar tho
+      // (khong ep kieu literal o tang entity) nen ep kieu tai day.
+      nodeKind: destination.kind as "poi" | "cluster" | "province",
       // Gate "originality" (07/2026) — chi so trung lap voi bai KHAC cung tinh,
       // null (chua gan tinh) = gate tu bo qua khi khong co comparisonKey.
       comparisonKey: destination.provinceCode,
@@ -230,6 +235,7 @@ export class CreateDestinationJobUseCase {
       toneProfile: null,
       sourceContext,
       contentTier: destination.contentTier,
+      nodeKind: destination.kind as "poi" | "cluster" | "province",
       products: [],
     };
     const outlineRequest = await this.promptBuilder.buildOutline(ctx);
@@ -391,14 +397,24 @@ export class CreateDestinationJobUseCase {
     }
 
     // Da co it nhat 1 tom tat trich xuat (Skill hoac GSG, da qua duyet tay) —
-    // dang tin cay hon than bai cu tren site (co the loi thoi, chinh la ly do
-    // pipeline trich xuat ra doi). §6 D2: bo han khoi than bai dai khi da co,
-    // chi giu 4 dong quick-fact (re, luon huu ich de doi chieu).
+    // dang tin cay hon TOAN BO noi dung site cu (ke ca 4 dong quick-fact), vi:
+    // (1) trung lap voi "Facts da duyet" da dua vao sourceContext o tren,
+    // (2) 4 dong quick-fact do rat co the chinh la van AI viet o lan generate
+    // truoc — dua lai vao lam "ban de viet lai tot hon" tao rui ro bam khuon
+    // (anchoring) vao loi van/loi sai cu thay vi viet moi tu nguon dang tin
+    // cay hon. Quyet dinh 25/07/2026 (§5.3/D2) chi bo than bai dai — quyet
+    // dinh nay (sua theo phan hoi nguoi dung) bo LUON ca 4 dong, chi giu lai
+    // TOAN BO khoi "Noi dung hien tai tren website" cho nhanh CHUA co tom tat
+    // trich xuat nao (fallback duy nhat con lai cho nhanh do).
     const hasExtractedSummary = Boolean(
       destination.aiReferenceSummary || destination.aiReferenceSummaryGsg,
     );
 
-    if (request.mode === "update" && destination.siteId !== null) {
+    if (
+      !hasExtractedSummary &&
+      request.mode === "update" &&
+      destination.siteId !== null
+    ) {
       const current = await this.siteDb.fetchDestinationContent(
         destination.siteId,
       );
@@ -415,12 +431,10 @@ export class CreateDestinationJobUseCase {
           parts.push(`- Di chuyển hiện ghi: ${stripHtml(current.transport)}`);
         if (current.tip)
           parts.push(`- Mẹo hiện ghi: ${stripHtml(current.tip)}`);
-        if (!hasExtractedSummary) {
-          parts.push("", "### Thân bài hiện tại (đã bỏ HTML):");
-          parts.push(
-            stripHtml(current.contentHtml).slice(0, MAX_OLD_CONTENT_CHARS),
-          );
-        }
+        parts.push("", "### Thân bài hiện tại (đã bỏ HTML):");
+        parts.push(
+          stripHtml(current.contentHtml).slice(0, MAX_OLD_CONTENT_CHARS),
+        );
       }
     }
 

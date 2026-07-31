@@ -165,7 +165,7 @@ export function DestinationImageUploader({
           <img
             src={shownImage}
             alt="Ảnh đại diện"
-            className="h-24 w-32 rounded object-cover"
+            className="h-40 w-56 rounded bg-zinc-100 object-contain dark:bg-zinc-900"
             onError={(e) => (e.currentTarget.style.display = "none")}
           />
         )}

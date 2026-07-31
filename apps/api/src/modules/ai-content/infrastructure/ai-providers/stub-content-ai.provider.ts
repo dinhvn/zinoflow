@@ -171,6 +171,7 @@ export class StubContentAiProvider implements ContentAiProvider {
         "Ăn gì đặc trưng gần đây",
         "Quà mang về",
       ],
+      includeOptionalSections: { anGi: true, quaMangVe: true },
       plannedFaqQuestions: [
         `Đi ${topic} mùa nào đẹp nhất?`,
         "Tham quan mất bao lâu?",

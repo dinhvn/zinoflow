@@ -66,7 +66,7 @@ describe("destination normalizeArticle", () => {
     ).toEqual([]);
     expect(
       sections.find((section) => section.blockKey === "trai-nghiem")?.content,
-    ).toContain("chưa có dữ liệu đã xác minh");
+    ).toContain("chưa có đủ thông tin");
     expect(normalized.quickFacts.food).toBe("Bạn nên tự chuẩn bị đồ ăn.");
     expect(normalized.faq).toEqual([
       { question: "Điểm gần nhất là đâu?", answer: "Điểm A cách 2 km." },
@@ -84,7 +84,7 @@ describe("destination normalizeArticle", () => {
     ) as DestinationArticle;
 
     expect(normalized.quickFacts.food).toBe(
-      "Hiện chưa có dữ liệu đã xác minh về dịch vụ ăn uống tại điểm đến.",
+      "Hiện chưa có đủ thông tin để giới thiệu quán ăn hay món đặc trưng quanh đây.",
     );
     expect(
       normalized.sections.find((section) => section.blockKey === "an-gi")

@@ -85,11 +85,18 @@ export interface ArticleTypeProfile {
   normalizeOutline?(outline: OutlineLike, topic: string): OutlineLike;
   /**
    * Sua 1 section AI tra ve TRUOC KHI dua vao mang sections (tuy chon). Bai diem den
-   * ep cung blockKey theo DUNG VI TRI trong DESTINATION_SECTION_ORDER — khong tin AI
-   * tu gan lai blockKey (cung nguyen tac da dung o GenerateDestinationBlockUseCase),
-   * tranh truong hop AI gan sai/trung blockKey khi noi dung headings da bi ep dung roi.
+   * ep cung blockKey theo DUNG VI TRI trong danh sach block-key ACTIVE cua outline
+   * nay (khong phai luon DESTINATION_SECTION_ORDER day du — tu khi cho phep bo
+   * "an-gi"/"qua-mang-ve" khi thieu du lieu, vi tri trong mang co the ngan hon 7,
+   * nen phai doi chieu dung danh sach da loc theo includeOptionalSections cua CHINH
+   * outline nay, tranh lech vi tri gan sai blockKey giua 2 khoi cuoi). `outline` la
+   * outline DA qua normalizeOutline (tham so tuy chon, cac profile khac bo qua).
    */
-  normalizeSection?(section: ContentSection, index: number): ContentSection;
+  normalizeSection?(
+    section: ContentSection,
+    index: number,
+    outline?: OutlineLike,
+  ): ContentSection;
   /** Ap dung invariant phu thuoc nguon sau khi AI tra ve toan bai. */
   normalizeArticle?(
     article: AnyArticle,
@@ -156,7 +163,7 @@ const affiliateProfile: ArticleTypeProfile = {
 /**
  * Tieu de mau cho dung 7 chu de co dinh (DESTINATION_SECTION_ORDER) — khop dung
  * template da mo ta trong prompt outline (default-prompts.ts, muc "guide-diem-den"/
- * "guide-diem-den-flagship"). Dung de EP CUNG sectionHeadings sau khi AI tra ve, thay
+ * "guide-diem-den-cum"). Dung de EP CUNG sectionHeadings sau khi AI tra ve, thay
  * vi tin AI tu dat dung 7 tieu de theo dung thu tu (bug 07/2026: AI de lac de, bo qua
  * "lich-trinh"/"an-gi"/"qua-mang-ve" de thay bang chu de tuy hung khac).
  */
@@ -172,6 +179,27 @@ const DESTINATION_HEADING_TEMPLATES: Partial<
   "qua-mang-ve": (topic) => `Quà mang về từ ${topic}`,
 };
 
+/**
+ * Danh sach block-key ACTIVE cho 1 outline cu the — bo "an-gi"/"qua-mang-ve" khi AI
+ * da khai includeOptionalSections tuong ung la false (nguon khong co du lieu, xem
+ * destinationOutlineSchema). Dung chung cho normalizeOutline (ra heading) VA
+ * normalizeSection (map dung blockKey theo VI TRI) de 2 buoc luon dong bo cung 1
+ * danh sach — neu chi bo "an-gi" ma van giu "qua-mang-ve", vi tri trong mang bi lech
+ * so voi DESTINATION_SECTION_ORDER day du nen KHONG duoc index thang vao no.
+ */
+function resolveActiveSectionOrder(
+  includeOptionalSections:
+    | { anGi?: boolean; quaMangVe?: boolean }
+    | undefined,
+): readonly DestinationBlockKey[] {
+  return DESTINATION_SECTION_ORDER.filter((key) => {
+    if (key === "an-gi") return includeOptionalSections?.anGi ?? true;
+    if (key === "qua-mang-ve")
+      return includeOptionalSections?.quaMangVe ?? true;
+    return true;
+  });
+}
+
 const MISSING_SOURCE_LIST_BLOCKS: ReadonlyArray<
   readonly [string, DestinationBlockKey]
 > = [
@@ -180,14 +208,21 @@ const MISSING_SOURCE_LIST_BLOCKS: ReadonlyArray<
   ["souvenirs", "qua-mang-ve"],
 ];
 
+// Van xuoi tu nhien (khong con kieu "thong bao he thong" nhu ban cu "Hien chua co
+// du lieu da xac minh...") — day la LUOI AN TOAN cuoi cung khi co le?ch giua co
+// deterministic "missing-structured-source" va includeOptionalSections AI tu khai
+// (vd AI bao co du lieu nhung co van bao thieu) — hiem khi kich hoat voi "an-gi"/
+// "qua-mang-ve" vi 2 khoi do gio co the bi BO HAN khoi outline (xem
+// resolveActiveSectionOrder), nhung "trai-nghiem" van bat buoc nen van can fallback.
 const MISSING_SOURCE_BLOCK_CONTENT: Partial<
   Record<DestinationBlockKey, string>
 > = {
   "trai-nghiem":
-    "Hiện chưa có dữ liệu đã xác minh về các hoạt động cụ thể tại điểm đến.",
-  "an-gi": "Hiện chưa có dữ liệu đã xác minh về dịch vụ ăn uống tại điểm đến.",
+    "Hiện chưa có đủ thông tin cụ thể về các hoạt động tại điểm đến này.",
+  "an-gi":
+    "Hiện chưa có đủ thông tin để giới thiệu quán ăn hay món đặc trưng quanh đây.",
   "qua-mang-ve":
-    "Hiện chưa có dữ liệu đã xác minh về quà lưu niệm hoặc đặc sản bán tại điểm đến.",
+    "Hiện chưa có thông tin về đặc sản hay quà lưu niệm riêng của điểm đến này.",
 };
 
 const MISSING_SOURCE_FAQ_PATTERNS: Partial<
@@ -246,18 +281,34 @@ const destinationProfile: ArticleTypeProfile = {
     renderDestinationMarkdown(article as DestinationArticle),
   extractTitle: (article) => (article as DestinationArticle).title,
   usesProductCatalog: false,
-  normalizeOutline: (outline, topic) => ({
-    ...outline,
-    sectionHeadings: DESTINATION_SECTION_ORDER.map(
-      (key) =>
-        DESTINATION_HEADING_TEMPLATES[key]?.(topic) ??
-        DESTINATION_BLOCK_LABELS[key],
-    ),
-  }),
-  normalizeSection: (section, index) => ({
-    ...section,
-    blockKey: DESTINATION_SECTION_ORDER[index] ?? section.blockKey,
-  }),
+  normalizeOutline: (outline, topic) => {
+    const includeOptionalSections = (
+      outline as unknown as {
+        includeOptionalSections?: { anGi: boolean; quaMangVe: boolean };
+      }
+    ).includeOptionalSections;
+    const activeOrder = resolveActiveSectionOrder(includeOptionalSections);
+    return {
+      ...outline,
+      sectionHeadings: activeOrder.map(
+        (key) =>
+          DESTINATION_HEADING_TEMPLATES[key]?.(topic) ??
+          DESTINATION_BLOCK_LABELS[key],
+      ),
+    };
+  },
+  normalizeSection: (section, index, outline) => {
+    const includeOptionalSections = (
+      outline as unknown as {
+        includeOptionalSections?: { anGi: boolean; quaMangVe: boolean };
+      }
+    )?.includeOptionalSections;
+    const activeOrder = resolveActiveSectionOrder(includeOptionalSections);
+    return {
+      ...section,
+      blockKey: activeOrder[index] ?? section.blockKey,
+    };
+  },
   normalizeArticle: (article, sourceContext) =>
     normalizeDestinationArticle(article as DestinationArticle, sourceContext),
   createManualSkeleton: (topic) =>

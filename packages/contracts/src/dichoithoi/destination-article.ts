@@ -138,16 +138,41 @@ export const MIN_LIST_ITEMS = 0;
 
 /**
  * Outline buoc 1 — khong co plannedProducts (diem den khong co product).
- * sectionHeadings PHAI dung 7 phan tu, khop DESTINATION_SECTION_ORDER — truoc
- * day min(3).max(8) cho phep AI lo prompt (da noi ro "dung 7 muc") va tra ve
- * it hon, khien bai thieu khoi ma khong gate nao bat loi (bug phat hien 07/2026,
- * nguoi dung thay AI chi tao 1-2 block).
+ * sectionHeadings TRUOC DAY bat buoc dung 7 phan tu tuyet doi (truoc do nua la
+ * min(3).max(8) — bug 07/2026: AI lo prompt tra ve it hon ma khong gate nao
+ * bat loi). Gio (thao luan ve "an gi"/"qua mang ve" khong bat buoc khi nguon
+ * khong co du lieu) cho phep 5-7 phan tu, NHUNG khong chi noi long suong —
+ * bat buoc kem `includeOptionalSections` VA `.refine()` doi chieu dung do dai
+ * mang voi co da khai bao, tranh tai phat bug cu (AI khong the "tinh lam
+ * bieng" tra ve it hon ma khong khai bao ro ly do trong includeOptionalSections).
  */
-export const destinationOutlineSchema = z.object({
-  title: z.string(),
-  sectionHeadings: z.array(z.string()).length(DESTINATION_SECTION_ORDER.length),
-  plannedFaqQuestions: z.array(z.string()).max(6),
-});
+export const destinationOutlineSchema = z
+  .object({
+    title: z.string(),
+    sectionHeadings: z
+      .array(z.string())
+      .min(5)
+      .max(DESTINATION_SECTION_ORDER.length),
+    /** AI tu khai bao co viet khoi "an-gi"/"qua-mang-ve" hay khong — quyet dinh
+     * DUA THEO nguon co du lieu hay khong, KHONG dua vao Priority/do noi tieng. */
+    includeOptionalSections: z.object({
+      anGi: z.boolean(),
+      quaMangVe: z.boolean(),
+    }),
+    plannedFaqQuestions: z.array(z.string()).max(6),
+  })
+  .refine(
+    (v) =>
+      v.sectionHeadings.length ===
+      5 +
+        (v.includeOptionalSections.anGi ? 1 : 0) +
+        (v.includeOptionalSections.quaMangVe ? 1 : 0),
+    {
+      message:
+        "sectionHeadings phải có đúng số mục khớp với includeOptionalSections (5 mục bắt buộc + số mục tuỳ chọn đã khai true)",
+      path: ["sectionHeadings"],
+    },
+  );
 export type DestinationOutline = z.infer<typeof destinationOutlineSchema>;
 
 /**
