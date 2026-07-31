@@ -55,4 +55,6 @@ export interface TransportRepository {
   create(input: UpsertTransportInput): Promise<TransportRecord>;
   update(id: string, input: UpsertTransportInput): Promise<TransportRecord>;
   setSiteId(id: string, siteId: number): Promise<void>;
+  /** Xoa han 1 tuyen — transport_stops tu xoa theo qua ON DELETE CASCADE (Postgres) */
+  delete(id: string): Promise<void>;
 }

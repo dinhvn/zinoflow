@@ -160,6 +160,17 @@ export class MssqlTransportSiteDbAdapter implements TransportSiteDb, OnModuleDes
     return rows.map((r) => r.Slug);
   }
 
+  async deleteTransport(transportSiteId: number): Promise<void> {
+    await this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("transportId", transportSiteId);
+      await request.query(`
+        DELETE FROM v2.TransportStop WHERE TransportId = @transportId;
+        DELETE FROM v2.Transport WHERE Id = @transportId;
+      `);
+    });
+  }
+
   async onModuleDestroy(): Promise<void> {
     if (this.pool) {
       await this.pool.close();

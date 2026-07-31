@@ -43,6 +43,10 @@ function rowFromObject(o: Record<string, string>): TransportImportRow {
   };
 }
 
+/** Sheet mac dinh nguoi dung dang dung de chuan bi du lieu Ve xe khach (31/07/2026) */
+const DEFAULT_SHEET_URL =
+  "https://docs.google.com/spreadsheets/d/1dj2Zwb496l6rTJykOpMYLyP8syD13Bv4MFrIi9fgIpo/edit?gid=528084009#gid=528084009";
+
 const ACTION_TONE = { create: "emerald", update: "blue", needsConfirm: "amber" } as const;
 const ACTION_LABEL = { create: "Tạo mới", update: "Cập nhật", needsConfirm: "Cần xác nhận" } as const;
 
@@ -61,7 +65,7 @@ export function ImportTransportsModal({
   onClose: () => void;
   onImported: () => void;
 }) {
-  const [sheetUrl, setSheetUrl] = useState("");
+  const [sheetUrl, setSheetUrl] = useState(DEFAULT_SHEET_URL);
   const [items, setItems] = useState<TransportImportRow[] | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<Set<number>>(new Set());

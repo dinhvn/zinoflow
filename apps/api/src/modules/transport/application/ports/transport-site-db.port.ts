@@ -57,4 +57,6 @@ export interface TransportSiteDb {
   findCardsForDestination(destinationSiteId: number, mode: number): Promise<TransportCardData[]>;
   /** Slug cac POI con TRUC TIEP cua 1 cum — de recompute lai the cho tung POI khi tuyen doi (fan-out) */
   findPoiChildSlugs(clusterSiteId: number): Promise<string[]>;
+  /** Xoa han 1 tuyen — xoa TransportStop truoc (khong co ON DELETE CASCADE) roi xoa Transport */
+  deleteTransport(transportSiteId: number): Promise<void>;
 }

@@ -102,6 +102,16 @@ export default function TransportsPage() {
     onError: (e) => setError(e instanceof ApiError ? e.message : String(e)),
   });
 
+  const remove = useMutation({
+    mutationFn: async (id: string) => apiSend("DELETE", `/transports/${id}`),
+    onSuccess: (_data, id) => {
+      setError(null);
+      if (editingId === id) resetForm();
+      queryClient.invalidateQueries({ queryKey: ["transports"] });
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : String(e)),
+  });
+
   function resetForm() {
     setForm(EMPTY_FORM);
     setEditingId(null);
@@ -269,9 +279,23 @@ export default function TransportsPage() {
                   {t.priceFrom ?? "—"} · {t.vehicleType ?? "—"} · {t.phone ?? "—"}
                 </div>
               </div>
-              <Button size="sm" onClick={() => startEdit(t)}>
-                Sửa
-              </Button>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => startEdit(t)}>
+                  Sửa
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  loading={remove.isPending && remove.variables === t.id}
+                  onClick={() => {
+                    if (confirm(`Xoá tuyến "${t.operatorName}" (${o?.destinationName ?? "—"} → ${d?.destinationName ?? "—"})?`)) {
+                      remove.mutate(t.id);
+                    }
+                  }}
+                >
+                  Xoá
+                </Button>
+              </div>
             </div>
           );
         })}

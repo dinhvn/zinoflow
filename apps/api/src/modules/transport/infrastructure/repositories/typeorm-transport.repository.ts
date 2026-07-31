@@ -76,6 +76,10 @@ export class TypeOrmTransportRepository implements ITransportRepository {
     await this.repo.update({ id }, { siteId });
   }
 
+  async delete(id: string): Promise<void> {
+    await this.repo.delete({ id });
+  }
+
   private async replaceStops(
     transportId: string,
     stops: UpsertTransportInput["stops"],

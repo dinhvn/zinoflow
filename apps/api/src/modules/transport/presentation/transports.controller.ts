@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query } from "@nestjs/common";
 import {
   fetchSheetRequestSchema,
   importTransportsRequestSchema,
@@ -20,6 +20,7 @@ import {
 import { ListTransportsUseCase } from "../application/use-cases/list-transports.usecase";
 import { UpsertTransportUseCase } from "../application/use-cases/upsert-transport.usecase";
 import { ImportTransportsUseCase } from "../application/use-cases/import-transports.usecase";
+import { DeleteTransportUseCase } from "../application/use-cases/delete-transport.usecase";
 
 /** REST man "Vận chuyển" (transport-plan §3 Giai đoạn 1) */
 @Controller("transports")
@@ -28,6 +29,7 @@ export class TransportsController {
     private readonly listTransports: ListTransportsUseCase,
     private readonly upsertTransport: UpsertTransportUseCase,
     private readonly importTransports: ImportTransportsUseCase,
+    private readonly deleteTransport: DeleteTransportUseCase,
     @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
   ) {}
 
@@ -66,5 +68,11 @@ export class TransportsController {
     @Body(new ZodValidationPipe(upsertTransportRequestSchema)) request: UpsertTransportRequest,
   ): Promise<Transport> {
     return this.upsertTransport.update(id, request);
+  }
+
+  @Delete(":id")
+  async remove(@Param("id") id: string): Promise<{ ok: true }> {
+    await this.deleteTransport.execute(id);
+    return { ok: true };
   }
 }
