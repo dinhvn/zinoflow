@@ -181,15 +181,22 @@ slug dự trữ" — rủi ro không đáng, đi ngược convention `/tinh`/`/v
   dashboard-alerts, article module) pass; migration Postgres chạy thật
   thành công trên DB local.
 
-### ⏳ CHƯA BUILD — Website hiển thị (dichoithoi repo, C#)
-- `ArticleController.cs`: route mới `/cam-nang/danh-muc/{slug}` (hub page,
-  đúng khuôn `TopicController.cs` — `CollectionPage`/`ItemList` JSON-LD,
-  breadcrumb, noindex nếu ít bài).
-- `/cam-nang` (Index): thêm filter/tab theo category (hiện tất cả category
-  có bài, đếm số bài mỗi category).
-- Trang chi tiết bài: hiện badge category + link sang hub.
-- Bài liên quan: lọc theo `Category` trùng (MVP, có thể nâng cấp sau bằng
-  kết hợp `ArticleDestinationMap`).
-- Cần thêm hàm đọc `v2.Article` theo `Category` ở
-  `DiChoiThoi.Service`/`IArticleService` (chưa audit chi tiết — làm ở giai
-  đoạn build, không suy đoán trước).
+### ✅ ĐÃ BUILD (31/07/2026) — Website hiển thị (dichoithoi repo, C#)
+- `ArticleCategoryConstants` (7 nhãn, ngưỡng noindex `MIN_INDEXABLE_CATEGORY_ARTICLES=3`).
+- `IArticleRepository`/`ArticleRepository`: `GetCategoryCountsAsync`,
+  `GetByCategoryAsync` (có phân trang), `GetRelatedByCategoryAsync`.
+  `ArticleModel.cs` thêm `Category`, `ArticleCategoryInfo`,
+  `ArticleCategoryPageModel`, `RelatedArticles`.
+- `ArticleController.cs`: route mới `/cam-nang/danh-muc/{slug}` (hub,
+  `CollectionPage`/`ItemList` JSON-LD + breadcrumb + noindex nếu <3 bài,
+  đúng khuôn `TopicController.cs`) — không đụng route `/cam-nang/{slug}`
+  vì khác số segment (3 vs 2), không cần "đăng ký slug dự trữ".
+- `/cam-nang` (Index): chip lọc theo category + đếm số bài.
+- `/cam-nang/{slug}` (Detail): badge category (link sang hub) + khối "Bài
+  liên quan" (lọc `Category` trùng, MVP — có thể nâng cấp sau bằng kết hợp
+  `ArticleDestinationMap`).
+- Tách `_ArticleCardList.cshtml` dùng chung Index/Category/Detail-related,
+  không lặp code.
+- DoD đã verify: `dotnet build DiChoiThoi.Web` — 0 lỗi CS (chỉ fail bước
+  copy DLL cuối do dev server đang chạy khoá file, không phải lỗi code).
+  Commit `ae17fd2` (dichoithoi, branch develop).

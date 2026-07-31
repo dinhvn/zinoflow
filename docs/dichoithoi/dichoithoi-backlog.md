@@ -306,12 +306,12 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   đủ authority) — điểm đến vẫn là trục SEO chính, phần overflow ngoài Top-N
   bake sẵn gộp vào 1 bài cẩm nang có content biên tập thật + card list full.
   Vận chuyển viết bài theo ĐIỂM ĐẾN (Mức A, không theo tuyến). **Giai đoạn
-  1-4 (query full-list + CMS gắn card list + hiển thị website) VẪN CHƯA
-  BUILD.** Việc §6 (Danh mục bài cẩm nang, độc lập với phần trên) **ĐÃ BUILD
-  xong phần schema+CMS zinoflow** (7 category, field `Category` trên
-  `v2.Article`/`content_jobs`, CMS chọn+lưu category, migration Postgres đã
-  chạy) — còn thiếu phần website dichoithoi (hub `/cam-nang/danh-muc/{slug}`,
-  filter `/cam-nang`, badge, bài liên quan theo category).
+  1-4 (query full-list Tour/Vé/Vận chuyển + CMS gắn card list + hiển thị
+  "Xem thêm" trên trang điểm đến) VẪN CHƯA BUILD.** Việc §6 (Danh mục bài
+  cẩm nang, độc lập với phần trên) **ĐÃ BUILD XONG HOÀN TOÀN** (schema+CMS
+  zinoflow + website dichoithoi: hub `/cam-nang/danh-muc/{slug}`, chip lọc
+  trên `/cam-nang`, badge + bài liên quan trên trang chi tiết). Commit
+  zinoflow (contracts/CMS) + dichoithoi `86acc32`+`ae17fd2` (branch develop).
 
 - ✅ **Nâng chất lượng prompt + bài viết điểm đến — ĐÃ BUILD GĐ0-5 (29/07/2026),
   GĐ6 CHỜ REVIEW/ACTIVATE THỦ CÔNG** — plan ở
