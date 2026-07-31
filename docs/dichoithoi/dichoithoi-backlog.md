@@ -279,23 +279,23 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
-- ⏳ **Vé xe khách (CMS + hiển thị website) — PLAN CHỐT KIẾN TRÚC, CHƯA BUILD
-  (31/07/2026, cập nhật cùng ngày sang mô hình tuyến có điểm dừng)**: plan
-  đầy đủ ở `dichoithoi-transport-vexekhach-plan.md`, mở rộng
-  `dichoithoi-bus-spec.md`/`dichoithoi-flight-spec.md` (trước đó chỉ phân
-  tích, chưa chốt cách build). Quyết định: bảng Postgres `transports` hợp
-  nhất (cột `mode`, sẵn cho Flight sau) + bảng map `transport_stops`
-  (destination_slug + role: origin/destination/waypoint + seq_order) — 1
-  tuyến chọn **điểm đầu, điểm cuối, điểm trung gian** (mỗi điểm là 1 node
-  cụm/tỉnh có thật, không phải text tự do). Hiển thị: điểm đầu/cuối có card
-  "🚌 Vé xe khách", điểm trung gian KHÔNG hiện (chỉ lưu lộ trình), POI con
-  kế thừa card từ cụm cha qua `ParentId`. Publish thẳng SQL Server
-  `v2.Transport`+`v2.TransportStop` qua adapter mssql giống Hotel — có JOIN
-  qua bảng stop (khác nhận định sai ban đầu "không cần bảng map", đã sửa).
-  KHÔNG dùng DynamicBlocksJson (chưa build cho bất kỳ khối nào). 4 giai
-  đoạn: (1) schema+API zinoflow, (2) CMS UI (form nhà xe + 3 picker
-  đầu/cuối/trung gian) + sidebar "Vé xe", (3) SQL Server schema+write, (4)
-  hiển thị card bên website + kế thừa POI. Chưa bắt đầu code giai đoạn nào.
+- ✅ **Vé xe khách (CMS + hiển thị website) — ĐÃ BUILD + VERIFY END-TO-END
+  (31/07/2026)**: plan đầy đủ ở `dichoithoi-transport-vexekhach-plan.md`.
+  Bảng Postgres `transports` hợp nhất (cột `mode`, sẵn cho Flight sau) +
+  `transport_stops` (destination_slug + role origin/destination/waypoint +
+  seq_order) — 1 tuyến chọn **điểm đầu, điểm cuối, điểm trung gian** (node
+  cụm/tỉnh thật, picker tái dùng kiểu `AddTicketDestinationPicker`). CMS
+  mới `/dichoithoi/xe-khach` (sidebar "Vé xe"). Publish thẳng SQL Server
+  `v2.Transport`+`v2.TransportStop`. Hiển thị: bake `DestinationContent.
+  TransportCardsJson` (đúng pattern `HotelCardsJson`/`TourCardsJson` Phase
+  15 đã có sẵn — audit lúc code phát hiện Hotel/Tour KHÔNG live-query như
+  tưởng ban đầu, đã sửa theo đúng pattern) cho cả điểm đầu/cuối lẫn mọi POI
+  con qua `ParentId` (fan-out khi tuyến đổi). Điểm trung gian không hiện
+  card. Đã verify thật: tạo tuyến qua API → xác nhận bake đúng SQL Server →
+  mở trang web thật thấy card đúng cho điểm đầu/cuối + POI con kế thừa, ẩn
+  hoàn toàn khi không có dữ liệu. Commit zinoflow `c4cc07b`, dichoithoi
+  `d1dd00b` (branch develop). Còn lại: chỉ Vé máy bay (mode=1) chưa build UI
+  (bảng đã sẵn sàng nhận), và job cào tự động (MVP nhập tay).
 
 - ✅ **Nâng chất lượng prompt + bài viết điểm đến — ĐÃ BUILD GĐ0-5 (29/07/2026),
   GĐ6 CHỜ REVIEW/ACTIVATE THỦ CÔNG** — plan ở

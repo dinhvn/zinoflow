@@ -1,10 +1,23 @@
-# Dichoithoi Vé xe khách — Plan implement (31/07/2026, CHƯA BUILD)
+# Dichoithoi Vé xe khách — Plan implement (31/07/2026, ✅ ĐÃ BUILD + VERIFY 31/07/2026)
 
 Ghi lại từ yêu cầu: thêm 1 menu CMS zinoflow quản lý nhà xe/tuyến (giống
 Khách sạn/Tour/Vé), publish thẳng lên website dichoithoi. Mở rộng/thay thế
 `dichoithoi-bus-spec.md` + `dichoithoi-flight-spec.md` §1 mục 2 (đã phân
 tích trước nhưng chưa build) — plan này CHỐT kiến trúc cụ thể để build,
 không viết lại phần đã đúng ở 2 file kia.
+
+**Cập nhật sau khi build (31/07/2026)**: 2 điểm lệch so với bản chốt ban đầu,
+phát hiện trong lúc code — xem "Sửa sau audit" ở §2:
+1. Model gắn theo TỈNH ban đầu bị đổi giữa hội thoại sang gắn theo TUYẾN có
+   điểm dừng (điểm đầu/cuối/trung gian, mỗi điểm là node cụm/tỉnh thật) —
+   đã cập nhật §2 trước khi build, không phải phát hiện lúc code.
+2. **Hiển thị website**: audit sâu hơn lúc code phát hiện Hotel/Tour **đã có
+   sẵn** cơ chế bake-per-destination (`HotelCardsJson`/`TourCardsJson`, Phase
+   15) — KHÔNG phải live-query như bản ghi đầu tiên của hội thoại này kết
+   luận (đã nhầm giữa query zinoflow dùng để TÍNH card với cách website ĐỌC
+   card). Đã build Transport theo ĐÚNG pattern Phase 15 này
+   (`TransportCardsJson`), không phải live-query như dự kiến ban đầu — xem
+   §2 "Sửa sau audit".
 
 ## 1) Hiện trạng đã audit (code thật, không suy đoán)
 
@@ -83,6 +96,17 @@ zinoflow (Postgres, nguồn sự thật)              dichoithoi (SQL Server, we
                                                  Card "🚌 Vé xe khách" trong
                                                  mục "Cách tới đây"
 ```
+
+**Sửa sau audit lúc code (31/07/2026)**: sơ đồ trên (website SELECT trực
+tiếp `v2.TransportStop` mỗi lần render) ĐÃ BỊ THAY bằng bake-per-destination
+— giữ nguyên bảng `v2.Transport`/`v2.TransportStop` làm nguồn tính, nhưng
+thêm cột `DestinationContent.TransportCardsJson` (giống hệt
+`HotelCardsJson`/`TourCardsJson` đã có từ Phase 15). zinoflow tính lại JSON
+này (`RecomputeTransportCardsUseCase`) và ghi đè mỗi khi 1 tuyến được
+tạo/sửa — cho CẢ điểm đầu/cuối LẪN mọi POI con trực tiếp của chúng (fan-out
+qua `ParentId`, vì POI phải có JSON riêng, không thể kế thừa lúc render).
+Website (`DestinationExtrasRepository.cs`) chỉ đọc thẳng cột này, giống
+Hotel/Tour — không JOIN `TransportStop` nào lúc render trang.
 
 - Postgres `transports`: `id, mode smallint (1=flight dự phòng/2=bus),
   operator_name, phone, vehicle_type, price_from, thumbnail_url, provider,
