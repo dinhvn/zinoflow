@@ -164,7 +164,9 @@ Hotel/Tour — không JOIN `TransportStop` nào lúc render trang.
   hoặc >1 origin.
 
 ### Giai đoạn 2 — zinoflow: CMS UI (phụ thuộc Giai đoạn 1 — cần API trước)
-- Trang `apps/web/src/app/dichoithoi/xe-khach/page.tsx` — copy cấu trúc
+- Trang `apps/web/src/app/dichoithoi/van-chuyen/page.tsx` (route đổi từ
+  `xe-khach` sang tên chung 31/07/2026 — bảng dữ liệu đã thiết kế sẵn cho
+  nhiều phương tiện, không muốn đổi URL khi thêm mode khác) — copy cấu trúc
   `khach-san/page.tsx` cho phần thông tin nhà xe (tên *, SĐT, loại xe text
   tự do, giá từ, provider + sourceUrl optional, preview affiliate URL) +
   tái dùng UI kiểu `AddTicketDestinationPicker` (`ve/page.tsx`) cho 3 ô

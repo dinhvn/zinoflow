@@ -285,7 +285,9 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   `transport_stops` (destination_slug + role origin/destination/waypoint +
   seq_order) — 1 tuyến chọn **điểm đầu, điểm cuối, điểm trung gian** (node
   cụm/tỉnh thật, picker tái dùng kiểu `AddTicketDestinationPicker`). CMS
-  mới `/dichoithoi/xe-khach` (sidebar "Vé xe"). Publish thẳng SQL Server
+  mới `/dichoithoi/van-chuyen` (sidebar "Vận chuyển" — đổi từ `xe-khach`
+  31/07/2026 vì bảng đã thiết kế sẵn cho nhiều phương tiện, tránh đổi URL
+  sau này). Publish thẳng SQL Server
   `v2.Transport`+`v2.TransportStop`. Hiển thị: bake `DestinationContent.
   TransportCardsJson` (đúng pattern `HotelCardsJson`/`TourCardsJson` Phase
   15 đã có sẵn — audit lúc code phát hiện Hotel/Tour KHÔNG live-query như
