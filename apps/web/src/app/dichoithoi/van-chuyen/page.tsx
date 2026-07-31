@@ -16,6 +16,7 @@ import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { PageHeader } from "@/shared/ui/page-header";
 import { FeatureIntro } from "@/shared/ui";
 import { AffiliateUrlPreview } from "@/features/dichoithoi/affiliate-url-preview";
+import { ImportTransportsModal } from "@/features/dichoithoi/import-transports-modal";
 
 const LINK_STATUS_LABEL: Record<Transport["linkStatus"], string> = {
   converted: "Đã áp rule",
@@ -58,6 +59,7 @@ export default function TransportsPage() {
   const [destination, setDestination] = useState<StopPick | null>(null);
   const [waypoints, setWaypoints] = useState<StopPick[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const transportsQuery = useQuery({
     queryKey: ["transports", "bus"],
@@ -139,6 +141,17 @@ export default function TransportsPage() {
       <PageHeader
         title="Vận chuyển"
         description="Quản lý các tuyến vận chuyển tới điểm đến (hiện có Xe khách; Vé máy bay/tàu hoả sẽ bổ sung sau cùng trang này) — gắn theo cụm/tỉnh (điểm đầu-cuối-trung gian), khác Vé tham quan (gắn theo 1 điểm cụ thể)."
+        actions={
+          <Button size="sm" className="whitespace-nowrap" onClick={() => setImportOpen(true)}>
+            Nhập từ Sheet
+          </Button>
+        }
+      />
+
+      <ImportTransportsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => queryClient.invalidateQueries({ queryKey: ["transports"] })}
       />
 
       <FeatureIntro

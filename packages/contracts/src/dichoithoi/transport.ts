@@ -75,3 +75,60 @@ export const upsertTransportRequestSchema = z.object({
   stops: z.array(transportStopSchema).min(2),
 });
 export type UpsertTransportRequest = z.infer<typeof upsertTransportRequestSchema>;
+
+/**
+ * Import hang loat tu Google Sheet (transport-plan §3, cung co che
+ * product-spec §5.1 nhung KHONG dung chung matcher voi Hotel/Tour — sourceUrl
+ * o day co the RONG (nhieu nha xe chi co SDT), khong dung lam khoa chinh duy
+ * nhat duoc. 1 dong CSV = 1 tuyen, dang phang originSlug/destinationSlug/
+ * waypointSlugs thay vi mang `stops` — server tu ghep lai thanh stops[].
+ */
+export const transportImportRowSchema = z.object({
+  operatorName: z.string().min(1).max(256),
+  phone: z.string().max(32).nullable().optional(),
+  vehicleType: z.string().max(64).nullable().optional(),
+  priceFrom: z.number().nonnegative().nullable().optional(),
+  thumbnailUrl: z.string().max(512).nullable().optional(),
+  provider: z.string().max(64).nullable().optional(),
+  sourceUrl: z.string().max(512).nullable().optional(),
+  originSlug: z.string().min(1).max(64),
+  destinationSlug: z.string().min(1).max(64),
+  /** Slug cac diem trung gian, thu tu tren tuyen — rong = khong co */
+  waypointSlugs: z.array(z.string().max(64)).optional().default([]),
+});
+export type TransportImportRow = z.infer<typeof transportImportRowSchema>;
+
+export const importTransportsRequestSchema = z.object({
+  items: z.array(transportImportRowSchema).min(1).max(500),
+  dryRun: z.boolean().optional().default(false),
+  /**
+   * Xac nhan gop rieng cho cac dong needsConfirm — key = INDEX dong trong
+   * `items` (khac Hotel dung sourceUrl lam key, vi sourceUrl o day co the
+   * rong cho nhieu dong nen khong du duy nhat de lam key).
+   */
+  confirmMergeIndexes: z.array(z.number().int()).optional(),
+});
+export type ImportTransportsRequest = z.infer<typeof importTransportsRequestSchema>;
+
+export const importTransportRowResultSchema = z.object({
+  index: z.number().int(),
+  operatorName: z.string(),
+  originSlug: z.string(),
+  destinationSlug: z.string(),
+  action: z.enum(["create", "update", "needsConfirm"]),
+  matchedId: z.string().nullable(),
+  reason: z.string().nullable(),
+  applied: z.boolean(),
+  error: z.string().nullable(),
+});
+export type ImportTransportRowResult = z.infer<typeof importTransportRowResultSchema>;
+
+export const importTransportsResultSchema = z.object({
+  dryRun: z.boolean(),
+  created: z.number().int(),
+  updated: z.number().int(),
+  needsConfirm: z.number().int(),
+  errors: z.number().int(),
+  rows: z.array(importTransportRowResultSchema),
+});
+export type ImportTransportsResult = z.infer<typeof importTransportsResultSchema>;

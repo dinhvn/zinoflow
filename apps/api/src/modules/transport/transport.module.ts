@@ -2,9 +2,11 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AffiliateModule } from "../affiliate/affiliate.module";
 import { DestinationModule } from "../destination/destination.module";
+import { SharedSheetImportModule } from "../shared/sheet-import/shared-sheet-import.module";
 import { TransportsController } from "./presentation/transports.controller";
 import { ListTransportsUseCase } from "./application/use-cases/list-transports.usecase";
 import { UpsertTransportUseCase } from "./application/use-cases/upsert-transport.usecase";
+import { ImportTransportsUseCase } from "./application/use-cases/import-transports.usecase";
 import { RecomputeTransportCardsUseCase } from "./application/use-cases/recompute-transport-cards.usecase";
 import { TRANSPORT_REPOSITORY } from "./application/ports/transport.repository";
 import { TRANSPORT_SITE_DB } from "./application/ports/transport-site-db.port";
@@ -22,12 +24,14 @@ import { TransportStopEntity } from "./infrastructure/entities/transport-stop.en
   imports: [
     AffiliateModule,
     DestinationModule,
+    SharedSheetImportModule,
     TypeOrmModule.forFeature([TransportEntity, TransportStopEntity]),
   ],
   controllers: [TransportsController],
   providers: [
     ListTransportsUseCase,
     UpsertTransportUseCase,
+    ImportTransportsUseCase,
     RecomputeTransportCardsUseCase,
     { provide: TRANSPORT_REPOSITORY, useClass: TypeOrmTransportRepository },
     { provide: TRANSPORT_SITE_DB, useClass: MssqlTransportSiteDbAdapter },
