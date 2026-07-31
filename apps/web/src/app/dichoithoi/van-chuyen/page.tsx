@@ -43,7 +43,13 @@ const EMPTY_FORM = {
 
 type StopPick = { slug: string; name: string };
 
-/** Man "Vé xe" — CRUD nha xe/tuyen (transport-plan §3 Giai đoạn 2), mode co dinh = bus (mode=1 may bay du phong sau) */
+/**
+ * Man "Vận chuyển" — CRUD tuyen van chuyen (transport-plan §3 Giai đoạn 2).
+ * Route/menu dat ten CHUNG (khong phai "xe-khach") vi bang `transports` da
+ * thiet ke san cho nhieu phuong tien (mode) — hien tai CHI co UI cho Xe
+ * khach (mode=bus); Ve may bay (mode=flight) va cac mode khac (tau hoa...)
+ * se them sau ma khong can doi URL.
+ */
 export default function TransportsPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(EMPTY_FORM);
@@ -131,14 +137,15 @@ export default function TransportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Vé xe"
-        description="Quản lý nhà xe/tuyến khách gắn theo cụm/tỉnh (điểm đầu-cuối-trung gian), khác Vé tham quan (gắn theo 1 điểm cụ thể)."
+        title="Vận chuyển"
+        description="Quản lý các tuyến vận chuyển tới điểm đến (hiện có Xe khách; Vé máy bay/tàu hoả sẽ bổ sung sau cùng trang này) — gắn theo cụm/tỉnh (điểm đầu-cuối-trung gian), khác Vé tham quan (gắn theo 1 điểm cụ thể)."
       />
 
       <FeatureIntro
         summary={
           <>
-            Xe khách không tới 1 điểm tham quan cụ thể — mỗi tuyến chọn{" "}
+            Hiện tại trang này quản lý <strong>🚌 Xe khách</strong>. Xe khách không tới 1 điểm
+            tham quan cụ thể — mỗi tuyến chọn{" "}
             <strong>Điểm đầu</strong>, <strong>Điểm cuối</strong> (cụm/tỉnh, bắt buộc) và{" "}
             <strong>Điểm trung gian</strong> (tuỳ chọn, tuyến đi ngang qua).
           </>

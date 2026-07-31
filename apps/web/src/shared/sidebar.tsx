@@ -54,7 +54,7 @@ const DICHOITHOI_ITEMS: NavItem[] = [
   { href: "/dichoithoi/khach-san", label: "Khách sạn", icon: IconHotel },
   { href: "/dichoithoi/tour", label: "Tour", icon: IconCompass },
   { href: "/dichoithoi/ve", label: "Vé", icon: IconTicket },
-  { href: "/dichoithoi/xe-khach", label: "Vé xe", icon: IconBus },
+  { href: "/dichoithoi/van-chuyen", label: "Vận chuyển", icon: IconBus },
   { href: "/dichoithoi/san-pham", label: "Sản phẩm", icon: IconTag },
   { href: "/dichoithoi/quy-trinh", label: "Quy trình", icon: IconFlow },
 ];
