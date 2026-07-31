@@ -54,6 +54,7 @@ const DICHOITHOI_ITEMS: NavItem[] = [
   { href: "/dichoithoi/khach-san", label: "Khách sạn", icon: IconHotel },
   { href: "/dichoithoi/tour", label: "Tour", icon: IconCompass },
   { href: "/dichoithoi/ve", label: "Vé", icon: IconTicket },
+  { href: "/dichoithoi/xe-khach", label: "Vé xe", icon: IconBus },
   { href: "/dichoithoi/san-pham", label: "Sản phẩm", icon: IconTag },
   { href: "/dichoithoi/quy-trinh", label: "Quy trình", icon: IconFlow },
 ];
@@ -300,6 +301,17 @@ function IconTicket(props: SVGProps<SVGSVGElement>) {
     <IconBase {...props}>
       <path d="M3 9a2 2 0 100 6v2a2 2 0 002 2h14a2 2 0 002-2v-2a2 2 0 100-6V7a2 2 0 00-2-2H5a2 2 0 00-2 2z" />
       <path d="M13 4v3M13 17v3M13 10v4" />
+    </IconBase>
+  );
+}
+
+function IconBus(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M3 11h18" />
+      <circle cx="7.5" cy="18.5" r="1.5" />
+      <circle cx="16.5" cy="18.5" r="1.5" />
     </IconBase>
   );
 }

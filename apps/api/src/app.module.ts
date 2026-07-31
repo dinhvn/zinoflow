@@ -8,6 +8,7 @@ import { AiContentModule } from "./modules/ai-content/ai-content.module";
 import { DestinationModule } from "./modules/destination/destination.module";
 import { AffiliateModule } from "./modules/affiliate/affiliate.module";
 import { HotelModule } from "./modules/hotel/hotel.module";
+import { TransportModule } from "./modules/transport/transport.module";
 import { TourModule } from "./modules/tour/tour.module";
 import { ProductModule } from "./modules/product/product.module";
 import { ArticleModule } from "./modules/article/article.module";
@@ -38,6 +39,7 @@ import { ApiTokenGuard } from "./modules/shared/auth/api-token.guard";
     AffiliateModule,
     DestinationModule,
     HotelModule,
+    TransportModule,
     TourModule,
     ProductModule,
     ArticleModule,

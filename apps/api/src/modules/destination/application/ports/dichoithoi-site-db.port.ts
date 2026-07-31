@@ -248,6 +248,8 @@ export interface DichoithoiSiteDb {
    */
   updateHotelCards(siteId: number, hotelCardsJson: string): Promise<boolean>;
   updateTourCards(siteId: number, tourCardsJson: string): Promise<boolean>;
+  /** Ghi TransportCardsJson (transport-plan §2 Giai đoạn 4) — cung pattern Hotel/Tour. */
+  updateTransportCards(siteId: number, transportCardsJson: string): Promise<boolean>;
   /**
    * Ghi SouvenirProductsJson (Phase 27, "Quà mang về" MVP) — cung pattern
    * Hotel/Tour: precompute card JSON, website chi echo, khong query song.

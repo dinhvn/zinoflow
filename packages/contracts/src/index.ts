@@ -16,6 +16,7 @@ export * from "./dichoithoi/coverage-score";
 export * from "./dichoithoi/dashboard-alerts";
 export * from "./dichoithoi/affiliate";
 export * from "./dichoithoi/hotel";
+export * from "./dichoithoi/transport";
 export * from "./dichoithoi/tour";
 export * from "./dichoithoi/product";
 export * from "./dichoithoi/article-content";

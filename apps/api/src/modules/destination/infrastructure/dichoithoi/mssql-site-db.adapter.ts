@@ -741,6 +741,20 @@ export class MssqlSiteDbAdapter implements DichoithoiSiteDb, OnModuleDestroy {
     });
   }
 
+  async updateTransportCards(siteId: number, transportCardsJson: string): Promise<boolean> {
+    return this.runWithRetry(async (pool) => {
+      const request = pool.request();
+      request.input("siteId", siteId);
+      request.input("transportCardsJson", transportCardsJson);
+      const result = await request.query(`
+        UPDATE v2.DestinationContent SET TransportCardsJson = @transportCardsJson
+        WHERE DestinationId = @siteId
+          AND (TransportCardsJson IS NULL OR TransportCardsJson <> @transportCardsJson)
+      `);
+      return (result.rowsAffected[0] ?? 0) > 0;
+    });
+  }
+
   async updateSouvenirProducts(siteId: number, souvenirProductsJson: string): Promise<boolean> {
     return this.runWithRetry(async (pool) => {
       const request = pool.request();
