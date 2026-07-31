@@ -75,6 +75,13 @@ export const createContentJobRequestSchema = z.object({
    * voi moi loai bai khac (gate se tu bo qua khi khong co comparisonKey).
    */
   comparisonKey: z.string().nullable().optional(),
+  /**
+   * Website tham khao (toi da 5) — CHI co y nghia voi articleType cam-nang
+   * (article-ai-extraction-plan.md GĐ1). Dung lam nguon cho skill Claude Code
+   * + Google Search Grounding truoc khi AI viet bai, KHONG tu dong queue
+   * generate luc tao job (xem create-content-job.usecase.ts).
+   */
+  referenceUrls: z.array(z.string().url()).max(5).optional(),
   /** Optional — default theo SiteProfile neu khong truyen. */
   aiProvider: aiProviderKeySchema.optional(),
   aiModel: z.string().optional(),
@@ -93,6 +100,12 @@ export const updateContentJobRequestSchema = z
     toneProfile: z.string().nullable(),
     aiProvider: aiProviderKeySchema,
     aiModel: z.string().min(1),
+    /**
+     * Ghi de ngu canh nguon TRUOC khi generate — dung o bai cam-nang de rap
+     * noi dung da trich xuat (skill/GSG, article-ai-extraction-plan.md GĐ4)
+     * vao sourceContext truoc khi bam "Bắt đầu sinh nội dung".
+     */
+    sourceContext: z.string().max(60_000).nullable(),
   })
   .partial();
 export type UpdateContentJobRequest = z.infer<typeof updateContentJobRequestSchema>;
@@ -120,10 +133,14 @@ export const contentJobSchema = z.object({
   status: contentJobStatusSchema,
   aiProvider: aiProviderKeySchema,
   aiModel: z.string(),
+  /** Ngu canh nguon cho prompt — bai cam-nang doc/sua o ArticleExtractionPanel truoc khi generate. */
+  sourceContext: z.string().nullable(),
   /** Anh dai dien (og:image/JSON-LD image) — CHI y nghia voi articleType cam-nang, chon tay tu Thu vien anh. */
   coverImageId: z.string().uuid().nullable(),
   /** Danh muc bai cam nang — CHI y nghia voi articleType cam-nang (article.ts). */
   category: articleCategorySchema.nullable(),
+  /** Website tham khao — CHI y nghia voi articleType cam-nang (article-ai-extraction-plan.md GĐ1). */
+  referenceUrls: z.array(z.string()).nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

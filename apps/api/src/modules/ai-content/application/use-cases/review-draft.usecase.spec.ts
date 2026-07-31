@@ -28,6 +28,7 @@ function makeJob(comparisonKey: string | null = null): ContentJob {
     comparisonKey,
     originalityExcerpt: null,
     coverImageId: null,
+    referenceUrls: null,
     category: null,
     aiProvider: "anthropic",
     aiModel: "claude-opus-4-8",

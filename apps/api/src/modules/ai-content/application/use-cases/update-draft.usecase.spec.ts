@@ -20,6 +20,7 @@ function makeJob(articleType: "guide-diem-den" | "cam-nang", status: "DraftReady
     comparisonKey: null,
     originalityExcerpt: null,
     coverImageId: null,
+    referenceUrls: null,
     category: null,
     aiProvider: "anthropic",
     aiModel: "manual",

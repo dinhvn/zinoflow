@@ -4,6 +4,8 @@ import {
   setArticleCategoryRequestSchema,
   setArticleCoverImageRequestSchema,
   type ArticleDestinationMapResponse,
+  type ArticleAiExtraction,
+  type ListArticleAiExtractionsResponse,
   type PreviewArticleResult,
   type PublishArticleResult,
   type RefreshAllDynamicBlocksReport,
@@ -21,6 +23,8 @@ import { GetArticleDestinationMapUseCase } from "../application/use-cases/get-ar
 import { SaveArticleDestinationMapUseCase } from "../application/use-cases/save-article-destination-map.usecase";
 import { SetArticleCoverImageUseCase } from "../application/use-cases/set-article-cover-image.usecase";
 import { SetArticleCategoryUseCase } from "../application/use-cases/set-article-category.usecase";
+import { GetArticleAiExtractionUseCase } from "../application/use-cases/get-article-ai-extraction.usecase";
+import { ExtractArticleInfoGsgUseCase } from "../application/use-cases/extract-article-info-gsg.usecase";
 
 /** REST bai cam nang (article-spec §9) */
 @Controller("articles")
@@ -34,6 +38,8 @@ export class ArticlesController {
     private readonly saveDestinationMap: SaveArticleDestinationMapUseCase,
     private readonly setCoverImage: SetArticleCoverImageUseCase,
     private readonly setCategory: SetArticleCategoryUseCase,
+    private readonly getAiExtraction: GetArticleAiExtractionUseCase,
+    private readonly extractGsg: ExtractArticleInfoGsgUseCase,
   ) {}
 
   /** Publish bai DA DUYET xuong SQL Server (gate thu cong thu 2) */
@@ -97,5 +103,17 @@ export class ArticlesController {
     body: SetArticleCategoryRequest,
   ): Promise<void> {
     return this.setCategory.execute(jobId, body);
+  }
+
+  /** Doc trich xuat nguon hien co (skill + gsg) — article-ai-extraction-plan.md GĐ2 */
+  @Get(":jobId/ai-extraction")
+  getAiExtractionForJob(@Param("jobId") jobId: string): Promise<ListArticleAiExtractionsResponse> {
+    return this.getAiExtraction.execute(jobId);
+  }
+
+  /** Trich xuat tu dong qua Gemini + Google Search Grounding — GĐ3 */
+  @Post(":jobId/ai-extraction/gsg")
+  runGsgExtraction(@Param("jobId") jobId: string): Promise<ArticleAiExtraction> {
+    return this.extractGsg.execute(jobId);
   }
 }

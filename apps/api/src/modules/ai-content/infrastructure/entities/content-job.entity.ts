@@ -76,6 +76,10 @@ export class ContentJobEntity {
   @Column({ type: "varchar", length: 32, nullable: true })
   category!: ArticleCategory | null;
 
+  /** Website tham khao — CHI y nghia voi articleType cam-nang. */
+  @Column({ name: "reference_urls", type: "jsonb", nullable: true })
+  referenceUrls!: string[] | null;
+
   @Index()
   @Column({ type: "varchar", length: 30 })
   status!: ContentJobStatus;

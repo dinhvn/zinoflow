@@ -19,6 +19,7 @@ function fakeJob(overrides: Partial<ContentJobProps>): ContentJob {
     comparisonKey: null,
     originalityExcerpt: null,
     coverImageId: null,
+    referenceUrls: null,
     category: null,
     status: "Created",
     aiProvider: "gemini",

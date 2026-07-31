@@ -18,6 +18,7 @@ function makeJob(status: ContentJobStatus): ContentJob {
     comparisonKey: null,
     originalityExcerpt: null,
     coverImageId: null,
+    referenceUrls: null,
     category: null,
     status,
     aiProvider: "anthropic",
@@ -53,11 +54,11 @@ describe("ContentJob.updateGenerationParams", () => {
     expect(s.aiProvider).toBe("anthropic");
   });
 
-  it.each(["Failed", "DraftReady"] as const)("cho phép sửa khi job %s", (status) => {
+  it.each(["Created", "Failed", "DraftReady"] as const)("cho phép sửa khi job %s", (status) => {
     expect(() => makeJob(status).updateGenerationParams({ topic: "abcdef" })).not.toThrow();
   });
 
-  it.each(["Created", "GeneratingOutline", "InReview", "Approved", "Rejected"] as const)(
+  it.each(["GeneratingOutline", "InReview", "Approved", "Rejected"] as const)(
     "chặn sửa khi job %s (DomainRuleError)",
     (status) => {
       expect(() => makeJob(status).updateGenerationParams({ topic: "abcdef" })).toThrow(
@@ -65,4 +66,10 @@ describe("ContentJob.updateGenerationParams", () => {
       );
     },
   );
+
+  it("cho phép ghi đè sourceContext (rap tu trich xuat GĐ4) khi job Created", () => {
+    const job = makeJob("Created");
+    job.updateGenerationParams({ sourceContext: "Tổng hợp trích xuất..." });
+    expect(job.toSnapshot().sourceContext).toBe("Tổng hợp trích xuất...");
+  });
 });

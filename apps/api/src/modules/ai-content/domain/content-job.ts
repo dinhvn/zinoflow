@@ -35,6 +35,8 @@ export interface ContentJobProps {
   coverImageId: string | null;
   /** Danh muc bai cam nang (loc/hien thi /cam-nang/danh-muc) — CHI y nghia voi articleType cam-nang. */
   category: ArticleCategory | null;
+  /** Website tham khao — CHI y nghia voi articleType cam-nang (article-ai-extraction-plan.md GĐ1). */
+  referenceUrls: string[] | null;
   status: ContentJobStatus;
   aiProvider: AiProviderKey;
   aiModel: string;
@@ -67,15 +69,24 @@ export class ContentJob {
 
   /**
    * Trang thai cho phep sua tham so sinh bai truoc khi generate lai.
-   * Dong bo voi retry (chi Failed/DraftReady moi ve GeneratingOutline duoc — content-job-state).
+   * Dong bo voi retry (Created/Failed/DraftReady deu ve GeneratingOutline duoc —
+   * content-job-state). Created duoc them (article-ai-extraction-plan.md GĐ1/GĐ4):
+   * bai cam-nang khong tu queue generate luc tao, nguoi dung sua sourceContext
+   * (rap tu trich xuat) truoc khi bam "Bắt đầu sinh nội dung" trong khi job con
+   * dang Created.
    */
-  private static readonly EDITABLE_STATUSES: readonly ContentJobStatus[] = ["Failed", "DraftReady"];
+  private static readonly EDITABLE_STATUSES: readonly ContentJobStatus[] = [
+    "Created",
+    "Failed",
+    "DraftReady",
+  ];
 
   /**
-   * Sua tham so sinh bai (topic/keyword/tone/provider/model) truoc khi chay lai.
-   * Chi hop le o Failed hoac DraftReady; dang generate/review/approved thi tu choi.
-   * KHONG doi status — caller goi retry() de transition ve GeneratingOutline va chay lai.
-   * Chi ghi de field co trong input (undefined = giu nguyen).
+   * Sua tham so sinh bai (topic/keyword/tone/provider/model/sourceContext) truoc
+   * khi chay lai. Chi hop le o Created/Failed/DraftReady; dang generate/review/
+   * approved thi tu choi. KHONG doi status — caller goi retry() de transition ve
+   * GeneratingOutline va chay lai. Chi ghi de field co trong input (undefined =
+   * giu nguyen).
    */
   updateGenerationParams(input: {
     topic?: string;
@@ -83,6 +94,7 @@ export class ContentJob {
     toneProfile?: string | null;
     aiProvider?: AiProviderKey;
     aiModel?: string;
+    sourceContext?: string | null;
   }): void {
     if (!ContentJob.EDITABLE_STATUSES.includes(this.props.status)) {
       throw new DomainRuleError(
@@ -95,6 +107,7 @@ export class ContentJob {
     if (input.toneProfile !== undefined) this.props.toneProfile = input.toneProfile;
     if (input.aiProvider !== undefined) this.props.aiProvider = input.aiProvider;
     if (input.aiModel !== undefined) this.props.aiModel = input.aiModel;
+    if (input.sourceContext !== undefined) this.props.sourceContext = input.sourceContext;
     this.props.updatedAt = new Date();
   }
 

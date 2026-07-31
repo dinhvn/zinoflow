@@ -27,6 +27,7 @@ export default function NewArticlePage() {
   const [keywords, setKeywords] = useState("");
   const [siteCode, setSiteCode] = useState("dichoithoi");
   const [sourceContext, setSourceContext] = useState("");
+  const [referenceUrlsText, setReferenceUrlsText] = useState("");
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +48,12 @@ export default function NewArticlePage() {
     .split(",")
     .map((k) => k.trim())
     .filter(Boolean);
+
+  const referenceUrls = referenceUrlsText
+    .split("\n")
+    .map((u) => u.trim())
+    .filter(Boolean)
+    .slice(0, 5);
 
   const createManual = useMutation({
     mutationFn: async () =>
@@ -77,6 +84,7 @@ export default function NewArticlePage() {
           articleType: "cam-nang",
           keywordSeed,
           sourceContext: sourceContext.trim() || undefined,
+          referenceUrls: referenceUrls.length > 0 ? referenceUrls : undefined,
           aiProvider: selectedProvider.key,
           aiModel: selectedModel.id,
         }),
@@ -107,8 +115,10 @@ export default function NewArticlePage() {
             Dù chọn cách nào, bài luôn dừng ở bước duyệt trên trang <code>/content/&#123;id&#125;</code>{" "}
             — không có đường tắt đăng thẳng. AI có thể tự gợi ý chèn khối động dạng{" "}
             <code>[[block:...]]</code> (tự thay bằng dữ liệu thật lúc publish) khi thấy hợp ngữ
-            cảnh — nhưng vẫn cần người duyệt kiểm tra lại ở bước sau. &quot;Tư liệu tham khảo&quot;
-            không bắt buộc nhưng giúp AI bám sát thực tế hơn thay vì bịa chi tiết.
+            cảnh — nhưng vẫn cần người duyệt kiểm tra lại ở bước sau. &quot;Tạo bằng AI&quot; giờ
+            KHÔNG tự sinh nội dung ngay — job dừng ở trạng thái chờ, sang trang chi tiết job để
+            trích xuất thông tin từ website tham khảo (nhờ Claude Code, hoặc bấm &quot;Chạy Google
+            Search Grounding&quot;) rồi mới bấm &quot;Bắt đầu sinh nội dung&quot;.
           </>
         }
       />
@@ -137,6 +147,21 @@ export default function NewArticlePage() {
       <label className="block text-sm">
         <span className="mb-1 block text-zinc-500">Site code</span>
         <Input value={siteCode} onChange={(e) => setSiteCode(e.target.value)} className="w-full" />
+      </label>
+
+      <label className="block text-sm">
+        <span className="mb-1 block text-zinc-500">
+          Website tham khảo (tuỳ chọn, tối đa 5 — mỗi dòng 1 URL). Sau khi tạo job bằng AI, có thể
+          nhờ Claude Code trích xuất thông tin từ các link này, hoặc bấm &quot;Chạy Google Search
+          Grounding&quot; trong trang chi tiết job trước khi sinh nội dung.
+        </span>
+        <Textarea
+          value={referenceUrlsText}
+          onChange={(e) => setReferenceUrlsText(e.target.value)}
+          placeholder={"https://vi.wikipedia.org/wiki/...\nhttps://..."}
+          rows={3}
+          className="w-full"
+        />
       </label>
 
       <label className="block text-sm">
@@ -226,7 +251,7 @@ export default function NewArticlePage() {
           disabled={topic.trim().length < 5 || !selectedProvider || !selectedModel}
           onClick={() => createByAi.mutate()}
         >
-          {createByAi.isPending ? "Đang tạo..." : "🤖 Tạo bằng AI"}
+          {createByAi.isPending ? "Đang tạo..." : "🤖 Tạo job — trích xuất nguồn trước khi sinh"}
         </Button>
       </div>
     </div>

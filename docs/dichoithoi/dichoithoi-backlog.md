@@ -279,6 +279,21 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- ✅ **Quy trình soạn bài cẩm nang có trích xuất nguồn trước khi AI viết —
+  ĐÃ BUILD XONG 6 GIAI ĐOẠN (31/07/2026)**: plan ở
+  `dichoithoi-article-ai-extraction-plan.md`. Tiêu đề tạm → website tham
+  khảo (`referenceUrls`, tối đa 5) → Claude skill
+  `dichoithoi-extract-article-info` HOẶC Google Search Grounding tự động
+  (`ExtractArticleInfoGsgUseCase`) → ghi vào bảng `article_ai_extractions`
+  (1 field `extracted_summary` — đơn giản hơn destination) → người dùng
+  đọc/sửa rồi "Lưu vào ngữ cảnh nguồn" → bấm "Bắt đầu sinh nội dung" (tái
+  dùng `retry` endpoint có sẵn, không cần API mới) → AI viết với persona
+  "giống người thật" mới thêm (`HUMAN_WRITER_RULE_CAM_NANG`) → duyệt (đã
+  có sẵn). Đổi kiến trúc quan trọng: `articleType=cam-nang` KHÔNG còn tự
+  queue generate ngay lúc tạo job (khác mọi articleType khác) — dừng ở
+  Created chờ trích xuất trước. Build 0 lỗi TS, 377 test pass, 2 migration
+  Postgres đã chạy.
+
 - ✅ **Vé xe khách (CMS + hiển thị website) — ĐÃ BUILD + VERIFY END-TO-END
   (31/07/2026)**: plan đầy đủ ở `dichoithoi-transport-vexekhach-plan.md`.
   Bảng Postgres `transports` hợp nhất (cột `mode`, sẵn cho Flight sau) +

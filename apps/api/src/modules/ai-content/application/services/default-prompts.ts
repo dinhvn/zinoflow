@@ -43,6 +43,24 @@ const NO_FABRICATION_RULE = [
   `- KHÔNG claim quá đà ("tốt nhất thị trường", "cam kết 100%", claim y khoa...).`,
 ].join("\n");
 
+/**
+ * Persona "viết như người thật" + chong van phong AI rap khuon + semantic SEO
+ * nhe — CHI dung cho cam-nang (article-ai-extraction-plan.md GĐ5, chot
+ * 31/07/2026), KHONG dua vao SYSTEM_PROMPT_KEY dung chung moi articleType de
+ * tranh anh huong toplist/review/guide-diem-den.
+ */
+const HUMAN_WRITER_RULE_CAM_NANG = [
+  `Nhập vai 1 người viết nội dung du lịch có kinh nghiệm thực tế, viết cho bạn`,
+  `bè/độc giả thật — KHÔNG viết kiểu AI tổng hợp thông tin khô khan, rập khuôn.`,
+  `- Tránh câu mở đầu sáo rỗng kiểu "Bạn đang tìm kiếm...", "Không thể phủ nhận rằng...",`,
+  `  "Trong bài viết này chúng ta sẽ...".`,
+  `- Xen kẽ câu ngắn/dài tự nhiên — tránh MỌI câu đều cùng 1 cấu trúc "X là Y, có Z".`,
+  `- Ưu tiên chi tiết CỤ THỂ lấy từ tư liệu tham khảo (tên riêng, con số, trải nghiệm`,
+  `  thực tế) thay vì tính từ chung chung ("tuyệt đẹp", "không thể bỏ lỡ", "nổi tiếng").`,
+  `- Semantic SEO: chủ động dùng biến thể/từ đồng nghĩa liên quan chủ đề + từ khóa chính`,
+  `  một cách tự nhiên trong câu văn, KHÔNG nhồi nhét lặp lại y hệt 1 cụm từ khóa nhiều lần.`,
+].join("\n");
+
 export const DEFAULT_PROMPTS: Readonly<Record<string, string>> = {
   [SYSTEM_PROMPT_KEY]: [
     `Bạn là chuyên gia viết content affiliate tiếng Việt cho website thương mại.`,
@@ -688,6 +706,7 @@ export const DEFAULT_PROMPTS: Readonly<Record<string, string>> = {
     ``,
     `Yêu cầu:`,
     VIETNAMESE_RULE,
+    HUMAN_WRITER_RULE_CAM_NANG,
     `- title: 50-70 ký tự, chứa từ khóa chính, đúng dạng người dùng hay gõ tìm kiếm.`,
     `- sectionHeadings: 3-8 mục H2, mỗi mục là 1 nhóm nội dung thật (vd theo khu`,
     `  vực/loại hình/tiêu chí) — KHÔNG tạo heading rỗng chỉ để nhét khối động,`,
@@ -706,6 +725,7 @@ export const DEFAULT_PROMPTS: Readonly<Record<string, string>> = {
     ``,
     `Yêu cầu:`,
     VIETNAMESE_RULE,
+    HUMAN_WRITER_RULE_CAM_NANG,
     `- content: 100-200 từ văn xuôi tự nhiên GIỚI THIỆU nhóm nội dung của section này`,
     `  (không liệt kê khô khan) — đây là phần dẫn dắt, KHÔNG phải danh sách thật.`,
     `- Nếu section này hợp với 1 khối danh sách động (điểm đến/khách sạn/tour/sản`,
@@ -734,6 +754,7 @@ export const DEFAULT_PROMPTS: Readonly<Record<string, string>> = {
     ``,
     `Yêu cầu:`,
     VIETNAMESE_RULE,
+    HUMAN_WRITER_RULE_CAM_NANG,
     `- title: giữ đúng title trong outline.`,
     `- intro: 80-150 từ mở bài tự nhiên, nêu rõ bài này tổng hợp gì, dành cho ai.`,
     `- metadata.metaTitle <= 60 ký tự; metadata.metaDescription 50-250 ký tự chứa`,
@@ -754,6 +775,7 @@ export const DEFAULT_PROMPTS: Readonly<Record<string, string>> = {
     ``,
     `Yêu cầu — PHẦN SECTIONS:`,
     VIETNAMESE_RULE,
+    HUMAN_WRITER_RULE_CAM_NANG,
     `- content mỗi section: 100-200 từ văn xuôi tự nhiên GIỚI THIỆU nhóm nội dung của section đó`,
     `  (không liệt kê khô khan) — đây là phần dẫn dắt, KHÔNG phải danh sách thật.`,
     `- Nếu section hợp với 1 khối danh sách động (điểm đến/khách sạn/tour/sản phẩm/món ăn liên`,

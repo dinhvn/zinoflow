@@ -468,8 +468,10 @@ export class ContentController {
       status: s.status,
       aiProvider: s.aiProvider,
       aiModel: s.aiModel,
+      sourceContext: s.sourceContext,
       coverImageId: s.coverImageId,
       category: s.category,
+      referenceUrls: s.referenceUrls,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     };

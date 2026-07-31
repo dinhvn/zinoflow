@@ -46,6 +46,7 @@ export class CreateManualDraftUseCase {
       originalityExcerpt: null,
       coverImageId: null,
       category: null,
+      referenceUrls: null,
       aiProvider: CreateManualDraftUseCase.INERT_PROVIDER,
       aiModel: CreateManualDraftUseCase.INERT_MODEL,
     });

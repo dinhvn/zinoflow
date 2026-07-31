@@ -34,6 +34,7 @@ import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
 import { InsertDynamicBlockPanel } from "@/features/dichoithoi/insert-dynamic-block-panel";
 import { ArticleDestinationMapPanel } from "@/features/dichoithoi/article-destination-map-panel";
+import { ArticleExtractionPanel } from "@/features/dichoithoi/article-extraction-panel";
 import { DestinationArticleEditor } from "@/features/dichoithoi/destination-article-editor/destination-article-editor";
 import { QualityWarningDismiss } from "@/features/quality-warning-dismiss";
 import {
@@ -629,6 +630,14 @@ export default function JobDetailPage({
               Bài đã được duyệt. Sửa nội dung sẽ tạo version mới và phải duyệt
               lại.
             </p>
+          )}
+
+          {job.status === "Created" && job.articleType === "cam-nang" && (
+            <ArticleExtractionPanel
+              jobId={id}
+              currentSourceContext={job.sourceContext}
+              referenceUrls={job.referenceUrls}
+            />
           )}
 
           {/* Sua tham so sinh bai + chay lai (Failed/DraftReady) */}

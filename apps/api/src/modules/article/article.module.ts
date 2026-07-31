@@ -17,11 +17,16 @@ import { GetArticleDestinationMapUseCase } from "./application/use-cases/get-art
 import { SaveArticleDestinationMapUseCase } from "./application/use-cases/save-article-destination-map.usecase";
 import { SetArticleCoverImageUseCase } from "./application/use-cases/set-article-cover-image.usecase";
 import { SetArticleCategoryUseCase } from "./application/use-cases/set-article-category.usecase";
+import { GetArticleAiExtractionUseCase } from "./application/use-cases/get-article-ai-extraction.usecase";
+import { ExtractArticleInfoGsgUseCase } from "./application/use-cases/extract-article-info-gsg.usecase";
 import { ARTICLE_SITE_DB } from "./application/ports/article-site-db.port";
 import { ARTICLE_PUBLICATION_REPOSITORY } from "./application/ports/article-publication.repository";
+import { ARTICLE_AI_EXTRACTION_REPOSITORY } from "./application/ports/article-ai-extraction.repository";
 import { MssqlArticleSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-article-site-db.adapter";
 import { TypeOrmArticlePublicationRepository } from "./infrastructure/repositories/typeorm-article-publication.repository";
+import { TypeOrmArticleAiExtractionRepository } from "./infrastructure/repositories/typeorm-article-ai-extraction.repository";
 import { ArticlePublicationEntity } from "./infrastructure/entities/article-publication.entity";
+import { ArticleAiExtractionEntity } from "./infrastructure/entities/article-ai-extraction.entity";
 
 /**
  * Module Article (M4 Phase 8) — bai tong hop/cam nang voi khoi dong compile
@@ -36,7 +41,7 @@ import { ArticlePublicationEntity } from "./infrastructure/entities/article-publ
     TourModule,
     ProductModule,
     ContentImageModule,
-    TypeOrmModule.forFeature([ArticlePublicationEntity]),
+    TypeOrmModule.forFeature([ArticlePublicationEntity, ArticleAiExtractionEntity]),
   ],
   controllers: [ArticlesController],
   providers: [
@@ -50,8 +55,11 @@ import { ArticlePublicationEntity } from "./infrastructure/entities/article-publ
     SaveArticleDestinationMapUseCase,
     SetArticleCoverImageUseCase,
     SetArticleCategoryUseCase,
+    GetArticleAiExtractionUseCase,
+    ExtractArticleInfoGsgUseCase,
     { provide: ARTICLE_SITE_DB, useClass: MssqlArticleSiteDbAdapter },
     { provide: ARTICLE_PUBLICATION_REPOSITORY, useClass: TypeOrmArticlePublicationRepository },
+    { provide: ARTICLE_AI_EXTRACTION_REPOSITORY, useClass: TypeOrmArticleAiExtractionRepository },
   ],
 })
 export class ArticleModule {}

@@ -21,6 +21,7 @@ export * from "./dichoithoi/tour";
 export * from "./dichoithoi/product";
 export * from "./dichoithoi/article-content";
 export * from "./dichoithoi/article";
+export * from "./dichoithoi/article-ai-extraction";
 export * from "./dichoithoi/content-image";
 
 // Khuyenmai — laruki/dochoi3s (M5)

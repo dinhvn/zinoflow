@@ -73,6 +73,7 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
     entity.originalityExcerpt = s.originalityExcerpt;
     entity.coverImageId = s.coverImageId;
     entity.category = s.category;
+    entity.referenceUrls = s.referenceUrls;
     entity.status = s.status;
     entity.aiProvider = s.aiProvider;
     entity.aiModel = s.aiModel;
@@ -98,6 +99,7 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
       originalityExcerpt: entity.originalityExcerpt,
       coverImageId: entity.coverImageId,
       category: entity.category,
+      referenceUrls: entity.referenceUrls,
       status: entity.status,
       aiProvider: entity.aiProvider,
       aiModel: entity.aiModel,

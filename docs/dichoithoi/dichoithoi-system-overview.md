@@ -87,6 +87,13 @@ lại tracking trạng thái.
     cẩm nang (content thật + card list full), mở rộng pattern "Xem thêm"
     đã có cho Food/Nightlife/Souvenir. Đọc trước khi đụng
     `V2ArticleDestinationMap`/khối Tour-Vé-Vận chuyển trên Detail.cshtml.
+    12h2. `dichoithoi-article-ai-extraction-plan.md` — plan CHƯA build
+    (31/07/2026): quy trình soạn bài cẩm nang có trích xuất nguồn trước khi
+    AI viết (website tham khảo + Claude skill + Gemini/GSG, bảng staging
+    riêng cho Article, KHÔNG dùng chung bảng destination) + nâng persona
+    "giống người thật"/SEO cho prompt cẩm nang. Đọc trước khi đụng
+    `articles/new/page.tsx`/`default-prompts.ts` (mục cam-nang)/tạo bảng
+    staging mới.
     12h. `dichoithoi-poi-distance-plan.md` — Giai đoạn 1-3 ĐÃ XONG (21/07/2026):
     thay/bổ sung Haversine bằng khoảng cách đường bộ thật (OpenRouteService)
     cho `DistanceFromCenter` + bảng `poi_distances` (con↔con cùng cụm), nút

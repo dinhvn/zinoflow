@@ -62,6 +62,7 @@ export class CreateContentJobUseCase {
       originalityExcerpt: null,
       coverImageId: null,
       category: null,
+      referenceUrls: request.referenceUrls ?? null,
       aiProvider,
       aiModel:
         request.aiModel ??
@@ -70,6 +71,15 @@ export class CreateContentJobUseCase {
     });
 
     await this.repository.save(job);
+
+    // Bai cam-nang KHONG tu queue generate luc tao (article-ai-extraction-plan.md
+    // GĐ1) — nguoi dung can trich xuat nguon (skill/GSG) + rap sourceContext
+    // truoc, roi tu bam "Bắt đầu sinh nội dung" (POST /content/jobs/:id/retry,
+    // hop le vi Created nam trong EDITABLE_STATUSES/transition GeneratingOutline).
+    if (request.articleType === "cam-nang") {
+      this.logger.log(`Content job ${job.id} (cẩm nang) created, chờ trích xuất nguồn trước khi sinh nội dung`);
+      return { jobId: job.id, status: job.status };
+    }
 
     const queueJobId = await this.jobQueue.send(QUEUE_NAMES.contentGenerate, {
       contentJobId: job.id,
