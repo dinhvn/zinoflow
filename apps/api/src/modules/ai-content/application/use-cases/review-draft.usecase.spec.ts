@@ -24,9 +24,11 @@ function makeJob(comparisonKey: string | null = null): ContentJob {
     toneProfile: null,
     sourceContext: null,
     contentTier: null,
+    nodeKind: null,
     comparisonKey,
     originalityExcerpt: null,
     coverImageId: null,
+    category: null,
     aiProvider: "anthropic",
     aiModel: "claude-opus-4-8",
   });

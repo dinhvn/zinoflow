@@ -5,8 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
 import {
   aiUsageLogEntrySchema,
+  articleCategorySchema,
   contentJobSchema,
   type AiUsageLogEntry,
+  type ArticleCategory,
   destinationDetailSchema,
   draftArticleSchema,
   listAiProvidersResponseSchema,
@@ -38,6 +40,17 @@ import {
   formatPromptVersion,
   isLatestPromptVersion,
 } from "@/shared/prompt-version";
+
+/** Nhan tieng Viet cho danh muc bai cam nang (chot 31/07/2026). */
+const CATEGORY_LABELS: Record<ArticleCategory, string> = {
+  "kinh-nghiem": "Kinh nghiệm",
+  "lich-trinh": "Lịch trình",
+  "di-chuyen": "Di chuyển",
+  "an-uong": "Ăn uống",
+  "luu-tru": "Lưu trú",
+  "diem-tham-quan-vui-choi": "Điểm tham quan & vui chơi",
+  "mua-sam": "Mua sắm",
+};
 
 /** Draft response tu GET /content/jobs/:id/draft (DraftRecord phia API). */
 const draftSchema = z.object({
@@ -286,6 +299,21 @@ export default function JobDetailPage({
     mutationFn: () =>
       apiSend("PUT", `/articles/${id}/cover-image`, {
         contentImageId: coverImageId || null,
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["content-job", id] }),
+  });
+
+  // Danh muc bai cam nang (loc/hien thi /cam-nang/danh-muc — chot 31/07/2026).
+  // Doc lap voi noi dung, khong can Approve/publish lai de doi.
+  const [category, setCategory] = useState<ArticleCategory | "">("");
+  useEffect(() => {
+    if (isArticle) setCategory(job?.category ?? "");
+  }, [isArticle, job?.category]);
+  const saveCategory = useMutation({
+    mutationFn: () =>
+      apiSend("PUT", `/articles/${id}/category`, {
+        category: category || null,
       }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["content-job", id] }),
@@ -853,6 +881,44 @@ export default function JobDetailPage({
                   className="mt-2 h-24 w-40 rounded object-cover"
                 />
               )}
+            </div>
+          )}
+
+          {isArticle && (
+            <div className="mt-3 rounded border border-zinc-200 p-3 dark:border-zinc-800">
+              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                Danh mục bài
+              </p>
+              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                Dùng để lọc/hiển thị bài trên trang /cam-nang/danh-muc và gợi
+                ý bài liên quan. Chưa chọn thì bài không thuộc danh mục nào
+                (không chặn đăng bài).
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Select
+                  value={category}
+                  onChange={(e) =>
+                    setCategory(e.target.value as ArticleCategory | "")
+                  }
+                  className="min-w-64"
+                >
+                  <option value="">— Không có danh mục —</option>
+                  {articleCategorySchema.options.map((c) => (
+                    <option key={c} value={c}>
+                      {CATEGORY_LABELS[c]}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={saveCategory.isPending}
+                  disabled={category === (job?.category ?? "")}
+                  onClick={() => saveCategory.mutate()}
+                >
+                  {saveCategory.isPending ? "Đang lưu..." : "Lưu danh mục"}
+                </Button>
+              </div>
             </div>
           )}
 

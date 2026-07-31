@@ -1,5 +1,6 @@
 import type {
   AiProviderKey,
+  ArticleCategory,
   ArticleType,
   ContentJobStatus,
   ContentSourceType,
@@ -20,12 +21,20 @@ export interface ContentJobProps {
   sourceContext: string | null;
   /** flagship | standard | null — chi y nghia voi articleType guide-diem-den (Phase 28.3) */
   contentTier: "flagship" | "standard" | null;
+  /**
+   * poi | cluster | province | null — chi y nghia voi articleType guide-diem-den.
+   * Quyet dinh PromptBuilder chon bo prompt POI hay Cum (thay Phase 28.3, xem
+   * prompt-builder.ts).
+   */
+  nodeKind: "poi" | "cluster" | "province" | null;
   /** Gate "originality" (07/2026) — pham vi so sanh (vd ma tinh), null = gate tu bo qua. */
   comparisonKey: string | null;
   /** Doan van trich xuat de lam corpus so sanh cho job KHAC — ghi luc Approved. */
   originalityExcerpt: string | null;
   /** Anh dai dien (og:image/JSON-LD image) — CHI y nghia voi articleType cam-nang. */
   coverImageId: string | null;
+  /** Danh muc bai cam nang (loc/hien thi /cam-nang/danh-muc) — CHI y nghia voi articleType cam-nang. */
+  category: ArticleCategory | null;
   status: ContentJobStatus;
   aiProvider: AiProviderKey;
   aiModel: string;
@@ -104,6 +113,15 @@ export class ContentJob {
       throw new DomainRuleError("Chỉ bài cẩm nang mới có ảnh đại diện chọn tay ở đây");
     }
     this.props.coverImageId = contentImageId;
+    this.props.updatedAt = new Date();
+  }
+
+  /** Gan danh muc bai cam nang (cam-nang-affiliate-overflow-plan.md, chot 31/07/2026). */
+  setCategory(category: ArticleCategory | null): void {
+    if (this.props.articleType !== "cam-nang") {
+      throw new DomainRuleError("Chỉ bài cẩm nang mới có danh mục");
+    }
+    this.props.category = category;
     this.props.updatedAt = new Date();
   }
 

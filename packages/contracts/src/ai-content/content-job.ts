@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 import { aiProviderKeySchema } from "./ai-provider";
-import { destinationContentTierSchema } from "../dichoithoi/destination";
+import {
+  destinationContentTierSchema,
+  destinationKindSchema,
+} from "../dichoithoi/destination";
+import { articleCategorySchema } from "../dichoithoi/article";
 
 /**
  * Trang thai content job — state machine theo spec §5.
@@ -60,6 +64,12 @@ export const createContentJobRequestSchema = z.object({
    */
   contentTier: destinationContentTierSchema.nullable().optional(),
   /**
+   * poi | cluster | province | null — CHI co y nghia voi articleType
+   * guide-diem-den: quyet dinh PromptBuilder chon bo prompt POI hay Cum (thay
+   * Phase 28.3, khong con phu thuoc contentTier — xem prompt-builder.ts).
+   */
+  nodeKind: destinationKindSchema.nullable().optional(),
+  /**
    * Gate "originality" (07/2026) — pham vi so sanh trung lap (vd slug/ma tinh
    * cua diem den). CHI co y nghia voi articleType guide-diem-den, null/undefined
    * voi moi loai bai khac (gate se tu bo qua khi khong co comparisonKey).
@@ -112,6 +122,8 @@ export const contentJobSchema = z.object({
   aiModel: z.string(),
   /** Anh dai dien (og:image/JSON-LD image) — CHI y nghia voi articleType cam-nang, chon tay tu Thu vien anh. */
   coverImageId: z.string().uuid().nullable(),
+  /** Danh muc bai cam nang — CHI y nghia voi articleType cam-nang (article.ts). */
+  category: articleCategorySchema.nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

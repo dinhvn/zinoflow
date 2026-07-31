@@ -81,18 +81,24 @@ lại tracking trạng thái.
     mở rộng thêm nhánh trích xuất TỰ ĐỘNG qua Gemini 3.x + Google Search
     Grounding chạy trong app (không cần Claude Code), song song với skill
     thủ công — đã lên plan triển khai theo giai đoạn A-E ở §6.
-    12g. `dichoithoi-poi-distance-plan.md` — Giai đoạn 1-3 ĐÃ XONG (21/07/2026):
+    12g. `dichoithoi-camnang-affiliate-overflow-plan.md` — plan CHƯA build
+    (31/07/2026): điểm đến vẫn là trục SEO chính, Hotel/Tour/Vé/Vận chuyển
+    không có hub/search riêng — overflow ngoài Top-N bake sẵn gộp vào bài
+    cẩm nang (content thật + card list full), mở rộng pattern "Xem thêm"
+    đã có cho Food/Nightlife/Souvenir. Đọc trước khi đụng
+    `V2ArticleDestinationMap`/khối Tour-Vé-Vận chuyển trên Detail.cshtml.
+    12h. `dichoithoi-poi-distance-plan.md` — Giai đoạn 1-3 ĐÃ XONG (21/07/2026):
     thay/bổ sung Haversine bằng khoảng cách đường bộ thật (OpenRouteService)
     cho `DistanceFromCenter` + bảng `poi_distances` (con↔con cùng cụm), nút
     theo cụm/tỉnh + nút riêng 1 điểm ở tab "Quan hệ". Giai đoạn 4 (nối vào
     AI sourceContext) còn tuỳ chọn, chưa chốt — đọc trước khi đụng vào
     `related-builder.ts`/`RecomputeRelatedService`/tab quan hệ.
-    12h. `dichoithoi-map-cluster-view-plan.md` — plan CHƯA build (23/07/2026):
+    12i. `dichoithoi-map-cluster-view-plan.md` — plan CHƯA build (23/07/2026):
     thêm chế độ xem theo 1 cụm/tỉnh cụ thể trên `/dichoithoi/ban-do` (Select
     chọn cụm + tự fit bounds, tắt marker clustering, hiện tên marker thường
     trực, vẽ đường quan hệ con↔con từ `poi_distances`, bảng liệt kê cặp+km) —
     đọc trước khi đụng vào `ban-do/page.tsx`/`destination-map-*.tsx`.
-    12i. `phan-tich/dichoithoi-taxonomy-chuan-hoa.md` — Nhóm/Type/Tag điểm đến
+    12j. `phan-tich/dichoithoi-taxonomy-chuan-hoa.md` — Nhóm/Type/Tag điểm đến
     ĐÃ MIGRATE 24/07/2026 (4 Nhóm/18 Type/17 Tag, thay hoàn toàn bộ cũ 3
     nhóm/16 type/9 tag mô tả trong `database-redesign.md` §3.2/§3.2.1, còn
     đó chỉ để tham khảo lịch sử). Đã chạy AI gán cho 247 POI thật
@@ -101,18 +107,18 @@ lại tracking trạng thái.
     `/dichoithoi/phan-loai`. `dichoithoi-taxonomy-overview.md` (hiện trạng
     TRƯỚC redesign, 23/07/2026) chỉ còn giá trị lịch sử/baseline map slug
     cũ→mới. Đọc trước khi đụng seed taxonomy hoặc prompt AI gán Type/Tag.
-    12j. `dichoithoi-content-freshness-plan.md` — ĐÃ BUILD+VERIFY (29/07/2026):
+    12k. `dichoithoi-content-freshness-plan.md` — ĐÃ BUILD+VERIFY (29/07/2026):
     thay dòng `updateNotice` AI viết cứng lúc generate (đã xoá hẳn) bằng tín
     hiệu "cập nhật nội dung" thật (2 cột `ContentUpdatedAt`/`LastVerifiedAt`
     tách biệt, gate so sánh giá trị + AI Haiku phân loại `ContentHtml`, badge
     ẩn sau 6 tháng, tránh "date spam") — đọc trước khi đụng
     `PublishDestinationUseCase`/badge cập nhật trên trang detail.
-    12k. `dichoithoi-google-seo-guidelines.md` — tổng hợp ĐẦY ĐỦ chính sách SEO
+    12l. `dichoithoi-google-seo-guidelines.md` — tổng hợp ĐẦY ĐỦ chính sách SEO
     chính thức Google (16 chính sách spam, structured data, sitemap
     `lastmod`, Core Web Vitals, duplicate content, cảnh báo date-spam
     nguyên văn) đọc trực tiếp 29/07/2026 — tra cứu khi cần trích dẫn chính
     xác, companion cho `dichoithoi-seo-principles.md`.
-    12l. `dichoithoi-destination-prompt-quality-plan.md` — ĐÃ BUILD GĐ0-5
+    12m. `dichoithoi-destination-prompt-quality-plan.md` — ĐÃ BUILD GĐ0-5
     (29/07/2026), GĐ6 chờ review/activate thủ công: nâng chất lượng bài
     POI/Flagship từ source context tới prompt, contract Mức B, quality gates,
     observability và QA rollout; đọc trước khi sửa prompt `guide-diem-den.*`

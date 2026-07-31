@@ -168,9 +168,11 @@ function createJob(): ContentJob {
     toneProfile: null,
     sourceContext: null,
     contentTier: null,
+    nodeKind: null,
     comparisonKey: null,
     originalityExcerpt: null,
     coverImageId: null,
+    category: null,
     aiProvider: "anthropic",
     aiModel: "stub-model",
   });
@@ -319,9 +321,11 @@ describe("GenerateContentUseCase — bai diem den ep cung 7 chu de co dinh (fix 
       toneProfile: null,
       sourceContext: null,
       contentTier: "standard",
+      nodeKind: "poi",
       comparisonKey: null,
       originalityExcerpt: null,
       coverImageId: null,
+      category: null,
       aiProvider: "anthropic",
       aiModel: "stub-model",
     });

@@ -1,6 +1,7 @@
 import { Column, Entity, Index, PrimaryColumn } from "typeorm";
 import type {
   AiProviderKey,
+  ArticleCategory,
   ArticleType,
   ContentJobStatus,
   ContentSourceType,
@@ -48,6 +49,14 @@ export class ContentJobEntity {
   contentTier!: "flagship" | "standard" | null;
 
   /**
+   * poi | cluster | province | null — chi y nghia voi articleType guide-diem-den.
+   * Quyet dinh PromptBuilder chon bo prompt POI hay Cum (khong con phu thuoc
+   * contentTier nhu Phase 28.3 cu, xem prompt-builder.ts).
+   */
+  @Column({ name: "node_kind", type: "varchar", length: 16, nullable: true })
+  nodeKind!: "poi" | "cluster" | "province" | null;
+
+  /**
    * Gate "originality" (07/2026) — slug tinh, copy 1 lan luc tao job, CHI set
    * khi articleType=guide-diem-den. Dung lam pham vi so sanh (chi so voi bai
    * cung tinh, tranh false-positive giua cac tinh khac nhau).
@@ -62,6 +71,10 @@ export class ContentJobEntity {
   /** Anh dai dien (og:image/JSON-LD image) — CHI y nghia voi articleType cam-nang. */
   @Column({ name: "cover_image_id", type: "uuid", nullable: true })
   coverImageId!: string | null;
+
+  /** Danh muc bai cam nang — CHI y nghia voi articleType cam-nang. */
+  @Column({ type: "varchar", length: 32, nullable: true })
+  category!: ArticleCategory | null;
 
   @Index()
   @Column({ type: "varchar", length: 30 })

@@ -68,9 +68,11 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
     entity.toneProfile = s.toneProfile;
     entity.sourceContext = s.sourceContext;
     entity.contentTier = s.contentTier;
+    entity.nodeKind = s.nodeKind;
     entity.comparisonKey = s.comparisonKey;
     entity.originalityExcerpt = s.originalityExcerpt;
     entity.coverImageId = s.coverImageId;
+    entity.category = s.category;
     entity.status = s.status;
     entity.aiProvider = s.aiProvider;
     entity.aiModel = s.aiModel;
@@ -91,9 +93,11 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
       toneProfile: entity.toneProfile,
       sourceContext: entity.sourceContext,
       contentTier: entity.contentTier,
+      nodeKind: entity.nodeKind,
       comparisonKey: entity.comparisonKey,
       originalityExcerpt: entity.originalityExcerpt,
       coverImageId: entity.coverImageId,
+      category: entity.category,
       status: entity.status,
       aiProvider: entity.aiProvider,
       aiModel: entity.aiModel,

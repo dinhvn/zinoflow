@@ -411,6 +411,7 @@ CREATE TABLE v2.Article (
   ContentHtml     nvarchar(max) NOT NULL,             -- DA compile khoi dong — website chi doc field nay
   MetaTitle       nvarchar(150) NULL,
   MetaDescription nvarchar(300) NULL,
+  Category        varchar(32)   NULL,   -- kinh-nghiem|lich-trinh|di-chuyen|an-uong|luu-tru|diem-tham-quan-vui-choi|mua-sam
   Status          tinyint       NOT NULL DEFAULT 1,   -- 0 draft, 1 published, 2 hidden
   PublishedAt     datetime2     NULL,
   UpdatedAt       datetime2     NOT NULL DEFAULT SYSUTCDATETIME()
@@ -425,7 +426,7 @@ IF OBJECT_ID('v2.ArticleDestinationMap') IS NULL
 CREATE TABLE v2.ArticleDestinationMap (
   ArticleId        int           NOT NULL REFERENCES v2.Article(Id),
   DestinationSlug  varchar(64)   NOT NULL,
-  Topic            varchar(20)   NOT NULL,   -- itinerary|food|souvenir|nightlife|poi-guide|general
+  Topic            varchar(20)   NOT NULL,   -- itinerary|food|souvenir|nightlife|poi-guide|tour|ticket|transport|general
   [Order]          int           NOT NULL DEFAULT 0,
   PRIMARY KEY (ArticleId, DestinationSlug, Topic)
 );

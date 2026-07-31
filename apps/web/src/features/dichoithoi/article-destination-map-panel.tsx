@@ -18,6 +18,9 @@ const TOPIC_LABELS: Record<ArticleTopic, string> = {
   souvenir: "Quà mang về",
   nightlife: "Buổi tối",
   "poi-guide": "Điểm tham quan",
+  tour: "Tour du lịch",
+  ticket: "Vé thăm quan",
+  transport: "Vận chuyển",
   general: "Chung",
 };
 

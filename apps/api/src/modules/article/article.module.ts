@@ -16,6 +16,7 @@ import { RefreshAllDynamicBlocksUseCase } from "./application/use-cases/refresh-
 import { GetArticleDestinationMapUseCase } from "./application/use-cases/get-article-destination-map.usecase";
 import { SaveArticleDestinationMapUseCase } from "./application/use-cases/save-article-destination-map.usecase";
 import { SetArticleCoverImageUseCase } from "./application/use-cases/set-article-cover-image.usecase";
+import { SetArticleCategoryUseCase } from "./application/use-cases/set-article-category.usecase";
 import { ARTICLE_SITE_DB } from "./application/ports/article-site-db.port";
 import { ARTICLE_PUBLICATION_REPOSITORY } from "./application/ports/article-publication.repository";
 import { MssqlArticleSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-article-site-db.adapter";
@@ -48,6 +49,7 @@ import { ArticlePublicationEntity } from "./infrastructure/entities/article-publ
     GetArticleDestinationMapUseCase,
     SaveArticleDestinationMapUseCase,
     SetArticleCoverImageUseCase,
+    SetArticleCategoryUseCase,
     { provide: ARTICLE_SITE_DB, useClass: MssqlArticleSiteDbAdapter },
     { provide: ARTICLE_PUBLICATION_REPOSITORY, useClass: TypeOrmArticlePublicationRepository },
   ],

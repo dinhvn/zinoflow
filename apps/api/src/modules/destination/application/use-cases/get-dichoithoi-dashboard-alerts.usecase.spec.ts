@@ -19,12 +19,14 @@ function fakeJob(overrides: Partial<ContentJobProps>): ContentJob {
     comparisonKey: null,
     originalityExcerpt: null,
     coverImageId: null,
+    category: null,
     status: "Created",
     aiProvider: "gemini",
     aiModel: "gemini-2.5-flash",
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
+    nodeKind: overrides.nodeKind ?? null,
   });
 }
 

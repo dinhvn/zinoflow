@@ -16,9 +16,11 @@ function makeJob(articleType: "guide-diem-den" | "cam-nang", status: "DraftReady
     toneProfile: null,
     sourceContext: null,
     contentTier: null,
+    nodeKind: null,
     comparisonKey: null,
     originalityExcerpt: null,
     coverImageId: null,
+    category: null,
     aiProvider: "anthropic",
     aiModel: "manual",
   });

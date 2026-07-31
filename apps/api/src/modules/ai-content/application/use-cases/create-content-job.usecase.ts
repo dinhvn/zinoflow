@@ -57,9 +57,11 @@ export class CreateContentJobUseCase {
       toneProfile: request.toneProfile ?? null,
       sourceContext: request.sourceContext ?? null,
       contentTier: request.contentTier ?? null,
+      nodeKind: request.nodeKind ?? null,
       comparisonKey: request.comparisonKey ?? null,
       originalityExcerpt: null,
       coverImageId: null,
+      category: null,
       aiProvider,
       aiModel:
         request.aiModel ??

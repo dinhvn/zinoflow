@@ -11,6 +11,9 @@ const KEYWORD_RULES: Array<{ topic: ArticleTopic; keywords: string[] }> = [
   { topic: "souvenir", keywords: ["quà", "đặc sản mua", "lưu niệm", "mua sắm"] },
   { topic: "nightlife", keywords: ["về đêm", "buổi tối", "chơi đêm"] },
   { topic: "food", keywords: ["ẩm thực", "ăn gì", "quán ăn", "món ngon", "đặc sản"] },
+  { topic: "transport", keywords: ["xe khách", "nhà xe", "vé xe", "di chuyển bằng", "phương tiện"] },
+  { topic: "ticket", keywords: ["vé tham quan", "vé vào cổng", "giá vé"] },
+  { topic: "tour", keywords: ["tour", "trọn gói", "ghép đoàn"] },
   { topic: "poi-guide", keywords: ["top", "điểm check-in", "địa điểm", "điểm tham quan"] },
 ];
 

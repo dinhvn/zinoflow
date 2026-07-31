@@ -71,9 +71,34 @@ export const articleTopicSchema = z.enum([
   "souvenir",
   "nightlife",
   "poi-guide",
+  "tour",
+  "ticket",
+  "transport",
   "general",
 ]);
 export type ArticleTopic = z.infer<typeof articleTopicSchema>;
+
+/**
+ * Danh muc bai cam nang — gan truc tiep tren bai (KHAC voi articleTopicSchema
+ * o tren, von gan theo tung cap bai-diem-den). Dung cho trang hub
+ * /cam-nang/danh-muc/{slug} + loc/lien ket bai lien quan
+ * (dichoithoi-camnang-affiliate-overflow-plan.md, chot 31/07/2026).
+ */
+export const articleCategorySchema = z.enum([
+  "kinh-nghiem",
+  "lich-trinh",
+  "di-chuyen",
+  "an-uong",
+  "luu-tru",
+  "diem-tham-quan-vui-choi",
+  "mua-sam",
+]);
+export type ArticleCategory = z.infer<typeof articleCategorySchema>;
+
+export const setArticleCategoryRequestSchema = z.object({
+  category: articleCategorySchema.nullable(),
+});
+export type SetArticleCategoryRequest = z.infer<typeof setArticleCategoryRequestSchema>;
 
 export const articleDestinationMapItemSchema = z.object({
   destinationSlug: z.string().min(1).max(64),

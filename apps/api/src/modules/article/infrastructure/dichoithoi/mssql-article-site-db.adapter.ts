@@ -37,15 +37,16 @@ export class MssqlArticleSiteDbAdapter implements ArticleSiteDb, OnModuleDestroy
       request.input("contentHtml", input.contentHtml);
       request.input("metaTitle", input.metaTitle);
       request.input("metaDescription", input.metaDescription);
+      request.input("category", input.category);
       const result = await request.query<{ SiteId: number }>(`
         IF @siteId IS NULL
         BEGIN
           INSERT INTO v2.Article
             (Slug, Title, ShortDescription, Thumbnail, ContentHtml, MetaTitle, MetaDescription,
-             Status, PublishedAt)
+             Category, Status, PublishedAt)
           VALUES
             (@slug, @title, @shortDescription, @thumbnail, @contentHtml, @metaTitle, @metaDescription,
-             1, SYSUTCDATETIME());
+             @category, 1, SYSUTCDATETIME());
           SELECT CAST(SCOPE_IDENTITY() AS int) AS SiteId;
         END
         ELSE
@@ -53,6 +54,7 @@ export class MssqlArticleSiteDbAdapter implements ArticleSiteDb, OnModuleDestroy
           UPDATE v2.Article SET
             Slug = @slug, Title = @title, ShortDescription = @shortDescription, Thumbnail = @thumbnail,
             ContentHtml = @contentHtml, MetaTitle = @metaTitle, MetaDescription = @metaDescription,
+            Category = @category,
             Status = 1, PublishedAt = COALESCE(PublishedAt, SYSUTCDATETIME()), UpdatedAt = SYSUTCDATETIME()
           WHERE Id = @siteId;
           SELECT @siteId AS SiteId;

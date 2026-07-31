@@ -9,6 +9,8 @@ export interface UpsertArticleInput {
   contentHtml: string;
   metaTitle: string | null;
   metaDescription: string | null;
+  /** Danh muc bai cam nang — loc/hien thi /cam-nang/danh-muc (chot 31/07/2026). */
+  category: string | null;
 }
 
 /** 1 dong gan diem den + topic cho bai (article-spec §8.1, Phase 26) */

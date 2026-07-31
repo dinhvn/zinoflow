@@ -96,6 +96,7 @@ export class PublishArticleUseCase {
       contentHtml: linkedHtml,
       metaTitle: article.metadata.metaTitle,
       metaDescription: article.metadata.metaDescription,
+      category: snapshot.category,
     });
 
     await this.publications.upsert({ jobId, siteId, slug, publishedAt: new Date() });

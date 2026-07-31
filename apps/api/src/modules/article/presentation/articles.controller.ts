@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Put } from "@nestjs/common";
 import {
   saveArticleDestinationMapRequestSchema,
+  setArticleCategoryRequestSchema,
   setArticleCoverImageRequestSchema,
   type ArticleDestinationMapResponse,
   type PreviewArticleResult,
@@ -8,6 +9,7 @@ import {
   type RefreshAllDynamicBlocksReport,
   type RefreshDynamicBlocksResult,
   type SaveArticleDestinationMapRequest,
+  type SetArticleCategoryRequest,
   type SetArticleCoverImageRequest,
 } from "@zinoflow/contracts";
 import { ZodValidationPipe } from "../../shared/validation/zod-validation.pipe";
@@ -18,6 +20,7 @@ import { RefreshAllDynamicBlocksUseCase } from "../application/use-cases/refresh
 import { GetArticleDestinationMapUseCase } from "../application/use-cases/get-article-destination-map.usecase";
 import { SaveArticleDestinationMapUseCase } from "../application/use-cases/save-article-destination-map.usecase";
 import { SetArticleCoverImageUseCase } from "../application/use-cases/set-article-cover-image.usecase";
+import { SetArticleCategoryUseCase } from "../application/use-cases/set-article-category.usecase";
 
 /** REST bai cam nang (article-spec §9) */
 @Controller("articles")
@@ -30,6 +33,7 @@ export class ArticlesController {
     private readonly getDestinationMap: GetArticleDestinationMapUseCase,
     private readonly saveDestinationMap: SaveArticleDestinationMapUseCase,
     private readonly setCoverImage: SetArticleCoverImageUseCase,
+    private readonly setCategory: SetArticleCategoryUseCase,
   ) {}
 
   /** Publish bai DA DUYET xuong SQL Server (gate thu cong thu 2) */
@@ -83,5 +87,15 @@ export class ArticlesController {
     body: SetArticleCoverImageRequest,
   ): Promise<void> {
     return this.setCoverImage.execute(jobId, body);
+  }
+
+  /** Gan danh muc bai cam nang — loc/hien thi /cam-nang/danh-muc (chot 31/07/2026) */
+  @Put(":jobId/category")
+  setArticleCategory(
+    @Param("jobId") jobId: string,
+    @Body(new ZodValidationPipe(setArticleCategoryRequestSchema))
+    body: SetArticleCategoryRequest,
+  ): Promise<void> {
+    return this.setCategory.execute(jobId, body);
   }
 }
