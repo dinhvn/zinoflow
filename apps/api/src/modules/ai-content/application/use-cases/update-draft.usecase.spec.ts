@@ -24,6 +24,7 @@ function makeJob(articleType: "guide-diem-den" | "cam-nang", status: "DraftReady
     category: null,
     aiProvider: "anthropic",
     aiModel: "manual",
+    generationMode: "sync",
   });
   job.transitionTo("DraftReady");
   if (status === "Approved") {

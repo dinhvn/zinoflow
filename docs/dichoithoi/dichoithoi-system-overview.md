@@ -52,6 +52,10 @@ lại tracking trạng thái.
     `admin_provinces` FK ở bus-spec (đã xác nhận sai so với code thật).
 12. `dichoithoi-backlog.md` — **nguồn sự thật duy nhất** cho quyết định cần
     chốt + việc còn mở + rủi ro vận hành từ tất cả tài liệu trên.
+    12a. `dichoithoi-pilot-4-diem-plan.md` — pilot CHƯA build (31/07/2026):
+    chuẩn hoá dữ liệu + verify AI content trên 4 điểm (Đà Lạt, Dalat
+    Fairytale Land, Đạ Tẻh, Thác Triệu Hải) trước khi generate hàng loạt —
+    có bảng tiến độ tick tay, đọc khi quay lại hỏi "làm tới đâu rồi".
     12b. `dichoithoi-destination-relations-plan.md` — plan CHƯA build (15/07/2026):
     nâng cấp gợi ý "Điểm đến liên quan" theo nhiều tiêu chí (thêm cùng loại
     hình, tách nhãn hiển thị, nối ArticleDestinationMap, JSON-LD) — đọc trước

@@ -18,6 +18,8 @@ import { AiProviderError } from "../../../shared/errors/app-error";
 @Injectable()
 export class OpenAiContentAiProvider implements ContentAiProvider {
   readonly key = "openai" as const;
+  /** Batch API chi Gemini ho tro trong kien truc hien tai. */
+  readonly supportsBatch = false;
 
   isConfigured(): boolean {
     // Co tinh tra false ke ca khi co OPENAI_API_KEY: adapter chua implement,

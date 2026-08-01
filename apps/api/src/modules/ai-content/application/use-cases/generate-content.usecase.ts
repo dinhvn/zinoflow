@@ -1,5 +1,4 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
 import { type ContentSection } from "@zinoflow/contracts";
 import {
   getArticleTypeProfile,
@@ -10,20 +9,12 @@ import {
   type ContentJobRepository,
 } from "../ports/content-job.repository";
 import {
-  CONTENT_DRAFT_REPOSITORY,
-  type ContentDraftRepository,
-} from "../ports/content-draft.repository";
-import {
   AI_PROVIDER_REGISTRY,
   type AiCallUsage,
   type AiProviderRegistry,
   type ContentAiProvider,
   type StructuredGenerationRequest,
 } from "../ports/content-ai-provider.port";
-import {
-  PRODUCT_CATALOG,
-  type ProductCatalog,
-} from "../ports/product-catalog.port";
 import {
   AI_USAGE_RECORDER,
   type AiUsageRecorder,
@@ -32,12 +23,14 @@ import {
   CONTENT_GENERATION_CHECKPOINT_REPOSITORY,
   type ContentGenerationCheckpointRepository,
 } from "../ports/content-generation-checkpoint.repository";
-import {
-  PromptBuilder,
-  type PromptJobContext,
-} from "../services/prompt-builder";
+import { PromptBuilder } from "../services/prompt-builder";
 import { buildPromptLogText } from "../services/prompt-log-text";
 import type { OutlineLike } from "../services/article-type-profiles";
+import { ContentJobContextBuilder } from "../services/content-job-context.builder";
+import {
+  finalizeArticle,
+  ContentDraftPersister,
+} from "../services/content-generation-result-applier";
 import type { ZodType } from "zod/v4";
 
 /**
@@ -81,15 +74,14 @@ export class GenerateContentUseCase {
 
   constructor(
     @Inject(CONTENT_JOB_REPOSITORY) private readonly jobs: ContentJobRepository,
-    @Inject(CONTENT_DRAFT_REPOSITORY)
-    private readonly drafts: ContentDraftRepository,
     @Inject(AI_PROVIDER_REGISTRY)
     private readonly providers: AiProviderRegistry,
-    @Inject(PRODUCT_CATALOG) private readonly catalog: ProductCatalog,
     @Inject(AI_USAGE_RECORDER) private readonly usage: AiUsageRecorder,
     @Inject(CONTENT_GENERATION_CHECKPOINT_REPOSITORY)
     private readonly checkpoints: ContentGenerationCheckpointRepository,
     private readonly prompts: PromptBuilder,
+    private readonly contextBuilder: ContentJobContextBuilder,
+    private readonly draftPersister: ContentDraftPersister,
   ) {}
 
   async execute(contentJobId: string): Promise<void> {
@@ -120,30 +112,7 @@ export class GenerateContentUseCase {
       const provider = this.providers.resolve(snapshot.aiProvider);
       // Profile theo loai bai (spec §19.3): schema + render rieng tung loai
       const profile = getArticleTypeProfile(snapshot.articleType);
-      const products = profile.usesProductCatalog
-        ? await this.catalog.findProducts({
-            siteCode: snapshot.siteCode,
-            topic: snapshot.topic,
-            keywords: snapshot.keywordSeed,
-          })
-        : [];
-      const ctx: PromptJobContext = {
-        model: snapshot.aiModel,
-        articleType: snapshot.articleType,
-        topic: snapshot.topic,
-        siteCode: snapshot.siteCode,
-        keywordSeed: snapshot.keywordSeed,
-        toneProfile: snapshot.toneProfile,
-        sourceContext: snapshot.sourceContext,
-        contentTier: snapshot.contentTier,
-        nodeKind: snapshot.nodeKind,
-        products,
-        // Chi bai diem den (dichoithoi) — KHONG dat 1 gia tri chung cho ca site
-        // laruki/dochoi3s (Muc B, dichoithoi-destination-ai-extraction-plan §6 D3).
-        // 0.5: cau tu mem mai/giau cam xuc hon nhung van bam sat sourceContext that.
-        temperature:
-          snapshot.articleType === "guide-diem-den" ? 0.5 : undefined,
-      };
+      const ctx = await this.contextBuilder.build(snapshot, profile);
 
       // Resume: doc checkpoint truoc — co outline da xong thi khong goi lai AI cho buoc do.
       const checkpoint = await this.checkpoints.findByJobId(job.id);
@@ -199,42 +168,16 @@ export class GenerateContentUseCase {
       // Ep cung blockKey theo DUNG VI TRI trong DESTINATION_SECTION_ORDER (bai diem
       // den) — khong tin AI tu gan lai blockKey dung, cung nguyen tac da dung o
       // GenerateDestinationBlockUseCase (xem ArticleTypeProfile.normalizeSection).
-      const sections = (rawArticle as { sections: ContentSection[] }).sections;
-      const normalizedSections = profile.normalizeSection
-        ? sections.map((s, i) => profile.normalizeSection!(s, i, outline))
-        : sections;
-      const articleWithNormalizedSections = {
-        ...rawArticle,
-        sections: normalizedSections,
-      } as AnyArticle;
-      const article = profile.normalizeArticle
-        ? profile.normalizeArticle(
-            articleWithNormalizedSections,
-            snapshot.sourceContext,
-          )
-        : articleWithNormalizedSections;
-
-      const latest = await this.drafts.findLatestByJobId(job.id);
-      await this.drafts.save({
-        id: randomUUID(),
-        jobId: job.id,
-        version: (latest?.version ?? 0) + 1, // generate lai -> version moi, khong de unique conflict
-        title: profile.extractTitle(article),
-        outline: outline as {
-          title: string;
-          sectionHeadings: string[];
-        } & Record<string, unknown>,
-        article,
-        draftMarkdown: profile.renderMarkdown(article),
-        createdAt: new Date(),
-      });
+      const article = finalizeArticle(rawArticle, profile, outline, snapshot.sourceContext);
+      await this.draftPersister.saveNewVersion(job.id, profile, outline, article);
 
       job.transitionTo("DraftReady");
       await this.jobs.save(job);
       // Xong roi — xoa checkpoint, khong con can resume nua
       await this.checkpoints.clear(job.id);
+      const sectionCount = (article as { sections: ContentSection[] }).sections.length;
       this.logger.log(
-        `Job ${job.id} -> DraftReady (provider: ${provider.key}, ${normalizedSections.length} sections)`,
+        `Job ${job.id} -> DraftReady (provider: ${provider.key}, ${sectionCount} sections)`,
       );
     } catch (error) {
       // Danh dau Failed roi rethrow de pg-boss ap retry policy.

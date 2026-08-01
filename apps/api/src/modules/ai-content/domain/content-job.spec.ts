@@ -21,6 +21,7 @@ function makeJob(status: ContentJobStatus): ContentJob {
     referenceUrls: null,
     category: null,
     status,
+    generationMode: "sync",
     aiProvider: "anthropic",
     aiModel: "claude-opus-4-8",
     createdAt: new Date("2026-01-01T00:00:00.000Z"),

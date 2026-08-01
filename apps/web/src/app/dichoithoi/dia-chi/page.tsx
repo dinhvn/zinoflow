@@ -7,9 +7,9 @@ import {
   addressMappingsResponseSchema,
 } from "@zinoflow/contracts";
 import { apiGet } from "@/shared/api-client";
+import { Combobox } from "@/shared/ui/combobox";
 import { Input } from "@/shared/ui/input";
 import { Pagination } from "@/shared/ui/pagination";
-import { Select } from "@/shared/ui/select";
 import { FeatureIntro } from "@/shared/ui";
 
 /**
@@ -81,34 +81,28 @@ export default function DiaChiPage() {
           placeholder="Tìm theo tên phường/xã, quận/huyện (gõ có dấu)..."
           className="w-72"
         />
-        <Select
+        <Combobox
           value={oldProvince}
-          onChange={(e) => {
-            setOldProvince(e.target.value);
+          onChange={(v) => {
+            setOldProvince(v);
             setPage(1);
           }}
-        >
-          <option value="">Tỉnh/thành cũ (tất cả)</option>
-          {provincesQuery.data?.oldProvinces.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </Select>
-        <Select
+          emptyLabel="Tỉnh/thành cũ (tất cả)"
+          placeholder="Tỉnh/thành cũ (tất cả)"
+          className="w-56"
+          options={(provincesQuery.data?.oldProvinces ?? []).map((p) => ({ value: p, label: p }))}
+        />
+        <Combobox
           value={newProvince}
-          onChange={(e) => {
-            setNewProvince(e.target.value);
+          onChange={(v) => {
+            setNewProvince(v);
             setPage(1);
           }}
-        >
-          <option value="">Tỉnh/thành mới (tất cả)</option>
-          {provincesQuery.data?.newProvinces.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </Select>
+          emptyLabel="Tỉnh/thành mới (tất cả)"
+          placeholder="Tỉnh/thành mới (tất cả)"
+          className="w-56"
+          options={(provincesQuery.data?.newProvinces ?? []).map((p) => ({ value: p, label: p }))}
+        />
       </div>
 
       {listQuery.isLoading && <p className="text-sm text-zinc-500">Đang tải...</p>}

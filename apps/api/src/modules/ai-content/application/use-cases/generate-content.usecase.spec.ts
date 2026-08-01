@@ -2,6 +2,8 @@ import type { ZodType, z } from "zod/v4";
 import { randomUUID } from "node:crypto";
 import { GenerateContentUseCase } from "./generate-content.usecase";
 import { PromptBuilder } from "../services/prompt-builder";
+import { ContentJobContextBuilder } from "../services/content-job-context.builder";
+import { ContentDraftPersister } from "../services/content-generation-result-applier";
 import { ContentJob } from "../../domain/content-job";
 import { InMemoryContentJobRepository } from "../../infrastructure/repositories/in-memory-content-job.repository";
 import { StubContentAiProvider } from "../../infrastructure/ai-providers/stub-content-ai.provider";
@@ -61,6 +63,7 @@ class InMemoryDraftRepository implements ContentDraftRepository {
 /** Provider boc stub, nem loi cho N lan goi "content" dau tien. */
 class FlakyProvider implements ContentAiProvider {
   readonly key = "stub" as const;
+  readonly supportsBatch = false;
   private readonly stub = new StubContentAiProvider();
   contentCalls = 0;
 
@@ -89,6 +92,7 @@ class FlakyProvider implements ContentAiProvider {
 /** Provider boc stub, nem loi VINH VIEN tu 1 diem trong pipeline — dung mo phong crash sau outline. */
 class FailAfterOutlineProvider implements ContentAiProvider {
   readonly key = "stub" as const;
+  readonly supportsBatch = false;
   private readonly stub = new StubContentAiProvider();
   outlineCalls = 0;
   contentCalls = 0;
@@ -142,12 +146,12 @@ function buildUseCase(provider: ContentAiProvider) {
   const checkpoints = new InMemoryCheckpointRepository();
   const useCase = new GenerateContentUseCase(
     jobs,
-    drafts,
     { resolve: () => provider },
-    { findProducts: async () => [] },
     usage,
     checkpoints,
     prompts,
+    new ContentJobContextBuilder({ findProducts: async () => [] }),
+    new ContentDraftPersister(drafts),
   );
   // Bo delay giua cac lan retry de test chay nhanh
   jest
@@ -176,6 +180,7 @@ function createJob(): ContentJob {
     category: null,
     aiProvider: "anthropic",
     aiModel: "stub-model",
+    generationMode: "sync",
   });
 }
 
@@ -246,12 +251,12 @@ describe("GenerateContentUseCase (Option 3 - 2 buoc: outline -> content gop)", (
     const crashingProvider = new FailAfterOutlineProvider(true);
     const useCase1 = new GenerateContentUseCase(
       jobs,
-      drafts,
       { resolve: () => crashingProvider },
-      { findProducts: async () => [] },
       usage,
       checkpoints,
       prompts,
+      new ContentJobContextBuilder({ findProducts: async () => [] }),
+      new ContentDraftPersister(drafts),
     );
     jest
       .spyOn(useCase1 as unknown as { delay: () => Promise<void> }, "delay")
@@ -269,12 +274,12 @@ describe("GenerateContentUseCase (Option 3 - 2 buoc: outline -> content gop)", (
     await jobs.save(jobRetry!);
     const useCase2 = new GenerateContentUseCase(
       jobs,
-      drafts,
       { resolve: () => healthyProvider },
-      { findProducts: async () => [] },
       usage,
       checkpoints,
       prompts,
+      new ContentJobContextBuilder({ findProducts: async () => [] }),
+      new ContentDraftPersister(drafts),
     );
     jest
       .spyOn(useCase2 as unknown as { delay: () => Promise<void> }, "delay")
@@ -330,6 +335,7 @@ describe("GenerateContentUseCase — bai diem den ep cung 7 chu de co dinh (fix 
       category: null,
       aiProvider: "anthropic",
       aiModel: "stub-model",
+      generationMode: "sync",
     });
     await jobs.save(job);
 

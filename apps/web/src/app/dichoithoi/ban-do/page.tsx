@@ -13,6 +13,7 @@ import {
 import { apiGet, apiSend } from "@/shared/api-client";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Select } from "@/shared/ui/select";
+import { Combobox } from "@/shared/ui/combobox";
 import { Button } from "@/shared/ui/button";
 import { Slider } from "@/shared/ui/slider";
 import { FeatureIntro } from "@/shared/ui";
@@ -240,14 +241,17 @@ export default function BanDoPage() {
       />
 
       <div className="flex flex-wrap gap-2">
-        <Select value={provinceCode} onChange={(e) => setProvinceCode(e.target.value)}>
-          <option value="">Tỉnh/thành (tất cả)</option>
-          {taxonomyQuery.data?.provinces.map((p) => (
-            <option key={p.provinceCode} value={p.provinceCode}>
-              {p.shortName}
-            </option>
-          ))}
-        </Select>
+        <Combobox
+          value={provinceCode}
+          onChange={setProvinceCode}
+          emptyLabel="Tỉnh/thành (tất cả)"
+          placeholder="Tỉnh/thành (tất cả)"
+          className="w-48"
+          options={(taxonomyQuery.data?.provinces ?? []).map((p) => ({
+            value: p.provinceCode,
+            label: p.shortName,
+          }))}
+        />
         <Select value={status} onChange={(e) => setStatus(e.target.value)}>
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -262,15 +266,17 @@ export default function BanDoPage() {
             </option>
           ))}
         </Select>
-        <Select value={focusSlug} onChange={(e) => setFocusSlug(e.target.value)}>
-          <option value="">Xem cụm/tỉnh cụ thể (tất cả)</option>
-          {focusOptions.map((o) => (
-            <option key={o.slug} value={o.slug}>
-              {o.name}
-              {o.provinceName && o.kind === "cluster" ? ` — ${o.provinceName}` : ""}
-            </option>
-          ))}
-        </Select>
+        <Combobox
+          value={focusSlug}
+          onChange={setFocusSlug}
+          emptyLabel="Xem cụm/tỉnh cụ thể (tất cả)"
+          placeholder="Xem cụm/tỉnh cụ thể (tất cả)"
+          className="w-64"
+          options={focusOptions.map((o) => ({
+            value: o.slug,
+            label: `${o.name}${o.provinceName && o.kind === "cluster" ? ` — ${o.provinceName}` : ""}`,
+          }))}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">

@@ -39,6 +39,7 @@ const baseRequest: CreateContentJobRequest = {
   topic: "Chủ đề thử nghiệm",
   articleType: "toplist",
   keywordSeed: [],
+  generationMode: "sync",
 };
 
 describe("CreateContentJobUseCase — auto-queue theo articleType (article-ai-extraction-plan.md GĐ1)", () => {

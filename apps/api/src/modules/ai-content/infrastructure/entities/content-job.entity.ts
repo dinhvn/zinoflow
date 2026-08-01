@@ -3,6 +3,7 @@ import type {
   AiProviderKey,
   ArticleCategory,
   ArticleType,
+  ContentJobGenerationMode,
   ContentJobStatus,
   ContentSourceType,
 } from "@zinoflow/contracts";
@@ -83,6 +84,10 @@ export class ContentJobEntity {
   @Index()
   @Column({ type: "varchar", length: 30 })
   status!: ContentJobStatus;
+
+  /** sync (mac dinh, tu chay ngay) | batch (nguoi dung tu gui qua Batch AI). */
+  @Column({ name: "generation_mode", type: "varchar", length: 10, default: "sync" })
+  generationMode!: ContentJobGenerationMode;
 
   @Column({ name: "ai_provider", type: "varchar", length: 20 })
   aiProvider!: AiProviderKey;

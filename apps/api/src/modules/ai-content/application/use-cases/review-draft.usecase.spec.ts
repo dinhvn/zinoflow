@@ -32,6 +32,7 @@ function makeJob(comparisonKey: string | null = null): ContentJob {
     category: null,
     aiProvider: "anthropic",
     aiModel: "claude-opus-4-8",
+    generationMode: "sync",
   });
   job.transitionTo("DraftReady");
   job.transitionTo("InReview");

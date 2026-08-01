@@ -18,6 +18,8 @@ import { AiProviderError } from "../../../shared/errors/app-error";
 @Injectable()
 export class StubContentAiProvider implements ContentAiProvider {
   readonly key = "stub" as const;
+  /** Batch API chi Gemini ho tro trong kien truc hien tai. */
+  readonly supportsBatch = false;
 
   isConfigured(): boolean {
     return true; // stub luon san sang

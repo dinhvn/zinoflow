@@ -12,6 +12,7 @@ function fakeProvider(output: unknown): ContentAiProvider {
   return {
     key: "anthropic",
     isConfigured: () => true,
+    supportsBatch: false,
     generateStructured: async <TSchema extends ZodType>(
       _request: StructuredGenerationRequest,
       _schema: TSchema,

@@ -192,6 +192,7 @@ export class CreateDestinationJobUseCase {
         ? aiProviderKeySchema.parse(request.aiProvider)
         : undefined,
       aiModel: request.aiModel,
+      generationMode: request.generationMode,
     });
 
     await this.mirrorRepo.setActiveJob(destination.slug, result.jobId);

@@ -75,6 +75,7 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
     entity.category = s.category;
     entity.referenceUrls = s.referenceUrls;
     entity.status = s.status;
+    entity.generationMode = s.generationMode;
     entity.aiProvider = s.aiProvider;
     entity.aiModel = s.aiModel;
     entity.createdAt = s.createdAt;
@@ -101,6 +102,7 @@ export class TypeOrmContentJobRepository implements ContentJobRepository {
       category: entity.category,
       referenceUrls: entity.referenceUrls,
       status: entity.status,
+      generationMode: entity.generationMode,
       aiProvider: entity.aiProvider,
       aiModel: entity.aiModel,
       createdAt: entity.createdAt,

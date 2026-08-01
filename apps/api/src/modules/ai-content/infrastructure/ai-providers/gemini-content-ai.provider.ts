@@ -3,6 +3,9 @@ import { GoogleGenAI } from "@google/genai";
 import { z, type ZodType } from "zod/v4";
 import type {
   AiCallUsage,
+  BatchCheckResult,
+  BatchItemOutcome,
+  BatchRequestItem,
   ContentAiProvider,
   StructuredGenerationRequest,
 } from "../../application/ports/content-ai-provider.port";
@@ -27,6 +30,9 @@ export class GeminiContentAiProvider implements ContentAiProvider {
     return Boolean(process.env.GEMINI_API_KEY);
   }
 
+  /** Gemini Batch API (client.batches.create/get) — xem submitBatch/checkBatch duoi. */
+  readonly supportsBatch = true;
+
   async generateStructured<TSchema extends ZodType>(
     request: StructuredGenerationRequest,
     schema: TSchema,
@@ -34,32 +40,137 @@ export class GeminiContentAiProvider implements ContentAiProvider {
     const startedAt = Date.now();
     try {
       const response = await this.callWithRetry(request, schema);
-      const text = response.text;
-      if (!text) {
-        throw new AiProviderError(`Gemini ${request.operation}: empty response`, [
-          `finishReason: ${response.candidates?.[0]?.finishReason ?? "unknown"}`,
-        ]);
-      }
-
-      // Phong truong hop model boc JSON trong ```json fence (hiem khi da set mimeType)
-      const cleanJson = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-      const output = schema.parse(JSON.parse(cleanJson)) as z.infer<TSchema>;
-
+      const rawOutput = this.extractRawJson(
+        response.text,
+        response.candidates?.[0]?.finishReason,
+        request.operation,
+      );
+      const output = schema.parse(rawOutput) as z.infer<TSchema>;
       const latencyMs = Date.now() - startedAt;
-      const meta = response.usageMetadata;
-      const inputTokens = meta?.promptTokenCount ?? 0;
-      // Gemini 2.5 tinh thinking tokens vao gia output
-      const outputTokens = (meta?.candidatesTokenCount ?? 0) + (meta?.thoughtsTokenCount ?? 0);
-      const { costUsd, priced } = computeGeminiCostUsd(request.model, inputTokens, outputTokens);
-      if (!priced) {
-        this.logger.warn(`No pricing for model "${request.model}" - cost logged as 0`);
-      }
-
-      return { output, usage: { inputTokens, outputTokens, costUsd, latencyMs } };
+      const usage = this.usageFrom(response.usageMetadata, request.model, latencyMs);
+      return { output, usage };
     } catch (error) {
       if (error instanceof AiProviderError) throw error;
       throw new AiProviderError(
         `Gemini ${request.operation} failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /**
+   * Boc JSON tu text response — dung chung cho generateStructured (sync) va
+   * checkBatch (khi doc tung InlinedResponse). Chi parse JSON, KHONG
+   * schema.parse — batch khong biet schema cua tung item (xem port).
+   */
+  private extractRawJson(
+    text: string | undefined,
+    finishReason: string | undefined,
+    operation: string,
+  ): unknown {
+    if (!text) {
+      throw new AiProviderError(`Gemini ${operation}: empty response`, [
+        `finishReason: ${finishReason ?? "unknown"}`,
+      ]);
+    }
+    // Phong truong hop model boc JSON trong ```json fence (hiem khi da set mimeType)
+    const cleanJson = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    return JSON.parse(cleanJson);
+  }
+
+  private usageFrom(
+    meta: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number } | undefined,
+    model: string,
+    latencyMs: number,
+  ): AiCallUsage {
+    const inputTokens = meta?.promptTokenCount ?? 0;
+    // Gemini 2.5 tinh thinking tokens vao gia output
+    const outputTokens = (meta?.candidatesTokenCount ?? 0) + (meta?.thoughtsTokenCount ?? 0);
+    const { costUsd, priced } = computeGeminiCostUsd(model, inputTokens, outputTokens);
+    if (!priced) {
+      this.logger.warn(`No pricing for model "${model}" - cost logged as 0`);
+    }
+    return { inputTokens, outputTokens, costUsd, latencyMs };
+  }
+
+  /**
+   * Gui 1 loat request cung luc qua Gemini Batch API — re hon ~50% nhung
+   * khong co ket qua ngay (nguoi dung tu bam "Kiem tra" sau, xem checkBatch).
+   * metadata.key gan vao tung InlinedRequest de khop lai dung item khi doc
+   * ket qua (KHONG dua vao thu tu mang).
+   */
+  async submitBatch(items: BatchRequestItem[]): Promise<{ providerBatchName: string }> {
+    if (items.length === 0) {
+      throw new AiProviderError("Gemini submitBatch: danh sach item rong");
+    }
+    const inlinedRequests = items.map((item) => ({
+      model: item.request.model,
+      contents: item.request.prompt,
+      metadata: { key: item.key },
+      config: {
+        systemInstruction: item.request.system,
+        responseMimeType: "application/json" as const,
+        responseJsonSchema: z.toJSONSchema(item.schema),
+        ...(item.request.temperature !== undefined ? { temperature: item.request.temperature } : {}),
+        ...(item.request.useGoogleSearch ? { tools: [{ googleSearch: {} }] } : {}),
+      },
+    }));
+    try {
+      const batchJob = await this.getClient().batches.create({
+        model: items[0]!.request.model,
+        src: inlinedRequests,
+      });
+      if (!batchJob.name) {
+        throw new AiProviderError("Gemini submitBatch: khong nhan duoc providerBatchName");
+      }
+      return { providerBatchName: batchJob.name };
+    } catch (error) {
+      if (error instanceof AiProviderError) throw error;
+      throw new AiProviderError(
+        `Gemini submitBatch failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /** Kiem tra trang thai 1 batch — nguoi dung tu bam nut, khong auto-poll. */
+  async checkBatch(providerBatchName: string): Promise<BatchCheckResult> {
+    try {
+      const batchJob = await this.getClient().batches.get({ name: providerBatchName });
+      const state = batchJob.state;
+      if (state === "JOB_STATE_SUCCEEDED") {
+        const responses = batchJob.dest?.inlinedResponses ?? [];
+        const items: BatchItemOutcome[] = responses.map((res) => {
+          const key = res.metadata?.key ?? "";
+          if (res.error) {
+            return { key, errorMessage: res.error.message ?? "Gemini batch item error" };
+          }
+          try {
+            const rawOutput = this.extractRawJson(
+              res.response?.text,
+              res.response?.candidates?.[0]?.finishReason,
+              "batch-item",
+            );
+            const usage = this.usageFrom(res.response?.usageMetadata, batchJob.model ?? "", 0);
+            return { key, rawOutput, usage };
+          } catch (error) {
+            return {
+              key,
+              errorMessage: error instanceof Error ? error.message : String(error),
+            };
+          }
+        });
+        return { state: "succeeded", items };
+      }
+      if (
+        state === "JOB_STATE_FAILED" ||
+        state === "JOB_STATE_CANCELLED" ||
+        state === "JOB_STATE_EXPIRED"
+      ) {
+        return { state: "failed" };
+      }
+      return { state: "pending" };
+    } catch (error) {
+      throw new AiProviderError(
+        `Gemini checkBatch failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

@@ -83,6 +83,7 @@ export class CreateCmsContentJobUseCase {
       sourceContext,
       aiProvider: request.aiProvider ? aiProviderKeySchema.parse(request.aiProvider) : undefined,
       aiModel: request.aiModel,
+      generationMode: "sync",
     });
 
     await this.mirror.setActiveJob(post.cmsId, result.jobId);

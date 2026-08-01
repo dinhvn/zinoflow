@@ -137,6 +137,10 @@ import {
   AdminWardEntity,
   AdminWardMappingEntity,
 } from "./infrastructure/entities/admin-units.entity";
+import { GsgExtractionResultApplier } from "./application/services/gsg-extraction-result-applier";
+import { ClusterPoiResultApplier } from "./application/services/cluster-poi-result-applier";
+import { DestinationGsgExtractionBatchTaskHandler } from "./infrastructure/batch-handlers/destination-gsg-extraction-batch-task-handler";
+import { ClusterPoiDiscoveryBatchTaskHandler } from "./infrastructure/batch-handlers/cluster-poi-discovery-batch-task-handler";
 
 /**
  * Module Dichoithoi (M4) — AI tool dong vai CMS cho noi dung diem den.
@@ -252,6 +256,13 @@ import {
     GetRelatedSpotlightUseCase,
     ManageCuratedRelationUseCase,
     ManageExcludedRelationUseCase,
+    // Batch AI (docs/specs/ai-batch-mode.md) — 2 handler tu dang ky vao
+    // BATCH_TASK_HANDLER_REGISTRY (export tu AiContentModule) qua onModuleInit(),
+    // AiContentModule KHONG can biet gi ve DestinationModule.
+    GsgExtractionResultApplier,
+    ClusterPoiResultApplier,
+    DestinationGsgExtractionBatchTaskHandler,
+    ClusterPoiDiscoveryBatchTaskHandler,
     { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
     { provide: CACHE_PURGE, useClass: HttpCachePurgeAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },

@@ -68,6 +68,7 @@ export class CreateContentJobUseCase {
         request.aiModel ??
         CreateContentJobUseCase.DEFAULT_MODELS[aiProvider] ??
         CreateContentJobUseCase.DEFAULT_MODELS["anthropic"]!,
+      generationMode: request.generationMode,
     });
 
     await this.repository.save(job);
@@ -78,6 +79,13 @@ export class CreateContentJobUseCase {
     // hop le vi Created nam trong EDITABLE_STATUSES/transition GeneratingOutline).
     if (request.articleType === "cam-nang") {
       this.logger.log(`Content job ${job.id} (cẩm nang) created, chờ trích xuất nguồn trước khi sinh nội dung`);
+      return { jobId: job.id, status: job.status };
+    }
+
+    // generationMode=batch: nguoi dung tu chon job + gui qua Batch AI
+    // (trang /ai-batches), KHONG tu enqueue pg-boss — xem docs/specs/ai-batch-mode.md.
+    if (request.generationMode === "batch") {
+      this.logger.log(`Content job ${job.id} tạo ở chế độ batch, chờ gửi qua Batch AI`);
       return { jobId: job.id, status: job.status };
     }
 

@@ -14,6 +14,7 @@ function fakeProvider(output: unknown): ContentAiProvider {
   return {
     key: "anthropic",
     isConfigured: () => true,
+    supportsBatch: false,
     generateStructured: async (_request: StructuredGenerationRequest, schema) => ({
       output: schema.parse(output),
       usage,

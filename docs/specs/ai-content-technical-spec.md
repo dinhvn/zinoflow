@@ -84,6 +84,12 @@ Transition rules:
 - Rejected bat buoc co reason.
 - Approved draft bi sua noi dung se tao version moi va quay ve InReview.
 
+**OutlineReady** (them 07/2026): trang thai trung gian CHI luong Batch AI dung
+(outline da sinh xong qua Gemini Batch API, cho gui batch buoc content — nut
+bam thu cong) — luong sync (pg-boss worker) khong bao gio dung o day, van
+chay lien GeneratingOutline -> DraftReady nhu cu. Xem
+`docs/specs/ai-batch-mode.md`.
+
 ## 6) Use cases
 1. CreateContentJob
 2. GenerateOutline
@@ -180,6 +186,13 @@ Yeu cau chung:
 - Log token usage, cost (USD), latency cho moi call (bang ai_usage_logs).
 - Khong hardcode provider trong application layer; API key qua env vars.
 - Output AI bat buoc validate bang Zod schema truoc khi luu draft.
+
+**Batch AI** (them 07/2026): ngoai `generateStructured()` (1 request, dong
+bo), provider co the khai bao them capability `supportsBatch` +
+`submitBatch()`/`checkBatch()` (Gemini Batch API — gui nhieu request cung
+luc, re hon ~50%, khong dong bo). Chi Gemini implement hien tai. Kien truc
+pluggable theo taskType (them tac vu moi khong sua core) — xem
+`docs/specs/ai-batch-mode.md`.
 
 ## 9) Quality gates
 Gate bat buoc truoc approve:

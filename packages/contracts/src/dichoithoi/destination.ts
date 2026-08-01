@@ -370,6 +370,13 @@ export const createDestinationJobRequestSchema = z.object({
   referenceUrls: z.array(referenceUrlSchema).max(5).optional(),
   aiProvider: z.string().optional(),
   aiModel: z.string().optional(),
+  /**
+   * sync (mac dinh, chay ngay + hien goi y inline tren trang diem den) | batch
+   * (khong tu chay — job cho chon trong /ai-batches, gui outline/content qua
+   * Batch AI, ket qua KHONG hien inline nua, phai qua trang do de kiem tra).
+   * Dung khi tao hang loat job cho nhieu diem den cung luc.
+   */
+  generationMode: z.enum(["sync", "batch"]).default("sync"),
 });
 export type CreateDestinationJobRequest = z.infer<typeof createDestinationJobRequestSchema>;
 

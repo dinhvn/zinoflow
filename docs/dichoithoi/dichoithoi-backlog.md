@@ -279,6 +279,35 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- **Pilot chuẩn hoá 4 điểm test toàn bộ pipeline AI content (31/07/2026,
+  CHƯA BUILD, đang bắt đầu)**: plan + bảng tiến độ ở
+  `dichoithoi-pilot-4-diem-plan.md`. 4 điểm: Đà Lạt (cụm lớn), Dalat
+  Fairytale Land (điểm con, đủ giá vé/vé online), Đạ Tẻh (cụm nhỏ), Thác
+  Triệu Hải (điểm con, hoang sơ — đã có 1 lượt test job-abaa 29/07 nhưng
+  chưa qua checklist verify đầy đủ). Mục tiêu: chuẩn hoá dữ liệu + gắn đủ
+  Hotel/Tour/Vé/Vé xe khách trên tập nhỏ này trước khi generate hàng loạt.
+  Audit thật xác nhận `v2.Destination` chỉ có 1 dòng (Thác Triệu Hải, Id=277),
+  3 điểm còn lại chưa tồn tại; `v2.Hotel`/`v2.Tour`/`v2.Transport` trống.
+
+- **SEO cho link affiliate (Hotel/Tour/Vé/Vé xe khách/Product) — CHƯA BUILD,
+  ghi nhận 31/07/2026 sau khi thảo luận**: 2 việc cụ thể cần làm khi đụng lại
+  các module affiliate:
+  1. **`rel="sponsored"` cho mọi link affiliate outbound** — đây là khuyến
+     nghị chính thức của Google (khác `nofollow` thường), giúp Google phân
+     loại đúng loại link, tránh truyền tín hiệu PageRank sai lệch. Cần audit
+     xem `Detail.cshtml`/các partial card (Hotel/Tour/Transport/Product) hiện
+     link affiliate ra `<a>` chưa có `rel` gì, thêm `rel="sponsored"` (có thể
+     kèm `nofollow` cho chắc: `rel="sponsored nofollow"`).
+  2. **Câu disclosure affiliate cố định cuối bài/trang có CTA thương mại** —
+     KHÔNG phải yêu cầu ranking của Google (không nằm trong 16 spam policies),
+     mục đích là trust signal (E-E-A-T) + minh bạch pháp lý. Câu này phải CỐ
+     ĐỊNH (hard-code 1 câu chung, không để AI tự viết mỗi lần) để tránh chính
+     nó trở thành nội dung lặp hàng loạt (Scaled content abuse #11).
+  - Rủi ro liên quan đã có nguyên tắc từ trước (không phải việc mới): **Thin
+    affiliation (#15)** — mọi trang có CTA Hotel/Tour/Vé phải có nội dung gốc
+    bao quanh (kinh nghiệm thực tế, so sánh, lưu ý), không chỉ nhúng link
+    trơ. Xem `dichoithoi-google-seo-guidelines.md` §2 dòng #11/#15.
+
 - ✅ **Quy trình soạn bài cẩm nang có trích xuất nguồn trước khi AI viết —
   ĐÃ BUILD XONG 6 GIAI ĐOẠN (31/07/2026)**: plan ở
   `dichoithoi-article-ai-extraction-plan.md`. Tiêu đề tạm → website tham
@@ -1648,6 +1677,18 @@ TopGoiCuocContent/GoiCuocs[].Content/NhaMangs[].Content`. Tiện thể phát
     1 phần preview/update ở trên — PHẢI giữ published-only để không tạo link
     chết trên trang `/loai`, `/tinh` công khai. Đánh giá "cosmetic gap" trong
     audit 26/07/2026 trước đó là sai — đây là hành vi đúng, không sửa.
+
+## Batch AI (Gemini Batch API) — ĐÃ BUILD 01/08/2026
+
+Trích xuất dữ liệu điểm đến (`destination-gsg-extraction`) và tìm điểm con
+cho cụm (`cluster-poi-discovery`) giờ có thêm đường **Batch AI** (gửi nhiều
+điểm đến/cụm cùng lúc qua Gemini Batch API, rẻ hơn ~50%, không có kết quả
+ngay — phải tự bấm "Kiểm tra" ở trang `/ai-batches`) — **song song**, không
+thay thế 2 nút chạy đơn lẻ hiện có trên trang chi tiết điểm đến (hành vi cũ
+giữ nguyên 100%, đã tách logic dùng chung qua `gsg-extraction-result-applier.ts`/
+`cluster-poi-result-applier.ts`). Thiết kế tổng quát (không riêng dichoithoi,
+áp dụng cả viết bài AI cho laruki/dochoi3s) — chi tiết đầy đủ ở
+`docs/specs/ai-batch-mode.md`.
 
 ## Việc CŨ hơn — đã lỗi thời, cần rà lại khi đụng tới
 

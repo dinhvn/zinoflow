@@ -62,6 +62,19 @@ import { DismissQualityWarningUseCase } from "./application/use-cases/dismiss-qu
 import { QUALITY_WARNING_FEEDBACK_REPOSITORY } from "./application/ports/quality-warning-feedback.repository";
 import { TypeOrmQualityWarningFeedbackRepository } from "./infrastructure/repositories/typeorm-quality-warning-feedback.repository";
 import { QualityWarningFeedbackEntity } from "./infrastructure/entities/quality-warning-feedback.entity";
+import { ContentJobContextBuilder } from "./application/services/content-job-context.builder";
+import { ContentDraftPersister } from "./application/services/content-generation-result-applier";
+import { AI_BATCH_REPOSITORY } from "./application/ports/ai-batch.repository";
+import { BATCH_TASK_HANDLER_REGISTRY } from "./application/ports/batch-task-handler.port";
+import { TypeOrmAiBatchRepository } from "./infrastructure/repositories/typeorm-ai-batch.repository";
+import { DefaultBatchTaskHandlerRegistry } from "./infrastructure/ai-providers/batch-task-handler.registry";
+import { ContentOutlineBatchTaskHandler } from "./infrastructure/ai-providers/content-outline-batch-task-handler";
+import { ContentArticleBatchTaskHandler } from "./infrastructure/ai-providers/content-article-batch-task-handler";
+import { SubmitAiBatchUseCase } from "./application/use-cases/submit-ai-batch.usecase";
+import { CheckAiBatchUseCase } from "./application/use-cases/check-ai-batch.usecase";
+import { AiBatchController } from "./presentation/ai-batch.controller";
+import { AiBatchEntity } from "./infrastructure/entities/ai-batch.entity";
+import { AiBatchItemEntity } from "./infrastructure/entities/ai-batch-item.entity";
 
 @Module({
   imports: [
@@ -75,9 +88,11 @@ import { QualityWarningFeedbackEntity } from "./infrastructure/entities/quality-
       AiProviderSettingEntity,
       ContentGenerationCheckpointEntity,
       QualityWarningFeedbackEntity,
+      AiBatchEntity,
+      AiBatchItemEntity,
     ]),
   ],
-  controllers: [ContentController],
+  controllers: [ContentController, AiBatchController],
   providers: [
     CreateContentJobUseCase,
     CreateManualDraftUseCase,
@@ -107,6 +122,14 @@ import { QualityWarningFeedbackEntity } from "./infrastructure/entities/quality-
     DefaultAiProviderRegistry,
     MockProductCatalog,
     CmsHttpProductCatalog,
+    ContentJobContextBuilder,
+    ContentDraftPersister,
+    SubmitAiBatchUseCase,
+    CheckAiBatchUseCase,
+    ContentOutlineBatchTaskHandler,
+    ContentArticleBatchTaskHandler,
+    { provide: AI_BATCH_REPOSITORY, useClass: TypeOrmAiBatchRepository },
+    { provide: BATCH_TASK_HANDLER_REGISTRY, useClass: DefaultBatchTaskHandlerRegistry },
     { provide: CONTENT_JOB_REPOSITORY, useClass: TypeOrmContentJobRepository },
     {
       provide: CONTENT_DRAFT_REPOSITORY,
@@ -180,6 +203,10 @@ import { QualityWarningFeedbackEntity } from "./infrastructure/entities/quality-
     CONTENT_DRAFT_REPOSITORY,
     AI_PROVIDER_REGISTRY,
     AI_USAGE_RECORDER,
+    // Batch AI (docs/specs/ai-batch-mode.md) — DestinationModule tu dang ky
+    // handler cua no (GSG extraction, cluster POI discovery) vao day qua
+    // onModuleInit(), tranh vong lap module (AiContentModule KHONG import nguoc DestinationModule).
+    BATCH_TASK_HANDLER_REGISTRY,
     // Pivot gop editor vao trang detail: GenerateDestinationBlockUseCase (module
     // destination) tai dung PromptBuilder.buildSection() cho goi y AI tung block.
     PromptBuilder,

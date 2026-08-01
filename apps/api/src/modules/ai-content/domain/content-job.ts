@@ -2,6 +2,7 @@ import type {
   AiProviderKey,
   ArticleCategory,
   ArticleType,
+  ContentJobGenerationMode,
   ContentJobStatus,
   ContentSourceType,
 } from "@zinoflow/contracts";
@@ -38,6 +39,12 @@ export interface ContentJobProps {
   /** Website tham khao — CHI y nghia voi articleType cam-nang (article-ai-extraction-plan.md GĐ1). */
   referenceUrls: string[] | null;
   status: ContentJobStatus;
+  /**
+   * sync (mac dinh, pg-boss tu chay ngay) | batch (nguoi dung tu gui qua
+   * Batch AI, khong tu enqueue — CreateContentJobUseCase). Bat bien sau khi
+   * tao, khong co setter — doi che do phai tao job moi.
+   */
+  generationMode: ContentJobGenerationMode;
   aiProvider: AiProviderKey;
   aiModel: string;
   createdAt: Date;

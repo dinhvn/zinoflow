@@ -17,6 +17,7 @@ const num = (n: number) => n.toLocaleString("vi-VN");
 const STATUS_META: Record<ContentJobStatus, { label: string; tone: BadgeTone }> = {
   Created: { label: "Mới tạo", tone: "gray" },
   GeneratingOutline: { label: "Đang sinh", tone: "blue" },
+  OutlineReady: { label: "Chờ gửi batch nội dung", tone: "blue" },
   DraftReady: { label: "Có nháp", tone: "indigo" },
   InReview: { label: "Chờ duyệt", tone: "amber" },
   Approved: { label: "Đã duyệt", tone: "emerald" },

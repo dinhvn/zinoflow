@@ -55,6 +55,34 @@ export interface StructuredGenerationRequest {
   useGoogleSearch?: boolean;
 }
 
+/** 1 item gui vao Batch API — key dung de khop ket qua tra ve (Gemini InlinedRequest.metadata). */
+export interface BatchRequestItem {
+  key: string;
+  request: StructuredGenerationRequest;
+  schema: ZodType;
+}
+
+/**
+ * Ket qua 1 item sau khi batch xong. rawOutput la JSON da parse, CHUA qua
+ * schema.parse — validate theo schema cu the tung item nam o application
+ * layer (BatchTaskHandler.applyResult), vi checkBatch khong biet schema cua
+ * tung item (submit tu 1 lan goi truoc, co the khac tien trinh).
+ */
+export interface BatchItemOutcome {
+  key: string;
+  rawOutput?: unknown;
+  usage?: AiCallUsage;
+  errorMessage?: string;
+}
+
+export type ProviderBatchState = "pending" | "succeeded" | "failed";
+
+export interface BatchCheckResult {
+  state: ProviderBatchState;
+  /** Chi co khi state === "succeeded". */
+  items?: BatchItemOutcome[];
+}
+
 export interface ContentAiProvider {
   readonly key: AiProviderKey | "stub";
   /** Provider co du config de goi that khong (API key trong env). */
@@ -63,6 +91,10 @@ export interface ContentAiProvider {
     request: StructuredGenerationRequest,
     schema: TSchema,
   ): Promise<{ output: z.infer<TSchema>; usage: AiCallUsage }>;
+  /** Provider co ho tro Gemini Batch API khong — false thi khong implement 2 method duoi. */
+  readonly supportsBatch: boolean;
+  submitBatch?(items: BatchRequestItem[]): Promise<{ providerBatchName: string }>;
+  checkBatch?(providerBatchName: string): Promise<BatchCheckResult>;
 }
 
 /** Registry resolve provider theo aiProvider tren job. */

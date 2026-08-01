@@ -11,7 +11,7 @@ import {
   type TagSuggestion,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend } from "@/shared/api-client";
-import { Badge, Button, Checkbox, ErrorBox, FeatureIntro, Modal, PageHeader, Select } from "@/shared/ui";
+import { Badge, Button, Checkbox, Combobox, ErrorBox, FeatureIntro, Modal, PageHeader } from "@/shared/ui";
 import { AiInvocationBar } from "@/features/dichoithoi/ai-invocation-bar";
 
 const QUERY_KEY = ["tag-kanban-board"];
@@ -268,14 +268,17 @@ function KanbanBoard({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Select value={clusterSlug} onChange={(e) => onClusterChange(e.target.value)}>
-          <option value="">Chọn cụm/tỉnh...</option>
-          {data.clusters.map((c) => (
-            <option key={c.slug} value={c.slug}>
-              {c.name} ({c.kind === "province" ? "Tỉnh" : "Cụm"})
-            </option>
-          ))}
-        </Select>
+        <Combobox
+          value={clusterSlug}
+          onChange={onClusterChange}
+          emptyLabel="Chọn cụm/tỉnh..."
+          placeholder="Chọn cụm/tỉnh..."
+          className="w-56"
+          options={data.clusters.map((c) => ({
+            value: c.slug,
+            label: `${c.name} (${c.kind === "province" ? "Tỉnh" : "Cụm"})`,
+          }))}
+        />
         {clusterSlug && (
           <span className="text-sm text-zinc-500">
             {classifiedCount}/{destinationsInCluster.length} điểm trong cụm đã có tag

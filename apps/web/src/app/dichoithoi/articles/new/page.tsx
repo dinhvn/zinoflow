@@ -30,6 +30,7 @@ export default function NewArticlePage() {
   const [referenceUrlsText, setReferenceUrlsText] = useState("");
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
+  const [generationMode, setGenerationMode] = useState<"sync" | "batch">("sync");
   const [error, setError] = useState<string | null>(null);
 
   const providersQuery = useQuery({
@@ -87,6 +88,7 @@ export default function NewArticlePage() {
           referenceUrls: referenceUrls.length > 0 ? referenceUrls : undefined,
           aiProvider: selectedProvider.key,
           aiModel: selectedModel.id,
+          generationMode,
         }),
       );
     },
@@ -199,6 +201,21 @@ export default function NewArticlePage() {
           </p>
         </div>
       </details>
+
+      <label className="block text-sm">
+        <span className="mb-1 block text-zinc-500">Chế độ sinh bài</span>
+        <Select
+          value={generationMode}
+          onChange={(e) => setGenerationMode(e.target.value as "sync" | "batch")}
+          className="w-full"
+        >
+          <option value="sync">Tự động — chạy ngay, có kết quả sau vài phút</option>
+          <option value="batch">
+            Batch AI — rẻ hơn ~50%, phải tự bấm &quot;Gửi batch&quot; ở trang /ai-batches, không có
+            kết quả ngay (chỉ Gemini hỗ trợ)
+          </option>
+        </Select>
+      </label>
 
       <div className="grid grid-cols-2 gap-4">
         <label className="block text-sm">

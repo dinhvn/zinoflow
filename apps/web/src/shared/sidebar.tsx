@@ -22,6 +22,7 @@ type NavItem = {
 const MAIN_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: IconDashboard, exact: true },
   { href: "/content", label: "AI Content", icon: IconSparkles },
+  { href: "/ai-batches", label: "Batch AI", icon: IconLayers },
   { href: "/prompts", label: "Prompt mẫu", icon: IconDoc },
   { href: "/image-studio", label: "Tạo ảnh sản phẩm", icon: IconImage },
   { href: "/usage", label: "Chi phí AI", icon: IconChart },
@@ -199,6 +200,15 @@ function IconSparkles(props: SVGProps<SVGSVGElement>) {
     <IconBase {...props}>
       <path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
       <path d="M18 15l.7 1.8L20.5 17.5 18.7 18.2 18 20l-.7-1.8L15.5 17.5l1.8-.7z" />
+    </IconBase>
+  );
+}
+
+function IconLayers(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 3l9 5-9 5-9-5 9-5z" />
+      <path d="M3 13l9 5 9-5" />
     </IconBase>
   );
 }

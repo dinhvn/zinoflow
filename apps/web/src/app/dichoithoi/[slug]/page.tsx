@@ -1741,6 +1741,7 @@ export default function DestinationDetailPage({
                 slug={slug}
                 requestBody={{
                   mode: d?.contentState === "chua-co-bai" ? "create" : "update",
+                  generationMode: "sync",
                   userNotes: aiInputsBody().userNotes,
                   referenceUrls: aiInputsBody().referenceUrls.length
                     ? aiInputsBody().referenceUrls

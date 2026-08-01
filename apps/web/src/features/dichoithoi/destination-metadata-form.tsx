@@ -10,6 +10,7 @@ import {
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
+import { Combobox } from "@/shared/ui/combobox";
 import { FeatureIntro } from "@/shared/ui/feature-intro";
 import { Select } from "@/shared/ui/select";
 
@@ -256,18 +257,17 @@ export function DestinationMetadataForm({
           </Select>
         </Field>
         <Field label="Tỉnh/Thành">
-          <Select
+          <Combobox
             value={v.provinceCode}
-            onChange={(e) => set("provinceCode", e.target.value)}
+            onChange={(value) => set("provinceCode", value)}
+            emptyLabel="— Chọn tỉnh —"
+            placeholder="— Chọn tỉnh —"
             className="w-full"
-          >
-            <option value="">— Chọn tỉnh —</option>
-            {taxonomyQuery.data?.provinces.map((p) => (
-              <option key={p.provinceCode} value={p.provinceCode}>
-                {p.shortName}
-              </option>
-            ))}
-          </Select>
+            options={(taxonomyQuery.data?.provinces ?? []).map((p) => ({
+              value: p.provinceCode,
+              label: p.shortName,
+            }))}
+          />
         </Field>
         <Field
           label={

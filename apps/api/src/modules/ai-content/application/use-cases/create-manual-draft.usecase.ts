@@ -49,6 +49,7 @@ export class CreateManualDraftUseCase {
       referenceUrls: null,
       aiProvider: CreateManualDraftUseCase.INERT_PROVIDER,
       aiModel: CreateManualDraftUseCase.INERT_MODEL,
+      generationMode: "sync",
     });
 
     const profile = getArticleTypeProfile(request.articleType);

@@ -42,6 +42,7 @@ describe("ContentJob state machine (spec §5)", () => {
     const ALL: ContentJobStatus[] = [
       "Created",
       "GeneratingOutline",
+      "OutlineReady",
       "DraftReady",
       "InReview",
       "Approved",
@@ -51,7 +52,8 @@ describe("ContentJob state machine (spec §5)", () => {
     // Bang ky vong doc lap voi implementation — sua state machine thi PHAI sua bang nay co y thuc
     const EXPECTED_ALLOWED: Record<ContentJobStatus, ContentJobStatus[]> = {
       Created: ["GeneratingOutline", "DraftReady", "Failed"],
-      GeneratingOutline: ["DraftReady", "Failed"],
+      GeneratingOutline: ["DraftReady", "Failed", "OutlineReady"],
+      OutlineReady: ["DraftReady", "Failed"],
       DraftReady: ["InReview", "GeneratingOutline"],
       InReview: ["Approved", "Rejected", "DraftReady"], // DraftReady = RequestChange
       Approved: ["InReview"],

@@ -33,6 +33,7 @@ import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { Button, buttonClasses } from "@/shared/ui/button";
 import { Card, ActionRow } from "@/shared/ui/card";
 import { Checkbox } from "@/shared/ui/checkbox";
+import { Combobox } from "@/shared/ui/combobox";
 import { DataTable, type DataTableColumn, type SortDirection } from "@/shared/ui/data-table";
 import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
@@ -594,18 +595,14 @@ function DichoithoiPageContent() {
               : "Tính khoảng cách đường bộ"}
           </Button>
           <span className="flex items-center gap-1.5">
-            <Select
+            <Combobox
               value={selectedGroupSlug}
-              onChange={(e) => setSelectedGroupSlug(e.target.value)}
-              className="text-xs"
-            >
-              <option value="">— Chọn cụm/tỉnh —</option>
-              {groupOptions.map((g) => (
-                <option key={g.slug} value={g.slug}>
-                  {g.name}
-                </option>
-              ))}
-            </Select>
+              onChange={setSelectedGroupSlug}
+              emptyLabel="— Chọn cụm/tỉnh —"
+              placeholder="— Chọn cụm/tỉnh —"
+              className="w-48 text-xs"
+              options={groupOptions.map((g) => ({ value: g.slug, label: g.name }))}
+            />
             <Button
               size="sm"
               disabled={!selectedGroupSlug}
@@ -759,34 +756,31 @@ function DichoithoiPageContent() {
           placeholder="Tìm theo tên (gõ không dấu được)..."
           className="w-64"
         />
-        <Select
+        <Combobox
           value={provinceCode}
-          onChange={(e) => {
-            setProvinceCode(e.target.value);
+          onChange={(v) => {
+            setProvinceCode(v);
             resetToFirstPage();
           }}
-        >
-          <option value="">Tất cả tỉnh/thành</option>
-          {taxonomyQuery.data?.provinces.map((p) => (
-            <option key={p.provinceCode} value={p.provinceCode}>
-              {p.shortName}
-            </option>
-          ))}
-        </Select>
-        <Select
+          emptyLabel="Tất cả tỉnh/thành"
+          placeholder="Tất cả tỉnh/thành"
+          className="w-48"
+          options={(taxonomyQuery.data?.provinces ?? []).map((p) => ({
+            value: p.provinceCode,
+            label: p.shortName,
+          }))}
+        />
+        <Combobox
           value={parentSlug}
-          onChange={(e) => {
-            setParentSlug(e.target.value);
+          onChange={(v) => {
+            setParentSlug(v);
             resetToFirstPage();
           }}
-        >
-          <option value="">Tất cả cụm/tỉnh cha</option>
-          {groupOptions.map((g) => (
-            <option key={g.slug} value={g.slug}>
-              {g.name}
-            </option>
-          ))}
-        </Select>
+          emptyLabel="Tất cả cụm/tỉnh cha"
+          placeholder="Tất cả cụm/tỉnh cha"
+          className="w-56"
+          options={groupOptions.map((g) => ({ value: g.slug, label: g.name }))}
+        />
         <Select
           value={kind}
           onChange={(e) => {

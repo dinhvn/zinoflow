@@ -25,6 +25,8 @@ import { computeAnthropicCostUsd } from "./anthropic-pricing";
 @Injectable()
 export class AnthropicContentAiProvider implements ContentAiProvider {
   readonly key = "anthropic" as const;
+  /** Batch API chi Gemini ho tro trong kien truc hien tai. */
+  readonly supportsBatch = false;
   private readonly logger = new Logger(AnthropicContentAiProvider.name);
   private client: Anthropic | null = null;
 

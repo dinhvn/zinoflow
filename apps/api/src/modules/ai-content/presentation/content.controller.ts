@@ -466,6 +466,7 @@ export class ContentController {
       articleType: s.articleType,
       keywordSeed: [...s.keywordSeed],
       status: s.status,
+      generationMode: s.generationMode,
       aiProvider: s.aiProvider,
       aiModel: s.aiModel,
       sourceContext: s.sourceContext,

@@ -13,6 +13,12 @@ import { articleCategorySchema } from "../dichoithoi/article";
 export const contentJobStatusSchema = z.enum([
   "Created",
   "GeneratingOutline",
+  /**
+   * Outline da sinh xong, cho content — CHI luong Batch API dung (nut bam
+   * thu cong "Gui batch content" bat dau tu trang thai nay). Luong sync
+   * (pg-boss worker) chay lien outline->content, khong bao gio dung lai o day.
+   */
+  "OutlineReady",
   "DraftReady",
   "InReview",
   "Approved",
@@ -20,6 +26,15 @@ export const contentJobStatusSchema = z.enum([
   "Failed",
 ]);
 export type ContentJobStatus = z.infer<typeof contentJobStatusSchema>;
+
+/**
+ * sync = pg-boss worker tu chay ngay luc tao job (mac dinh, hanh vi hien tai).
+ * batch = KHONG tu enqueue — nguoi dung tu chon job + bam "Gui batch outline"/
+ * "Gui batch content" (trang /content) de goi Gemini Batch API, re hon ~50%
+ * nhung khong co ket qua ngay, phai bam "Kiem tra" thu cong.
+ */
+export const contentJobGenerationModeSchema = z.enum(["sync", "batch"]);
+export type ContentJobGenerationMode = z.infer<typeof contentJobGenerationModeSchema>;
 
 /**
  * Manual = tao draft KHONG qua AI (viet tay tu dau) — mo rong 07/2026, xem
@@ -85,6 +100,8 @@ export const createContentJobRequestSchema = z.object({
   /** Optional — default theo SiteProfile neu khong truyen. */
   aiProvider: aiProviderKeySchema.optional(),
   aiModel: z.string().optional(),
+  /** sync (mac dinh, tu chay ngay) | batch (nguoi dung tu gui qua Batch API). */
+  generationMode: contentJobGenerationModeSchema.default("sync"),
 });
 export type CreateContentJobRequest = z.infer<typeof createContentJobRequestSchema>;
 
@@ -131,6 +148,7 @@ export const contentJobSchema = z.object({
   articleType: articleTypeSchema,
   keywordSeed: z.array(z.string()),
   status: contentJobStatusSchema,
+  generationMode: contentJobGenerationModeSchema,
   aiProvider: aiProviderKeySchema,
   aiModel: z.string(),
   /** Ngu canh nguon cho prompt — bai cam-nang doc/sua o ArticleExtractionPanel truoc khi generate. */

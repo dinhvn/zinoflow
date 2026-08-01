@@ -14,7 +14,10 @@ import { DomainRuleError } from "../../shared/errors/app-error";
  */
 const ALLOWED_TRANSITIONS: Record<ContentJobStatus, readonly ContentJobStatus[]> = {
   Created: ["GeneratingOutline", "DraftReady", "Failed"],
-  GeneratingOutline: ["DraftReady", "Failed"],
+  GeneratingOutline: ["DraftReady", "Failed", "OutlineReady"],
+  // OutlineReady: CHI luong Batch API dung (outline xong, cho gui batch content
+  // — nut bam thu cong). Luong sync khong bao gio dung o day.
+  OutlineReady: ["DraftReady", "Failed"],
   DraftReady: ["InReview", "GeneratingOutline"], // cho phep generate lai truoc khi review
   InReview: ["Approved", "Rejected", "DraftReady"], // DraftReady = RequestChange (yeu cau sua)
   Approved: ["InReview"],

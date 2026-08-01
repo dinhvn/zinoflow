@@ -22,6 +22,7 @@ function fakeJob(overrides: Partial<ContentJobProps>): ContentJob {
     referenceUrls: null,
     category: null,
     status: "Created",
+    generationMode: "sync",
     aiProvider: "gemini",
     aiModel: "gemini-2.5-flash",
     createdAt: new Date(),
