@@ -109,6 +109,7 @@ import { PreviewTaxonomyTypeSuggestPromptUseCase } from "./application/use-cases
 import { PreviewTagSuggestPromptUseCase } from "./application/use-cases/preview-tag-suggest-prompt.usecase";
 import { UpdateDestinationTypesUseCase } from "./application/use-cases/update-destination-types.usecase";
 import { SuggestTaxonomyTypesUseCase } from "./application/use-cases/suggest-taxonomy-types.usecase";
+import { BulkApplyTaxonomySuggestionsUseCase } from "./application/use-cases/bulk-apply-taxonomy-suggestions.usecase";
 import { GetRelationsMapDataUseCase } from "./application/use-cases/get-relations-map-data.usecase";
 import { GetRelatedSpotlightUseCase } from "./application/use-cases/get-related-spotlight.usecase";
 import { ManageCuratedRelationUseCase } from "./application/use-cases/manage-curated-relation.usecase";
@@ -246,6 +247,7 @@ import {
     PreviewTagSuggestPromptUseCase,
     UpdateDestinationTypesUseCase,
     SuggestTaxonomyTypesUseCase,
+    BulkApplyTaxonomySuggestionsUseCase,
     GetRelationsMapDataUseCase,
     GetRelatedSpotlightUseCase,
     ManageCuratedRelationUseCase,

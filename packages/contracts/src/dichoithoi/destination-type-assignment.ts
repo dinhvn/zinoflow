@@ -84,3 +84,24 @@ export const suggestTaxonomyTypesResponseSchema = z.object({
   suggestions: z.array(taxonomyTypeSuggestionSchema),
 });
 export type SuggestTaxonomyTypesResponse = z.infer<typeof suggestTaxonomyTypesResponseSchema>;
+
+/**
+ * Ap dung HANG LOAT goi y AI dang "pending" cho danh sach diem da CHON san
+ * (nguoi dung xem truoc bang so sanh cu/moi + ly do roi tick, khong am tham
+ * ghi het ca cum — phan hoi 24/07/2026: khong tin AI 100%, phai xem truoc).
+ * Ghi de TOAN BO Type cua tung diem bang suggestedTypeSlugs, giong PATCH don le.
+ */
+export const bulkApplyTaxonomySuggestionsRequestSchema = z.object({
+  destinationSlugs: z.array(z.string()).min(1).max(500),
+});
+export type BulkApplyTaxonomySuggestionsRequest = z.infer<
+  typeof bulkApplyTaxonomySuggestionsRequestSchema
+>;
+
+export const bulkApplyTaxonomySuggestionsResponseSchema = z.object({
+  applied: z.number().int(),
+  errors: z.array(z.object({ destinationSlug: z.string(), message: z.string() })),
+});
+export type BulkApplyTaxonomySuggestionsResponse = z.infer<
+  typeof bulkApplyTaxonomySuggestionsResponseSchema
+>;

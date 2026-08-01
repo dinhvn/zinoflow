@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  bulkApplyTaxonomySuggestionsResponseSchema,
   getTaxonomyKanbanBoardResponseSchema,
   previewPromptResponseSchema,
   suggestTaxonomyTypesResponseSchema,
@@ -56,7 +57,10 @@ export default function PhanLoaiPage() {
             trong cụm dựa trên tên + nội dung thật (không bịa) — kết quả chỉ lưu vào bảng nháp chờ
             duyệt, KHÔNG tự ghi. Thẻ có gợi ý AI hiện chip &quot;AI&quot; — bấm thẻ mở popup đã tick
             sẵn theo gợi ý (nếu điểm đó chưa có loại hình nào) kèm lý do, tự quyết định tick/bỏ
-            tick rồi lưu.
+            tick rồi lưu. Muốn nhanh hơn khi cả cụm có nhiều gợi ý: bấm{" "}
+            <strong>&quot;Xem trước &amp; áp dụng&quot;</strong> để mở bảng so sánh cũ/mới + lý do
+            cho TẤT CẢ điểm đang chờ duyệt trong cụm, bỏ tick điểm nào không đồng ý rồi áp dụng
+            hàng loạt 1 lần — vẫn phải xem qua trước, không tự động ghi khi chưa xác nhận.
           </>
         }
       />
@@ -81,6 +85,7 @@ function KanbanBoard({
   onClusterChange: (slug: string) => void;
 }) {
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const queryClient = useQueryClient();
   const [aiProvider, setAiProvider] = useState("");
   const [aiModel, setAiModel] = useState("");
@@ -99,6 +104,14 @@ function KanbanBoard({
   );
 
   const classifiedCount = destinationsInCluster.filter((d) => d.typeSlugs.length > 0).length;
+
+  const pendingSuggestions = useMemo(
+    () =>
+      destinationsInCluster.filter(
+        (d) => d.suggestionStatus === "pending" && (d.suggestedTypeSlugs?.length ?? 0) > 0,
+      ),
+    [destinationsInCluster],
+  );
 
   const columns = useMemo(() => {
     const bySlug = new Map(data.types.map((t) => [t.slug, t]));
@@ -155,6 +168,11 @@ function KanbanBoard({
           <Button size="sm" variant="secondary" onClick={() => suggest.mutate()} loading={suggest.isPending}>
             Gợi ý AI cho cụm này
           </Button>
+          {pendingSuggestions.length > 0 && (
+            <Button size="sm" onClick={() => setReviewOpen(true)}>
+              Xem trước & áp dụng ({pendingSuggestions.length})
+            </Button>
+          )}
         </div>
       )}
 
@@ -200,7 +218,113 @@ function KanbanBoard({
           onClose={() => setEditingSlug(null)}
         />
       )}
+
+      {reviewOpen && (
+        <BulkReviewModal
+          suggestions={pendingSuggestions}
+          types={data.types}
+          onClose={() => setReviewOpen(false)}
+        />
+      )}
     </div>
+  );
+}
+
+function BulkReviewModal({
+  suggestions,
+  types,
+  onClose,
+}: {
+  suggestions: TaxonomyBoardDestination[];
+  types: GetTaxonomyKanbanBoardResponse["types"];
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [checked, setChecked] = useState<Set<string>>(new Set(suggestions.map((d) => d.slug)));
+
+  const apply = useMutation({
+    mutationFn: async (destinationSlugs: string[]) =>
+      bulkApplyTaxonomySuggestionsResponseSchema.parse(
+        await apiSend("POST", "/destination-types/bulk-apply-suggestions", { destinationSlugs }),
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+
+  function toggle(slug: string) {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  }
+
+  function nameOf(slug: string): string {
+    return types.find((t) => t.slug === slug)?.name ?? slug;
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`Xem trước gợi ý AI (${suggestions.length} điểm)`}>
+      <div className="space-y-4">
+        <p className="text-xs text-zinc-500">
+          Xem lại từng dòng trước khi áp dụng — bỏ tick điểm nào bạn không đồng ý với gợi ý AI.
+          Áp dụng sẽ ghi đè toàn bộ loại hình của các điểm được tick bằng đúng gợi ý AI.
+        </p>
+
+        <div className="max-h-[55vh] space-y-2 overflow-y-auto">
+          {suggestions.map((d) => (
+            <div
+              key={d.slug}
+              className="rounded border border-zinc-200 p-2.5 text-xs dark:border-zinc-800"
+            >
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  label={d.name}
+                  checked={checked.has(d.slug)}
+                  onChange={() => toggle(d.slug)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 space-y-1">
+                  <div className="grid grid-cols-[auto_1fr] items-start gap-x-2 gap-y-0.5">
+                    <span className="text-zinc-500 dark:text-zinc-400">Hiện tại:</span>
+                    <span>
+                      {d.typeSlugs.length === 0 ? "(chưa có loại hình)" : d.typeSlugs.map(nameOf).join(", ")}
+                    </span>
+                    <span className="text-zinc-500 dark:text-zinc-400">AI gợi ý:</span>
+                    <span className="font-medium">
+                      {(d.suggestedTypeSlugs ?? []).map(nameOf).join(", ")}
+                    </span>
+                  </div>
+                  <p className="italic text-zinc-500 dark:text-zinc-400">Lý do: {d.suggestionReason}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {apply.isError && <ErrorBox error={apply.error} fallback="Lỗi áp dụng hàng loạt" />}
+        {apply.isSuccess && (
+          <p className="text-sm text-zinc-500">
+            Đã áp dụng {apply.data.applied} điểm.
+            {apply.data.errors.length > 0 && ` ${apply.data.errors.length} điểm lỗi.`}
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button size="sm" variant="secondary" onClick={onClose}>
+            Đóng
+          </Button>
+          <Button
+            size="sm"
+            disabled={checked.size === 0}
+            loading={apply.isPending}
+            onClick={() => apply.mutate([...checked])}
+          >
+            Áp dụng đã chọn ({checked.size})
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
