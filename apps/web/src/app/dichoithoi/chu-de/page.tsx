@@ -5,17 +5,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   generateTagDescriptionResponseSchema,
   listDestinationTagAssignmentsResponseSchema,
-  previewPromptResponseSchema,
   previewTagDescriptionResponseSchema,
   reverseCheckTagAssignmentsResponseSchema,
-  suggestTagAssignmentsResponseSchema,
   type ListDestinationTagAssignmentsResponse,
   type TagReverseCheckFinding,
-  type TagSuggestion,
 } from "@zinoflow/contracts";
 import { apiSend, apiGet, ApiError } from "@/shared/api-client";
-import { Badge, Button, buttonClasses, Checkbox, ErrorBox, FeatureIntro, Input, Modal, Textarea } from "@/shared/ui";
-import { AiInvocationBar } from "@/features/dichoithoi/ai-invocation-bar";
+import { Badge, Button, buttonClasses, ErrorBox, FeatureIntro, Input, Modal, Textarea } from "@/shared/ui";
 
 const QUERY_KEY = ["destination-tag-assignments"];
 
@@ -97,11 +93,10 @@ function ChuDeSections({ data }: { data: ListDestinationTagAssignmentsResponse }
   return (
     <div className="space-y-8">
       <TagListSection data={data} />
-      <SuggestSection assignedSlugs={new Set(data.assignments.filter((a) => a.tagSlugs.length > 0).map((a) => a.destinationSlug))} />
       <ReverseCheckSection />
       <p className="text-sm text-zinc-500">
-        Rà/sửa tag theo từng cụm/tỉnh (kể cả điểm đã có tag) + gợi ý AI hàng loạt có xem trước đã
-        chuyển sang trang riêng{" "}
+        Gán tag hàng loạt bằng AI (cả điểm chưa có tag lẫn rà/sửa theo từng cụm/tỉnh) đã chuyển sang
+        trang riêng{" "}
         <a href="/dichoithoi/phan-loai-chu-de" className="text-primary hover:underline">
           Rà soát chủ đề
         </a>
@@ -403,139 +398,7 @@ function CreateTagForm() {
   );
 }
 
-/* --- 2. AI goi y gan tag hang loat + duyet --- */
-
-function SuggestSection({ assignedSlugs }: { assignedSlugs: Set<string> }) {
-  const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<Map<string, Set<string>>>(new Map());
-  const [aiProvider, setAiProvider] = useState("");
-  const [aiModel, setAiModel] = useState("");
-
-  const suggest = useMutation({
-    mutationFn: async () =>
-      suggestTagAssignmentsResponseSchema.parse(
-        await apiSend("POST", "/destination-tags/suggest", { aiProvider, aiModel }),
-      ),
-    onSuccess: (r) => {
-      setSelected(new Map(r.suggestions.map((s) => [s.destinationSlug, new Set(s.tagSlugs)])));
-    },
-  });
-
-  const apply = useMutation({
-    mutationFn: () =>
-      apiSend("POST", "/destination-tags/apply", {
-        assignments: [...selected.entries()].map(([destinationSlug, tagSlugs]) => ({
-          destinationSlug,
-          tagSlugs: [...tagSlugs],
-        })),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      setSelected(new Map());
-      suggest.reset();
-    },
-  });
-
-  function toggleTag(destinationSlug: string, tagSlug: string) {
-    setSelected((prev) => {
-      const next = new Map(prev);
-      const tags = new Set(next.get(destinationSlug) ?? []);
-      if (tags.has(tagSlug)) tags.delete(tagSlug);
-      else tags.add(tagSlug);
-      next.set(destinationSlug, tags);
-      return next;
-    });
-  }
-
-  const suggestions = suggest.data?.suggestions ?? [];
-
-  return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-            Gán tag hàng loạt (AI gợi ý)
-          </h3>
-          <p className="text-xs text-zinc-500">
-            AI chỉ gợi ý cho điểm đến chưa có tag nào ({assignedSlugs.size} điểm đã gán, sẽ bỏ qua).
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <AiInvocationBar
-            onSelectionChange={(p, m) => {
-              setAiProvider(p);
-              setAiModel(m);
-            }}
-            fetchPreview={async () =>
-              previewPromptResponseSchema.parse(
-                await apiSend("POST", "/destination-tags/suggest/preview", {}),
-              ).sections
-            }
-          />
-          <Button size="sm" onClick={() => suggest.mutate()} loading={suggest.isPending}>
-            Gợi ý AI
-          </Button>
-        </div>
-      </div>
-
-      {suggest.isError && <ErrorBox error={suggest.error} fallback="Lỗi gợi ý tag" />}
-
-      {suggestions.length === 0 && suggest.isSuccess && (
-        <p className="text-sm text-zinc-500">Không có điểm đến nào cần gợi ý (đã gán tag hết).</p>
-      )}
-
-      {suggestions.length > 0 && (
-        <div className="space-y-2">
-          <div className="divide-y divide-zinc-200 rounded border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
-            {suggestions.map((s) => (
-              <SuggestionRow
-                key={s.destinationSlug}
-                suggestion={s}
-                selectedTags={selected.get(s.destinationSlug) ?? new Set()}
-                onToggle={(tagSlug) => toggleTag(s.destinationSlug, tagSlug)}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => apply.mutate()} loading={apply.isPending}>
-              Áp dụng lựa chọn ({suggestions.length} điểm)
-            </Button>
-            {apply.isError && <ErrorBox error={apply.error} fallback="Lỗi ghi tag" />}
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function SuggestionRow({
-  suggestion,
-  selectedTags,
-  onToggle,
-}: {
-  suggestion: TagSuggestion;
-  selectedTags: Set<string>;
-  onToggle: (tagSlug: string) => void;
-}) {
-  return (
-    <div className="space-y-1.5 p-3">
-      <div className="text-sm font-medium">{suggestion.destinationSlug}</div>
-      <p className="text-xs text-zinc-500">{suggestion.reasoning}</p>
-      <div className="flex flex-wrap gap-3">
-        {suggestion.tagSlugs.map((tag) => (
-          <Checkbox
-            key={tag}
-            label={tag}
-            checked={selectedTags.has(tag)}
-            onChange={() => onToggle(tag)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* --- 3. Ra soat nguoc --- */
+/* --- 2. Ra soat nguoc --- */
 
 function ReverseCheckSection() {
   const check = useMutation({

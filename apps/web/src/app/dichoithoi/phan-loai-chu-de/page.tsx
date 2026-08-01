@@ -27,9 +27,10 @@ const UNCLASSIFIED_COLUMN = "__unclassified__";
  * từng điểm, hoặc dùng "Xem trước & áp dụng" để duyệt hàng loạt qua bảng so
  * sánh cũ/mới — không tự động ghi khi chưa xác nhận.
  *
- * Tách riêng khỏi /dichoithoi/chu-de (trang đó quản lý danh sách chủ đề, mô tả
- * 300-500 từ cho trang public, gán hàng loạt cho điểm CHƯA có tag nào, và rà
- * soát ngược) — trang này là nơi rà/sửa tag THEO TỪNG CỤM, kể cả điểm đã có tag.
+ * Gồm 2 phần: (1) gán hàng loạt cho điểm CHƯA có tag nào — không phân biệt
+ * cụm, AI tự quét toàn site; (2) Kanban rà/sửa THEO TỪNG CỤM, kể cả điểm đã
+ * có tag. Tách riêng khỏi /dichoithoi/chu-de (trang đó chỉ còn quản lý danh
+ * sách chủ đề + mô tả 300-500 từ cho trang public + rà soát ngược).
  */
 export default function PhanLoaiChuDePage() {
   const [clusterSlug, setClusterSlug] = useState("");
@@ -42,27 +43,29 @@ export default function PhanLoaiChuDePage() {
     <div className="space-y-4">
       <PageHeader
         title="Rà soát chủ đề"
-        description="Xem lại và sửa chủ đề (tag) đã gán cho từng điểm đến, theo từng cụm/tỉnh một — quản lý danh sách chủ đề và mô tả trang public ở /dichoithoi/chu-de."
+        description="Gán chủ đề (tag) cho điểm đến bằng AI, duyệt trước khi ghi — quản lý danh sách chủ đề và mô tả trang public ở /dichoithoi/chu-de."
       />
 
       <FeatureIntro
         summary={
           <>
-            Chọn 1 cụm/tỉnh, bấm vào 1 thẻ điểm đến để tick/bỏ tick chủ đề — lưu ngay khi tick,
-            không cần nút lưu riêng. Cột <strong>&quot;Chưa gán&quot;</strong> (viền cam) luôn hiện
-            đầu tiên — đây là danh sách ưu tiên xử lý trước.
+            Phía trên: gán tag hàng loạt cho điểm <strong>chưa có tag nào</strong> (toàn site). Phía
+            dưới: chọn 1 cụm/tỉnh để rà/sửa tag theo Kanban, kể cả điểm <strong>đã có tag</strong>.
           </>
         }
         details={
           <>
-            Bấm <strong>&quot;Gợi ý AI cho cụm này&quot;</strong> để AI đề xuất tag cho toàn bộ điểm
+            Cả 2 phần đều theo nguyên tắc: AI chỉ gợi ý, KHÔNG tự ghi — luôn xem bảng so sánh cũ/mới
+            + lý do rồi mới tick/bỏ tick, áp dụng. Ở phần Kanban: bấm vào thẻ điểm đến để tick/bỏ
+            tick chủ đề — lưu ngay khi tick, không cần nút lưu riêng. Cột{" "}
+            <strong>&quot;Chưa gán&quot;</strong> (viền cam) luôn hiện đầu tiên. Bấm{" "}
+            <strong>&quot;Gợi ý AI cho cụm này&quot;</strong> để AI đề xuất tag cho toàn bộ điểm
             trong cụm dựa trên tên + nội dung thật (không bịa) — gợi ý chỉ tồn tại tạm trên máy
             (KHÔNG lưu DB, khác trang &quot;Rà soát loại hình&quot;), mất khi rời trang hoặc đổi
-            cụm khác. Bấm vào thẻ để mở popup đã tick sẵn theo gợi ý (nếu điểm đó chưa có tag nào)
-            kèm lý do, tự quyết định tick/bỏ tick rồi lưu. Muốn nhanh hơn khi cả cụm có nhiều gợi ý:
-            bấm <strong>&quot;Xem trước &amp; áp dụng&quot;</strong> để mở bảng so sánh cũ/mới + lý
-            do cho TẤT CẢ điểm đang có gợi ý, bỏ tick điểm nào không đồng ý rồi áp dụng hàng loạt 1
-            lần — vẫn phải xem qua trước, không tự động ghi khi chưa xác nhận.
+            cụm khác. Muốn nhanh hơn khi cả cụm có nhiều gợi ý: bấm{" "}
+            <strong>&quot;Xem trước &amp; áp dụng&quot;</strong> để mở bảng so sánh cũ/mới + lý do
+            cho TẤT CẢ điểm đang có gợi ý, bỏ tick điểm nào không đồng ý rồi áp dụng hàng loạt 1
+            lần.
           </>
         }
       />
@@ -71,9 +74,128 @@ export default function PhanLoaiChuDePage() {
       {query.isError && <ErrorBox error={query.error} fallback="Lỗi tải dữ liệu chủ đề" />}
 
       {query.data && (
-        <KanbanBoard data={query.data} clusterSlug={clusterSlug} onClusterChange={setClusterSlug} />
+        <>
+          <GlobalSuggestSection data={query.data} />
+          <KanbanBoard data={query.data} clusterSlug={clusterSlug} onClusterChange={setClusterSlug} />
+        </>
       )}
     </div>
+  );
+}
+
+/** Gán tag hàng loạt cho điểm CHƯA có tag nào — không phân biệt cụm/tỉnh
+ * (chuyển từ /dichoithoi/chu-de, phản hồi người dùng: gộp về 1 trang). */
+function GlobalSuggestSection({ data }: { data: GetTagKanbanBoardResponse }) {
+  const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<Map<string, Set<string>>>(new Map());
+  const [aiProvider, setAiProvider] = useState("");
+  const [aiModel, setAiModel] = useState("");
+
+  const assignedCount = data.destinations.filter((d) => d.tagSlugs.length > 0).length;
+  const nameOf = (slug: string) => data.destinations.find((d) => d.slug === slug)?.name ?? slug;
+
+  const suggest = useMutation({
+    mutationFn: async () =>
+      suggestTagAssignmentsResponseSchema.parse(
+        await apiSend("POST", "/destination-tags/suggest", { aiProvider, aiModel }),
+      ),
+    onSuccess: (r) => {
+      setSelected(new Map(r.suggestions.map((s) => [s.destinationSlug, new Set(s.tagSlugs)])));
+    },
+  });
+
+  const apply = useMutation({
+    mutationFn: () =>
+      apiSend("POST", "/destination-tags/apply", {
+        assignments: [...selected.entries()].map(([destinationSlug, tagSlugs]) => ({
+          destinationSlug,
+          tagSlugs: [...tagSlugs],
+        })),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      setSelected(new Map());
+      suggest.reset();
+    },
+  });
+
+  function toggleTag(destinationSlug: string, tagSlug: string) {
+    setSelected((prev) => {
+      const next = new Map(prev);
+      const tags = new Set(next.get(destinationSlug) ?? []);
+      if (tags.has(tagSlug)) tags.delete(tagSlug);
+      else tags.add(tagSlug);
+      next.set(destinationSlug, tags);
+      return next;
+    });
+  }
+
+  const suggestions = suggest.data?.suggestions ?? [];
+
+  return (
+    <section className="space-y-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+            Gán tag hàng loạt cho điểm chưa có tag (toàn site)
+          </h3>
+          <p className="text-xs text-zinc-500">
+            AI chỉ gợi ý cho điểm đến chưa có tag nào ({assignedCount} điểm đã gán, sẽ bỏ qua).
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <AiInvocationBar
+            onSelectionChange={(p, m) => {
+              setAiProvider(p);
+              setAiModel(m);
+            }}
+            fetchPreview={async () =>
+              previewPromptResponseSchema.parse(
+                await apiSend("POST", "/destination-tags/suggest/preview", {}),
+              ).sections
+            }
+          />
+          <Button size="sm" onClick={() => suggest.mutate()} loading={suggest.isPending}>
+            Gợi ý AI
+          </Button>
+        </div>
+      </div>
+
+      {suggest.isError && <ErrorBox error={suggest.error} fallback="Lỗi gợi ý tag" />}
+
+      {suggestions.length === 0 && suggest.isSuccess && (
+        <p className="text-sm text-zinc-500">Không có điểm đến nào cần gợi ý (đã gán tag hết).</p>
+      )}
+
+      {suggestions.length > 0 && (
+        <div className="space-y-2">
+          <div className="divide-y divide-zinc-200 rounded border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+            {suggestions.map((s) => (
+              <div key={s.destinationSlug} className="space-y-1.5 p-3">
+                <div className="text-sm font-medium">{nameOf(s.destinationSlug)}</div>
+                <p className="text-xs text-zinc-500">{s.reasoning}</p>
+                <div className="flex flex-wrap gap-3">
+                  {s.tagSlugs.map((tagSlug) => (
+                    <Checkbox
+                      key={tagSlug}
+                      label={data.tags.find((t) => t.slug === tagSlug)?.name ?? tagSlug}
+                      checked={(selected.get(s.destinationSlug) ?? new Set()).has(tagSlug)}
+                      onChange={() => toggleTag(s.destinationSlug, tagSlug)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => apply.mutate()} loading={apply.isPending}>
+              Áp dụng lựa chọn ({suggestions.length} điểm)
+            </Button>
+            {apply.isError && <ErrorBox error={apply.error} fallback="Lỗi ghi tag" />}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
