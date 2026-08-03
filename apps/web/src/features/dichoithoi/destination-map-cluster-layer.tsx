@@ -106,7 +106,8 @@ export function DestinationMapClusterLayer({
           permanent: true,
           direction: "top",
           offset: [0, -4],
-          className: "!rounded !border-none !bg-white/90 !px-1.5 !py-0.5 !text-xs !shadow",
+          className:
+            "!rounded !border !border-zinc-300 !bg-white !px-1.5 !py-0.5 !text-xs !font-medium !text-zinc-900 !opacity-100 !shadow-md",
         });
       }
       if (onMarkerClick) marker.on("click", () => onMarkerClick(item));

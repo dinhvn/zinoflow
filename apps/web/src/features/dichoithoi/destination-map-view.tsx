@@ -54,12 +54,21 @@ export function DestinationMapView({
   items,
   allItems,
   focusSlug,
+  autoFitBounds = false,
+  disableClustering,
   onMarkerClick,
   relationsLayer,
 }: {
   items: DestinationMapItem[];
   allItems: DestinationMapItem[];
   focusSlug: string | null;
+  /** Tu dong zoom/pan vua khop `items` du khong chon focusSlug cu the — dung cho
+   * modal "Xem tren ban do" o /dichoithoi (chi fit bounds, KHONG bat buoc tat
+   * clustering nhu focusSlug). */
+  autoFitBounds?: boolean;
+  /** Ghi de mac dinh (focusSlug !== null) — vd modal /dichoithoi muon hien tung
+   * diem + nhan ten thuong truc ma khong can chon 1 cum/tinh cu the. */
+  disableClustering?: boolean;
   onMarkerClick?: (item: DestinationMapItem) => void;
   relationsLayer: {
     on: boolean;
@@ -86,11 +95,11 @@ export function DestinationMapView({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <MapFitBounds items={items} active={focusSlug !== null} />
+      <MapFitBounds items={items} active={focusSlug !== null || autoFitBounds} />
       <DestinationMapClusterLayer
         items={items}
         onMarkerClick={onMarkerClick}
-        disableClustering={focusSlug !== null}
+        disableClustering={disableClustering ?? focusSlug !== null}
       />
       {relationsLayer.on && (
         <DestinationMapRelationsLayer

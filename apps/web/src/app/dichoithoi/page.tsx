@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   destinationTaxonomySchema,
@@ -37,6 +38,7 @@ import { Combobox } from "@/shared/ui/combobox";
 import { DataTable, type DataTableColumn, type SortDirection } from "@/shared/ui/data-table";
 import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
+import { Modal } from "@/shared/ui/modal";
 import { Pagination } from "@/shared/ui/pagination";
 import { Select } from "@/shared/ui/select";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -44,6 +46,20 @@ import { FeatureIntro } from "@/shared/ui";
 import { ImportDestinationsModal } from "@/features/dichoithoi/import-destinations-modal";
 import { ExportDestinationsModal } from "@/features/dichoithoi/export-destinations-modal";
 import { ImportDestinationFieldsModal } from "@/features/dichoithoi/import-destination-fields-modal";
+
+// Leaflet dung truc tiep `window` — phai tat SSR, giong /dichoithoi/ban-do.
+const DestinationMapView = dynamic(
+  () => import("@/features/dichoithoi/destination-map-view").then((m) => m.DestinationMapView),
+  { ssr: false, loading: () => <MapModalPlaceholder /> },
+);
+
+function MapModalPlaceholder() {
+  return (
+    <div className="flex h-[70vh] w-full items-center justify-center rounded-lg border border-zinc-200 text-sm text-zinc-500 dark:border-zinc-800">
+      Đang tải bản đồ...
+    </div>
+  );
+}
 
 /** Khoi "Viec can lam" tren hub (destination-spec §7.2, Phase 23) — chi hien
  * khi co it nhat 1 canh bao (nguyen tac "khong hien muc chi de biet"). */
@@ -128,6 +144,7 @@ export default function DichoithoiPage() {
 /** Hub khu Dichoithoi — danh sách điểm đến từ mirror (spec §7.2). */
 function DichoithoiPageContent() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [provinceCode, setProvinceCode] = useState("");
@@ -145,12 +162,32 @@ function DichoithoiPageContent() {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importFieldsOpen, setImportFieldsOpen] = useState(false);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
 
   const taxonomyQuery = useQuery({
     queryKey: ["dichoithoi-taxonomy"],
     queryFn: () => apiGet("/destinations/taxonomy", destinationTaxonomySchema),
     staleTime: 5 * 60 * 1000,
   });
+
+  // Params chung cho /destinations — tai su dung cho bang chinh (co phan trang)
+  // va cho modal ban do (khong phan trang, lay het de ve marker dung bo loc).
+  function buildDestinationFilterParams(pageArg: number, limitArg: number): URLSearchParams {
+    const params = new URLSearchParams({
+      page: String(pageArg),
+      limit: String(limitArg),
+      sortBy,
+      sortDir,
+    });
+    if (search) params.set("q", search);
+    if (provinceCode) params.set("provinceCode", provinceCode);
+    if (parentSlug) params.set("parentSlug", parentSlug);
+    if (kind) params.set("kind", kind);
+    if (contentState) params.set("contentState", contentState);
+    if (production) params.set("production", production);
+    if (missingCoords) params.set("missingCoords", "true");
+    return params;
+  }
 
   const listQuery = useQuery({
     queryKey: [
@@ -167,22 +204,49 @@ function DichoithoiPageContent() {
       page,
       pageSize,
     ],
-    queryFn: () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(pageSize),
-        sortBy,
-        sortDir,
-      });
-      if (search) params.set("q", search);
-      if (provinceCode) params.set("provinceCode", provinceCode);
-      if (parentSlug) params.set("parentSlug", parentSlug);
-      if (kind) params.set("kind", kind);
-      if (contentState) params.set("contentState", contentState);
-      if (production) params.set("production", production);
-      if (missingCoords) params.set("missingCoords", "true");
-      return apiGet(`/destinations?${params}`, listDestinationsResponseSchema);
+    queryFn: () =>
+      apiGet(
+        `/destinations?${buildDestinationFilterParams(page, pageSize)}`,
+        listDestinationsResponseSchema,
+      ),
+  });
+
+  // Lay TOAN BO diem khop bo loc hien tai (khong phan trang) de ve len ban do
+  // trong modal "Xem tren ban do" — chi fetch khi modal dang mo. API gioi han
+  // limit toi da 200/request (listDestinationsQuerySchema) nen phai goi nhieu
+  // trang lien tiep roi gop lai, dung MAX_PAGE_LIMIT lam kich thuoc moi trang.
+  const MAX_PAGE_LIMIT = 200;
+  const mapModalQuery = useQuery({
+    queryKey: [
+      "dichoithoi-destinations-map-modal",
+      search,
+      provinceCode,
+      parentSlug,
+      kind,
+      contentState,
+      production,
+      missingCoords,
+    ],
+    queryFn: async () => {
+      const first = await apiGet(
+        `/destinations?${buildDestinationFilterParams(1, MAX_PAGE_LIMIT)}`,
+        listDestinationsResponseSchema,
+      );
+      const items = [...first.items];
+      let pageNum = 2;
+      while (items.length < first.total) {
+        const next = await apiGet(
+          `/destinations?${buildDestinationFilterParams(pageNum, MAX_PAGE_LIMIT)}`,
+          listDestinationsResponseSchema,
+        );
+        if (next.items.length === 0) break;
+        items.push(...next.items);
+        pageNum += 1;
+      }
+      return { ...first, items };
     },
+    enabled: mapModalOpen,
+    staleTime: 30_000,
   });
 
   const syncMutation = useMutation({
@@ -429,6 +493,23 @@ function DichoithoiPageContent() {
           {PRODUCTION_LABELS[d.productionState]}
         </Badge>
       ),
+    },
+    {
+      key: "googleMapsUrl",
+      header: "Bản đồ",
+      render: (d) =>
+        d.googleMapsUrl ? (
+          <a
+            href={d.googleMapsUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Badge tone="emerald">Đã có ↗</Badge>
+          </a>
+        ) : (
+          <Badge tone="gray">Chưa có</Badge>
+        ),
     },
     {
       key: "syncFlags",
@@ -835,6 +916,16 @@ function DichoithoiPageContent() {
 
       {listQuery.isError && <ErrorBox error={listQuery.error} fallback="Lỗi tải danh sách" />}
 
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setMapModalOpen(true)}
+          className={buttonClasses({ variant: "secondary" })}
+        >
+          Xem trên bản đồ
+        </button>
+      </div>
+
       <DataTable
         columns={columns}
         items={data?.items ?? []}
@@ -863,6 +954,50 @@ function DichoithoiPageContent() {
           }}
         />
       )}
+
+      <Modal
+        open={mapModalOpen}
+        onClose={() => setMapModalOpen(false)}
+        title={`Điểm đến trên bản đồ (${mapModalQuery.data?.items.length ?? "..."}/${data?.total ?? "..."} khớp bộ lọc)`}
+        width="max-w-6xl"
+      >
+        <p className="mb-3 text-xs text-zinc-500">
+          Đúng danh sách đang lọc ở bảng bên dưới (không phân trang). Chấm nhỏ = điểm lẻ (POI),
+          chấm to = tỉnh/cụm; cam = Flagship, xanh = Standard; mờ = chưa publish. Bấm vào 1 điểm để
+          mở trang chi tiết. Xem đầy đủ bộ lọc + lớp quan hệ tại{" "}
+          <a href="/dichoithoi/ban-do" className="text-blue-600 hover:underline dark:text-blue-400">
+            /dichoithoi/ban-do
+          </a>
+          .
+        </p>
+        {mapModalQuery.isLoading && <MapModalPlaceholder />}
+        {mapModalQuery.isError && (
+          <p className="text-sm text-red-600">
+            Không tải được dữ liệu bản đồ: {String(mapModalQuery.error)}
+          </p>
+        )}
+        {mapModalOpen && !mapModalQuery.isLoading && !mapModalQuery.isError && (
+          <DestinationMapView
+            items={mapModalQuery.data?.items ?? []}
+            allItems={mapModalQuery.data?.items ?? []}
+            focusSlug={null}
+            autoFitBounds
+            disableClustering
+            onMarkerClick={(item) => router.push(`/dichoithoi/${item.slug}`)}
+            relationsLayer={{
+              on: false,
+              clusterDistances: [],
+              curatedRelations: [],
+              distanceLevelKm: null,
+              spotlightSlug: null,
+              spotlightItems: [],
+              poiDistances: [],
+              onRemoveCurated: () => {},
+              onExcludeSpotlight: () => {},
+            }}
+          />
+        )}
+      </Modal>
 
       <ImportDestinationsModal
         open={importOpen}
