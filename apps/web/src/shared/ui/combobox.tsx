@@ -81,7 +81,7 @@ export function Combobox({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full rounded border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="absolute z-[1200] mt-1 w-full rounded border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           <div className="p-1.5">
             <input
               autoFocus
