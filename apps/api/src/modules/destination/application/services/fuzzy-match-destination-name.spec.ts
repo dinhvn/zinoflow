@@ -20,4 +20,23 @@ describe("isLikelySameDestinationName", () => {
   it("does not match empty strings", () => {
     expect(isLikelySameDestinationName("", "Hòn Rơm")).toBe(false);
   });
+
+  describe("ignoreTokens (cluster-name stripping, bug 04/08/2026)", () => {
+    const clusterTokens = new Set(["bao", "loc"]);
+
+    it("does not match two different POIs that only share the cluster name suffix", () => {
+      expect(
+        isLikelySameDestinationName("Đèo Bảo Lộc", "Tượng Đức Mẹ Đèo Bảo Lộc", clusterTokens),
+      ).toBe(false);
+      expect(isLikelySameDestinationName("Đèo Bảo Lộc", "Đồi Dổi Bảo Lộc", clusterTokens)).toBe(false);
+    });
+
+    it("still matches a real abbreviation unrelated to the cluster name", () => {
+      expect(isLikelySameDestinationName("Thác Damb'ri", "Damb'ri", clusterTokens)).toBe(true);
+    });
+
+    it("still matches when neither name touches the cluster name tokens", () => {
+      expect(isLikelySameDestinationName("Chùa Linh Ứng", "Linh Ứng Tự", clusterTokens)).toBe(true);
+    });
+  });
 });

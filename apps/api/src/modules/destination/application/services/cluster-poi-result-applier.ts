@@ -19,6 +19,7 @@ import {
   buildClusterPoiUserPrompt,
 } from "./build-cluster-poi-prompt";
 import { isLikelySameDestinationName } from "./fuzzy-match-destination-name";
+import { normalizeVietnamese } from "../../../shared/text/vietnamese";
 import type { DestinationMirrorEntity } from "../../infrastructure/entities/destination-mirror.entity";
 import type { ClusterPoiBackupEntity } from "../../infrastructure/entities/cluster-poi-backup.entity";
 
@@ -78,7 +79,7 @@ export function buildClusterPoiRequest(
  * "orphan-match" (diem chua gan cum nao, cung tinh) truoc "backup-match" (co trong
  * bang backup tam, chua khoi phuc) — con lai la "new".
  */
-function classify(
+export function classify(
   loc: z.infer<typeof geminiLocationSchema>,
   cluster: DestinationMirrorEntity,
   all: DestinationMirrorEntity[],
@@ -92,8 +93,15 @@ function classify(
     status: "pending" as const,
   };
 
+  // Loai tu thuoc ten cum khoi so sanh — xem ghi chu ignoreTokens o
+  // isLikelySameDestinationName (bug tung khop nham 2 POI khac nhau chi vi
+  // cung chua ten cum, vd "Tượng Đức Mẹ Đèo Bảo Lộc" vs "Đèo Bảo Lộc").
+  const clusterNameTokens = new Set(normalizeVietnamese(cluster.name).split(" ").filter(Boolean));
+
   const existingChild = all.find(
-    (d) => d.parentSlug === cluster.slug && isLikelySameDestinationName(d.name, loc.name),
+    (d) =>
+      d.parentSlug === cluster.slug &&
+      isLikelySameDestinationName(d.name, loc.name, clusterNameTokens),
   );
   if (existingChild) {
     return {
@@ -111,7 +119,7 @@ function classify(
       d.kind === "poi" &&
       d.parentSlug === null &&
       d.provinceCode === cluster.provinceCode &&
-      isLikelySameDestinationName(d.name, loc.name),
+      isLikelySameDestinationName(d.name, loc.name, clusterNameTokens),
   );
   if (orphan) {
     return {
@@ -124,7 +132,9 @@ function classify(
     };
   }
 
-  const backup = backupCandidates.find((b) => isLikelySameDestinationName(b.name, loc.name));
+  const backup = backupCandidates.find((b) =>
+    isLikelySameDestinationName(b.name, loc.name, clusterNameTokens),
+  );
   if (backup) {
     return {
       ...base,
@@ -157,8 +167,9 @@ export class ClusterPoiResultApplier {
   ) {}
 
   /**
-   * Ap ket qua AI vao bang staging + ghi usage. promptText chi co o luong
-   * sync — luong batch bo qua (request da bi huy sau khi submit).
+   * Ap ket qua AI vao bang staging + ghi usage. promptText: sync tu goi
+   * buildPromptLogText() ngay tai cho, batch tu AiBatchItemEntity.requestText
+   * chup luc submit (xem ClusterPoiDiscoveryBatchTaskHandler).
    */
   async apply(
     clusterSlug: string,
@@ -169,9 +180,19 @@ export class ClusterPoiResultApplier {
     promptText?: string | null,
     /** Model thuc te da dung (batch co the ghi de CLUSTER_POI_MODEL) — ghi dung vao usage log. */
     modelUsed: string = CLUSTER_POI_MODEL,
+    /** != null <=> lan goi nay den tu Batch AI — xem giai thich o GsgExtractionResultApplier.apply. */
+    batchItemId?: string | null,
   ): Promise<ClusterPoiCandidateItem[]> {
     const output = clusterPoiGeminiResponseSchema.parse(rawOutput);
-    const backupCandidates = await this.backupRepo.findUnrestoredByProvince(cluster.provinceCode);
+    // Loai backup row CUA CHINH cum nay: hau het POI trong cum co ten chua ten
+    // cum ("... Bao Loc") nen rule includes() cua isLikelySameDestinationName
+    // se khop nham voi backup cua cum (vd "Tuong Duc Me Deo Bao Loc" chua
+    // "Bao Loc") -> matchType="backup-match" tro ve chinh cum, accept se
+    // am tham khong lam gi vi backup do da duoc khoi phuc roi (bug phat hien
+    // 04/08/2026, cum bao-loc: "Tượng Đức Mẹ Đèo Bảo Lộc"/"Đồi Dổi Bảo Lộc").
+    const backupCandidates = (
+      await this.backupRepo.findUnrestoredByProvince(cluster.provinceCode)
+    ).filter((b) => b.slug !== cluster.slug);
     const candidates = output.locations.map((loc) => classify(loc, cluster, all, backupCandidates));
 
     const extractedAt = new Date();
@@ -179,6 +200,8 @@ export class ClusterPoiResultApplier {
 
     await this.usage.record({
       jobId: null,
+      batchItemId: batchItemId ?? null,
+      via: batchItemId != null ? "batch" : "sync",
       provider: CLUSTER_POI_PROVIDER_KEY,
       model: modelUsed,
       operation: "find-cluster-poi-candidates",
