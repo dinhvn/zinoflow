@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
 import {
@@ -100,6 +100,19 @@ const CONTENT_STATE_LABELS: Record<string, string> = {
   "da-duyet": "Đã duyệt · chờ publish",
   "da-publish": "Đã publish (AI)",
 };
+
+/**
+ * Dropdown chon chu ky tu dong lam moi toan bang (yeu cau nguoi dung 08/2026)
+ * — moi lan het chu ky, kiem tra TAT CA batch dang "submitted" 1 luot; khong
+ * co batch nao thoa thi khong goi API lan do.
+ */
+const AUTO_REFRESH_INTERVAL_OPTIONS = [
+  { value: 15_000, label: "15 giây" },
+  { value: 30_000, label: "30 giây" },
+  { value: 60_000, label: "1 phút" },
+  { value: 120_000, label: "2 phút" },
+  { value: 300_000, label: "5 phút" },
+];
 
 /** Bo dau + lowercase — search khong dau (giong Combobox), dung trong dialog chon bài. */
 function fold(s: string): string {
@@ -299,6 +312,37 @@ export default function AiBatchesPage() {
       await queryClient.invalidateQueries({ queryKey: ["content-jobs-for-batch"] });
     },
   });
+
+  // 1 tick chung o goc bang "Batch gần đây" — mac dinh KHONG bat (yeu cau
+  // nguoi dung 08/2026). Bat len thi cu het moi chu ky se kiem tra TOAN BO
+  // batch dang "submitted" 1 luot (khong co batch nao thoa thi khong goi gi).
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [autoRefreshIntervalMs, setAutoRefreshIntervalMs] = useState(AUTO_REFRESH_INTERVAL_OPTIONS[0]!.value);
+  // Tranh chong lap khi 1 luot kiem tra chua xong ma da toi chu ky ke tiep.
+  const autoRefreshTickRunning = useRef(false);
+
+  useEffect(() => {
+    if (!autoRefreshEnabled) return;
+    const timer = setInterval(() => {
+      void (async () => {
+        if (autoRefreshTickRunning.current) return;
+        const batches = queryClient.getQueryData<AiBatch[]>(["ai-batches"]) ?? [];
+        const pending = batches.filter((b) => b.status === "submitted");
+        if (pending.length === 0) return;
+        autoRefreshTickRunning.current = true;
+        try {
+          await Promise.all(
+            pending.map((b) => apiSend("POST", `/ai-batches/${b.id}/check`, {}).catch(() => null)),
+          );
+          await queryClient.invalidateQueries({ queryKey: ["ai-batches"] });
+          await queryClient.invalidateQueries({ queryKey: ["content-jobs-for-batch"] });
+        } finally {
+          autoRefreshTickRunning.current = false;
+        }
+      })();
+    }, autoRefreshIntervalMs);
+    return () => clearInterval(timer);
+  }, [autoRefreshEnabled, autoRefreshIntervalMs, queryClient]);
 
   function togglePickerChecked(entityId: string) {
     setPickerChecked((prev) => {
@@ -612,9 +656,34 @@ export default function AiBatchesPage() {
 
       {/* Danh sach batch */}
       <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
-        <h3 className="border-b border-zinc-200 p-4 font-medium dark:border-zinc-800">
-          Batch gần đây
-        </h3>
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 p-4 dark:border-zinc-800">
+          <div>
+            <h3 className="font-medium">Batch gần đây</h3>
+            <p className="mt-1 text-xs text-zinc-500">
+              Bật <strong>&quot;Tự động làm mới&quot;</strong> để cứ hết mỗi chu kỳ hệ thống tự kiểm
+              tra TẤT CẢ batch đang chờ (không có batch nào chờ thì không gọi gì). Mặc định KHÔNG bật.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              label="Tự động làm mới"
+              checked={autoRefreshEnabled}
+              onChange={() => setAutoRefreshEnabled((v) => !v)}
+            />
+            <Select
+              value={autoRefreshIntervalMs}
+              onChange={(e) => setAutoRefreshIntervalMs(Number(e.target.value))}
+              disabled={!autoRefreshEnabled}
+              className="w-32"
+            >
+              {AUTO_REFRESH_INTERVAL_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
         <DataTable
           columns={[
             { key: "taskType", header: "Loại tác vụ", render: (b: AiBatch) => TASK_TYPE_LABELS[b.taskType] ?? b.taskType },
