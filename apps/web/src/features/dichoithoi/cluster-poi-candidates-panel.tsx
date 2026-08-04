@@ -99,13 +99,21 @@ export function ClusterPoiCandidatesPanel({
     onError: (e) => setError(e),
   });
 
+  // Tick 1 dong "backup-match" -> mac dinh BAT LUON "Dùng tên/mô tả/ưu tiên
+  // của AI" (yeu cau nguoi dung 08/2026 — ban backup thuong la ten cu/thieu
+  // mo ta tu dot Atlas, ban AI moi thuong tot hon) — nguoi dung van tu bo
+  // tick lai duoc neu muon giu nguyen ban backup.
   function toggle(i: number) {
+    const willCheck = !checked.has(i);
     setChecked((prev) => {
       const next = new Set(prev);
       if (next.has(i)) next.delete(i);
       else next.add(i);
       return next;
     });
+    if (willCheck && candidates[i]?.matchType === "backup-match") {
+      setPreferAi((prev) => new Set(prev).add(i));
+    }
   }
 
   // Chi tinh tren cac dong THUC SU tick duoc (khac "existing-in-cluster" —
@@ -125,6 +133,15 @@ export function ClusterPoiCandidatesPanel({
       }
       return new Set([...prev, ...actionableIndexes]);
     });
+    if (!allChecked) {
+      setPreferAi((prev) => {
+        const next = new Set(prev);
+        for (const i of actionableIndexes) {
+          if (candidates[i]?.matchType === "backup-match") next.add(i);
+        }
+        return next;
+      });
+    }
   }
 
   function togglePreferAi(i: number) {

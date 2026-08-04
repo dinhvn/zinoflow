@@ -93,15 +93,25 @@ export function classify(
     status: "pending" as const,
   };
 
-  // Loai tu thuoc ten cum khoi so sanh — xem ghi chu ignoreTokens o
+  // Loai tu thuoc ten cum VA ten tinh khoi so sanh — xem ghi chu ignoreTokens o
   // isLikelySameDestinationName (bug tung khop nham 2 POI khac nhau chi vi
-  // cung chua ten cum, vd "Tượng Đức Mẹ Đèo Bảo Lộc" vs "Đèo Bảo Lộc").
-  const clusterNameTokens = new Set(normalizeVietnamese(cluster.name).split(" ").filter(Boolean));
+  // cung chua ten cum, vd "Tượng Đức Mẹ Đèo Bảo Lộc" vs "Đèo Bảo Lộc"). Ten
+  // tinh can loai tuong tu: bug thuc te 04/08/2026 (cum dat-mui) — 1 backup
+  // duoc khoi phuc giu nguyen ten backup qua ngan la "Cà Mau" (trung ten
+  // tinh), khien MOI ung vien khac co ten chua "Cà Mau" (gan nhu tat ca vi
+  // cum nam trong tinh Cà Mau) bi khop nham vao dung 1 diem do.
+  const provinceName = all.find(
+    (d) => d.kind === "province" && d.provinceCode === cluster.provinceCode,
+  )?.name;
+  const ignoreTokens = new Set([
+    ...normalizeVietnamese(cluster.name).split(" ").filter(Boolean),
+    ...(provinceName ? normalizeVietnamese(provinceName).split(" ").filter(Boolean) : []),
+  ]);
 
   const existingChild = all.find(
     (d) =>
       d.parentSlug === cluster.slug &&
-      isLikelySameDestinationName(d.name, loc.name, clusterNameTokens),
+      isLikelySameDestinationName(d.name, loc.name, ignoreTokens),
   );
   if (existingChild) {
     return {
@@ -119,7 +129,7 @@ export function classify(
       d.kind === "poi" &&
       d.parentSlug === null &&
       d.provinceCode === cluster.provinceCode &&
-      isLikelySameDestinationName(d.name, loc.name, clusterNameTokens),
+      isLikelySameDestinationName(d.name, loc.name, ignoreTokens),
   );
   if (orphan) {
     return {
@@ -133,7 +143,7 @@ export function classify(
   }
 
   const backup = backupCandidates.find((b) =>
-    isLikelySameDestinationName(b.name, loc.name, clusterNameTokens),
+    isLikelySameDestinationName(b.name, loc.name, ignoreTokens),
   );
   if (backup) {
     return {

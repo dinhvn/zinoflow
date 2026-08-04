@@ -88,6 +88,45 @@ describe("ClusterPoiResultApplier.apply", () => {
     expect(hill!.matchType).toBe("new");
   });
 
+  it("does not match a candidate to an existing child just because both names contain the province name", async () => {
+    // Bug 04/08/2026 (cum dat-mui, tinh Cà Mau): 1 backup duoc khoi phuc giu
+    // nguyen ten backup qua ngan "Cà Mau" (trung ten tinh) — MOI ung vien
+    // khac trong cum co ten chua "Cà Mau" (gan nhu tat ca, vi cum nam trong
+    // tinh Cà Mau) deu bi khop nham vao dung 1 diem do.
+    const datMuiCluster = {
+      slug: "dat-mui",
+      name: "Đất Mũi",
+      aiNotes: null,
+      provinceCode: "96",
+    } as unknown as DestinationMirrorEntity;
+    const caMauProvince = {
+      slug: "ca-mau",
+      name: "Cà Mau",
+      kind: "province",
+      provinceCode: "96",
+    } as unknown as DestinationMirrorEntity;
+    const caMauStub = {
+      slug: "ca-mau-2",
+      name: "Cà Mau",
+      parentSlug: "dat-mui",
+    } as unknown as DestinationMirrorEntity;
+    const applier = buildApplier([]);
+    const [result] = await applier.apply(
+      "dat-mui",
+      datMuiCluster,
+      [caMauProvince, caMauStub],
+      {
+        locations: [
+          { name: "Vườn quốc gia Mũi Cà Mau", priority_level: 1, short_description: null, address: null },
+        ],
+      },
+      { inputTokens: 0, outputTokens: 0, costUsd: 0, latencyMs: 0 },
+    );
+
+    expect(result!.matchType).toBe("new");
+    expect(result!.matchedSlug).toBeNull();
+  });
+
   it("still matches a candidate to a real, different backup row in the same province", async () => {
     const realBackup: ClusterPoiBackupEntity = {
       ...clusterOwnBackup,
