@@ -304,14 +304,32 @@ export default function AiBatchesPage() {
     },
   });
 
-  const checkBatch = useMutation({
-    mutationFn: async (batchId: string) =>
-      checkAiBatchResponseSchema.parse(await apiSend("POST", `/ai-batches/${batchId}/check`, {})),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["ai-batches"] });
-      await queryClient.invalidateQueries({ queryKey: ["content-jobs-for-batch"] });
-    },
-  });
+  // Set cac batchId dang duoc kiem tra (thu cong HOAC tu dong) — dung chung de
+  // hien loading dung o nut "Kiểm tra" cua tung dong, ke ca khi auto-refresh
+  // kiem tra NHIEU batch cung luc (khong dung 1 useMutation.isPending vi no
+  // chi theo doi 1 lan goi gan nhat, sai khi chay song song).
+  const [checkingBatchIds, setCheckingBatchIds] = useState<Set<string>>(new Set());
+
+  async function runCheck(batchId: string): Promise<void> {
+    setCheckingBatchIds((prev) => new Set(prev).add(batchId));
+    try {
+      checkAiBatchResponseSchema.parse(await apiSend("POST", `/ai-batches/${batchId}/check`, {}));
+    } catch {
+      // Loi tam thoi (mang, Google ban...) — bo qua, khong chan cac batch khac.
+    } finally {
+      setCheckingBatchIds((prev) => {
+        const next = new Set(prev);
+        next.delete(batchId);
+        return next;
+      });
+    }
+  }
+
+  async function runCheckAndInvalidate(batchId: string): Promise<void> {
+    await runCheck(batchId);
+    await queryClient.invalidateQueries({ queryKey: ["ai-batches"] });
+    await queryClient.invalidateQueries({ queryKey: ["content-jobs-for-batch"] });
+  }
 
   // 1 tick chung o goc bang "Batch gần đây" — mac dinh KHONG bat (yeu cau
   // nguoi dung 08/2026). Bat len thi cu het moi chu ky se kiem tra TOAN BO
@@ -320,10 +338,19 @@ export default function AiBatchesPage() {
   const [autoRefreshIntervalMs, setAutoRefreshIntervalMs] = useState(AUTO_REFRESH_INTERVAL_OPTIONS[0]!.value);
   // Tranh chong lap khi 1 luot kiem tra chua xong ma da toi chu ky ke tiep.
   const autoRefreshTickRunning = useRef(false);
+  // Moc thoi gian lan kiem tra ke tiep — dung de hien dem nguoc (yeu cau
+  // nguoi dung 08/2026). nowTick chi de ep re-render moi giay, khong dung gia tri.
+  const [nextCheckAt, setNextCheckAt] = useState<number | null>(null);
+  const [, setNowTick] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!autoRefreshEnabled) return;
+    if (!autoRefreshEnabled) {
+      setNextCheckAt(null);
+      return;
+    }
+    setNextCheckAt(Date.now() + autoRefreshIntervalMs);
     const timer = setInterval(() => {
+      setNextCheckAt(Date.now() + autoRefreshIntervalMs);
       void (async () => {
         if (autoRefreshTickRunning.current) return;
         const batches = queryClient.getQueryData<AiBatch[]>(["ai-batches"]) ?? [];
@@ -331,9 +358,7 @@ export default function AiBatchesPage() {
         if (pending.length === 0) return;
         autoRefreshTickRunning.current = true;
         try {
-          await Promise.all(
-            pending.map((b) => apiSend("POST", `/ai-batches/${b.id}/check`, {}).catch(() => null)),
-          );
+          await Promise.all(pending.map((b) => runCheck(b.id)));
           await queryClient.invalidateQueries({ queryKey: ["ai-batches"] });
           await queryClient.invalidateQueries({ queryKey: ["content-jobs-for-batch"] });
         } finally {
@@ -342,7 +367,19 @@ export default function AiBatchesPage() {
       })();
     }, autoRefreshIntervalMs);
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runCheck vao deps se tao lai timer moi lan re-render, khong can thiet.
   }, [autoRefreshEnabled, autoRefreshIntervalMs, queryClient]);
+
+  useEffect(() => {
+    if (!autoRefreshEnabled) return;
+    const display = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(display);
+  }, [autoRefreshEnabled]);
+
+  const countdownSeconds =
+    autoRefreshEnabled && nextCheckAt !== null
+      ? Math.max(0, Math.ceil((nextCheckAt - Date.now()) / 1000))
+      : null;
 
   function togglePickerChecked(entityId: string) {
     setPickerChecked((prev) => {
@@ -682,6 +719,11 @@ export default function AiBatchesPage() {
                 </option>
               ))}
             </Select>
+            {countdownSeconds !== null && (
+              <span className="text-xs text-zinc-500 tabular-nums">
+                Kiểm tra sau {countdownSeconds}s
+              </span>
+            )}
           </div>
         </div>
         <DataTable
@@ -701,8 +743,8 @@ export default function AiBatchesPage() {
                 b.status === "submitted" ? (
                   <Button
                     size="sm"
-                    loading={checkBatch.isPending}
-                    onClick={() => checkBatch.mutate(b.id)}
+                    loading={checkingBatchIds.has(b.id)}
+                    onClick={() => void runCheckAndInvalidate(b.id)}
                   >
                     Kiểm tra
                   </Button>
