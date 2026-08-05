@@ -23,6 +23,8 @@ export * from "./dichoithoi/article-content";
 export * from "./dichoithoi/article";
 export * from "./dichoithoi/article-ai-extraction";
 export * from "./dichoithoi/content-image";
+export * from "./dichoithoi/geocode";
+export * from "./dichoithoi/destination-audit";
 
 // Khuyenmai — laruki/dochoi3s (M5)
 export * from "./khuyenmai/cms-site";

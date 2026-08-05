@@ -125,6 +125,21 @@ import { TypeOrmPoiDistanceRepository } from "./infrastructure/repositories/type
 import { PoiDistanceEntity } from "./infrastructure/entities/poi-distance.entity";
 import { DISTANCE_MATRIX_PROVIDER } from "./application/ports/distance-matrix-provider.port";
 import { OpenRouteServiceMatrixAdapter } from "./infrastructure/routing/openrouteservice-matrix.adapter";
+import { PLACE_GEOCODING_PROVIDER } from "./application/ports/place-geocoding-provider.port";
+import { GooglePlacesProvider } from "./infrastructure/geocoding/google-places.provider";
+import { PLACES_API_USAGE_REPOSITORY } from "./application/ports/places-api-usage.repository";
+import { TypeOrmPlacesApiUsageRepository } from "./infrastructure/repositories/typeorm-places-api-usage.repository";
+import { PlacesApiUsageLogEntity } from "./infrastructure/entities/places-api-usage-log.entity";
+import { GetGeocodeSuggestionsUseCase } from "./application/use-cases/get-geocode-suggestions.usecase";
+import { RunGeocodeBatchUseCase } from "./application/use-cases/run-geocode-batch.usecase";
+import { ProcessGeocodeBatchUseCase } from "./application/use-cases/process-geocode-batch.usecase";
+import { AcceptGeocodeCandidatesUseCase } from "./application/use-cases/accept-geocode-candidates.usecase";
+import { ListGeocodeCandidatesUseCase } from "./application/use-cases/list-geocode-candidates.usecase";
+import { GeocodeBatchWorker } from "./infrastructure/workers/geocode-batch.worker";
+import { DESTINATION_GEOCODE_CANDIDATE_REPOSITORY } from "./application/ports/destination-geocode-candidate.repository";
+import { TypeOrmDestinationGeocodeCandidateRepository } from "./infrastructure/repositories/typeorm-destination-geocode-candidate.repository";
+import { DestinationGeocodeCandidateEntity } from "./infrastructure/entities/destination-geocode-candidate.entity";
+import { AuditDestinationDuplicatesClusterFitUseCase } from "./application/use-cases/audit-destination-duplicates-cluster-fit.usecase";
 import { RecomputeGroupDistancesUseCase } from "./application/use-cases/recompute-group-distances.usecase";
 import { RecomputeNearbyDistancesUseCase } from "./application/use-cases/recompute-nearby-distances.usecase";
 import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
@@ -167,6 +182,8 @@ import { ClusterPoiDiscoveryBatchTaskHandler } from "./infrastructure/batch-hand
       ClusterDistanceEntity,
       PoiDistanceEntity,
       TaxonomySuggestionEntity,
+      PlacesApiUsageLogEntity,
+      DestinationGeocodeCandidateEntity,
     ]),
   ],
   controllers: [
@@ -256,6 +273,13 @@ import { ClusterPoiDiscoveryBatchTaskHandler } from "./infrastructure/batch-hand
     GetRelatedSpotlightUseCase,
     ManageCuratedRelationUseCase,
     ManageExcludedRelationUseCase,
+    GetGeocodeSuggestionsUseCase,
+    RunGeocodeBatchUseCase,
+    ProcessGeocodeBatchUseCase,
+    AcceptGeocodeCandidatesUseCase,
+    ListGeocodeCandidatesUseCase,
+    GeocodeBatchWorker,
+    AuditDestinationDuplicatesClusterFitUseCase,
     // Batch AI (docs/specs/ai-batch-mode.md) — 2 handler tu dang ky vao
     // BATCH_TASK_HANDLER_REGISTRY (export tu AiContentModule) qua onModuleInit(),
     // AiContentModule KHONG can biet gi ve DestinationModule.
@@ -288,6 +312,12 @@ import { ClusterPoiDiscoveryBatchTaskHandler } from "./infrastructure/batch-hand
     { provide: POI_DISTANCE_REPOSITORY, useClass: TypeOrmPoiDistanceRepository },
     { provide: DISTANCE_MATRIX_PROVIDER, useClass: OpenRouteServiceMatrixAdapter },
     { provide: TAXONOMY_SUGGESTION_REPOSITORY, useClass: TypeOrmTaxonomySuggestionRepository },
+    { provide: PLACE_GEOCODING_PROVIDER, useClass: GooglePlacesProvider },
+    { provide: PLACES_API_USAGE_REPOSITORY, useClass: TypeOrmPlacesApiUsageRepository },
+    {
+      provide: DESTINATION_GEOCODE_CANDIDATE_REPOSITORY,
+      useClass: TypeOrmDestinationGeocodeCandidateRepository,
+    },
   ],
   exports: [DICHOITHOI_SITE_DB, DESTINATION_MIRROR_REPOSITORY],
 })

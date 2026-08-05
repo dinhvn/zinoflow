@@ -22,4 +22,5 @@ export const QUEUE_NAMES = {
   tourImageIngest: "tour.image-ingest",
   destinationRelink: "destination.relink",
   affiliateReapply: "affiliate.reapply",
+  destinationGeocodeBatch: "destination.geocode-batch",
 } as const;

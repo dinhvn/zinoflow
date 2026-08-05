@@ -124,6 +124,13 @@ lại tracking trạng thái.
     tách biệt, gate so sánh giá trị + AI Haiku phân loại `ContentHtml`, badge
     ẩn sau 6 tháng, tránh "date spam") — đọc trước khi đụng
     `PublishDestinationUseCase`/badge cập nhật trên trang detail.
+    12l2. `dichoithoi-destination-geocode-audit-plan.md` — plan CHƯA build
+    (05/08/2026): tự động geocode ~3757 điểm con thiếu `googleMapsUrl` qua
+    Google Places API (New) Text Search (location bias theo toạ độ cụm cha,
+    đã có 99.6%) + bảng duyệt hàng loạt (kèm ảnh/SĐT/giờ mở cửa) → sau đó
+    audit trùng lặp/sai cụm bằng toạ độ thật. Đọc trước khi đụng
+    `cluster-poi-discovery`/thêm geocoding provider mới/sửa
+    `fuzzy-match-destination-name.ts`.
     12l. `dichoithoi-google-seo-guidelines.md` — tổng hợp ĐẦY ĐỦ chính sách SEO
     chính thức Google (16 chính sách spam, structured data, sitemap
     `lastmod`, Core Web Vitals, duplicate content, cảnh báo date-spam

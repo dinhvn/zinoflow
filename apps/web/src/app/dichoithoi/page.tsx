@@ -16,6 +16,8 @@ import {
   relinkAllReportSchema,
   syncDestinationsResultSchema,
   getDestinationsMapResponseSchema,
+  runGeocodeBatchResponseSchema,
+  type RunGeocodeBatchResponse,
   type MigrateDestinationImagesReport,
   type DestinationContentState,
   type DestinationKind,
@@ -46,6 +48,7 @@ import { FeatureIntro } from "@/shared/ui";
 import { ImportDestinationsModal } from "@/features/dichoithoi/import-destinations-modal";
 import { ExportDestinationsModal } from "@/features/dichoithoi/export-destinations-modal";
 import { ImportDestinationFieldsModal } from "@/features/dichoithoi/import-destination-fields-modal";
+import { GeocodeCandidatesPanel } from "@/features/dichoithoi/geocode-candidates-panel";
 
 // Leaflet dung truc tiep `window` — phai tat SSR, giong /dichoithoi/ban-do.
 const DestinationMapView = dynamic(
@@ -163,6 +166,8 @@ function DichoithoiPageContent() {
   const [exportOpen, setExportOpen] = useState(false);
   const [importFieldsOpen, setImportFieldsOpen] = useState(false);
   const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [geocodePanelOpen, setGeocodePanelOpen] = useState(false);
+  const [geocodeRunResult, setGeocodeRunResult] = useState<RunGeocodeBatchResponse | null>(null);
 
   const taxonomyQuery = useQuery({
     queryKey: ["dichoithoi-taxonomy"],
@@ -209,6 +214,26 @@ function DichoithoiPageContent() {
         `/destinations?${buildDestinationFilterParams(page, pageSize)}`,
         listDestinationsResponseSchema,
       ),
+  });
+
+  // Giai doan 1b (che do hang loat) — dichoithoi-destination-geocode-audit-plan.md.
+  // Chay theo DUNG bo loc dang ap dung tren bang (tai su dung filter co san,
+  // khong xay man chon pham vi rieng) — enqueue qua pg-boss, ket qua vao
+  // bang staging, mo GeocodeCandidatesPanel de duyet.
+  const runGeocodeBatch = useMutation({
+    mutationFn: async () =>
+      runGeocodeBatchResponseSchema.parse(
+        await apiSend("POST", "/destinations/geocode-batch", {
+          parentSlug: parentSlug || null,
+          kind: kind || undefined,
+          provinceCode: provinceCode || undefined,
+          missingCoords: missingCoords || undefined,
+        }),
+      ),
+    onSuccess: (res) => {
+      setGeocodeRunResult(res);
+      setGeocodePanelOpen(true);
+    },
   });
 
   // Lay TOAN BO diem khop bo loc hien tai (khong phan trang) de ve len ban do
@@ -915,8 +940,19 @@ function DichoithoiPageContent() {
       </div>
 
       {listQuery.isError && <ErrorBox error={listQuery.error} fallback="Lỗi tải danh sách" />}
+      {runGeocodeBatch.isError && (
+        <ErrorBox error={runGeocodeBatch.error} fallback="Không chạy được — kiểm tra lại bộ lọc/quota" />
+      )}
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {missingCoords && data && data.total > 0 && (
+          <Button size="sm" loading={runGeocodeBatch.isPending} onClick={() => runGeocodeBatch.mutate()}>
+            🔍 Tìm toạ độ hàng loạt cho {data.total} điểm đang lọc
+          </Button>
+        )}
+        <button type="button" onClick={() => setGeocodePanelOpen(true)} className={buttonClasses({ variant: "secondary" })}>
+          📋 Kết quả tìm toạ độ chờ duyệt
+        </button>
         <button
           type="button"
           onClick={() => setMapModalOpen(true)}
@@ -925,6 +961,13 @@ function DichoithoiPageContent() {
           Xem trên bản đồ
         </button>
       </div>
+      {geocodeRunResult && (
+        <p className="text-right text-xs text-zinc-500">
+          Đã gửi job tìm toạ độ cho {geocodeRunResult.targetCount} điểm (đã dùng{" "}
+          {geocodeRunResult.usageThisMonth}/1000 lượt Google Places miễn phí tháng này) — chạy nền, quay
+          lại "Kết quả tìm toạ độ chờ duyệt" sau ít phút.
+        </p>
+      )}
 
       <DataTable
         columns={columns}
@@ -1022,6 +1065,12 @@ function DichoithoiPageContent() {
         open={importFieldsOpen}
         onClose={() => setImportFieldsOpen(false)}
         onImported={() => queryClient.invalidateQueries({ queryKey: ["dichoithoi-destinations"] })}
+      />
+
+      <GeocodeCandidatesPanel
+        open={geocodePanelOpen}
+        onClose={() => setGeocodePanelOpen(false)}
+        onAccepted={() => queryClient.invalidateQueries({ queryKey: ["dichoithoi-destinations"] })}
       />
     </div>
   );

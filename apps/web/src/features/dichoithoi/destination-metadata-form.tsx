@@ -5,14 +5,21 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   destinationMetaSuggestionSchema,
   destinationTaxonomySchema,
+  getGeocodeSuggestionsResponseSchema,
   type DestinationKind,
+  type PlaceGeocodeCandidate,
   type UpsertDestinationRequest,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Combobox } from "@/shared/ui/combobox";
 import { FeatureIntro } from "@/shared/ui/feature-intro";
+import { Modal } from "@/shared/ui/modal";
 import { Select } from "@/shared/ui/select";
+
+/** Nguong canh bao free-tier Enterprise SKU cua Google Places (chot 05/08/2026) */
+const PLACES_API_WARN_THRESHOLD = 800;
 
 /** Sinh slug tu ten: bo dau tieng Viet, d->d, ky tu khac -> gach ngang. */
 export function slugify(name: string): string {
@@ -115,6 +122,7 @@ export function DestinationMetadataForm({
   const [error, setError] = useState<{ message: string; details: string[] } | null>(null);
   // Khi tao moi: tu sinh slug tu ten cho toi khi nguoi dung tu sua slug
   const [slugTouched, setSlugTouched] = useState(!isNew);
+  const [geocodeModalOpen, setGeocodeModalOpen] = useState(false);
 
   const taxonomyQuery = useQuery({
     queryKey: ["dichoithoi-taxonomy"],
@@ -143,6 +151,26 @@ export function DestinationMetadataForm({
       setV((prev) => ({ ...prev, shortDescription: s.shortDescription, kind: s.suggestedKind }));
     },
   });
+
+  // Giai doan 1a (che do tung diem) — dichoithoi-destination-geocode-audit-plan.md.
+  // LUON goi live, khong cache — chi de nguoi dung xem/chon roi tu dien vao form,
+  // KHONG tu ghi DB (van phai bam "Luu" nhu binh thuong).
+  const geocodeSuggest = useMutation({
+    mutationFn: () =>
+      apiGet(`/destinations/${initial.slug}/geocode-suggestions`, getGeocodeSuggestionsResponseSchema),
+    onSuccess: () => setGeocodeModalOpen(true),
+  });
+
+  const applyGeocodeCandidate = (c: PlaceGeocodeCandidate) => {
+    setV((prev) => ({
+      ...prev,
+      googleMapsUrl: c.googleMapsUri ?? prev.googleMapsUrl,
+      addressNew: c.formattedAddress ?? prev.addressNew,
+      contactPhone: c.nationalPhoneNumber ?? prev.contactPhone,
+      contactWebsite: c.websiteUri ?? prev.contactWebsite,
+    }));
+    setGeocodeModalOpen(false);
+  };
 
   const save = useMutation({
     mutationFn: async () => {
@@ -272,15 +300,22 @@ export function DestinationMetadataForm({
         <Field
           label={
             v.kind === "cluster"
-              ? "Điểm cha (slug) — để trống thì tự gán vào tỉnh đã chọn ở trên"
-              : "Điểm cha (slug) — để trống nếu không có"
+              ? "Cụm/Tỉnh cha — để trống thì tự gán vào tỉnh đã chọn ở trên"
+              : "Cụm/Tỉnh cha — để trống nếu không có"
           }
         >
-          <input
+          <Combobox
             value={v.parentSlug}
-            onChange={(e) => set("parentSlug", e.target.value)}
-            placeholder="vd: sapa"
-            className={`${inputCls} font-mono`}
+            onChange={(value) => set("parentSlug", value)}
+            emptyLabel="— Không có —"
+            placeholder="— Không có —"
+            className="w-full"
+            options={(taxonomyQuery.data?.clusters ?? [])
+              .filter((c) => c.slug !== v.slug)
+              .map((c) => ({
+                value: c.slug,
+                label: `${c.name} (${c.kind === "province" ? "Tỉnh" : "Cụm"})`,
+              }))}
           />
         </Field>
         <Field label="Độ ưu tiên (1 = cao nhất, 5 = thấp nhất) — điểm ưu tiên 1-2 hiện ở khu nổi bật">
@@ -342,17 +377,94 @@ export function DestinationMetadataForm({
       </Field>
 
       <Field label="Link Google Maps">
-        <input
-          value={v.googleMapsUrl}
-          onChange={(e) => set("googleMapsUrl", e.target.value)}
-          placeholder="vd: https://www.google.com/maps/place/...@10.87,106.81,17z"
-          className={inputCls}
-        />
+        <div className="flex items-center gap-2">
+          <input
+            value={v.googleMapsUrl}
+            onChange={(e) => set("googleMapsUrl", e.target.value)}
+            placeholder="vd: https://www.google.com/maps/place/...@10.87,106.81,17z"
+            className={inputCls}
+          />
+          {!isNew && (
+            <Button
+              size="sm"
+              className="shrink-0 px-2 py-1 text-xs"
+              loading={geocodeSuggest.isPending}
+              onClick={() => geocodeSuggest.mutate()}
+            >
+              🔍 Tìm bằng Google Places
+            </Button>
+          )}
+        </div>
+        {geocodeSuggest.isError && (
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+            Không tìm được (kiểm tra GOOGLE_MAPS_API_KEY / quota) —{" "}
+            {geocodeSuggest.error instanceof ApiError ? geocodeSuggest.error.message : String(geocodeSuggest.error)}
+          </p>
+        )}
         <p className="mt-1 text-xs text-zinc-400">
           Toạ độ (tự tính khi lưu):{" "}
           {initial.lat && initial.lng ? `${initial.lat}, ${initial.lng}` : "chưa có"}
         </p>
       </Field>
+
+      <Modal
+        open={geocodeModalOpen}
+        onClose={() => setGeocodeModalOpen(false)}
+        title="Kết quả tìm bằng Google Places"
+        width="max-w-3xl"
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Kết quả gọi trực tiếp Google Maps (không lưu ở máy chủ) — chọn đúng địa
+            điểm để tự điền vào form, sau đó bạn vẫn phải bấm "Lưu thay đổi" như
+            bình thường để ghi lại.
+          </p>
+          {geocodeSuggest.data && geocodeSuggest.data.usageThisMonth >= PLACES_API_WARN_THRESHOLD && (
+            <div className="rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+              Đã dùng {geocodeSuggest.data.usageThisMonth}/1000 lượt gọi Google Places
+              miễn phí tháng này — sắp hết hạn mức miễn phí.
+            </div>
+          )}
+          {geocodeSuggest.data?.candidates.length === 0 && (
+            <p className="text-sm text-zinc-500">Không tìm thấy kết quả nào phù hợp.</p>
+          )}
+          <div className="space-y-2">
+            {geocodeSuggest.data?.candidates.map((c) => (
+              <div
+                key={c.placeId}
+                className="rounded border border-zinc-300 p-3 text-sm dark:border-zinc-700"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{c.displayName}</p>
+                    {c.formattedAddress && (
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">{c.formattedAddress}</p>
+                    )}
+                  </div>
+                  <Badge tone={c.confidenceScore >= 0.7 ? "emerald" : c.confidenceScore >= 0.4 ? "amber" : "gray"}>
+                    độ khớp {Math.round(c.confidenceScore * 100)}%
+                  </Badge>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  {c.distanceToParentMeters !== null && (
+                    <span>cách cụm cha {(c.distanceToParentMeters / 1000).toFixed(1)}km</span>
+                  )}
+                  {c.nationalPhoneNumber && <span>· {c.nationalPhoneNumber}</span>}
+                  {c.businessStatus === "CLOSED_PERMANENTLY" && (
+                    <Badge tone="red">Google báo đã đóng cửa vĩnh viễn</Badge>
+                  )}
+                  {c.businessStatus === "CLOSED_TEMPORARILY" && <Badge tone="amber">Đang đóng cửa tạm thời</Badge>}
+                </div>
+                <div className="mt-2">
+                  <Button size="sm" className="px-2 py-1 text-xs" onClick={() => applyGeocodeCandidate(c)}>
+                    Dùng kết quả này
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field label="Địa chỉ mới (sau sáp nhập)">

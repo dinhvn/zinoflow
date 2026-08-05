@@ -21,6 +21,8 @@ import {
   deleteDestinationResponseSchema,
   recomputeNearbyDistancesReportSchema,
   getRelatedSpotlightResponseSchema,
+  runGeocodeBatchResponseSchema,
+  type RunGeocodeBatchResponse,
   DESTINATION_BLOCK_LABELS,
   DESTINATION_LIST_BLOCK_KEYS,
   DESTINATION_SECTION_ORDER,
@@ -52,6 +54,7 @@ import { DestinationMetaTitleEditor } from "@/features/dichoithoi/destination-me
 import { DestinationExternalReviewUrlsEditor } from "@/features/dichoithoi/destination-external-review-urls-editor";
 import { DestinationAiExtractionPanel } from "@/features/dichoithoi/destination-ai-extraction-panel";
 import { ClusterPoiCandidatesPanel } from "@/features/dichoithoi/cluster-poi-candidates-panel";
+import { GeocodeCandidatesPanel } from "@/features/dichoithoi/geocode-candidates-panel";
 import {
   DestinationJobSuggestionsModal,
   countAppliedFrameGroups,
@@ -63,6 +66,7 @@ import {
 import { DestinationHotelPanel } from "@/features/dichoithoi/destination-hotel-panel";
 import { DestinationTourPanel } from "@/features/dichoithoi/destination-tour-panel";
 import { Button, buttonClasses } from "@/shared/ui/button";
+import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
 import { Select } from "@/shared/ui/select";
 import { FeatureIntro } from "@/shared/ui/feature-intro";
@@ -389,6 +393,22 @@ export default function DestinationDetailPage({
       queryKey: ["destination-detail", slug],
     });
   }
+
+  // Giai doan 1b (che do hang loat) — dichoithoi-destination-geocode-audit-plan.md.
+  // Gioi han pham vi = diem con cum nay (parentSlug), cap doi tu nhien voi nut
+  // "Tim diem con" o tren (tim ten truoc, tim toa do sau).
+  const [geocodePanelOpen, setGeocodePanelOpen] = useState(false);
+  const [geocodeRunResult, setGeocodeRunResult] = useState<RunGeocodeBatchResponse | null>(null);
+  const runGeocodeBatchForCluster = useMutation({
+    mutationFn: async () =>
+      runGeocodeBatchResponseSchema.parse(
+        await apiSend("POST", "/destinations/geocode-batch", { parentSlug: slug, missingCoords: true }),
+      ),
+    onSuccess: (res) => {
+      setGeocodeRunResult(res);
+      setGeocodePanelOpen(true);
+    },
+  });
 
   // Tab dang mo — menu doc ben phai (thay scrollspy cu, xem ghi chu o TABS).
   // Dong bo voi query param ?tab= de reload trang KHONG bi nhay ve tab mac dinh
@@ -1361,6 +1381,7 @@ export default function DestinationDetailPage({
             <Group title="🔎 Trích xuất AI (Google Maps + web tham khảo)">
               <DestinationAiExtractionPanel
                 slug={d.slug}
+                name={d.name}
                 onAccepted={() => invalidate()}
               />
             </Group>
@@ -1369,6 +1390,47 @@ export default function DestinationDetailPage({
               <Group title="🧭 Tìm điểm con trong cụm (AI)">
                 <ClusterPoiCandidatesPanel
                   clusterSlug={d.slug}
+                  onAccepted={() => invalidate()}
+                />
+              </Group>
+            )}
+
+            {d.kind === "cluster" && (
+              <Group title="🔍 Tìm toạ độ cho điểm con cụm này (Google Places)">
+                <p className="mb-2 text-xs text-zinc-500">
+                  Tự động tìm googleMapsUrl + địa chỉ/SĐT/ảnh xem trước cho các điểm con của cụm này
+                  còn thiếu toạ độ — chạy nền, kết quả vào bảng duyệt bên dưới, KHÔNG tự ghi DB.
+                </p>
+                {runGeocodeBatchForCluster.isError && (
+                  <ErrorBox
+                    error={
+                      runGeocodeBatchForCluster.error instanceof ApiError
+                        ? runGeocodeBatchForCluster.error
+                        : new ApiError(0, String(runGeocodeBatchForCluster.error), [])
+                    }
+                  />
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    loading={runGeocodeBatchForCluster.isPending}
+                    onClick={() => runGeocodeBatchForCluster.mutate()}
+                  >
+                    🔍 Tìm toạ độ cho điểm con cụm này
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => setGeocodePanelOpen(true)}>
+                    📋 Kết quả chờ duyệt
+                  </Button>
+                </div>
+                {geocodeRunResult && (
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Đã gửi job cho {geocodeRunResult.targetCount} điểm (đã dùng{" "}
+                    {geocodeRunResult.usageThisMonth}/1000 lượt Google Places miễn phí tháng này).
+                  </p>
+                )}
+                <GeocodeCandidatesPanel
+                  open={geocodePanelOpen}
+                  onClose={() => setGeocodePanelOpen(false)}
                   onAccepted={() => invalidate()}
                 />
               </Group>

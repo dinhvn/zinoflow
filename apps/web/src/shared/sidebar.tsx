@@ -71,6 +71,11 @@ const DICHOITHOI_TOOL_ITEMS: NavItem[] = [
     label: "Backup còn lại",
     icon: IconDoc,
   },
+  {
+    href: "/dichoithoi/audit-toa-do",
+    label: "Rà soát trùng lặp/sai cụm",
+    icon: IconSearch,
+  },
 ];
 
 /** Khu CMS khuyenmai (laruki + dochoi3s) — tao content AI ghi vao CMS */

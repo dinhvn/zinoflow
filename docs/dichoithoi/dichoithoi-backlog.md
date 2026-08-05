@@ -279,6 +279,33 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- **Tự động geocode ~3757 điểm con thiếu googleMapsUrl + audit trùng lặp/sai
+  cụm (05/08/2026, ĐÃ BUILD CODE — CHƯA TEST DỮ LIỆU THẬT vì Places API (New)
+  chưa được bật trên Google Cloud project của người dùng)**: plan ở
+  `dichoithoi-destination-geocode-audit-plan.md`. Bối cảnh: batch AI
+  `cluster-poi-discovery` đã tạo 3862 poi nhưng chỉ 105 (2.7%) có
+  `googleMapsUrl` — dữ liệu thật xác nhận 234/235 cụm (99.6%) đã có toạ độ
+  nên dùng được làm location bias khi gọi Google Places API (New) Text
+  Search. Giai đoạn 0 (provider) → 1 (geocode, **2 chế độ**: 1a từng điểm —
+  nút "Tìm bằng Google Places" ngay trong `destination-metadata-form.tsx`,
+  gọi đồng bộ không qua batch; 1b hàng loạt — tái dùng filter
+  `missingCoords`/`parentSlug` có sẵn ở trang danh sách + nút riêng trên
+  trang chi tiết cụm, qua batch/pg-boss + bảng duyệt kiểu
+  `cluster-poi-candidates-panel.tsx`) → 2 (audit trùng lặp/sai cụm bằng
+  Haversine trên toạ độ thật vừa có, phụ thuộc Giai đoạn 1). Phát hiện quan
+  trọng: ảnh Places API (New) KHÔNG được cache theo điều khoản Google
+  ("cannot cache a photo name") — đề xuất Mức A (chỉ xem trước khi duyệt,
+  không lưu file) thay vì tải về vĩnh viễn như pipeline Pexels hiện có, cần
+  người dùng chốt trước khi code Giai đoạn 1. **Đã chốt 05/08/2026**: Mức A
+  ảnh (không lưu file) mở rộng thành nguyên tắc chung — chỉ `placeId` (vĩnh
+  viễn) + toạ độ (30 ngày) được lưu, mọi field khác luôn lấy bản tươi lúc
+  xem/áp dụng lại; lấy CẢ field Pro lẫn Enterprise ngay đợt đầu kèm cơ chế
+  cảnh báo ngưỡng free-tier dùng chung cho cả 2 chế độ (Pro cảnh báo
+  4000/5000, Enterprise 800/1000, chặn hẳn nếu vượt free thật trừ khi bật
+  toggle chấp nhận phí); ngưỡng khoảng cách Giai đoạn 2 để sau khi có dữ
+  liệu thật. Phát hiện thêm: field `businessStatus` (đóng cửa vĩnh viễn)
+  đáng lấy kèm ngay, chi phí gần như không tăng.
+
 - **Pilot chuẩn hoá 4 điểm test toàn bộ pipeline AI content (31/07/2026,
   CHƯA BUILD, đang bắt đầu)**: plan + bảng tiến độ ở
   `dichoithoi-pilot-4-diem-plan.md`. 4 điểm: Đà Lạt (cụm lớn), Dalat

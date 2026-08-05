@@ -114,6 +114,17 @@ import {
   type AcceptDestinationAiExtractionFieldsRequest,
   type DestinationAiExtraction,
   type GetDestinationAiExtractionResponse,
+  type GetGeocodeSuggestionsResponse,
+  auditDestinationDuplicatesClusterFitRequestSchema,
+  type AuditDestinationDuplicatesClusterFitRequest,
+  type AuditDestinationDuplicatesClusterFitReport,
+  runGeocodeBatchRequestSchema,
+  type RunGeocodeBatchRequest,
+  type RunGeocodeBatchResponse,
+  type ListGeocodeCandidatesResponse,
+  acceptGeocodeCandidatesRequestSchema,
+  type AcceptGeocodeCandidatesRequest,
+  type AcceptGeocodeCandidatesResponse,
   findClusterPoiCandidatesRequestSchema,
   type FindClusterPoiCandidatesRequest,
   acceptClusterPoiCandidatesRequestSchema,
@@ -170,6 +181,11 @@ import { PreviewDestinationPublishHtmlUseCase } from "../application/use-cases/p
 import { AddDestinationGalleryImageUseCase } from "../application/use-cases/add-destination-gallery-image.usecase";
 import { UpdateDestinationGalleryUseCase } from "../application/use-cases/update-destination-gallery.usecase";
 import { GetDestinationAiExtractionUseCase } from "../application/use-cases/get-destination-ai-extraction.usecase";
+import { GetGeocodeSuggestionsUseCase } from "../application/use-cases/get-geocode-suggestions.usecase";
+import { RunGeocodeBatchUseCase } from "../application/use-cases/run-geocode-batch.usecase";
+import { AcceptGeocodeCandidatesUseCase } from "../application/use-cases/accept-geocode-candidates.usecase";
+import { ListGeocodeCandidatesUseCase } from "../application/use-cases/list-geocode-candidates.usecase";
+import { AuditDestinationDuplicatesClusterFitUseCase } from "../application/use-cases/audit-destination-duplicates-cluster-fit.usecase";
 import { AcceptDestinationAiExtractionFieldsUseCase } from "../application/use-cases/accept-destination-ai-extraction-fields.usecase";
 import { ExtractDestinationInfoGsgUseCase } from "../application/use-cases/extract-destination-info-gsg.usecase";
 import { FindClusterPoiCandidatesUseCase } from "../application/use-cases/find-cluster-poi-candidates.usecase";
@@ -271,6 +287,11 @@ export class DestinationsController {
     private readonly getRelatedSpotlight: GetRelatedSpotlightUseCase,
     private readonly manageCuratedRelation: ManageCuratedRelationUseCase,
     private readonly manageExcludedRelation: ManageExcludedRelationUseCase,
+    private readonly getGeocodeSuggestionsUseCase: GetGeocodeSuggestionsUseCase,
+    private readonly runGeocodeBatchUseCase: RunGeocodeBatchUseCase,
+    private readonly acceptGeocodeCandidatesUseCase: AcceptGeocodeCandidatesUseCase,
+    private readonly listGeocodeCandidatesUseCase: ListGeocodeCandidatesUseCase,
+    private readonly auditDuplicatesClusterFit: AuditDestinationDuplicatesClusterFitUseCase,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
     @Inject(SHEET_CSV_FETCHER) private readonly sheetFetcher: SheetCsvFetcher,
     @Inject(JOB_QUEUE) private readonly jobQueue: JobQueue,
@@ -436,6 +457,46 @@ export class DestinationsController {
     return this.getTaxonomy.execute();
   }
 
+  /**
+   * Giai doan 1b (che do hang loat) — dichoithoi-destination-geocode-audit-plan.md.
+   * Enqueue qua pg-boss (fire-and-forget) — payload la filter tai dung
+   * listDestinationsQuerySchema (parentSlug/kind/provinceCode/missingCoords).
+   */
+  @Post("geocode-batch")
+  runGeocodeBatch(
+    @Body(new ZodValidationPipe(runGeocodeBatchRequestSchema)) request: RunGeocodeBatchRequest,
+  ): Promise<RunGeocodeBatchResponse> {
+    return this.runGeocodeBatchUseCase.execute(request);
+  }
+
+  /** Danh sach dong staging con "pending" — dung cho bang duyet hang loat */
+  @Get("geocode-candidates")
+  listGeocodeCandidates(): Promise<ListGeocodeCandidatesResponse> {
+    return this.listGeocodeCandidatesUseCase.execute();
+  }
+
+  /** Chap nhan tung dong da chon 1 placeId cu the trong bang duyet hang loat */
+  @Post("geocode-candidates/accept")
+  acceptGeocodeCandidates(
+    @Body(new ZodValidationPipe(acceptGeocodeCandidatesRequestSchema))
+    request: AcceptGeocodeCandidatesRequest,
+  ): Promise<AcceptGeocodeCandidatesResponse> {
+    return this.acceptGeocodeCandidatesUseCase.execute(request);
+  }
+
+  /**
+   * Giai doan 2 — dichoithoi-destination-geocode-audit-plan.md. CHI la bao
+   * cao doc (khong ghi gi) vi nguong khoang cach chua duoc chot — nguoi dung
+   * tu chinh qua query param roi tu sua tay qua form/panel co san.
+   */
+  @Get("audit/duplicates-cluster-fit")
+  auditDuplicatesClusterFitReport(
+    @Query(new ZodValidationPipe(auditDestinationDuplicatesClusterFitRequestSchema))
+    query: AuditDestinationDuplicatesClusterFitRequest,
+  ): Promise<AuditDestinationDuplicatesClusterFitReport> {
+    return this.auditDuplicatesClusterFit.execute(query);
+  }
+
   /** DTO nhe cho trang ban do tong quan CMS (relations-plan §5.2, Giai doan A4) */
   @Get("map")
   getMap(): Promise<GetDestinationsMapResponse> {
@@ -595,6 +656,20 @@ export class DestinationsController {
   @Post(":slug/ai-extraction/gsg")
   runGsgExtraction(@Param("slug") slug: string): Promise<DestinationAiExtraction> {
     return this.extractDestinationInfoGsg.execute(slug);
+  }
+
+  /**
+   * Goi y toa do/googleMapsUrl + thong tin co ban qua Google Places API (New)
+   * cho 1 diem CU THE (Giai doan 1a, dichoithoi-destination-geocode-audit-plan.md)
+   * — LUON goi live, khong luu cache o backend. Ket qua chi hien trong UI de
+   * nguoi dung tu chon roi dien vao form, KHONG tu ghi DB (van phai bam "Luu"
+   * cua form nhu binh thuong).
+   */
+  @Get(":slug/geocode-suggestions")
+  getGeocodeSuggestionsForSlug(
+    @Param("slug") slug: string,
+  ): Promise<GetGeocodeSuggestionsResponse> {
+    return this.getGeocodeSuggestionsUseCase.execute(slug);
   }
 
   /**
