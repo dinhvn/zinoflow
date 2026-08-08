@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cắt & chỉnh ảnh</title>
+    <link rel="stylesheet" href="crop.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="stage">
+        <canvas id="canvas"></canvas>
+        <p class="hint">
+          Kéo chuột để di chuyển ảnh · lăn chuột để zoom · Ctrl+V để dán ảnh từ clipboard (từ
+          bất kỳ đâu, không chỉ Google Maps)
+        </p>
+      </div>
+
+      <div class="panel">
+        <section>
+          <label>Khung ảnh</label>
+          <select id="aspect">
+            <option value="1.777:1600">Ảnh đại diện — 16:9 (1600px)</option>
+            <option value="1.333:1200">Ảnh thư viện — 4:3 (1200px)</option>
+            <option value="1:1200">Vuông — 1:1 (1200px)</option>
+          </select>
+        </section>
+
+        <section>
+          <label>Mode tự động</label>
+          <div class="btn-row">
+            <button id="autoNormal" type="button">Tự động</button>
+            <button id="autoVivid" type="button">Rực rỡ</button>
+            <button id="autoSharp" type="button">Rõ nét</button>
+          </div>
+        </section>
+
+        <section>
+          <label for="zoom">Zoom (<span id="zoomVal">100</span>%)</label>
+          <input id="zoom" type="range" min="100" max="500" value="100" />
+        </section>
+
+        <section>
+          <label for="brightness">Độ sáng (<span id="brightnessVal">100</span>%)</label>
+          <input id="brightness" type="range" min="40" max="180" value="100" />
+        </section>
+
+        <section>
+          <label for="contrast">Tương phản (<span id="contrastVal">100</span>%)</label>
+          <input id="contrast" type="range" min="50" max="200" value="100" />
+        </section>
+
+        <section>
+          <label for="saturate">Rực màu (<span id="saturateVal">100</span>%)</label>
+          <input id="saturate" type="range" min="0" max="200" value="100" />
+        </section>
+
+        <section>
+          <label for="sharpen">Làm nét (<span id="sharpenVal">0</span>%)</label>
+          <input id="sharpen" type="range" min="0" max="100" value="0" />
+        </section>
+
+        <section class="btn-row">
+          <button id="resetBtn" type="button">Đặt lại</button>
+          <button id="copyBtn" type="button" class="primary">Copy ảnh</button>
+        </section>
+
+        <p id="status" class="status"></p>
+
+        <details class="fallback">
+          <summary>Ảnh tải lỗi / mờ? Thử cách khác</summary>
+          <div class="btn-row">
+            <button id="tryOriginal" type="button">Dùng link ảnh gốc (không upsize)</button>
+          </div>
+          <label for="manualUrl">Hoặc dán URL ảnh khác (chuột phải ảnh trên Maps → Sao chép địa chỉ hình ảnh)</label>
+          <div class="btn-row">
+            <input id="manualUrl" type="text" placeholder="https://..." />
+            <button id="loadManualUrl" type="button">Tải</button>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <script src="crop.js"></script>
+  </body>
+</html>

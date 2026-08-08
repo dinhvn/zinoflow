@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Google Maps Image Clipper — dichoithoi",
+  "version": "0.3.0",
+  "description": "Rê chuột qua ảnh trong Google Maps (khi cửa sổ Crop đang mở) để nạp vào cửa sổ, chỉnh sáng/tương phản/lọc màu rồi copy, dán thẳng vào CMS zinoflow (?tab=images).",
+  "permissions": ["clipboardWrite"],
+  "host_permissions": [
+    "https://*.googleusercontent.com/*",
+    "https://*.ggpht.com/*",
+    "https://www.google.com/maps*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Mở cửa sổ Crop ảnh Google Maps"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.google.com/maps*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
