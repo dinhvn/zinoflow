@@ -36,4 +36,12 @@ describe("matchesGeocodeFilter", () => {
     expect(matchesGeocodeFilter(hasCoords, { missingCoords: true })).toBe(false);
     expect(matchesGeocodeFilter(noCoords, { missingCoords: true })).toBe(true);
   });
+
+  it("slugs (checkbox tick tay) overrides mọi filter khác — chỉ khớp đúng danh sách", () => {
+    const picked = makeDestination({ slug: "da-lat", kind: "cluster", parentSlug: "lam-dong" });
+    const notPicked = makeDestination({ slug: "sapa", kind: "cluster", parentSlug: "lao-cai" });
+    const filter = { slugs: ["da-lat"], kind: "poi" as const };
+    expect(matchesGeocodeFilter(picked, filter)).toBe(true);
+    expect(matchesGeocodeFilter(notPicked, filter)).toBe(false);
+  });
 });

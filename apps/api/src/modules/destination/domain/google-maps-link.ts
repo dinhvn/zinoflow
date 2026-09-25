@@ -46,6 +46,21 @@ export function parseGoogleMapsCoords(url: string): MapsCoords | null {
   return null;
 }
 
+/**
+ * true neu URL co toa do ghim CHINH XAC (`!3d!4d`) — KHONG phai chi tam khung
+ * nhin (`@lat,lng,zoom`). Dung de tu choi ket qua khi URL van con dang
+ * "/maps/search/..." (chua that su dieu huong toi 1 dia diem cu the) — luc do
+ * toa do "@lat,lng" trong URL rat co the CHINH LA toa do bias dau vao (tam cum
+ * cha), khong phai vi tri that cua diem, phat hien 09/09/2026 khi doi dinh dang
+ * URL tim kiem sang co ghep bias.
+ */
+export function hasMarkerCoords(url: string): boolean {
+  // Regex rieng (khong dung chung MARKER_COORDS_RE global) — .test() tren regex
+  // "g" lam thay doi lastIndex dung chung, se pha ket qua cua matchAll() o
+  // parseGoogleMapsCoords() neu goi xen ke.
+  return /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/.test(url);
+}
+
 const SHORT_LINK_HOSTS = ["goo.gl", "maps.app.goo.gl"];
 
 /** Link rut gon khong chua toa do trong chuoi — can resolve redirect truoc khi parse */

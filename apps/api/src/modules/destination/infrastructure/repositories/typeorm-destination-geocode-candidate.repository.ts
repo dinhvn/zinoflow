@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import type { DestinationGeocodeCandidateStatus } from "@zinoflow/contracts";
 import type {
   DestinationGeocodeCandidateRecord,
@@ -42,7 +42,7 @@ export class TypeOrmDestinationGeocodeCandidateRepository
   }
 
   async findPending(): Promise<DestinationGeocodeCandidateRecord[]> {
-    const rows = await this.repo.findBy({ status: "pending" });
+    const rows = await this.repo.findBy({ status: In(["pending", "not-found", "ambiguous"]) });
     return rows.map(toRecord);
   }
 
@@ -51,7 +51,17 @@ export class TypeOrmDestinationGeocodeCandidateRepository
     return row ? toRecord(row) : null;
   }
 
+  async findAccepted(): Promise<DestinationGeocodeCandidateRecord[]> {
+    const rows = await this.repo.findBy({ status: "accepted" });
+    return rows.map(toRecord);
+  }
+
   async setStatus(slug: string, status: DestinationGeocodeCandidateStatus): Promise<void> {
     await this.repo.update({ destinationSlug: slug }, { status });
+  }
+
+  async findAllAttemptedSlugs(): Promise<string[]> {
+    const rows = await this.repo.find({ select: { destinationSlug: true } });
+    return rows.map((r) => r.destinationSlug);
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -145,21 +145,31 @@ export default function DichoithoiPage() {
 }
 
 /** Hub khu Dichoithoi — danh sách điểm đến từ mirror (spec §7.2). */
+// Gia tri mac dinh cua bo loc/sap xep/phan trang — dung de dong bo 2 chieu voi
+// URL (chi ghi param khac mac dinh len URL) va cho nut "Xoa bo loc".
+const DEFAULT_SORT_BY: DestinationSortBy = "name";
+const DEFAULT_SORT_DIR: SortDirection = "asc";
+const DEFAULT_PAGE_SIZE = 50;
+
 function DichoithoiPageContent() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState("");
-  const [provinceCode, setProvinceCode] = useState("");
-  const [parentSlug, setParentSlug] = useState("");
-  const [kind, setKind] = useState("");
-  const [contentState, setContentState] = useState("");
-  const [production, setProduction] = useState("");
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
+  const [provinceCode, setProvinceCode] = useState(searchParams.get("provinceCode") ?? "");
+  const [parentSlug, setParentSlug] = useState(searchParams.get("parentSlug") ?? "");
+  const [kind, setKind] = useState(searchParams.get("kind") ?? "");
+  const [contentState, setContentState] = useState(searchParams.get("contentState") ?? "");
+  const [production, setProduction] = useState(searchParams.get("production") ?? "");
   const [missingCoords, setMissingCoords] = useState(searchParams.get("missingCoords") === "true");
-  const [sortBy, setSortBy] = useState<DestinationSortBy>("name");
-  const [sortDir, setSortDir] = useState<SortDirection>("asc");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [sortBy, setSortBy] = useState<DestinationSortBy>(
+    (searchParams.get("sortBy") as DestinationSortBy) || DEFAULT_SORT_BY,
+  );
+  const [sortDir, setSortDir] = useState<SortDirection>(
+    (searchParams.get("sortDir") as SortDirection) || DEFAULT_SORT_DIR,
+  );
+  const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
+  const [pageSize, setPageSize] = useState(Number(searchParams.get("pageSize")) || DEFAULT_PAGE_SIZE);
   const [syncResult, setSyncResult] = useState<SyncDestinationsResult | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -168,6 +178,7 @@ function DichoithoiPageContent() {
   const [mapModalOpen, setMapModalOpen] = useState(false);
   const [geocodePanelOpen, setGeocodePanelOpen] = useState(false);
   const [geocodeRunResult, setGeocodeRunResult] = useState<RunGeocodeBatchResponse | null>(null);
+  const [pickedSlugs, setPickedSlugs] = useState<Set<string>>(new Set());
 
   const taxonomyQuery = useQuery({
     queryKey: ["dichoithoi-taxonomy"],
@@ -217,13 +228,14 @@ function DichoithoiPageContent() {
   });
 
   // Giai doan 1b (che do hang loat) — dichoithoi-destination-geocode-audit-plan.md.
-  // Chay theo DUNG bo loc dang ap dung tren bang (tai su dung filter co san,
-  // khong xay man chon pham vi rieng) — enqueue qua pg-boss, ket qua vao
-  // bang staging, mo GeocodeCandidatesPanel de duyet.
+  // 2 pham vi: theo bo loc dang ap dung tren bang (mac dinh), hoac dung danh
+  // sach slug da tick checkbox (khi co, uu tien slugs — xem matchesGeocodeFilter).
+  // Enqueue qua pg-boss, ket qua vao bang staging, mo GeocodeCandidatesPanel de duyet.
   const runGeocodeBatch = useMutation({
-    mutationFn: async () =>
+    mutationFn: async (slugs?: string[]) =>
       runGeocodeBatchResponseSchema.parse(
         await apiSend("POST", "/destinations/geocode-batch", {
+          slugs: slugs && slugs.length > 0 ? slugs : undefined,
           parentSlug: parentSlug || null,
           kind: kind || undefined,
           provinceCode: provinceCode || undefined,
@@ -233,6 +245,7 @@ function DichoithoiPageContent() {
     onSuccess: (res) => {
       setGeocodeRunResult(res);
       setGeocodePanelOpen(true);
+      setPickedSlugs(new Set());
     },
   });
 
@@ -430,6 +443,66 @@ function DichoithoiPageContent() {
 
   const data = listQuery.data;
 
+  // Dong bo bo loc/sap xep/phan trang len URL (chi ghi param khac mac dinh)
+  // de reload lai trang van giu nguyen dieu kien tim kiem dang xem.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (provinceCode) params.set("provinceCode", provinceCode);
+    if (parentSlug) params.set("parentSlug", parentSlug);
+    if (kind) params.set("kind", kind);
+    if (contentState) params.set("contentState", contentState);
+    if (production) params.set("production", production);
+    if (missingCoords) params.set("missingCoords", "true");
+    if (sortBy !== DEFAULT_SORT_BY) params.set("sortBy", sortBy);
+    if (sortDir !== DEFAULT_SORT_DIR) params.set("sortDir", sortDir);
+    if (page !== 1) params.set("page", String(page));
+    if (pageSize !== DEFAULT_PAGE_SIZE) params.set("pageSize", String(pageSize));
+    const query = params.toString();
+    router.replace(query ? `/dichoithoi?${query}` : "/dichoithoi", { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    search,
+    provinceCode,
+    parentSlug,
+    kind,
+    contentState,
+    production,
+    missingCoords,
+    sortBy,
+    sortDir,
+    page,
+    pageSize,
+  ]);
+
+  const hasActiveFilters =
+    search !== "" ||
+    provinceCode !== "" ||
+    parentSlug !== "" ||
+    kind !== "" ||
+    contentState !== "" ||
+    production !== "" ||
+    missingCoords ||
+    sortBy !== DEFAULT_SORT_BY ||
+    sortDir !== DEFAULT_SORT_DIR ||
+    page !== 1 ||
+    pageSize !== DEFAULT_PAGE_SIZE;
+
+  // Dua toan bo bo loc/sap xep/phan trang ve mac dinh (nut "Xoa bo loc")
+  function resetFilters() {
+    setSearch("");
+    setProvinceCode("");
+    setParentSlug("");
+    setKind("");
+    setContentState("");
+    setProduction("");
+    setMissingCoords(false);
+    setSortBy(DEFAULT_SORT_BY);
+    setSortDir(DEFAULT_SORT_DIR);
+    setPage(1);
+    setPageSize(DEFAULT_PAGE_SIZE);
+  }
+
   // Doi filter -> ve trang 1 (tranh ket o trang trong)
   function resetToFirstPage() {
     setPage(1);
@@ -440,7 +513,33 @@ function DichoithoiPageContent() {
     resetToFirstPage();
   }
 
+  function togglePicked(slug: string) {
+    setPickedSlugs((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  }
+  const pageSlugs = (data?.items ?? []).map((d) => d.slug);
+  const allPickedOnPage = pageSlugs.length > 0 && pageSlugs.every((s) => pickedSlugs.has(s));
+  function togglePickAllOnPage() {
+    setPickedSlugs((prev) => {
+      const next = new Set(prev);
+      if (allPickedOnPage) pageSlugs.forEach((s) => next.delete(s));
+      else pageSlugs.forEach((s) => next.add(s));
+      return next;
+    });
+  }
+
   const columns: DataTableColumn<DestinationMirror>[] = [
+    {
+      key: "pick",
+      header: <Checkbox label="" checked={allPickedOnPage} onChange={togglePickAllOnPage} />,
+      render: (d) => (
+        <Checkbox label="" checked={pickedSlugs.has(d.slug)} onChange={() => togglePicked(d.slug)} />
+      ),
+    },
     {
       key: "name",
       header: "Tên",
@@ -464,6 +563,8 @@ function DichoithoiPageContent() {
           <div className="min-w-0">
             <a
               href={`/dichoithoi/${d.slug}`}
+              target="_blank"
+              rel="noreferrer"
               className="font-medium text-blue-600 hover:underline dark:text-blue-400"
             >
               {d.name}
@@ -486,6 +587,8 @@ function DichoithoiPageContent() {
         d.parentSlug ? (
           <a
             href={`/dichoithoi/${d.parentSlug}`}
+            target="_blank"
+            rel="noreferrer"
             className="text-blue-600 hover:underline dark:text-blue-400"
           >
             {nameBySlug.get(d.parentSlug) ?? d.parentSlug}
@@ -552,7 +655,12 @@ function DichoithoiPageContent() {
       cellClassName: "whitespace-nowrap",
       render: (d) => (
         <span className="flex items-center gap-3 text-xs">
-          <a href={`/dichoithoi/${d.slug}`} className={buttonClasses({ variant: "primary", size: "sm" })}>
+          <a
+            href={`/dichoithoi/${d.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClasses({ variant: "primary", size: "sm" })}
+          >
             Chi tiết →
           </a>
           <a
@@ -937,6 +1045,15 @@ function DichoithoiPageContent() {
             resetToFirstPage();
           }}
         />
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className={buttonClasses({ variant: "secondary" })}
+          >
+            ✕ Xoá bộ lọc
+          </button>
+        )}
       </div>
 
       {listQuery.isError && <ErrorBox error={listQuery.error} fallback="Lỗi tải danh sách" />}
@@ -945,8 +1062,17 @@ function DichoithoiPageContent() {
       )}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
+        {pickedSlugs.size > 0 && (
+          <Button
+            size="sm"
+            loading={runGeocodeBatch.isPending}
+            onClick={() => runGeocodeBatch.mutate([...pickedSlugs])}
+          >
+            🔍 Tìm toạ độ cho {pickedSlugs.size} điểm đã tick
+          </Button>
+        )}
         {missingCoords && data && data.total > 0 && (
-          <Button size="sm" loading={runGeocodeBatch.isPending} onClick={() => runGeocodeBatch.mutate()}>
+          <Button size="sm" loading={runGeocodeBatch.isPending} onClick={() => runGeocodeBatch.mutate(undefined)}>
             🔍 Tìm toạ độ hàng loạt cho {data.total} điểm đang lọc
           </Button>
         )}
@@ -963,9 +1089,9 @@ function DichoithoiPageContent() {
       </div>
       {geocodeRunResult && (
         <p className="text-right text-xs text-zinc-500">
-          Đã gửi job tìm toạ độ cho {geocodeRunResult.targetCount} điểm (đã dùng{" "}
-          {geocodeRunResult.usageThisMonth}/1000 lượt Google Places miễn phí tháng này) — chạy nền, quay
-          lại "Kết quả tìm toạ độ chờ duyệt" sau ít phút.
+          Đã gửi job tìm toạ độ cho {geocodeRunResult.targetCount} điểm (đã quét{" "}
+          {geocodeRunResult.usageThisMonth} lượt tháng này qua trình duyệt, không tốn phí) — chạy nền
+          chậm (8-20s/điểm) để tránh bị Google chặn, quay lại "Kết quả tìm toạ độ chờ duyệt" sau.
         </p>
       )}
 

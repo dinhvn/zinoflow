@@ -31,11 +31,20 @@ export class AuditDestinationDuplicatesClusterFitUseCase {
     request: AuditDestinationDuplicatesClusterFitRequest,
   ): Promise<AuditDestinationDuplicatesClusterFitReport> {
     const all = await this.mirrorRepo.findAll();
+    // CHI xet toa do da qua xac minh (co googleMapsUrl, tuc da di qua pipeline
+    // geocode Playwright chap nhan) — toa do CU nhap tu truoc (co lat/lng nhung
+    // khong co googleMapsUrl) co the sai lech, dua vao se ra bao cao trung
+    // lap/sai cum GIA (yeu cau nguoi dung 10/08/2026, sau khi phat hien pipeline
+    // geocode gan day chi la 1 phan du lieu toa do dang co trong bang).
     const poiWithCoords = all.filter(
-      (d) => d.kind === "poi" && d.lat !== null && d.lng !== null,
+      (d) => d.kind === "poi" && d.lat !== null && d.lng !== null && d.googleMapsUrl !== null,
     );
     const clusters = all.filter(
-      (d) => (d.kind === "cluster" || d.kind === "province") && d.lat !== null && d.lng !== null,
+      (d) =>
+        (d.kind === "cluster" || d.kind === "province") &&
+        d.lat !== null &&
+        d.lng !== null &&
+        d.googleMapsUrl !== null,
     );
 
     return {

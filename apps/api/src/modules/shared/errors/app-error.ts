@@ -45,3 +45,33 @@ export class UpstreamApiError extends AppError {
     super("UpstreamApiError", message, details, 502);
   }
 }
+
+/**
+ * Google tam chan (CAPTCHA/"unusual traffic") khi scrape Google Maps qua
+ * Playwright (thay Places API do billing bi chan khu vuc VN — xem memory
+ * dichoithoi-destination-geocode-audit-plan-open.md). Tach rieng UpstreamApiError
+ * de vong lap batch (ProcessGeocodeBatchUseCase) DUNG SOM thay vi log-va-tiep-tuc
+ * nhu loi 1 lan — goi lien tuc luc dang bi chan chi lam moi viec te hon.
+ */
+export class GeocodeBlockedError extends UpstreamApiError {
+  constructor(message: string) {
+    super(message);
+    this.name = "GeocodeBlockedError";
+  }
+}
+
+/**
+ * Tin hieu "bo qua tam" (KHONG phai loi that) — dung khi che do quickOnly
+ * gap trang danh sach nhieu ket qua (mo ho) va chu dong khong ghe tung ket
+ * qua de tiet kiem thoi gian, uu tien xu ly het cac diem ra dung 1 ket qua
+ * truoc (yeu cau 06/08/2026: chay qua dem, uu tien diem "vao la ra ngay").
+ * ProcessGeocodeBatchUseCase bat rieng loai nay: KHONG ghi vao staging (de
+ * diem nay con duoc coi la "chua tung quet", tu dong duoc thu lai o lan
+ * chay sau — vd chay lai voi quickOnly=false).
+ */
+export class AmbiguousResultsSkippedError extends AppError {
+  constructor(message: string) {
+    super("DomainRuleError", message, [], 422);
+    this.name = "AmbiguousResultsSkippedError";
+  }
+}

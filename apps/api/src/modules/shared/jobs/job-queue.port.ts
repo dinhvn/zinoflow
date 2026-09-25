@@ -23,4 +23,5 @@ export const QUEUE_NAMES = {
   destinationRelink: "destination.relink",
   affiliateReapply: "affiliate.reapply",
   destinationGeocodeBatch: "destination.geocode-batch",
+  destinationRefreshWebResults: "destination.refresh-web-results",
 } as const;

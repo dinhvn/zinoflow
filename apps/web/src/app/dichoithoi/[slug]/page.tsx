@@ -22,6 +22,7 @@ import {
   recomputeNearbyDistancesReportSchema,
   getRelatedSpotlightResponseSchema,
   runGeocodeBatchResponseSchema,
+  getGeocodeSuggestionsResponseSchema,
   type RunGeocodeBatchResponse,
   DESTINATION_BLOCK_LABELS,
   DESTINATION_LIST_BLOCK_KEYS,
@@ -408,6 +409,19 @@ export default function DestinationDetailPage({
       setGeocodeRunResult(res);
       setGeocodePanelOpen(true);
     },
+  });
+
+  // Giai doan 1a (che do tung diem) — thong nhat 05/08/2026: cung dat canh
+  // "Trich xuat AI" (khung ngay ben duoi) nhu buoc 1 cua 3 buoc trich xuat
+  // (Tim Google Maps -> Trich xuat Skill -> Trich xuat GSG). Ket qua ghi vao
+  // CUNG bang staging voi Giai doan 1b, duyet qua CUNG panel (slugFilter).
+  const [geocodeSelfPanelOpen, setGeocodeSelfPanelOpen] = useState(false);
+  const findGeocodeForThis = useMutation({
+    mutationFn: async () =>
+      getGeocodeSuggestionsResponseSchema.parse(
+        await apiSend("POST", `/destinations/${slug}/geocode-suggestions`, {}),
+      ),
+    onSuccess: () => setGeocodeSelfPanelOpen(true),
   });
 
   // Tab dang mo — menu doc ben phai (thay scrollspy cu, xem ghi chu o TABS).
@@ -1372,13 +1386,48 @@ export default function DestinationDetailPage({
               hint='Trích xuất dữ liệu điểm đến từ Google Maps/web tham khảo, và nhập thông tin để AI viết bài — kết quả dùng ở tab "📝 Nội dung" và "ℹ️ Thông tin cơ bản"/"💰 Thương mại & bổ trợ".'
             />
 
-            {/* Trich xuat AI tu Google Maps + web tham khao (dichoithoi-destination-ai-extraction-plan
-          §2.3) — tach tab rieng (07/2026, theo yeu cau nguoi dung): ket qua trich xuat ghi
-          vao CA 3 tab (Thong tin co ban: ten/dia chi/SDT/website/mo ta/meta title; Thuong mai:
-          gio mo cua/gia/danh gia bien tap/link review; va aiReferenceSummary lam ngu canh nen
-          cho AI viet bai ngay duoi day) — khong thuoc rieng 1 tab do nen gom chung voi phan
-          nhap thong tin AI vao 1 tab "AI ho tro". */}
-            <Group title="🔎 Trích xuất AI (Google Maps + web tham khảo)">
+            {/* Thong nhat 05/08/2026: 3 buoc trich xuat theo dung 1 thu tu — Tim Google
+          Maps (toa do + dia chi/SDT/website co ban) -> Trich xuat Skill -> Trich xuat
+          GSG — ca 3 deu ghi vao bang staging rieng, duyet qua panel rieng, KHONG tu
+          ap dung thang vao du lieu that. */}
+            <Group title="① Tìm Google Maps (toạ độ + thông tin cơ bản)">
+              <p className="mb-2 text-xs text-zinc-500">
+                Quét Google Maps cho đúng điểm này — tìm googleMapsUrl + địa chỉ/SĐT/website xem
+                trước (mất 10-20 giây, không tốn phí). Kết quả vào bảng chờ duyệt bên dưới,
+                KHÔNG tự ghi vào form/DB — mở bảng để chọn đúng ứng viên rồi bấm "Chấp nhận".
+              </p>
+              {findGeocodeForThis.isError && (
+                <ErrorBox
+                  error={
+                    findGeocodeForThis.error instanceof ApiError
+                      ? findGeocodeForThis.error
+                      : new ApiError(0, String(findGeocodeForThis.error), [])
+                  }
+                />
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" loading={findGeocodeForThis.isPending} onClick={() => findGeocodeForThis.mutate()}>
+                  🔍 Tìm trên Google Maps
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setGeocodeSelfPanelOpen(true)}>
+                  📋 Xem/duyệt kết quả
+                </Button>
+              </div>
+              {findGeocodeForThis.data && (
+                <p className="mt-1 text-xs text-zinc-500">
+                  Tìm được {findGeocodeForThis.data.candidates.length} ứng viên — đã lưu vào hàng chờ
+                  duyệt, mở "Xem/duyệt kết quả" để chọn đúng.
+                </p>
+              )}
+              <GeocodeCandidatesPanel
+                open={geocodeSelfPanelOpen}
+                onClose={() => setGeocodeSelfPanelOpen(false)}
+                onAccepted={() => invalidate()}
+                slugFilter={d.slug}
+              />
+            </Group>
+
+            <Group title="② Trích xuất AI (Skill/GSG — Google Maps + web tham khảo)">
               <DestinationAiExtractionPanel
                 slug={d.slug}
                 name={d.name}
@@ -1396,7 +1445,7 @@ export default function DestinationDetailPage({
             )}
 
             {d.kind === "cluster" && (
-              <Group title="🔍 Tìm toạ độ cho điểm con cụm này (Google Places)">
+              <Group title="🔍 Tìm toạ độ cho điểm con cụm này (quét Google Maps)">
                 <p className="mb-2 text-xs text-zinc-500">
                   Tự động tìm googleMapsUrl + địa chỉ/SĐT/ảnh xem trước cho các điểm con của cụm này
                   còn thiếu toạ độ — chạy nền, kết quả vào bảng duyệt bên dưới, KHÔNG tự ghi DB.
@@ -1424,8 +1473,9 @@ export default function DestinationDetailPage({
                 </div>
                 {geocodeRunResult && (
                   <p className="mt-1 text-xs text-zinc-500">
-                    Đã gửi job cho {geocodeRunResult.targetCount} điểm (đã dùng{" "}
-                    {geocodeRunResult.usageThisMonth}/1000 lượt Google Places miễn phí tháng này).
+                    Đã gửi job cho {geocodeRunResult.targetCount} điểm (đã quét{" "}
+                    {geocodeRunResult.usageThisMonth} lượt tháng này qua trình duyệt, không tốn phí) — chạy
+                    nền chậm để tránh bị Google chặn.
                   </p>
                 )}
                 <GeocodeCandidatesPanel
@@ -1611,7 +1661,7 @@ export default function DestinationDetailPage({
                           onClick={() =>
                             setRefUrls((rows) => [
                               ...rows,
-                              { label: "", url: "" },
+                              { label: "Thông tin", url: "" },
                             ])
                           }
                           className="mt-2 text-sm text-blue-600 hover:underline dark:text-blue-400"

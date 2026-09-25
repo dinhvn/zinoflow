@@ -1,7 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { PlaceGeocodeCandidate } from "@zinoflow/contracts";
 import { DomainRuleError } from "../../../shared/errors/app-error";
-import { normalizeVietnamese } from "../../../shared/text/vietnamese";
 import { haversineMeters } from "../../domain/related-builder";
 import {
   DESTINATION_MIRROR_REPOSITORY,
@@ -15,16 +14,26 @@ import {
   PLACES_API_USAGE_REPOSITORY,
   type PlacesApiUsageRepository,
 } from "../ports/places-api-usage.repository";
+import {
+  DESTINATION_GEOCODE_CANDIDATE_REPOSITORY,
+  type DestinationGeocodeCandidateRepository,
+} from "../ports/destination-geocode-candidate.repository";
+import {
+  buildStagedCandidates,
+  LOCATION_BIAS_RADIUS_METERS,
+  scoreCandidate,
+} from "../services/geocode-candidate-scoring";
 
-/** Ban kinh location bias quanh toa do cum cha — cum du lich thuong trai vai chuc km */
-export const LOCATION_BIAS_RADIUS_METERS = 20_000;
+export { LOCATION_BIAS_RADIUS_METERS, scoreCandidate };
 
 /**
  * Giai doan 1a (che do tung diem) — dichoithoi-destination-geocode-audit-plan.md.
- * Goi Google Places Text Search LIVE moi lan (khong luu cache), uu tien toa do
- * gan cum cha (locationBias) neu cum cha da co toa do that. KHONG ghi gi vao
- * destination — chi tra danh sach goi y de nguoi dung tu chon roi bam Luu tren
- * form co san (dung Cua C, xem dichoithoi-system-overview.md §2.2).
+ * Quet Google Maps LIVE moi lan (khong cache), uu tien toa do gan cum cha
+ * (locationBias) neu cum cha da co toa do that. Thong nhat 05/08/2026: KHONG
+ * con tra ket qua de FE tu dien thang vao form nua — ket qua duoc UPSERT vao
+ * cung bang staging voi Giai doan 1b (dichoithoi_destination_geocode_candidates),
+ * duyet qua CUNG 1 panel (GeocodeCandidatesPanel) — chi 1 luong duyet duy nhat
+ * cho ca tim tung diem lan tim hang loat.
  */
 @Injectable()
 export class GetGeocodeSuggestionsUseCase {
@@ -35,15 +44,15 @@ export class GetGeocodeSuggestionsUseCase {
     private readonly geocoder: PlaceGeocodingProvider,
     @Inject(PLACES_API_USAGE_REPOSITORY)
     private readonly usageRepo: PlacesApiUsageRepository,
+    @Inject(DESTINATION_GEOCODE_CANDIDATE_REPOSITORY)
+    private readonly candidateRepo: DestinationGeocodeCandidateRepository,
   ) {}
 
   async execute(
     slug: string,
   ): Promise<{ candidates: PlaceGeocodeCandidate[]; usageThisMonth: number }> {
     if (!this.geocoder.isConfigured()) {
-      throw new DomainRuleError(
-        "Chưa cấu hình GOOGLE_MAPS_API_KEY — tính năng tìm toạ độ tự động đang tắt",
-      );
+      throw new DomainRuleError("Tính năng tìm toạ độ tự động đang tắt");
     }
 
     const all = await this.mirrorRepo.findAll();
@@ -85,36 +94,15 @@ export class GetGeocodeSuggestionsUseCase {
       })
       .sort((a, b) => b.confidenceScore - a.confidenceScore);
 
+    const staged = buildStagedCandidates(destination.name, results, locationBias);
+    await this.candidateRepo.upsert({
+      destinationSlug: slug,
+      foundAt: new Date(),
+      candidates: staged,
+      status: staged.length === 0 ? "not-found" : "pending",
+    });
+
     const usageThisMonth = await this.usageRepo.countThisMonth();
     return { candidates, usageThisMonth };
   }
-}
-
-/**
- * 0-1, 60% do giong ten (Jaccard token, chuan hoa tieng Viet) + 40% khoang
- * cach toi cum cha (cang gan cum cha cang cao, xa hon ban kinh bias = 0).
- * distanceMeters=null (khong co cum cha co toa do) → coi nhu trung tinh 0.5.
- */
-export function scoreCandidate(
-  targetName: string,
-  candidateName: string,
-  distanceMeters: number | null,
-  radiusMeters: number,
-): number {
-  const nameScore = nameSimilarity(targetName, candidateName);
-  const distanceScore = distanceMeters === null ? 0.5 : Math.max(0, 1 - distanceMeters / radiusMeters);
-  return Math.round((0.6 * nameScore + 0.4 * distanceScore) * 100) / 100;
-}
-
-function nameSimilarity(a: string, b: string): number {
-  const na = normalizeVietnamese(a);
-  const nb = normalizeVietnamese(b);
-  if (!na || !nb) return 0;
-  if (na === nb) return 1;
-  const tokensA = new Set(na.split(" ").filter(Boolean));
-  const tokensB = new Set(nb.split(" ").filter(Boolean));
-  let intersection = 0;
-  for (const t of tokensA) if (tokensB.has(t)) intersection++;
-  const union = tokensA.size + tokensB.size - intersection;
-  return union === 0 ? 0 : intersection / union;
 }

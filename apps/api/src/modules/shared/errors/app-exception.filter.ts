@@ -65,12 +65,18 @@ export class AppExceptionFilter implements ExceptionFilter {
       };
     }
 
+    // Loi khong luong truoc duoc (bug, loi thu vien, ...) — day la tool
+    // noi bo local-first (khong public), nen tra thang message/stack ve FE
+    // de debug nhanh thay vi giau sau "Internal server error" chung chung.
     return {
       status: 500,
       envelope: {
         errorCode: "UnknownError",
-        message: "Internal server error",
-        details: [],
+        message: exception instanceof Error ? exception.message : "Internal server error",
+        details:
+          exception instanceof Error && exception.stack
+            ? [exception.stack]
+            : [],
         traceId,
       },
     };

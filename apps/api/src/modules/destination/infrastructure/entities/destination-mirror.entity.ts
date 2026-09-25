@@ -63,16 +63,18 @@ export class DestinationMirrorEntity {
   @Column({ name: "google_maps_url", type: "text", nullable: true })
   googleMapsUrl!: string | null;
 
-  @Column({ name: "address_new", type: "varchar", length: 256, nullable: true })
+  // text (khong gioi han) — dia chi Google Maps that co the vuot 256 ky tu, xem
+  // migration DestinationAddressWebsiteToText1782970000000
+  @Column({ name: "address_new", type: "text", nullable: true })
   addressNew!: string | null;
 
-  @Column({ name: "address_old", type: "varchar", length: 256, nullable: true })
+  @Column({ name: "address_old", type: "text", nullable: true })
   addressOld!: string | null;
 
   @Column({ name: "contact_phone", type: "varchar", length: 32, nullable: true })
   contactPhone!: string | null;
 
-  @Column({ name: "contact_website", type: "varchar", length: 256, nullable: true })
+  @Column({ name: "contact_website", type: "text", nullable: true })
   contactWebsite!: string | null;
 
   /** Nhieu link mua ve — affiliateUrl da tinh san (redesign §4.2/§4.3, thay booking_url cu) */

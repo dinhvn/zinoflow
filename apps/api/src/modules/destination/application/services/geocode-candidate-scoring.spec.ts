@@ -1,4 +1,4 @@
-import { scoreCandidate } from "./get-geocode-suggestions.usecase";
+import { scoreCandidate } from "./geocode-candidate-scoring";
 
 describe("scoreCandidate", () => {
   it("gives highest score for identical name and zero distance", () => {

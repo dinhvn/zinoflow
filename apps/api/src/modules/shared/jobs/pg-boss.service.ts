@@ -1,8 +1,30 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from "@nestjs/common";
+import { InjectDataSource } from "@nestjs/typeorm";
 import PgBoss from "pg-boss";
-import type { JobQueue } from "./job-queue.port";
+import type { DataSource } from "typeorm";
+import { QUEUE_NAMES, type JobQueue } from "./job-queue.port";
 
 type JobHandler = (data: object) => Promise<void>;
+
+/**
+ * Queue rieng can policy khac muc mac dinh (dat cho AI generation — job
+ * khong duoc treo vo han). destination.geocode-batch chay hang gio/nhieu
+ * ngay lien tuc (quet toan bo POI qua dem, yeu cau 06/08/2026): expiry 2h
+ * thay vi 15 phut (throttle 8-20s/lan + click "Ket qua tren web" de vuot 15
+ * phut voi batch vai chuc diem tro len — bug thuc te phat hien cung ngay,
+ * pg-boss tung retry-tu-dau khi "timeout" gia trong luc van chay binh
+ * thuong). retryLimit nang cao (30, so voi 3 mac dinh) + retryBackoff de tu
+ * phuc hoi qua dem neu gap loi tam thoi/bi Google chan tam thoi — xem
+ * ProcessGeocodeBatchUseCase (nem loi khi bi chan de pg-boss retry thay vi
+ * am tham "hoan tat" som). Retry AN TOAN vi excludeAlreadyAttempted() bo qua
+ * cac diem da quet xong khi khong truyen slugs cu the.
+ */
+const QUEUE_OPTIONS_OVERRIDES: Partial<Record<string, { expireInSeconds: number; retryLimit: number }>> = {
+  [QUEUE_NAMES.destinationGeocodeBatch]: { expireInSeconds: 2 * 60 * 60, retryLimit: 30 },
+  // Cung dac diem voi destinationGeocodeBatch (vong lap throttle qua nhieu diem,
+  // chay lau) — xem RefreshWebResultsBatchUseCase.
+  [QUEUE_NAMES.destinationRefreshWebResults]: { expireInSeconds: 2 * 60 * 60, retryLimit: 30 },
+};
 
 /**
  * Adapter pg-boss — queue chay tren chinh PostgreSQL (schema "pgboss"),
@@ -17,6 +39,11 @@ export class PgBossService implements JobQueue, OnModuleInit, OnModuleDestroy {
   private boss: PgBoss | null = null;
   /** Handlers dang ky truoc khi boss start se duoc attach trong onModuleInit. */
   private readonly pendingHandlers = new Map<string, JobHandler>();
+
+  constructor(
+    // Optional: app van boot duoc khi TypeORM chua duoc dang ky (chua co DATABASE_URL)
+    @Optional() @InjectDataSource() private readonly dataSource?: DataSource,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     const databaseUrl = process.env.DATABASE_URL;
@@ -68,9 +95,49 @@ export class PgBossService implements JobQueue, OnModuleInit, OnModuleDestroy {
     return this.boss.send(queueName, data);
   }
 
+  /**
+   * Tu phuc hoi job "mo coi" — bug thuc te 07-08/08/2026: process node chay
+   * `nest start --watch` hay bi crash/restart (loi tree-kill cua Nest CLI
+   * hoac loi type tam thoi luc dang sua code), moi lan nhu vay job dang chay
+   * dang do (state='active' trong pgboss.job) bi bo lai vinh vien vi khong
+   * con process nao dang thuc su xu ly no nua — phai nguoi vao tay tao job
+   * moi thay the. 1 lan bi bo quen qua dem mat gan 3 tieng xu ly (dichoithoi
+   * geocode batch). Goi TU DONG cho MOI queue trong `attachWorker()` (khong
+   * can tung worker tu dang ky) — ngay truoc khi `boss.work()` bat dau fetch,
+   * nen MOI job dang 'active' luc nay chac chan la mo coi tu lan chay truoc,
+   * an toan de fail() cho pg-boss tu dong retry (ton trong retryLimit/
+   * retryBackoff da cau hinh rieng cho tung queue, KHONG tao job moi — giu
+   * nguyen lich su/payload cu).
+   *
+   * GIA DINH single-instance (dung voi trien khai hien tai — 1 process API
+   * duy nhat, xem docs/tech-recommendation-web-mvp.md). Neu sau nay chay
+   * nhieu instance song song, gia dinh nay SAI (job dang duoc instance khac
+   * xu ly that se bi coi nham la mo coi) — can bo/sua lai logic nay truoc.
+   */
+  async resumeOrphanedJobs(queueName: string): Promise<number> {
+    if (!this.boss || !this.dataSource) return 0;
+    const rows: Array<{ id: string }> = await this.dataSource.query(
+      `SELECT id FROM pgboss.job WHERE name = $1 AND state = 'active'`,
+      [queueName],
+    );
+    for (const row of rows) {
+      await this.boss.fail(queueName, row.id).catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`Khong the phuc hoi job mo coi ${row.id} (${queueName}): ${message}`);
+      });
+    }
+    if (rows.length > 0) {
+      this.logger.warn(`Phuc hoi ${rows.length} job "mo coi" cho queue "${queueName}" (tu process truoc bi crash)`);
+    }
+    return rows.length;
+  }
+
   private async attachWorker(queueName: string, handler: JobHandler): Promise<void> {
     if (!this.boss) return;
     await this.ensureQueue(queueName);
+    // Tai day chac chan an toan: worker CHUA fetch job nao (work() goi ngay ben
+    // duoi) nen job dang 'active' luc nay chi co the la mo coi tu lan chay truoc.
+    await this.resumeOrphanedJobs(queueName);
     // pg-boss v10: work() nhan batch jobs (mac dinh size 1)
     await this.boss.work(queueName, async (jobs) => {
       for (const job of jobs) {
@@ -88,16 +155,17 @@ export class PgBossService implements JobQueue, OnModuleInit, OnModuleDestroy {
    */
   private async ensureQueue(queueName: string): Promise<void> {
     if (!this.boss) return;
-    try {
-      await this.boss.createQueue(queueName, {
-        name: queueName,
-        retryLimit: 3,
-        retryDelay: 30,
-        retryBackoff: true,
-        expireInSeconds: 15 * 60,
-      });
-    } catch {
-      // Queue da ton tai — bo qua
-    }
+    const overrides = QUEUE_OPTIONS_OVERRIDES[queueName];
+    const options = {
+      retryLimit: overrides?.retryLimit ?? 3,
+      retryDelay: 30,
+      retryBackoff: true,
+      expireInSeconds: overrides?.expireInSeconds ?? 15 * 60,
+    };
+    // createQueue la INSERT ... ON CONFLICT DO NOTHING (khong throw, khong cap
+    // nhat gi neu queue da ton tai tu truoc) — phai goi them updateQueue de
+    // dam bao options (vd expireInSeconds moi nang) duoc ap dung cho queue cu.
+    await this.boss.createQueue(queueName, { name: queueName, ...options });
+    await this.boss.updateQueue(queueName, { name: queueName, ...options });
   }
 }

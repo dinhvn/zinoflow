@@ -32,7 +32,20 @@ QUY TẮC CÀO DỮ LIỆU:
 
 4. Với mỗi điểm, nếu tìm được địa chỉ cụ thể qua Google Search thì ghi vào "address" — không bịa địa chỉ khi không tìm thấy (để null).
 
-Trả về DUY NHẤT JSON theo đúng schema đã cho — KHÔNG kèm văn bản dẫn dắt, không giải thích ngoài JSON. Tiếng Việt có dấu đầy đủ cho mọi giá trị text.`;
+ĐỊNH DẠNG JSON BẮT BUỘC (chế độ Batch không đính kèm JSON Schema riêng — PHẢI tự tuân
+theo ĐÚNG cấu trúc dưới đây, không được suy diễn cấu trúc khác):
+{
+  "locations": [
+    { "name": "Tên điểm đến", "priority_level": 1, "short_description": "Mô tả ngắn hoặc null", "address": "Địa chỉ hoặc null" }
+  ]
+}
+- LUÔN bọc trong 1 object gốc có DUY NHẤT key "locations" — TUYỆT ĐỐI không trả về
+  mảng trần (không có object bọc ngoài), không đổi tên key "locations".
+- "priority_level" là số nguyên 1-5 (không phải chuỗi). "short_description"/"address"
+  luôn có mặt trong mỗi phần tử — dùng null nếu không có, KHÔNG bỏ qua field.
+- Trả về DUY NHẤT JSON hợp lệ theo đúng cấu trúc trên — KHÔNG kèm văn bản dẫn dắt,
+  không giải thích, không markdown fence, không dấu câu/ký tự nào ngoài JSON.
+Tiếng Việt có dấu đầy đủ cho mọi giá trị text.`;
 
 /**
  * Prompt nguoi dung (chua ten cum + tinh + ghi chu bo sung) — dung chung generate/preview.

@@ -279,6 +279,36 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
 
 ## 0) Đang phân tích — CHƯA vào lộ trình build chính thức
 
+- **Chuẩn hoá POI/cụm theo từng tỉnh, làm xong 1 tỉnh mới sang tỉnh tiếp
+  theo (15/08/2026, CHƯA BUILD Giai đoạn 0 — công cụ audit sai cụm)**: plan
+  ở `dichoithoi-chuan-hoa-poi-theo-tinh-plan.md`. Bối cảnh: audit dữ liệu
+  thật 15/08/2026 phát hiện 1.228/3.580 POI (34,3%) thiếu toạ độ, 81 POI
+  cách xa cụm cha >50km (chưa có công cụ audit, cần xây), Type/Tag chỉ mới
+  6,3%/6,4%. Trong ngày đã sửa xong gốc lỗi geocode locality-fallback
+  (`accept-geocode-candidates.usecase.ts`) + gộp 59 POI trùng lặp + dọn 91
+  POI geocode sai. Người dùng chốt: chuẩn hoá THEO TỪNG TỈNH (34 tỉnh mới
+  sau sáp nhập, xem `dichoithoi-sap-nhap-tinh-thanh-2025.md`) trước khi
+  trích xuất nội dung/gắn Type-Tag, KHÔNG làm 1 lượt toàn quốc như hôm nay.
+  Giai đoạn 0 (xây script audit sai cụm) → Giai đoạn 1 (pilot tỉnh Điện
+  Biên, 43 POI) → Giai đoạn 2 (mở rộng 33 tỉnh còn lại, thứ tự ưu tiên CHƯA
+  CHỐT) → Giai đoạn 3 (Type/Tag + nội dung, phụ thuộc tỉnh đã "sạch dữ
+  liệu"). Có bảng theo dõi tiến độ 34 tỉnh trong plan.
+
+- **Tự động tìm nguồn tham khảo + gom & chuẩn hoá ảnh hàng loạt theo cụm
+  (10/08/2026, CHƯA BUILD)**: plan ở
+  `dichoithoi-auto-reference-image-pipeline-plan.md`. Bối cảnh: sau geocode,
+  bổ sung ảnh đại diện/thư viện + website tham khảo cho ~3000+ điểm làm tay
+  tốn vài tháng. Người dùng chấp nhận rủi ro bản quyền/ToS để lấy ảnh từ web
+  tham khảo + Google Maps (đổi có chủ đích so với nguyên tắc "Mức A không lưu
+  ảnh Maps" ở plan geocode bên dưới), dùng thêm Pexels/Unsplash song song.
+  3 giai đoạn: GĐ0 bảng staging ảnh destination + port công thức auto-tune từ
+  extension `gmaps-image-clipper` sang backend (sharp) — HIỆN CHƯA CÓ bước
+  "chờ duyệt" nào cho ảnh destination (khác `content_images`), đây là lỗ hổng
+  kiến trúc cần vá trước; GĐ1 thêm Unsplash + gom ảnh Google Maps; GĐ2 gom
+  ảnh + trích xuất từ website tham khảo (khuyến nghị tái dùng `aiReferenceUrls`
+  đã tự động điền sẵn qua `RefreshWebResultsBatchUseCase`, thay vì build thêm
+  Playwright search Google riêng — cần người dùng chốt hướng trước khi code).
+
 - **Tự động geocode ~3757 điểm con thiếu googleMapsUrl + audit trùng lặp/sai
   cụm (05/08/2026, ĐÃ BUILD CODE — CHƯA TEST DỮ LIỆU THẬT vì Places API (New)
   chưa được bật trên Google Cloud project của người dùng)**: plan ở

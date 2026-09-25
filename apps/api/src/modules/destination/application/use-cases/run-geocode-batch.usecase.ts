@@ -8,18 +8,23 @@ import {
   type DestinationMirrorRepository,
 } from "../ports/destination-mirror.repository";
 import {
-  PLACES_API_FREE_TIER_LIMIT,
   PLACES_API_USAGE_REPOSITORY,
   type PlacesApiUsageRepository,
 } from "../ports/places-api-usage.repository";
-import { matchesGeocodeFilter } from "../services/geocode-target-filter";
+import {
+  DESTINATION_GEOCODE_CANDIDATE_REPOSITORY,
+  type DestinationGeocodeCandidateRepository,
+} from "../ports/destination-geocode-candidate.repository";
+import { excludeAlreadyAttempted, matchesGeocodeFilter } from "../services/geocode-target-filter";
 
 /**
  * Giai doan 1b (che do hang loat) — dichoithoi-destination-geocode-audit-plan.md.
  * CHI enqueue qua pg-boss (fire-and-forget, cung pattern RelinkAllWorker/
- * hotel.auto-assign) — vong lap goi Google Places THAT chay trong
+ * hotel.auto-assign) — vong lap scrape Google Maps THAT chay trong
  * ProcessGeocodeBatchUseCase o worker, khong chay dong bo trong request vi
- * co the toi hang nghin diem.
+ * co the toi hang nghin diem. Khong con gioi han free-tier (chuyen tu Google
+ * Places API sang scrape qua Playwright, khong ton phi) — `usageThisMonth`
+ * chi con la thong ke tham khao, khong chan chay nua.
  */
 @Injectable()
 export class RunGeocodeBatchUseCase {
@@ -28,29 +33,41 @@ export class RunGeocodeBatchUseCase {
     private readonly mirrorRepo: DestinationMirrorRepository,
     @Inject(PLACES_API_USAGE_REPOSITORY)
     private readonly usageRepo: PlacesApiUsageRepository,
+    @Inject(DESTINATION_GEOCODE_CANDIDATE_REPOSITORY)
+    private readonly candidateRepo: DestinationGeocodeCandidateRepository,
     @Inject(JOB_QUEUE) private readonly jobQueue: JobQueue,
   ) {}
 
   async execute(request: RunGeocodeBatchRequest): Promise<RunGeocodeBatchResponse> {
     const all = await this.mirrorRepo.findAll();
-    const targetCount = all.filter((d) => matchesGeocodeFilter(d, request)).length;
+    const attemptedSlugs = new Set(await this.candidateRepo.findAllAttemptedSlugs());
+    const hasExplicitSlugs = Boolean(request.slugs && request.slugs.length > 0);
+    const targetCount = excludeAlreadyAttempted(
+      all.filter((d) => matchesGeocodeFilter(d, request)),
+      attemptedSlugs,
+      hasExplicitSlugs,
+    ).length;
     const usageThisMonth = await this.usageRepo.countThisMonth();
 
     if (targetCount === 0) {
-      throw new DomainRuleError("Không có điểm đến nào khớp bộ lọc đã chọn");
-    }
-    if (usageThisMonth >= PLACES_API_FREE_TIER_LIMIT && !request.acceptCostBeyondFreeTier) {
       throw new DomainRuleError(
-        `Đã dùng ${usageThisMonth}/${PLACES_API_FREE_TIER_LIMIT} lượt gọi Google Places miễn phí tháng này — ` +
-          `bật "Chấp nhận phát sinh phí ngoài free-tier" để tiếp tục chạy.`,
+        hasExplicitSlugs
+          ? "Không có điểm đến nào khớp bộ lọc đã chọn"
+          : "Không có điểm đến nào khớp bộ lọc đã chọn (hoặc tất cả đã từng tìm rồi — xem \"Kết quả tìm toạ độ chờ duyệt\")",
       );
     }
 
     const jobId = await this.jobQueue.send(QUEUE_NAMES.destinationGeocodeBatch, {
+      // CHI parentSlug thuc su nullable trong schema (destinationKindSchema/provinceCode/
+      // missingCoords/slugs CHI la .optional(), KHONG .nullable() — gui null cho may field
+      // do se lam runGeocodeBatchRequestSchema.parse() o worker nem loi, bug thuc te phat
+      // hien 06/08/2026 khi rieng parentSlug duoc coi null nhung cac field khac lai khong).
+      slugs: request.slugs,
       parentSlug: request.parentSlug ?? null,
-      kind: request.kind ?? null,
-      provinceCode: request.provinceCode ?? null,
-      missingCoords: request.missingCoords ?? null,
+      kind: request.kind,
+      provinceCode: request.provinceCode,
+      missingCoords: request.missingCoords,
+      quickOnly: request.quickOnly,
       acceptCostBeyondFreeTier: request.acceptCostBeyondFreeTier,
     });
 

@@ -45,6 +45,10 @@ export function ClusterPoiCandidatesPanel({
   const [preferAi, setPreferAi] = useState<Set<number>>(new Set());
   const [previewData, setPreviewData] = useState<PreviewClusterPoiPromptResponse | null>(null);
   const [error, setError] = useState<unknown>(null);
+  // Bang ket qua hien trong popup thay vi luon chiem cho ngay tren trang — tu
+  // mo ngay sau khi Tim xong (moi chay), nguoi dung tu bam lai "Xem ket qua"
+  // neu da dong hoac quay lai trang voi ket qua cu.
+  const [resultsOpen, setResultsOpen] = useState(false);
 
   const queryKey = ["cluster-poi-candidates", clusterSlug];
   const candidateQuery = useQuery({
@@ -78,6 +82,7 @@ export function ClusterPoiCandidatesPanel({
     onSuccess: () => {
       setError(null);
       setChecked(new Set());
+      setResultsOpen(true);
       void queryClient.invalidateQueries({ queryKey });
     },
     onError: (e) => setError(e),
@@ -178,6 +183,7 @@ export function ClusterPoiCandidatesPanel({
         rows={2}
         value={extraNotes}
         onChange={(e) => setExtraNotes(e.target.value)}
+        className="w-full"
       />
 
       <div className="flex flex-wrap items-center gap-2">
@@ -187,94 +193,120 @@ export function ClusterPoiCandidatesPanel({
         <Button size="sm" loading={find.isPending} onClick={() => find.mutate()}>
           {find.isPending ? "Đang tìm..." : "🔎 Tìm điểm con bằng AI"}
         </Button>
+        {candidates.length > 0 && !resultsOpen && (
+          <Button
+            size="sm"
+            variant={actionableIndexes.length > 0 ? "primary" : "secondary"}
+            onClick={() => setResultsOpen(true)}
+          >
+            📋 Xem kết quả ({candidates.length})
+            {actionableIndexes.length > 0 && (
+              <Badge tone="amber" className="ml-1">
+                {actionableIndexes.length} cần duyệt
+              </Badge>
+            )}
+          </Button>
+        )}
       </div>
 
       {previewData && <PreviewModal data={previewData} onClose={() => setPreviewData(null)} />}
 
-      {candidates.length > 0 && (
-        <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
-              <tr>
-                <th className="p-2 text-center">
-                  {actionableIndexes.length > 0 ? (
-                    <Checkbox label="" checked={allChecked} onChange={toggleAll} />
-                  ) : (
-                    "Chọn"
-                  )}
-                </th>
-                <th className="p-2">Tên</th>
-                <th className="p-2">Ưu tiên</th>
-                <th className="p-2">Mô tả</th>
-                <th className="p-2">Địa chỉ</th>
-                <th className="p-2">Trạng thái khớp</th>
-              </tr>
-            </thead>
-            <tbody>
-              {candidates.map((c: ClusterPoiCandidateItem, i) => {
-                const badge = MATCH_TYPE_BADGE[c.matchType];
-                const actionable = c.matchType !== "existing-in-cluster" && c.status === "pending";
-                const isBackupMatch = c.matchType === "backup-match";
-                return (
-                  <tr key={i} className="border-t border-zinc-200 align-top dark:border-zinc-800">
-                    <td className="p-2 text-center">
-                      {actionable ? (
-                        <Checkbox label="" checked={checked.has(i)} onChange={() => toggle(i)} />
-                      ) : (
-                        c.status !== "pending" && (
-                          <Badge tone={c.status === "accepted" ? "emerald" : "gray"}>
-                            {c.status === "accepted" ? "Đã chấp nhận" : "Đã bỏ qua"}
-                          </Badge>
-                        )
-                      )}
-                    </td>
-                    <td className="p-2 font-medium">{c.name}</td>
-                    <td className="p-2">{c.priorityLevel}</td>
-                    <td className="max-w-xs p-2 text-zinc-500">{c.shortDescription ?? "—"}</td>
-                    <td className="p-2 text-zinc-500">{c.address ?? "—"}</td>
-                    <td className="p-2">
-                      <div className="flex flex-col gap-1">
-                        <Badge tone={badge.tone}>{badge.label}</Badge>
-                        {c.matchedName && (
-                          <span className="text-xs text-zinc-500">Khớp với: {c.matchedName}</span>
-                        )}
-                        {isBackupMatch && (
-                          <span className="text-xs text-zinc-500">
-                            Backup có: {c.backupHasArticle ? "✍️ bài viết" : "— chưa có bài"}
-                            {" · "}
-                            {c.backupHasImages ? "🖼️ ảnh" : "— chưa có ảnh"}
-                          </span>
-                        )}
-                        {isBackupMatch && actionable && checked.has(i) && (
-                          <label className="flex items-center gap-1 text-xs text-zinc-500">
-                            <input
-                              type="checkbox"
-                              checked={preferAi.has(i)}
-                              onChange={() => togglePreferAi(i)}
-                            />
-                            Dùng tên/mô tả/ưu tiên của AI thay vì giữ nguyên bản backup
-                          </label>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {candidates.length > 0 && (
-        <Button
-          variant="primary"
-          size="sm"
-          loading={accept.isPending}
-          disabled={checked.size === 0}
-          onClick={() => accept.mutate([...checked])}
+      {resultsOpen && candidates.length > 0 && (
+        <Modal
+          open
+          onClose={() => setResultsOpen(false)}
+          title={`Kết quả tìm điểm con bằng AI (${candidates.length})`}
+          width="max-w-6xl"
         >
-          {accept.isPending ? "Đang ghi..." : `Chấp nhận ${checked.size} mục đã tick`}
-        </Button>
+          <div className="space-y-3">
+            <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
+                  <tr>
+                    <th className="p-2 text-center">
+                      {actionableIndexes.length > 0 ? (
+                        <Checkbox label="" checked={allChecked} onChange={toggleAll} />
+                      ) : (
+                        "Chọn"
+                      )}
+                    </th>
+                    <th className="p-2">Tên</th>
+                    <th className="p-2">Ưu tiên</th>
+                    <th className="p-2">Mô tả</th>
+                    <th className="p-2">Địa chỉ</th>
+                    <th className="p-2">Trạng thái khớp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {candidates.map((c: ClusterPoiCandidateItem, i) => {
+                    const badge = MATCH_TYPE_BADGE[c.matchType];
+                    const actionable = c.matchType !== "existing-in-cluster" && c.status === "pending";
+                    const isBackupMatch = c.matchType === "backup-match";
+                    return (
+                      <tr key={i} className="border-t border-zinc-200 align-top dark:border-zinc-800">
+                        <td className="p-2 text-center">
+                          {actionable ? (
+                            <Checkbox label="" checked={checked.has(i)} onChange={() => toggle(i)} />
+                          ) : (
+                            c.status !== "pending" && (
+                              <Badge tone={c.status === "accepted" ? "emerald" : "gray"}>
+                                {c.status === "accepted" ? "Đã chấp nhận" : "Đã bỏ qua"}
+                              </Badge>
+                            )
+                          )}
+                        </td>
+                        <td className="p-2 font-medium">{c.name}</td>
+                        <td className="p-2">{c.priorityLevel}</td>
+                        <td className="max-w-xs p-2 text-zinc-500">{c.shortDescription ?? "—"}</td>
+                        <td className="p-2 text-zinc-500">{c.address ?? "—"}</td>
+                        <td className="p-2">
+                          <div className="flex flex-col gap-1">
+                            <Badge tone={badge.tone}>{badge.label}</Badge>
+                            {c.matchedName && (
+                              <span className="text-xs text-zinc-500">Khớp với: {c.matchedName}</span>
+                            )}
+                            {isBackupMatch && (
+                              <span className="text-xs text-zinc-500">
+                                Backup có: {c.backupHasArticle ? "✍️ bài viết" : "— chưa có bài"}
+                                {" · "}
+                                {c.backupHasImages ? "🖼️ ảnh" : "— chưa có ảnh"}
+                              </span>
+                            )}
+                            {isBackupMatch && actionable && checked.has(i) && (
+                              <label className="flex items-center gap-1 text-xs text-zinc-500">
+                                <input
+                                  type="checkbox"
+                                  checked={preferAi.has(i)}
+                                  onChange={() => togglePreferAi(i)}
+                                />
+                                Dùng tên/mô tả/ưu tiên của AI thay vì giữ nguyên bản backup
+                              </label>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                loading={accept.isPending}
+                disabled={checked.size === 0}
+                onClick={() => accept.mutate([...checked])}
+              >
+                {accept.isPending ? "Đang ghi..." : `Chấp nhận ${checked.size} mục đã tick`}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setResultsOpen(false)}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

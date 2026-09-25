@@ -125,6 +125,12 @@ import {
   acceptGeocodeCandidatesRequestSchema,
   type AcceptGeocodeCandidatesRequest,
   type AcceptGeocodeCandidatesResponse,
+  skipGeocodeCandidatesRequestSchema,
+  type SkipGeocodeCandidatesRequest,
+  type SkipGeocodeCandidatesResponse,
+  resolveAmbiguousCandidateRequestSchema,
+  type ResolveAmbiguousCandidateRequest,
+  type ResolveAmbiguousCandidateResponse,
   findClusterPoiCandidatesRequestSchema,
   type FindClusterPoiCandidatesRequest,
   acceptClusterPoiCandidatesRequestSchema,
@@ -184,6 +190,8 @@ import { GetDestinationAiExtractionUseCase } from "../application/use-cases/get-
 import { GetGeocodeSuggestionsUseCase } from "../application/use-cases/get-geocode-suggestions.usecase";
 import { RunGeocodeBatchUseCase } from "../application/use-cases/run-geocode-batch.usecase";
 import { AcceptGeocodeCandidatesUseCase } from "../application/use-cases/accept-geocode-candidates.usecase";
+import { ResolveAmbiguousCandidateUseCase } from "../application/use-cases/resolve-ambiguous-candidate.usecase";
+import { SkipGeocodeCandidatesUseCase } from "../application/use-cases/skip-geocode-candidates.usecase";
 import { ListGeocodeCandidatesUseCase } from "../application/use-cases/list-geocode-candidates.usecase";
 import { AuditDestinationDuplicatesClusterFitUseCase } from "../application/use-cases/audit-destination-duplicates-cluster-fit.usecase";
 import { AcceptDestinationAiExtractionFieldsUseCase } from "../application/use-cases/accept-destination-ai-extraction-fields.usecase";
@@ -290,6 +298,8 @@ export class DestinationsController {
     private readonly getGeocodeSuggestionsUseCase: GetGeocodeSuggestionsUseCase,
     private readonly runGeocodeBatchUseCase: RunGeocodeBatchUseCase,
     private readonly acceptGeocodeCandidatesUseCase: AcceptGeocodeCandidatesUseCase,
+    private readonly resolveAmbiguousCandidateUseCase: ResolveAmbiguousCandidateUseCase,
+    private readonly skipGeocodeCandidatesUseCase: SkipGeocodeCandidatesUseCase,
     private readonly listGeocodeCandidatesUseCase: ListGeocodeCandidatesUseCase,
     private readonly auditDuplicatesClusterFit: AuditDestinationDuplicatesClusterFitUseCase,
     @Inject(IMAGE_CHECKER) private readonly imageChecker: ImageChecker,
@@ -469,10 +479,14 @@ export class DestinationsController {
     return this.runGeocodeBatchUseCase.execute(request);
   }
 
-  /** Danh sach dong staging con "pending" — dung cho bang duyet hang loat */
+  /**
+   * Danh sach dong staging con "pending" — dung cho bang duyet hang loat.
+   * `?slug=` de xem dung 1 diem (khung "Tim Google Maps" trong tab AI ho tro
+   * cua trang chi tiet).
+   */
   @Get("geocode-candidates")
-  listGeocodeCandidates(): Promise<ListGeocodeCandidatesResponse> {
-    return this.listGeocodeCandidatesUseCase.execute();
+  listGeocodeCandidates(@Query("slug") slug?: string): Promise<ListGeocodeCandidatesResponse> {
+    return this.listGeocodeCandidatesUseCase.execute(slug);
   }
 
   /** Chap nhan tung dong da chon 1 placeId cu the trong bang duyet hang loat */
@@ -482,6 +496,43 @@ export class DestinationsController {
     request: AcceptGeocodeCandidatesRequest,
   ): Promise<AcceptGeocodeCandidatesResponse> {
     return this.acceptGeocodeCandidatesUseCase.execute(request);
+  }
+
+  /**
+   * Dung khi dong "ambiguous" chi co ten (chua co toa do) da duoc xem qua va
+   * xac dinh dung 1 candidate — mo lai trang do lay toa do that, chuyen ve
+   * "pending" de hien trong bang duyet nhu binh thuong (yeu cau 10/08/2026).
+   */
+  @Post("geocode-candidates/resolve-ambiguous")
+  resolveAmbiguousCandidate(
+    @Body(new ZodValidationPipe(resolveAmbiguousCandidateRequestSchema))
+    request: ResolveAmbiguousCandidateRequest,
+  ): Promise<ResolveAmbiguousCandidateResponse> {
+    return this.resolveAmbiguousCandidateUseCase.execute(request);
+  }
+
+  /**
+   * Nut "Bo qua" trong bang duyet — danh dau "rejected", KHONG ghi gi vao
+   * destination, loai vinh vien khoi cac lan chay batch filter sau (nguoi
+   * dung tu kiem tra tay rieng).
+   */
+  @Post("geocode-candidates/skip")
+  skipGeocodeCandidates(
+    @Body(new ZodValidationPipe(skipGeocodeCandidatesRequestSchema))
+    request: SkipGeocodeCandidatesRequest,
+  ): Promise<SkipGeocodeCandidatesResponse> {
+    return this.skipGeocodeCandidatesUseCase.execute(request);
+  }
+
+  /**
+   * Vet lai "Ket qua tren web" cho cac diem da "Chap nhan" truoc khi bug quet
+   * rong duoc sua 08/08/2026 — fire-and-forget qua pg-boss, cung pattern voi
+   * relink/apply. Payload rong, RefreshWebResultsBatchUseCase tu tim muc tieu.
+   */
+  @Post("geocode-candidates/refresh-web-results")
+  async refreshWebResults(): Promise<{ jobId: string | null }> {
+    const jobId = await this.jobQueue.send(QUEUE_NAMES.destinationRefreshWebResults, {});
+    return { jobId };
   }
 
   /**
@@ -659,13 +710,14 @@ export class DestinationsController {
   }
 
   /**
-   * Goi y toa do/googleMapsUrl + thong tin co ban qua Google Places API (New)
-   * cho 1 diem CU THE (Giai doan 1a, dichoithoi-destination-geocode-audit-plan.md)
-   * — LUON goi live, khong luu cache o backend. Ket qua chi hien trong UI de
-   * nguoi dung tu chon roi dien vao form, KHONG tu ghi DB (van phai bam "Luu"
-   * cua form nhu binh thuong).
+   * Tim toa do/googleMapsUrl + thong tin co ban qua quet Google Maps cho 1
+   * diem CU THE (Giai doan 1a, dichoithoi-destination-geocode-audit-plan.md)
+   * — LUON goi live, khong cache. POST (khong phai GET) vi co side-effect
+   * that: upsert 1 dong vao bang staging geocode-candidates, CUNG 1 luong
+   * duyet voi Giai doan 1b (thong nhat 05/08/2026, giong cach GSG extraction
+   * o tren cung ghi vao staging roi duyet rieng, khong tu ap dung thang).
    */
-  @Get(":slug/geocode-suggestions")
+  @Post(":slug/geocode-suggestions")
   getGeocodeSuggestionsForSlug(
     @Param("slug") slug: string,
   ): Promise<GetGeocodeSuggestionsResponse> {

@@ -22,9 +22,13 @@ export class GetDestinationTaxonomyUseCase {
   ) {}
 
   async execute(): Promise<DestinationTaxonomy> {
-    const provinces = await this.mirrorRepo.listProvinces();
+    const [provinces, mirrors] = await Promise.all([
+      this.mirrorRepo.listProvinces(),
+      this.mirrorRepo.findAll(),
+    ]);
 
     let types: DestinationTaxonomy["types"] = [];
+    let siteClusters: DestinationTaxonomy["clusters"] = [];
     if (this.siteDb.isConfigured()) {
       try {
         types = await this.siteDb.fetchTypes();
@@ -32,8 +36,35 @@ export class GetDestinationTaxonomyUseCase {
         // schema moi co the chua duoc tao tren site — taxonomy tinh van dung duoc
         this.logger.warn(`Khong doc duoc DestinationType tu site: ${(err as Error).message}`);
       }
+      try {
+        const allDestinations = await this.siteDb.fetchAllDestinations();
+        siteClusters = allDestinations
+          .filter((d) => d.kind === "province" || d.kind === "cluster")
+          .map((d) => ({
+            slug: d.slug,
+            name: d.name,
+            kind: d.kind as "province" | "cluster",
+            provinceCode: d.provinceCode,
+          }));
+      } catch (err) {
+        this.logger.warn(`Khong doc duoc danh sach tinh/cum tu site: ${(err as Error).message}`);
+      }
     }
 
-    return { provinces, types };
+    // Gom them cum/tinh CHUA publish (mirror.siteId=null) — chua co tren site DB
+    const draftClusters = mirrors
+      .filter((m) => m.siteId === null && (m.kind === "province" || m.kind === "cluster"))
+      .map((m) => ({
+        slug: m.slug,
+        name: m.name,
+        kind: m.kind as "province" | "cluster",
+        provinceCode: m.provinceCode,
+      }));
+
+    const clusters = [...siteClusters, ...draftClusters].sort((a, b) =>
+      a.name.localeCompare(b.name, "vi"),
+    );
+
+    return { provinces, types, clusters };
   }
 }

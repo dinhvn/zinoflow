@@ -126,6 +126,15 @@ export class GooglePlacesProvider implements PlaceGeocodingProvider {
     );
   }
 
+  /** Provider nay khong con duoc wire (xem destination.module.ts) — chi giu de khop interface. */
+  async searchTextList(
+    query: string,
+    locationBias?: { lat: number; lng: number; radiusMeters: number },
+  ): Promise<Array<{ href: string; name: string }>> {
+    const results = await this.searchText(query, locationBias);
+    return results.map((r) => ({ href: r.placeId, name: r.displayName }));
+  }
+
   async getDetails(placeId: string): Promise<PlaceTextSearchResult | null> {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
@@ -179,5 +188,6 @@ function toResult(p: PlacesRawResult): PlaceTextSearchResult {
     rating: p.rating ?? null,
     userRatingCount: p.userRatingCount ?? null,
     photoNames: (p.photos ?? []).map((ph) => ph.name),
+    webResultUrls: [],
   };
 }

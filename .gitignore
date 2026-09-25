@@ -34,3 +34,6 @@ Thumbs.db
 # dvhcvn raw SQL dumps (tai lai bang scripts/convert-dvhcvn.ts khi can; chi commit JSON)
 apps/api/seed-data/dvhcvn/*.sql
 .playwright-mcp/
+
+# PlaywrightGoogleMapsProvider — Chrome profile that chay tren may nguoi dung (giu dang nhap/consent)
+apps/api/scripts/.chrome-geocode-profile/

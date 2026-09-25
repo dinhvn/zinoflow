@@ -952,6 +952,15 @@ export const destinationTaxonomySchema = z.object({
   ),
   // id: SQL Server driver co the tra ve dang chuoi ("64") — coerce de khong vo taxonomy
   types: z.array(z.object({ id: z.coerce.number().int(), slug: z.string(), name: z.string() })),
+  /** Node tinh/cum (ke ca draft chua publish) — dung cho combobox chon Diem cha (parentSlug) */
+  clusters: z.array(
+    z.object({
+      slug: z.string(),
+      name: z.string(),
+      kind: z.enum(["province", "cluster"]),
+      provinceCode: z.string().nullable(),
+    }),
+  ),
 });
 export type DestinationTaxonomy = z.infer<typeof destinationTaxonomySchema>;
 

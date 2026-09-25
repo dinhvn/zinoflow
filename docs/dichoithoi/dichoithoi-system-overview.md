@@ -73,6 +73,13 @@ lại tracking trạng thái.
     tự động tìm/tải ảnh minh hoạ qua API có giấy phép (Pexels), luôn ở
     trạng thái chờ duyệt — phụ thuộc 12d Mức A xong trước. Có kèm Claude
     Code skill `dichoithoi-find-content-images`.
+    12f2. `dichoithoi-auto-reference-image-pipeline-plan.md` — plan CHƯA build
+    (10/08/2026): tự động tìm website tham khảo (tái dùng `aiReferenceUrls` đã
+    có) + gom & chuẩn hoá ảnh hàng loạt (web tham khảo/Google Maps/Pexels/
+    Unsplash) theo từng cụm, port công thức auto-tune từ extension
+    `gmaps-image-clipper` sang backend — đọc trước khi thêm bảng staging ảnh
+    destination hoặc đụng `UploadDestinationImageUseCase`/
+    `AddDestinationGalleryImageUseCase`/`SharpImageProcessor`.
     12f. `dichoithoi-destination-ai-extraction-plan.md` — Giai đoạn 1-3 ĐÃ BUILD
     (16/07/2026): Claude đọc Google Maps + website tham khảo, trích xuất
     11 field (tên/địa chỉ/SĐT/website/giờ mở cửa/mô tả ngắn/meta title/link
@@ -141,6 +148,12 @@ lại tracking trạng thái.
     POI/Flagship từ source context tới prompt, contract Mức B, quality gates,
     observability và QA rollout; đọc trước khi sửa prompt `guide-diem-den.*`
     hoặc cardinality list/FAQ. Candidate hiện vẫn inactive theo chủ đích.
+    12n. `dichoithoi-chuan-hoa-poi-theo-tinh-plan.md` — plan CHƯA build
+    (15/08/2026): chuẩn hoá POI/cụm (toạ độ, trùng lặp, sai cụm) theo TỪNG
+    tỉnh trong 34 tỉnh mới, làm xong hẳn 1 tỉnh mới chuyển sang Type/Tag +
+    nội dung cho tỉnh đó — đọc trước khi làm tiếp bất kỳ việc chuẩn hoá dữ
+    liệu diện rộng nào (geocode/dedup/sai cụm), có bảng theo dõi tiến độ
+    34 tỉnh và Definition of Done cụ thể từng tỉnh.
 13. `dichoithoi-system-design.md` — **đọc file này nếu chỉ có thời gian đọc 1
     file**: tổng hợp toàn bộ spec thành 1 bức tranh kỹ thuật đầy đủ (bảng dữ
     liệu 2 database, sơ đồ luồng, API surface, nguyên tắc xuyên suốt).

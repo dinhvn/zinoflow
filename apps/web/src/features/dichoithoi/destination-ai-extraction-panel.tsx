@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getDestinationAiExtractionResponseSchema,
@@ -176,9 +177,11 @@ function buildCompareRows(
  */
 export function DestinationAiExtractionPanel({
   slug,
+  name,
   onAccepted,
 }: {
   slug: string;
+  name: string;
   onAccepted: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -201,6 +204,13 @@ export function DestinationAiExtractionPanel({
   const extractions = extractionQuery.data ?? [];
   const skillExtraction = extractions.find((e) => e.source === "skill") ?? null;
   const gsgExtraction = extractions.find((e) => e.source === "gsg") ?? null;
+
+  function pendingCount(extraction: DestinationAiExtraction | null): number {
+    if (!extraction) return 0;
+    return extraction.fields.filter((f) => f.found && f.status === "pending").length;
+  }
+  const skillPending = pendingCount(skillExtraction);
+  const gsgPending = pendingCount(gsgExtraction);
 
   const runGsg = useMutation({
     mutationFn: () => apiSend("POST", `/destinations/${slug}/ai-extraction/gsg`, {}),
@@ -299,15 +309,42 @@ export function DestinationAiExtractionPanel({
       {extractionQuery.isError && <ErrorBox error={extractionQuery.error} />}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="secondary" disabled={!skillExtraction} onClick={() => openSingle("skill")}>
+        <Button
+          size="sm"
+          variant={skillPending > 0 ? "primary" : "secondary"}
+          disabled={!skillExtraction}
+          onClick={() => openSingle("skill")}
+        >
           Xem trích xuất Skill{skillExtraction ? "" : " (chưa có)"}
+          {skillPending > 0 && (
+            <Badge tone="amber" className="ml-1">
+              {skillPending} cần duyệt
+            </Badge>
+          )}
         </Button>
-        <Button size="sm" variant="secondary" disabled={!gsgExtraction} onClick={() => openSingle("gsg")}>
+        <Button
+          size="sm"
+          variant={gsgPending > 0 ? "primary" : "secondary"}
+          disabled={!gsgExtraction}
+          onClick={() => openSingle("gsg")}
+        >
           Xem trích xuất Google Search{gsgExtraction ? "" : " (chưa có)"}
+          {gsgPending > 0 && (
+            <Badge tone="amber" className="ml-1">
+              {gsgPending} cần duyệt
+            </Badge>
+          )}
         </Button>
         <Button size="sm" loading={runGsg.isPending} onClick={() => runGsg.mutate()}>
           {runGsg.isPending ? "Đang chạy trích xuất GSG..." : "🔎 Chạy trích xuất GSG"}
         </Button>
+        <Link
+          href={`/ai-batches?taskType=destination-gsg-extraction&entityId=${encodeURIComponent(slug)}&label=${encodeURIComponent(name)}&sublabel=${encodeURIComponent("Điểm đến (trích xuất GSG)")}`}
+          className="text-xs text-blue-600 underline-offset-2 hover:underline dark:text-blue-400"
+          title="Rẻ hơn ~50% nhưng không có kết quả ngay — phải tự bấm Kiểm tra sau ở trang Batch AI"
+        >
+          Dùng Batch AI cho điểm này thay vì chạy ngay →
+        </Link>
         {skillExtraction && gsgExtraction && (
           <Button size="sm" variant="secondary" onClick={openCompare}>
             So sánh 2 nguồn
