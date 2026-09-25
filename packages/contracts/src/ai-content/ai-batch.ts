@@ -41,6 +41,9 @@ export const submitAiBatchRequestSchema = z.object({
    */
   provider: aiProviderKeySchema.optional(),
   model: z.string().optional(),
+  /** Ghi chu tuy chon nguoi dung tu nhap de phan biet cac batch cung taskType
+   * (vd "GSG cho cụm Đà Lạt đợt 2") — cho phep rong. */
+  note: z.string().max(500).optional(),
 });
 export type SubmitAiBatchRequest = z.infer<typeof submitAiBatchRequestSchema>;
 
@@ -51,6 +54,10 @@ export const aiBatchItemSchema = z.object({
   params: z.record(z.string(), z.unknown()).nullable(),
   status: aiBatchItemStatusSchema,
   errorMessage: z.string().nullable(),
+  /** Chi co gia tri khi status "succeeded". */
+  inputTokens: z.number().int().nonnegative().nullable(),
+  outputTokens: z.number().int().nonnegative().nullable(),
+  costUsd: z.number().nonnegative().nullable(),
   createdAt: z.string().datetime(),
 });
 export type AiBatchItem = z.infer<typeof aiBatchItemSchema>;
@@ -65,6 +72,17 @@ export const aiBatchSchema = z.object({
   itemCount: z.number().int().nonnegative(),
   createdAt: z.string().datetime(),
   checkedAt: z.string().datetime().nullable(),
+  /** Ghi chu tuy chon nguoi dung nhap luc gui batch — null neu de trong. */
+  note: z.string().nullable(),
+  /** So item "failed" trong batch — status batch phan anh trang thai JOB cua
+   * Google (vd "succeeded" = Google xu ly xong), KHONG dam bao moi item ben
+   * trong deu thanh cong (vd loi validate/AI rieng tung item). UI dung field
+   * nay de hien "Xong (lỗi N)" thay vi "succeeded" gay hieu lam khi co item loi. */
+  failedItemCount: z.number().int().nonnegative(),
+  /** Cong don tu cac item "succeeded" trong batch — 0 neu chua co item nao xong. */
+  totalInputTokens: z.number().int().nonnegative(),
+  totalOutputTokens: z.number().int().nonnegative(),
+  totalCostUsd: z.number().nonnegative(),
 });
 export type AiBatch = z.infer<typeof aiBatchSchema>;
 
@@ -83,3 +101,23 @@ export const listAiBatchesQuerySchema = z.object({
   taskType: aiBatchTaskTypeSchema.optional(),
 });
 export type ListAiBatchesQuery = z.infer<typeof listAiBatchesQuerySchema>;
+
+/**
+ * Xem trước prompt SẼ gửi cho 1 item — build y het luc submit that (dung
+ * chung BatchTaskHandler.buildRequest) nhung KHONG goi AI/luu gi, cho nguoi
+ * dung kiem tra truoc khi bam "Chạy Batch AI" (yeu cau nguoi dung 08/2026).
+ */
+export const previewAiBatchPromptRequestSchema = z.object({
+  taskType: aiBatchTaskTypeSchema,
+  entityId: z.string().min(1),
+  params: z.record(z.string(), z.unknown()).optional(),
+  provider: aiProviderKeySchema.optional(),
+  model: z.string().optional(),
+});
+export type PreviewAiBatchPromptRequest = z.infer<typeof previewAiBatchPromptRequestSchema>;
+
+export const previewAiBatchPromptResponseSchema = z.object({
+  model: z.string(),
+  promptText: z.string(),
+});
+export type PreviewAiBatchPromptResponse = z.infer<typeof previewAiBatchPromptResponseSchema>;

@@ -22,11 +22,30 @@ export class AiBatchItemEntity {
   @Column({ type: "jsonb", nullable: true })
   params!: Record<string, unknown> | null;
 
+  /** Prompt log day du (system+prompt+response schema) chup luc submit batch —
+   * luu lai vi request goc bi huy sau khi gui di Google, dung de ghi vao
+   * ai_usage_logs.promptText luc "Kiem tra" (xem migration AiBatchItemRequestTextAndUsageLink). */
+  @Column({ name: "request_text", type: "text", nullable: true })
+  requestText!: string | null;
+
   @Column({ type: "varchar", length: 10, default: "pending" })
   status!: AiBatchItemStatus;
 
   @Column({ name: "error_message", type: "text", nullable: true })
   errorMessage!: string | null;
+
+  /** 3 cot usage chi co gia tri khi item "succeeded" — dung de tinh tong chi
+   * phi/token ca batch (SUM), khong dua vao ai_usage_logs vi bang do khong
+   * tra duoc theo batch/destination slug (chi co jobId). */
+  @Column({ name: "input_tokens", type: "int", nullable: true })
+  inputTokens!: number | null;
+
+  @Column({ name: "output_tokens", type: "int", nullable: true })
+  outputTokens!: number | null;
+
+  /** numeric -> pg driver tra string, repository tu Number() (giong ai_usage_logs). */
+  @Column({ name: "cost_usd", type: "numeric", precision: 12, scale: 6, nullable: true })
+  costUsd!: string | null;
 
   @Column({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;

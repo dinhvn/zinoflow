@@ -42,6 +42,8 @@ export type AiUsageModelStat = z.infer<typeof aiUsageModelStatSchema>;
 export const aiUsageOperationStatSchema = z.object({
   operation: z.string(),
   calls: z.number().int(),
+  inputTokens: z.number().int(),
+  outputTokens: z.number().int(),
   costUsd: z.number(),
 });
 export type AiUsageOperationStat = z.infer<typeof aiUsageOperationStatSchema>;
@@ -50,6 +52,8 @@ export type AiUsageOperationStat = z.infer<typeof aiUsageOperationStatSchema>;
 export const aiUsageDailyStatSchema = z.object({
   date: z.string(),
   calls: z.number().int(),
+  inputTokens: z.number().int(),
+  outputTokens: z.number().int(),
   costUsd: z.number(),
 });
 export type AiUsageDailyStat = z.infer<typeof aiUsageDailyStatSchema>;
@@ -65,6 +69,11 @@ export type AiUsageSummaryResponse = z.infer<
   typeof aiUsageSummaryResponseSchema
 >;
 
+/** "sync" = chay ngay trong request/pg-boss (mac dinh) | "batch" = qua Gemini Batch API
+ * (trang /ai-batches) — nguoi dung 08/2026 muon phan biet duoc o /usage. */
+export const aiUsageViaSchema = z.enum(["sync", "batch"]);
+export type AiUsageVia = z.infer<typeof aiUsageViaSchema>;
+
 /**
  * 1 lan goi AI cu the cua 1 job — gom ca prompt/response tho (yeu cau nguoi dung
  * 07/2026 de debug/audit: bam vao 1 content job xem duoc AI da nhan prompt gi,
@@ -75,6 +84,7 @@ export const aiUsageLogEntrySchema = z.object({
   operation: z.string(),
   provider: z.string(),
   model: z.string(),
+  via: aiUsageViaSchema,
   inputTokens: z.number().int(),
   outputTokens: z.number().int(),
   costUsd: z.number(),
@@ -97,6 +107,9 @@ export type AiUsageLogEntry = z.infer<typeof aiUsageLogEntrySchema>;
  */
 export const aiUsageLogRowSchema = aiUsageLogEntrySchema.extend({
   jobId: z.string().nullable(),
+  /** ai_batch_items.id khi lan goi nay den tu Batch AI — dung de /ai-batches
+   * mo dung dong log nay (nut "Xem đã gửi/nhận"). */
+  batchItemId: z.string().nullable(),
 });
 export type AiUsageLogRow = z.infer<typeof aiUsageLogRowSchema>;
 
@@ -105,6 +118,7 @@ export const listAiUsageLogsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   provider: z.string().optional(),
   operation: z.string().optional(),
+  via: aiUsageViaSchema.optional(),
   from: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -113,6 +127,8 @@ export const listAiUsageLogsQuerySchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
+  /** Loc dung 1 lan goi tao ra tu 1 item Batch AI cu the — dung khi mo tu /ai-batches. */
+  batchItemId: z.string().uuid().optional(),
 });
 export type ListAiUsageLogsQuery = z.infer<typeof listAiUsageLogsQuerySchema>;
 

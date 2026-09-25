@@ -64,6 +64,8 @@ const SYSTEM_PROMPT = `Dùng Google Search để tìm thông tin ĐẦY ĐỦ, M
 
 Trả về DUY NHẤT JSON theo đúng schema đã cho (mảng field {key, newValue, found, note}) — KHÔNG kèm văn bản dẫn dắt, không giải thích ngoài JSON.
 
+Trả về ĐÚNG ${destinationAiExtractionFieldKeySchema.options.length} field, MỖI field đúng 1 lần, "key" PHẢI là 1 trong các giá trị sau (không tự đặt tên khác, không viết tắt/đổi chữ): ${destinationAiExtractionFieldKeySchema.options.map((k) => `"${k}"`).join(", ")}.
+
 Với MỖI field:
 - found=true CHỈ KHI tìm thấy thông tin cụ thể qua kết quả tìm kiếm — không suy đoán/dùng kiến thức nền nếu search không ra kết quả rõ ràng cho field cứng (địa chỉ, SĐT, giờ mở cửa, giá vé, link đánh giá ngoài).
 - found=false + newValue=null khi không tìm thấy — không bịa.
@@ -94,11 +96,26 @@ export function buildGsgExtractionRequest(
     .filter(Boolean)
     .join(" ");
 
+  // Dua vao aiNotes/aiReferenceUrls nguoi dung da luu qua "Luu thong tin cho AI"
+  // (neu co) — dong bo voi buildClusterPoiUserPrompt (cluster.aiNotes luon duoc
+  // dua vao), truoc day GSG diem den bo qua 2 truong nay du cung entity. URL chi
+  // la GOI Y tim kiem (Google Search Grounding khong fetch truc tiep 1 URL cu the).
+  const promptLines = [`Điểm du lịch cần tra cứu: "${queryContext}".`];
+  if (destination.aiNotes?.trim()) {
+    promptLines.push(`Ghi chú sẵn có của điểm đến (từ dữ liệu nội bộ):\n${destination.aiNotes.trim()}`);
+  }
+  if (destination.aiReferenceUrls.length > 0) {
+    const refs = destination.aiReferenceUrls.map((r) => `- ${r.label}: ${r.url}`).join("\n");
+    promptLines.push(
+      `Nguồn tham khảo người dùng cung cấp (ưu tiên tìm qua Google Search nếu có thể, không bịa nếu không tìm thấy):\n${refs}`,
+    );
+  }
+
   const request: StructuredGenerationRequest = {
     model: modelOverride ?? GSG_MODEL,
     operation: "extract-destination-gsg",
     system: SYSTEM_PROMPT,
-    prompt: `Điểm du lịch cần tra cứu: "${queryContext}".`,
+    prompt: promptLines.join("\n\n"),
     maxTokens: 8_000,
     vars: {},
     temperature: GSG_TEMPERATURE,
@@ -160,9 +177,9 @@ export class GsgExtractionResultApplier {
   ) {}
 
   /**
-   * Ap ket qua AI vao bang staging + ghi usage. promptText chi co o luong
-   * sync (da co san request luc goi apply cung 1 lan execute) — luong batch
-   * bo qua (request da bi huy sau khi submit, khong con giu lai).
+   * Ap ket qua AI vao bang staging + ghi usage. promptText: sync tu goi
+   * buildPromptLogText() ngay tai cho, batch tu AiBatchItemEntity.requestText
+   * chup luc submit (xem DestinationGsgExtractionBatchTaskHandler).
    */
   async apply(
     slug: string,
@@ -172,6 +189,10 @@ export class GsgExtractionResultApplier {
     promptText?: string | null,
     /** Model thuc te da dung (batch co the ghi de GSG_MODEL) — ghi dung vao usage log. */
     modelUsed: string = GSG_MODEL,
+    /** != null <=> lan goi nay den tu Batch AI — dung de suy ra `via` (KHONG
+     * con suy tu promptText nua, vi gio ca 2 luong deu co promptText) +
+     * ghi ai_usage_logs.batchItemId de /ai-batches mo lai duoc dung dong. */
+    batchItemId?: string | null,
   ): Promise<DestinationAiExtraction> {
     const output = gsgResponseSchema.parse(rawOutput);
 
@@ -202,6 +223,8 @@ export class GsgExtractionResultApplier {
 
     await this.usage.record({
       jobId: null,
+      batchItemId: batchItemId ?? null,
+      via: batchItemId != null ? "batch" : "sync",
       provider: GSG_PROVIDER_KEY,
       model: modelUsed,
       operation: "extract-destination-gsg",

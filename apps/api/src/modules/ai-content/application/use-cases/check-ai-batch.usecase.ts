@@ -80,8 +80,14 @@ export class CheckAiBatchUseCase {
         await handler.applyResult(item.entityId, outcome.rawOutput, outcome.usage!, {
           provider: batch.provider,
           model: batch.model,
+          batchItemId: item.id,
+          requestText: item.requestText,
         });
-        await this.repo.updateItemResult(item.id, "succeeded", null);
+        await this.repo.updateItemResult(item.id, "succeeded", null, {
+          inputTokens: outcome.usage!.inputTokens,
+          outputTokens: outcome.usage!.outputTokens,
+          costUsd: outcome.usage!.costUsd,
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         await this.applyOutcomeError(handler, item, message);

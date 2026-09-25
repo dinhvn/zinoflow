@@ -25,7 +25,7 @@ describe("GetDashboardSummaryUseCase", () => {
         totals: { calls: 5, inputTokens: 0, outputTokens: 0, costUsd: 0.12, avgLatencyMs: 0 },
         byModel: [],
         byOperation: [],
-        daily: [{ date: "2026-06-10", calls: 5, costUsd: 0.12 }],
+        daily: [{ date: "2026-06-10", calls: 5, inputTokens: 0, outputTokens: 0, costUsd: 0.12 }],
       }),
     } as unknown as GetAiUsageSummaryUseCase;
     return new GetDashboardSummaryUseCase(jobRepo, destRepo, cmsRepo, usage);

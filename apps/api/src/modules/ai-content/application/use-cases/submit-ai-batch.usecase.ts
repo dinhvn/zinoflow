@@ -14,6 +14,7 @@ import {
   BATCH_TASK_HANDLER_REGISTRY,
   type BatchTaskHandlerRegistry,
 } from "../ports/batch-task-handler.port";
+import { buildPromptLogText } from "../services/prompt-log-text";
 import { DomainRuleError } from "../../../shared/errors/app-error";
 
 /**
@@ -38,6 +39,7 @@ export class SubmitAiBatchUseCase {
     taskType: AiBatchTaskType,
     items: AiBatchItemInput[],
     override?: { provider: AiProviderKey; model: string },
+    note?: string,
   ): Promise<{ batchId: string }> {
     const handler = this.handlers.resolve(taskType);
 
@@ -48,7 +50,17 @@ export class SubmitAiBatchUseCase {
           item.params,
           override,
         );
-        return { entityId: item.entityId, params: item.params ?? null, request, schema, providerKey };
+        return {
+          entityId: item.entityId,
+          params: item.params ?? null,
+          // Chup lai prompt log NGAY LUC submit — request goc se bi huy sau khi
+          // gui di Google, khong con giu duoc luc "Kiem tra" ve sau (xem
+          // AiBatchItemEntity.requestText).
+          requestText: buildPromptLogText(request.system, request.prompt, schema),
+          request,
+          schema,
+          providerKey,
+        };
       }),
     );
 
@@ -86,6 +98,7 @@ export class SubmitAiBatchUseCase {
       itemCount: built.length,
       createdAt: now,
       checkedAt: null,
+      note: note?.trim() || null,
     });
     await this.repo.createItems(
       built.map((b) => ({
@@ -93,8 +106,12 @@ export class SubmitAiBatchUseCase {
         batchId,
         entityId: b.entityId,
         params: b.params,
+        requestText: b.requestText,
         status: "pending",
         errorMessage: null,
+        inputTokens: null,
+        outputTokens: null,
+        costUsd: null,
         createdAt: now,
       })),
     );

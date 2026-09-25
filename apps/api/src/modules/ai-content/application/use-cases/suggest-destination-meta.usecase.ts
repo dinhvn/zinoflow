@@ -69,6 +69,7 @@ export class SuggestDestinationMetaUseCase {
       provider: provider.key,
       model,
       operation: "suggest-meta",
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(SYSTEM, prompt, destinationMetaSuggestionSchema),
       responseText: JSON.stringify(output),

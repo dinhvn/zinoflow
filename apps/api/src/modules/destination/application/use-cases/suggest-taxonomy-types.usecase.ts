@@ -101,6 +101,7 @@ export class SuggestTaxonomyTypesUseCase {
       provider: provider.key,
       model,
       operation: "suggest-taxonomy-types",
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(TAXONOMY_TYPE_SUGGEST_SYSTEM, prompt, aiTaxonomyTypeSuggestionBatchSchema),
       responseText: JSON.stringify(output),

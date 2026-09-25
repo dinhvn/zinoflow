@@ -51,12 +51,15 @@ export interface BatchTaskHandler {
    * batchContext: provider/model THAT SU da dung cho ca batch (doc tu
    * AiBatch.provider/model — da phan anh dung override neu co luc submit) —
    * dung de ghi ai_usage_logs cho dung, KHONG suy tu job/hang-code nua.
+   * batchItemId/requestText: dung de ghi ai_usage_logs.batchItemId +
+   * promptText (chup luc submit, xem AiBatchItemEntity.requestText) — nguoi
+   * dung 08/2026 muon xem lai duoc "da gui gi/nhan gi" tu /ai-batches.
    */
   applyResult(
     entityId: string,
     rawOutput: unknown,
     usage: AiCallUsage,
-    batchContext: { provider: AiProviderKey; model: string },
+    batchContext: { provider: AiProviderKey; model: string; batchItemId: string; requestText: string | null },
   ): Promise<void>;
 
   /** Ap loi (Google tra error cho item nay, hoac applyResult nem loi) — vd doi status job sang Failed. */

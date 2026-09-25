@@ -69,6 +69,7 @@ export class ClassifyContentChangeUseCase {
       provider: provider.key,
       model: DEFAULT_MODEL,
       operation: "classify-content-change",
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(SYSTEM, prompt, classifyContentChangeResponseSchema),
       responseText: JSON.stringify(output),

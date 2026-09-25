@@ -7,11 +7,11 @@ import {
   type DashboardSummaryResponse,
 } from "@zinoflow/contracts";
 import { apiGet } from "@/shared/api-client";
+import { formatTokensAndCost } from "@/shared/format-usage";
 import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { ErrorBox } from "@/shared/ui/error-box";
 import { Card, ActionRow } from "@/shared/ui/card";
 
-const usd = (n: number) => `$${n.toFixed(n < 1 ? 4 : 2)}`;
 const num = (n: number) => n.toLocaleString("vi-VN");
 
 const STATUS_META: Record<ContentJobStatus, { label: string; tone: BadgeTone }> = {
@@ -68,7 +68,12 @@ export function DashboardHome() {
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi href="/content" label="Chờ duyệt" value={num(d.actions.pendingReview)} tone="amber" />
             <Kpi href="/content" label="Đã duyệt, chờ đăng" value={num(d.actions.approved)} tone="emerald" />
-            <Kpi href="/usage" label="Chi phí AI (30 ngày)" value={usd(d.cost.costUsd)} tone="indigo" />
+            <Kpi
+              href="/usage"
+              label="Chi phí AI (30 ngày)"
+              value={formatTokensAndCost(d.cost.inputTokens + d.cost.outputTokens, d.cost.costUsd)}
+              tone="indigo"
+            />
             <Kpi label="Đã xuất bản" value={num(published ?? 0)} tone="gray" />
           </div>
 
@@ -148,7 +153,7 @@ export function DashboardHome() {
                     {d.cost.daily.map((row) => (
                       <div
                         key={row.date}
-                        title={`${row.date}: ${usd(row.costUsd)}`}
+                        title={`${row.date}: ${formatTokensAndCost(row.inputTokens + row.outputTokens, row.costUsd)}`}
                         className="flex-1 rounded-t bg-indigo-500/60 hover:bg-indigo-500"
                         style={{ height: `${Math.max(3, (row.costUsd / maxDailyCost) * 100)}%` }}
                       />

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
 import {
@@ -11,11 +13,16 @@ import {
   destinationMirrorSchema,
   destinationTaxonomySchema,
   listAiProvidersResponseSchema,
+  listAiUsageLogsResponseSchema,
+  previewAiBatchPromptResponseSchema,
   submitAiBatchResponseSchema,
   type AiBatch,
+  type AiBatchItem,
   type AiBatchTaskType,
+  type AiUsageLogRow,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
+import { formatTokensAndCost } from "@/shared/format-usage";
 import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
@@ -25,8 +32,19 @@ import { FeatureIntro } from "@/shared/ui/feature-intro";
 import { Input } from "@/shared/ui/input";
 import { Modal } from "@/shared/ui/modal";
 import { Select } from "@/shared/ui/select";
+import { AiUsageLogDetailModal } from "@/features/usage/ai-usage-log-detail-modal";
 
 const batchesListSchema = z.array(aiBatchSchema);
+const ITEM_STATUS_LABELS: Record<string, string> = {
+  pending: "Đang chờ",
+  succeeded: "Thành công",
+  failed: "Lỗi",
+};
+const ITEM_STATUS_TONES: Record<string, BadgeTone> = {
+  pending: "gray",
+  succeeded: "emerald",
+  failed: "red",
+};
 const jobsListSchema = z.array(contentJobSchema);
 const destinationsListSchema = z.object({
   items: z.array(destinationMirrorSchema),
@@ -87,6 +105,21 @@ const BATCH_STATUS_TONES: Record<string, BadgeTone> = {
   failed: "red",
 };
 
+/** batch.status phan anh trang thai JOB cua Google ("succeeded" = Google xu ly
+ * xong), KHONG dam bao moi item ben trong deu thanh cong — 1 item co the loi
+ * validate/AI rieng le. Tinh nhan hien thi rieng de khong gay hieu lam "xong
+ * het" khi thuc ra co item Lỗi (failedItemCount > 0). */
+function batchDisplayStatus(batch: AiBatch): { label: string; tone: BadgeTone } {
+  if (batch.status === "succeeded" && batch.failedItemCount > 0) {
+    const allFailed = batch.failedItemCount >= batch.itemCount;
+    return {
+      label: allFailed ? "Xong — tất cả lỗi" : `Xong — lỗi ${batch.failedItemCount}/${batch.itemCount}`,
+      tone: allFailed ? "red" : "amber",
+    };
+  }
+  return { label: batch.status, tone: BATCH_STATUS_TONES[batch.status] ?? "gray" };
+}
+
 /** Giong het nhan dung o trang /dichoithoi — filter trong dialog dung chung nhan nay. */
 const KIND_LABELS: Record<string, string> = {
   province: "Tỉnh/Thành",
@@ -101,10 +134,42 @@ const CONTENT_STATE_LABELS: Record<string, string> = {
   "da-publish": "Đã publish (AI)",
 };
 
+/** "1h 5m" / "12 phút" / "38 giây" — dung cho cot "Tổng thời gian" o bang batch.
+ * Batch chi biet thoi diem lan kiem tra CUOI cung xac nhan xong (khong biet
+ * chinh xac Google xu ly xong luc nao) — dung tam checkedAt lam "hoan thanh". */
+function formatDuration(startIso: string, endIso: string): string {
+  const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
+  if (ms < 0) return "—";
+  const totalSeconds = Math.round(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes} phút`;
+  return `${seconds} giây`;
+}
+
+
+/** entityId nghia khac nhau tuy taskType (contentJobId | destination/cluster
+ * slug) — 2 ham nay tra ve dung tieu de cot + link bam-toi-thang cho tung
+ * loai, dung trong dialog chi tiet batch. */
+function entityIdColumnHeader(taskType: AiBatchTaskType): string {
+  if (taskType === "content-outline" || taskType === "content-article") return "Job ID";
+  return "Entity ID (điểm đến/cụm)";
+}
+
+function entityIdHref(taskType: AiBatchTaskType, entityId: string): string | null {
+  if (taskType === "content-outline" || taskType === "content-article") return `/content/${entityId}`;
+  if (taskType === "destination-gsg-extraction" || taskType === "cluster-poi-discovery")
+    return `/dichoithoi/${entityId}`;
+  return null;
+}
+
 /**
- * Dropdown chon chu ky tu dong lam moi toan bang (yeu cau nguoi dung 08/2026)
- * — moi lan het chu ky, kiem tra TAT CA batch dang "submitted" 1 luot; khong
- * co batch nao thoa thi khong goi API lan do.
+ * Dropdown chon chu ky tu dong lam moi toan bang (yeu cau nguoi dung
+ * 08/2026, sua lai 04/08/2026: 1 tick chung o goc bang thay vi tick tung
+ * dong) — moi lan het chu ky, kiem tra TAT CA batch dang "submitted" 1 luot;
+ * khong co batch nao thoa thi khong goi API lan do.
  */
 const AUTO_REFRESH_INTERVAL_OPTIONS = [
   { value: 15_000, label: "15 giây" },
@@ -127,17 +192,36 @@ function fold(s: string): string {
  * Trang quản lý Batch AI (Gemini Batch API) — gửi nhiều item cùng lúc cho 1
  * loại tác vụ, rẻ hơn ~50% nhưng KHÔNG có kết quả ngay, phải tự bấm "Kiểm
  * tra" (không tự động chạy nền). Xem docs/specs/ai-batch-mode.md.
+ *
+ * useSearchParams bat buoc nam trong Suspense o App Router (Next.js).
  */
 export default function AiBatchesPage() {
+  return (
+    <Suspense>
+      <AiBatchesPageContent />
+    </Suspense>
+  );
+}
+
+function AiBatchesPageContent() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [taskType, setTaskType] = useState<AiBatchTaskType>("content-outline");
   const [staged, setStaged] = useState<StagedItem[]>([]);
+  const [note, setNote] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerChecked, setPickerChecked] = useState<Set<string>>(new Set());
   const [pickerAdding, setPickerAdding] = useState(false);
   const [pickerAddError, setPickerAddError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [detailBatchId, setDetailBatchId] = useState<string | null>(null);
+  // Item dang bam "Xem prompt" trong danh sach da chon — xem truoc noi dung se
+  // gui cho AI TRUOC khi bam "Chạy Batch AI" (yeu cau nguoi dung 08/2026).
+  const [previewingItem, setPreviewingItem] = useState<StagedItem | null>(null);
+  // Item dang bam "Xem đã gửi/nhận" — fetch dung dong ai_usage_logs khop
+  // batchItemId roi mo lai CUNG modal voi /usage (yeu cau nguoi dung 08/2026).
+  const [viewingUsageBatchItemId, setViewingUsageBatchItemId] = useState<string | null>(null);
   // Rong = dung mac dinh (aiProvider/aiModel cua job voi viet bai, model co
   // dinh voi GSG/cluster-POI) — chon o day GHI DE cho CA batch nay, KHONG doi
   // aiModel luu tren job.
@@ -148,6 +232,26 @@ export default function AiBatchesPage() {
   const [filterParentSlug, setFilterParentSlug] = useState("");
   const [filterKind, setFilterKind] = useState("");
   const [filterContentState, setFilterContentState] = useState("");
+
+  // Preselect tu nut "Dung Batch AI" o trang chi tiet (vd diem den) — dieu huong
+  // sang day voi ?taskType=...&entityId=...&label=...&sublabel=... da co san, tranh
+  // nguoi dung phai tu tim lai qua dialog "+ Them bai". Chi ap dung 1 lan luc mount.
+  const appliedPreselect = useRef(false);
+  useEffect(() => {
+    if (appliedPreselect.current) return;
+    const qTaskType = searchParams.get("taskType");
+    const qEntityId = searchParams.get("entityId");
+    if (!qTaskType || !qEntityId) return;
+    appliedPreselect.current = true;
+    setTaskType(qTaskType as AiBatchTaskType);
+    setStaged([
+      {
+        entityId: qEntityId,
+        label: searchParams.get("label") ?? qEntityId,
+        sublabel: searchParams.get("sublabel") ?? "",
+      },
+    ]);
+  }, [searchParams]);
 
   const providersQuery = useQuery({
     queryKey: ["ai-providers-for-batch"],
@@ -291,10 +395,12 @@ export default function AiBatchesPage() {
           })),
           provider: selectedModelOverride?.provider,
           model: selectedModelOverride?.model,
+          note: note.trim() || undefined,
         }),
       ),
     onSuccess: async () => {
       setStaged([]);
+      setNote("");
       setSubmitError(null);
       await queryClient.invalidateQueries({ queryKey: ["ai-batches"] });
       await queryClient.invalidateQueries({ queryKey: ["content-jobs-for-batch"] });
@@ -304,10 +410,45 @@ export default function AiBatchesPage() {
     },
   });
 
+  const detailQuery = useQuery({
+    queryKey: ["ai-batch-detail", detailBatchId],
+    queryFn: () => apiGet(`/ai-batches/${detailBatchId}`, checkAiBatchResponseSchema),
+    enabled: detailBatchId !== null,
+  });
+
+  const previewPromptQuery = useQuery({
+    queryKey: ["ai-batch-preview-prompt", taskType, previewingItem?.entityId, modelOverrideKey],
+    queryFn: async () =>
+      previewAiBatchPromptResponseSchema.parse(
+        await apiSend("POST", "/ai-batches/preview-prompt", {
+          taskType,
+          entityId: previewingItem!.entityId,
+          params:
+            isClusterTask && previewingItem!.extraNotes?.trim()
+              ? { extraNotes: previewingItem!.extraNotes.trim() }
+              : undefined,
+          provider: selectedModelOverride?.provider,
+          model: selectedModelOverride?.model,
+        }),
+      ),
+    enabled: previewingItem !== null,
+  });
+
+  const usageLogForItemQuery = useQuery({
+    queryKey: ["ai-usage-log-by-batch-item", viewingUsageBatchItemId],
+    queryFn: () =>
+      apiGet(
+        `/content/ai-usage/logs?batchItemId=${viewingUsageBatchItemId}&limit=1`,
+        listAiUsageLogsResponseSchema,
+      ),
+    enabled: viewingUsageBatchItemId !== null,
+  });
+  const viewingUsageLog: AiUsageLogRow | null = usageLogForItemQuery.data?.rows[0] ?? null;
+
   // Set cac batchId dang duoc kiem tra (thu cong HOAC tu dong) — dung chung de
   // hien loading dung o nut "Kiểm tra" cua tung dong, ke ca khi auto-refresh
-  // kiem tra NHIEU batch cung luc (khong dung 1 useMutation.isPending vi no
-  // chi theo doi 1 lan goi gan nhat, sai khi chay song song).
+  // kiem tra NHIEU batch cung luc (khong dung checkBatch.isPending vi 1
+  // useMutation chi theo doi 1 lan goi gan nhat, sai khi chay song song).
   const [checkingBatchIds, setCheckingBatchIds] = useState<Set<string>>(new Set());
 
   async function runCheck(batchId: string): Promise<void> {
@@ -329,6 +470,7 @@ export default function AiBatchesPage() {
     await runCheck(batchId);
     await queryClient.invalidateQueries({ queryKey: ["ai-batches"] });
     await queryClient.invalidateQueries({ queryKey: ["content-jobs-for-batch"] });
+    await queryClient.invalidateQueries({ queryKey: ["ai-batch-detail"] });
   }
 
   // 1 tick chung o goc bang "Batch gần đây" — mac dinh KHONG bat (yeu cau
@@ -361,6 +503,7 @@ export default function AiBatchesPage() {
           await Promise.all(pending.map((b) => runCheck(b.id)));
           await queryClient.invalidateQueries({ queryKey: ["ai-batches"] });
           await queryClient.invalidateQueries({ queryKey: ["content-jobs-for-batch"] });
+          await queryClient.invalidateQueries({ queryKey: ["ai-batch-detail"] });
         } finally {
           autoRefreshTickRunning.current = false;
         }
@@ -386,6 +529,22 @@ export default function AiBatchesPage() {
       const next = new Set(prev);
       if (next.has(entityId)) next.delete(entityId);
       else next.add(entityId);
+      return next;
+    });
+  }
+
+  // "Chọn tất cả" chỉ áp dụng cho danh sách đang lọc hiện tại (pickerFiltered) —
+  // KHÔNG đụng tới các mục đã tick ở lần lọc trước đó.
+  const allFilteredChecked =
+    pickerFiltered.length > 0 && pickerFiltered.every((item) => pickerChecked.has(item.entityId));
+  function toggleCheckAllFiltered() {
+    setPickerChecked((prev) => {
+      const next = new Set(prev);
+      if (allFilteredChecked) {
+        for (const item of pickerFiltered) next.delete(item.entityId);
+      } else {
+        for (const item of pickerFiltered) next.add(item.entityId);
+      }
       return next;
     });
   }
@@ -558,9 +717,14 @@ export default function AiBatchesPage() {
                 key: "action",
                 header: "",
                 render: (item: StagedItem) => (
-                  <Button size="sm" variant="ghost" onClick={() => removeStaged(item.entityId)}>
-                    Xoá
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => setPreviewingItem(item)}>
+                      Xem prompt
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => removeStaged(item.entityId)}>
+                      Xoá
+                    </Button>
+                  </div>
                 ),
               },
             ]}
@@ -572,14 +736,25 @@ export default function AiBatchesPage() {
 
         {submitError && <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>}
 
-        <Button
-          variant="primary"
-          loading={submitBatch.isPending}
-          disabled={staged.length === 0}
-          onClick={() => submitBatch.mutate()}
-        >
-          {submitBatch.isPending ? "Đang gửi..." : `4. Chạy Batch AI (${staged.length} item)`}
-        </Button>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="block text-sm">
+            <span className="mb-1 block text-zinc-500">Ghi chú cho batch này (tuỳ chọn)</span>
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="VD: GSG cho cụm Đà Lạt đợt 2"
+              className="w-72"
+            />
+          </label>
+          <Button
+            variant="primary"
+            loading={submitBatch.isPending}
+            disabled={staged.length === 0}
+            onClick={() => submitBatch.mutate()}
+          >
+            {submitBatch.isPending ? "Đang gửi..." : `4. Chạy Batch AI (${staged.length} item)`}
+          </Button>
+        </div>
       </div>
 
       {/* Dialog tim + chon bài */}
@@ -649,7 +824,13 @@ export default function AiBatchesPage() {
             columns={[
               {
                 key: "pick",
-                header: "",
+                header: (
+                  <Checkbox
+                    label=""
+                    checked={allFilteredChecked}
+                    onChange={toggleCheckAllFiltered}
+                  />
+                ),
                 render: (item: PickerItem) => (
                   <Checkbox
                     label=""
@@ -728,14 +909,54 @@ export default function AiBatchesPage() {
         </div>
         <DataTable
           columns={[
+            {
+              key: "id",
+              header: "ID",
+              render: (b: AiBatch) => (
+                <span className="font-mono text-xs text-zinc-500" title={b.id}>
+                  {b.id.slice(0, 8)}
+                </span>
+              ),
+            },
             { key: "taskType", header: "Loại tác vụ", render: (b: AiBatch) => TASK_TYPE_LABELS[b.taskType] ?? b.taskType },
+            {
+              key: "note",
+              header: "Ghi chú",
+              render: (b: AiBatch) =>
+                b.note ? b.note : <span className="text-zinc-400">—</span>,
+            },
             { key: "itemCount", header: "Số item", render: (b) => b.itemCount, align: "right" },
             {
               key: "status",
               header: "Trạng thái",
-              render: (b) => <Badge tone={BATCH_STATUS_TONES[b.status] ?? "gray"}>{b.status}</Badge>,
+              render: (b) => {
+                const { label, tone } = batchDisplayStatus(b);
+                return <Badge tone={tone}>{label}</Badge>;
+              },
             },
             { key: "createdAt", header: "Gửi lúc", render: (b) => new Date(b.createdAt).toLocaleString("vi-VN") },
+            {
+              key: "completedAt",
+              header: "Hoàn thành lúc",
+              render: (b) =>
+                b.status !== "submitted" && b.checkedAt
+                  ? new Date(b.checkedAt).toLocaleString("vi-VN")
+                  : "—",
+            },
+            {
+              key: "duration",
+              header: "Tổng thời gian",
+              render: (b) =>
+                b.status !== "submitted" && b.checkedAt
+                  ? formatDuration(b.createdAt, b.checkedAt)
+                  : "—",
+            },
+            {
+              key: "tokensAndCost",
+              header: "Tokens (chi phí)",
+              align: "right",
+              render: (b) => formatTokensAndCost(b.totalInputTokens + b.totalOutputTokens, b.totalCostUsd),
+            },
             {
               key: "action",
               header: "",
@@ -744,7 +965,10 @@ export default function AiBatchesPage() {
                   <Button
                     size="sm"
                     loading={checkingBatchIds.has(b.id)}
-                    onClick={() => void runCheckAndInvalidate(b.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void runCheckAndInvalidate(b.id);
+                    }}
                   >
                     Kiểm tra
                   </Button>
@@ -753,10 +977,172 @@ export default function AiBatchesPage() {
           ]}
           items={batchesQuery.data ?? []}
           rowKey={(b) => b.id}
+          onRowClick={(b) => setDetailBatchId(b.id)}
           loading={batchesQuery.isLoading}
           emptyMessage="Chưa gửi batch nào."
         />
       </div>
+
+      {/* Dialog xem chi tiet 1 batch (danh sach item + trang thai/loi tung item) */}
+      <Modal
+        open={detailBatchId !== null}
+        onClose={() => setDetailBatchId(null)}
+        title={
+          detailQuery.data
+            ? `Chi tiết batch — ${TASK_TYPE_LABELS[detailQuery.data.batch.taskType] ?? detailQuery.data.batch.taskType}`
+            : "Chi tiết batch"
+        }
+        width="max-w-3xl"
+      >
+        {detailQuery.isLoading ? (
+          <p className="text-sm text-zinc-500">Đang tải...</p>
+        ) : detailQuery.data ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+              <span className="font-mono text-xs">{detailQuery.data.batch.id}</span>
+              <Badge tone={batchDisplayStatus(detailQuery.data.batch).tone}>
+                {batchDisplayStatus(detailQuery.data.batch).label}
+              </Badge>
+              <span>{detailQuery.data.batch.provider}/{detailQuery.data.batch.model}</span>
+              {detailQuery.data.batch.note && <span>· Ghi chú: {detailQuery.data.batch.note}</span>}
+              <span>· Gửi lúc {new Date(detailQuery.data.batch.createdAt).toLocaleString("vi-VN")}</span>
+              {detailQuery.data.batch.checkedAt && (
+                <span>
+                  · Kiểm tra lần cuối {new Date(detailQuery.data.batch.checkedAt).toLocaleString("vi-VN")}
+                </span>
+              )}
+              {detailQuery.data.batch.totalCostUsd > 0 && (
+                <span>
+                  · Tổng{" "}
+                  {formatTokensAndCost(
+                    detailQuery.data.batch.totalInputTokens + detailQuery.data.batch.totalOutputTokens,
+                    detailQuery.data.batch.totalCostUsd,
+                  )}
+                </span>
+              )}
+            </div>
+            <DataTable
+              columns={[
+                {
+                  key: "entityId",
+                  header: entityIdColumnHeader(detailQuery.data.batch.taskType),
+                  render: (item: AiBatchItem) => {
+                    const href = entityIdHref(detailQuery.data!.batch.taskType, item.entityId);
+                    return href ? (
+                      <Link
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        {item.entityId}
+                      </Link>
+                    ) : (
+                      item.entityId
+                    );
+                  },
+                },
+                {
+                  key: "status",
+                  header: "Trạng thái",
+                  render: (item) => (
+                    <Badge tone={ITEM_STATUS_TONES[item.status] ?? "gray"}>
+                      {ITEM_STATUS_LABELS[item.status] ?? item.status}
+                    </Badge>
+                  ),
+                },
+                {
+                  key: "tokensAndCost",
+                  header: "Tokens (chi phí)",
+                  align: "right",
+                  render: (item) =>
+                    formatTokensAndCost(
+                      (item.inputTokens ?? 0) + (item.outputTokens ?? 0),
+                      item.costUsd ?? 0,
+                    ),
+                },
+                {
+                  key: "errorMessage",
+                  header: "Lỗi",
+                  render: (item) => item.errorMessage ?? "",
+                },
+                {
+                  key: "action",
+                  header: "",
+                  render: (item) =>
+                    item.status === "succeeded" ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setViewingUsageBatchItemId(item.id)}
+                      >
+                        Xem đã gửi/nhận
+                      </Button>
+                    ) : null,
+                },
+              ]}
+              items={detailQuery.data.items}
+              rowKey={(item) => item.id}
+              emptyMessage="Batch này không có item nào."
+            />
+            {detailQuery.data.batch.status === "submitted" && (
+              <Button
+                size="sm"
+                loading={checkingBatchIds.has(detailQuery.data.batch.id)}
+                onClick={() => void runCheckAndInvalidate(detailQuery.data!.batch.id)}
+              >
+                Kiểm tra
+              </Button>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-red-600 dark:text-red-400">Không tải được chi tiết batch.</p>
+        )}
+      </Modal>
+
+      {/* Xem truoc prompt SE gui cho 1 item trong danh sach da chon — build y
+          het luc submit that, KHONG goi AI/luu gi (yeu cau nguoi dung 08/2026). */}
+      <Modal
+        open={previewingItem !== null}
+        onClose={() => setPreviewingItem(null)}
+        title={previewingItem ? `Xem trước prompt — ${previewingItem.label}` : "Xem trước prompt"}
+        width="max-w-3xl"
+      >
+        {previewPromptQuery.isLoading ? (
+          <p className="text-sm text-zinc-500">Đang dựng prompt...</p>
+        ) : previewPromptQuery.isError ? (
+          <p className="text-sm text-red-600 dark:text-red-400">
+            {previewPromptQuery.error instanceof ApiError
+              ? `${previewPromptQuery.error.message}: ${previewPromptQuery.error.details.join("; ")}`
+              : String(previewPromptQuery.error)}
+          </p>
+        ) : previewPromptQuery.data ? (
+          <div className="space-y-2">
+            <p className="text-xs text-zinc-500">Model: {previewPromptQuery.data.model}</p>
+            <pre className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+              {previewPromptQuery.data.promptText}
+            </pre>
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* Xem prompt/response cua 1 item batch — tai su dung dung modal o /usage
+          (yeu cau nguoi dung 08/2026: "trong usage đã có, bấm vô có thể mở ra
+          đúng item trong usage không?"). */}
+      {viewingUsageBatchItemId !== null &&
+        (usageLogForItemQuery.isLoading ? null : viewingUsageLog ? (
+          <AiUsageLogDetailModal log={viewingUsageLog} onClose={() => setViewingUsageBatchItemId(null)} />
+        ) : (
+          <Modal
+            open
+            onClose={() => setViewingUsageBatchItemId(null)}
+            title="Xem đã gửi/nhận"
+          >
+            <p className="text-sm text-zinc-500">
+              Chưa tìm thấy lượt gọi AI tương ứng trong /usage.
+            </p>
+          </Modal>
+        ))}
     </div>
   );
 }

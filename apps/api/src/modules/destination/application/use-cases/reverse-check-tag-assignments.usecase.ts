@@ -120,6 +120,7 @@ export class ReverseCheckTagAssignmentsUseCase {
       provider: provider.key,
       model: MODEL,
       operation: "reverse-check-destination-tags",
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(SYSTEM, prompt, aiTagReverseCheckBatchSchema),
       responseText: JSON.stringify(output),

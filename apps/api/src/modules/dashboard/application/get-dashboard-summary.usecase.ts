@@ -76,10 +76,17 @@ export class GetDashboardSummaryUseCase {
       channels,
       cost: {
         costUsd: usage.totals.costUsd,
+        inputTokens: usage.totals.inputTokens,
+        outputTokens: usage.totals.outputTokens,
         calls: usage.totals.calls,
         from: usage.range.from,
         to: usage.range.to,
-        daily: usage.daily.map((d) => ({ date: d.date, costUsd: d.costUsd })),
+        daily: usage.daily.map((d) => ({
+          date: d.date,
+          costUsd: d.costUsd,
+          inputTokens: d.inputTokens,
+          outputTokens: d.outputTokens,
+        })),
       },
       system: { database: "connected" },
     };

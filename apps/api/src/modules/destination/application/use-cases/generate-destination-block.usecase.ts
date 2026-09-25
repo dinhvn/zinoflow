@@ -109,6 +109,7 @@ export class GenerateDestinationBlockUseCase {
       provider: provider.key,
       model,
       operation: `generate-block-${blockKey}`,
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(promptRequest.system, promptRequest.prompt, contentSectionSchema),
       responseText: JSON.stringify(output),

@@ -57,6 +57,8 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
     const byOperationRows = await range(this.repo.createQueryBuilder("u"))
       .select("u.operation", "operation")
       .addSelect("COUNT(*)", "calls")
+      .addSelect("COALESCE(SUM(u.input_tokens),0)", "inputTokens")
+      .addSelect("COALESCE(SUM(u.output_tokens),0)", "outputTokens")
       .addSelect("COALESCE(SUM(u.cost_usd),0)", "costUsd")
       .groupBy("u.operation")
       .orderBy('"costUsd"', "DESC")
@@ -65,6 +67,8 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
     const dailyRows = await range(this.repo.createQueryBuilder("u"))
       .select("to_char(u.created_at, 'YYYY-MM-DD')", "date")
       .addSelect("COUNT(*)", "calls")
+      .addSelect("COALESCE(SUM(u.input_tokens),0)", "inputTokens")
+      .addSelect("COALESCE(SUM(u.output_tokens),0)", "outputTokens")
       .addSelect("COALESCE(SUM(u.cost_usd),0)", "costUsd")
       .groupBy("date")
       .orderBy("date", "ASC")
@@ -89,11 +93,15 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
       byOperation: byOperationRows.map((r) => ({
         operation: r.operation ?? "",
         calls: Number(r.calls),
+        inputTokens: Number(r.inputTokens),
+        outputTokens: Number(r.outputTokens),
         costUsd: Number(r.costUsd),
       })),
       daily: dailyRows.map((r) => ({
         date: r.date ?? "",
         calls: Number(r.calls),
+        inputTokens: Number(r.inputTokens),
+        outputTokens: Number(r.outputTokens),
         costUsd: Number(r.costUsd),
       })),
     };
@@ -109,6 +117,7 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
       operation: r.operation,
       provider: r.provider,
       model: r.model,
+      via: r.via,
       inputTokens: r.inputTokens,
       outputTokens: r.outputTokens,
       costUsd: Number(r.costUsd),
@@ -133,9 +142,12 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
       qb = qb.andWhere("u.operation = :operation", {
         operation: filter.operation,
       });
+    if (filter.via) qb = qb.andWhere("u.via = :via", { via: filter.via });
     if (filter.from)
       qb = qb.andWhere("u.created_at >= :from", { from: filter.from });
     if (filter.to) qb = qb.andWhere("u.created_at < :to", { to: filter.to });
+    if (filter.batchItemId)
+      qb = qb.andWhere("u.batch_item_id = :batchItemId", { batchItemId: filter.batchItemId });
 
     const [entities, total] = await qb
       .skip((filter.page - 1) * filter.limit)
@@ -152,9 +164,11 @@ export class TypeOrmAiUsageReader implements AiUsageReader {
       rows: entities.map((r) => ({
         id: r.id,
         jobId: r.jobId,
+        batchItemId: r.batchItemId,
         operation: r.operation,
         provider: r.provider,
         model: r.model,
+        via: r.via,
         inputTokens: r.inputTokens,
         outputTokens: r.outputTokens,
         costUsd: Number(r.costUsd),

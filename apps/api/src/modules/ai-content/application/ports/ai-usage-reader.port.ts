@@ -5,6 +5,7 @@ import type {
   AiUsageModelStat,
   AiUsageOperationStat,
   AiUsageTotals,
+  AiUsageVia,
 } from "@zinoflow/contracts";
 
 /** Port doc/tong hop ai_usage_logs cho man dashboard chi phi (/usage). */
@@ -22,8 +23,11 @@ export interface ListAiUsageLogsFilter {
   limit: number;
   provider?: string;
   operation?: string;
+  via?: AiUsageVia;
   from?: string;
   to?: string;
+  /** Loc dung 1 lan goi tao ra tu 1 item Batch AI cu the — dung khi mo tu /ai-batches. */
+  batchItemId?: string;
 }
 
 export interface AiUsageReader {

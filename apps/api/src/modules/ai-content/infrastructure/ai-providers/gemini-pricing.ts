@@ -15,16 +15,28 @@ const PRICE_PER_MILLION_TOKENS: Record<string, { input: number; output: number }
   "gemini-2.5-flash-lite": { input: 0.1, output: 0.4 },
 };
 
+/** Gemini Batch API giam gia ~50% ca input/output so voi goi dong bo (docs/specs/ai-batch-mode.md §gioi thieu). */
+const BATCH_DISCOUNT = 0.5;
+
 /** Model ngoai bang gia: cost 0 + priced=false de caller log warning (khong throw). */
 export function computeGeminiCostUsd(
   model: string,
   inputTokens: number,
   outputTokens: number,
+  /** true = goi qua Batch API — ap gia giam 50% (bug thuc te 03/08/2026: truoc do
+   * tinh cung gia voi sync, ket qua totalCostUsd hien thi cao gap doi thuc te). */
+  isBatch = false,
 ): { costUsd: number; priced: boolean } {
-  const price = PRICE_PER_MILLION_TOKENS[model];
+  // Batch API (batches.get().model) tra ve co tien to "models/" (vd
+  // "models/gemini-3.6-flash"), khac voi request.model luc submit (khong co
+  // tien to) — bug thuc te 02/08/2026: lookup truot, cost luon ra 0 du token
+  // > 0. generateContent (sync) khong bi vi khong doc lai model tu response.
+  const normalizedModel = model.replace(/^models\//, "");
+  const price = PRICE_PER_MILLION_TOKENS[normalizedModel];
   if (!price) {
     return { costUsd: 0, priced: false };
   }
-  const costUsd = (inputTokens * price.input + outputTokens * price.output) / 1_000_000;
+  const discount = isBatch ? BATCH_DISCOUNT : 1;
+  const costUsd = ((inputTokens * price.input + outputTokens * price.output) / 1_000_000) * discount;
   return { costUsd, priced: true };
 }

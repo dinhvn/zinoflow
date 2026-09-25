@@ -87,6 +87,7 @@ export class SuggestEditorialReviewUseCase {
       provider: provider.key,
       model: DEFAULT_MODEL,
       operation: "suggest-editorial-review",
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(SYSTEM, prompt, suggestEditorialReviewResponseSchema),
       responseText: JSON.stringify(output),

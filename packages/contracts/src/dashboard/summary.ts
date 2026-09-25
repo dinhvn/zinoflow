@@ -51,10 +51,19 @@ export const dashboardSummaryResponseSchema = z.object({
   channels: z.array(dashboardChannelSchema),
   cost: z.object({
     costUsd: z.number(),
+    inputTokens: z.number().int(),
+    outputTokens: z.number().int(),
     calls: z.number().int(),
     from: z.string(),
     to: z.string(),
-    daily: z.array(z.object({ date: z.string(), costUsd: z.number() })),
+    daily: z.array(
+      z.object({
+        date: z.string(),
+        costUsd: z.number(),
+        inputTokens: z.number().int(),
+        outputTokens: z.number().int(),
+      }),
+    ),
   }),
   system: z.object({ database: z.string() }),
 });

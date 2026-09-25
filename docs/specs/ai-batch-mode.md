@@ -124,6 +124,21 @@ cẩm-nang. 2 nơi tạo job ở chế độ batch:
 outline, `OutlineReady` cho content (trạng thái mới trong state machine, CHỈ batch
 flow dùng — luồng sync không bao giờ dừng ở đây).
 
+## Token/chi phí (thêm 08/2026)
+
+`ai_batch_items` có 3 cột `input_tokens`/`output_tokens`/`cost_usd` (nullable,
+chỉ set khi item `succeeded`) — ghi ngay trong `CheckAiBatchUseCase` bằng
+usage đã tính sẵn từ `GeminiContentAiProvider.usageFrom()`, KHÔNG dựa vào
+`ai_usage_logs`. Lý do tách riêng: `ai_usage_logs` chỉ có `jobId` (nullable) —
+`content-outline`/`content-article` map được (`jobId = entityId`), nhưng
+`destination-gsg-extraction`/`cluster-poi-discovery` luôn ghi `jobId: null`
+nên KHÔNG có cách nào lần lại đúng usage của 1 batch/entity cụ thể từ bảng
+đó. `ai_batches.totalInputTokens/totalOutputTokens/totalCostUsd` (API trả
+về, KHÔNG lưu cột riêng trong DB — tính runtime bằng SUM `ai_batch_items`
+qua `AiBatchRepository.sumUsageByBatchIds()`/tính trực tiếp từ mảng items ở
+`check`/`detail`) để tránh dữ liệu tổng bị lệch khỏi nguồn sự thật
+(`ai_batch_items`).
+
 ## Giới hạn đã biết
 
 - Chỉ Gemini hỗ trợ Batch API (`ContentAiProvider.supportsBatch`) — batch
@@ -139,3 +154,15 @@ flow dùng — luồng sync không bao giờ dừng ở đây).
 - 1 item lỗi (schema sai, entity không tồn tại...) không làm hỏng cả batch —
   `CheckAiBatchUseCase` bắt lỗi riêng từng item, gọi `handler.applyError()`,
   các item khác vẫn xử lý bình thường.
+- **Batch API + `useGoogleSearch` KHÔNG được set `responseMimeType`/
+  `responseJsonSchema`** (bug thật gặp 01-02/08/2026, item báo lỗi Gemini
+  "Request contains an invalid argument."): khác với `generateContent`
+  (sync — đã xác nhận chạy được kết hợp `tools: googleSearch` +
+  `responseJsonSchema` trên Gemini 3.x), **Batch API (`batches.create`)
+  validate chặt hơn và từ chối kết hợp này** (400 INVALID_ARGUMENT,
+  confirmed qua nhiều báo cáo cộng đồng Gemini API — xem
+  `GeminiContentAiProvider.submitBatch`). Handler nào dùng
+  `useGoogleSearch: true` (destination-gsg-extraction, cluster-poi-discovery)
+  khi chạy qua batch sẽ KHÔNG có JSON mode ép buộc từ API — dựa vào prompt
+  yêu cầu trả JSON + `extractRawJson` tự bóc ```json fence, rồi
+  `schema.parse` ở tầng applier validate lại (đã làm sẵn, không đổi).

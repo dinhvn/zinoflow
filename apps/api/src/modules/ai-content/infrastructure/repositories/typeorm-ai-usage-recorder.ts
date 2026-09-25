@@ -20,10 +20,12 @@ export class TypeOrmAiUsageRecorder implements AiUsageRecorder {
     const entity = new AiUsageLogEntity();
     entity.id = randomUUID();
     entity.jobId = entry.jobId;
+    entity.batchItemId = entry.batchItemId ?? null;
     // "stub" ghi nhu provider anthropic se gay nhieu so lieu cost — luu dung nguon
     entity.provider = entry.provider as AiProviderKey;
     entity.model = entry.model;
     entity.operation = entry.operation;
+    entity.via = entry.via;
     entity.inputTokens = entry.inputTokens;
     entity.outputTokens = entry.outputTokens;
     entity.costUsd = entry.costUsd.toFixed(6);

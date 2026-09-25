@@ -1,5 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn } from "typeorm";
-import type { AiProviderKey } from "@zinoflow/contracts";
+import type { AiProviderKey, AiUsageVia } from "@zinoflow/contracts";
 
 /**
  * Bang ai_usage_logs — ghi MOI call AI (spec §13): tokens, cost, latency.
@@ -14,6 +14,13 @@ export class AiUsageLogEntity {
   @Column({ name: "job_id", type: "uuid", nullable: true })
   jobId!: string | null;
 
+  /** Lien ket ve ai_batch_items.id khi lan goi nay den tu Batch AI — cac
+   * taskType dua tren destination/cluster slug khong co jobId nen day la
+   * cach duy nhat tra nguoc lai dung item o /ai-batches (yeu cau nguoi dung 08/2026). */
+  @Index()
+  @Column({ name: "batch_item_id", type: "uuid", nullable: true })
+  batchItemId!: string | null;
+
   @Column({ type: "varchar", length: 20 })
   provider!: AiProviderKey;
 
@@ -23,6 +30,10 @@ export class AiUsageLogEntity {
   /** "outline" | "section" | "title_variants" — buoc nao trong pipeline. */
   @Column({ type: "varchar", length: 50 })
   operation!: string;
+
+  /** "sync" | "batch" — xem AiUsageEntry.via. Default 'sync' cho log lich su cu. */
+  @Column({ type: "varchar", length: 10, default: "sync" })
+  via!: AiUsageVia;
 
   @Column({ name: "input_tokens", type: "int" })
   inputTokens!: number;

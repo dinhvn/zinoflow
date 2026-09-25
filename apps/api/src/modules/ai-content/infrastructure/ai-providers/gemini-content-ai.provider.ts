@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type Part } from "@google/genai";
 import { z, type ZodType } from "zod/v4";
 import type {
   AiCallUsage,
@@ -77,15 +77,34 @@ export class GeminiContentAiProvider implements ContentAiProvider {
     return JSON.parse(cleanJson);
   }
 
+  /**
+   * `dest.inlinedResponses[].response` cua Batch API la JSON thuan (khong
+   * phai instance GenerateContentResponse) — KHONG co getter `.text` tien
+   * dung nhu response cua generateContent (sync). Phai tu ghep text tu
+   * candidates[0].content.parts, bo qua part "thought" (Gemini 3.x gan
+   * thoughtSignature cho moi part, khong dung de phan biet thought/answer).
+   * Bug thuc te 02/08/2026: dung `res.response?.text` lam moi item batch
+   * bao loi "empty response" du Gemini da tra ve JSON hop le.
+   */
+  private extractTextFromParts(parts: Part[] | undefined): string | undefined {
+    const text = (parts ?? [])
+      .filter((part) => !part.thought && part.text)
+      .map((part) => part.text)
+      .join("");
+    return text || undefined;
+  }
+
   private usageFrom(
     meta: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number } | undefined,
     model: string,
     latencyMs: number,
+    /** true = ket qua nay tu Batch API — ap gia giam 50% (xem computeGeminiCostUsd). */
+    isBatch = false,
   ): AiCallUsage {
     const inputTokens = meta?.promptTokenCount ?? 0;
     // Gemini 2.5 tinh thinking tokens vao gia output
     const outputTokens = (meta?.candidatesTokenCount ?? 0) + (meta?.thoughtsTokenCount ?? 0);
-    const { costUsd, priced } = computeGeminiCostUsd(model, inputTokens, outputTokens);
+    const { costUsd, priced } = computeGeminiCostUsd(model, inputTokens, outputTokens, isBatch);
     if (!priced) {
       this.logger.warn(`No pricing for model "${model}" - cost logged as 0`);
     }
@@ -108,10 +127,18 @@ export class GeminiContentAiProvider implements ContentAiProvider {
       metadata: { key: item.key },
       config: {
         systemInstruction: item.request.system,
-        responseMimeType: "application/json" as const,
-        responseJsonSchema: z.toJSONSchema(item.schema),
+        // Batch API (batches.create) TU CHOI ket hop responseMimeType/responseJsonSchema
+        // voi tools (googleSearch) — 400 INVALID_ARGUMENT, khac voi generateContent
+        // (sync) da xac nhan chay duoc voi Gemini 3.x. Item co useGoogleSearch: bo qua
+        // JSON mode, dua vao prompt yeu cau tra JSON (extractRawJson da tu boc ```json
+        // fence). Item khong dung search: giu nguyen structured output nhu cu.
+        ...(item.request.useGoogleSearch
+          ? { tools: [{ googleSearch: {} }] }
+          : {
+              responseMimeType: "application/json" as const,
+              responseJsonSchema: z.toJSONSchema(item.schema),
+            }),
         ...(item.request.temperature !== undefined ? { temperature: item.request.temperature } : {}),
-        ...(item.request.useGoogleSearch ? { tools: [{ googleSearch: {} }] } : {}),
       },
     }));
     try {
@@ -145,11 +172,11 @@ export class GeminiContentAiProvider implements ContentAiProvider {
           }
           try {
             const rawOutput = this.extractRawJson(
-              res.response?.text,
+              this.extractTextFromParts(res.response?.candidates?.[0]?.content?.parts),
               res.response?.candidates?.[0]?.finishReason,
               "batch-item",
             );
-            const usage = this.usageFrom(res.response?.usageMetadata, batchJob.model ?? "", 0);
+            const usage = this.usageFrom(res.response?.usageMetadata, batchJob.model ?? "", 0, true);
             return { key, rawOutput, usage };
           } catch (error) {
             return {

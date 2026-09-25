@@ -4,14 +4,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listAiUsageLogsResponseSchema, type AiUsageLogRow } from "@zinoflow/contracts";
 import { apiGet } from "@/shared/api-client";
+import { formatTokensAndCost } from "@/shared/format-usage";
 import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table";
 import { ErrorBox } from "@/shared/ui/error-box";
-import { Modal } from "@/shared/ui/modal";
 import { Pagination } from "@/shared/ui/pagination";
 import { Select } from "@/shared/ui/select";
-
-const usd = (n: number) => `$${n.toFixed(n < 1 ? 4 : 2)}`;
+import { AiUsageLogDetailModal } from "./ai-usage-log-detail-modal";
 
 const PROVIDER_TONE: Record<string, BadgeTone> = {
   anthropic: "indigo",
@@ -19,6 +18,9 @@ const PROVIDER_TONE: Record<string, BadgeTone> = {
   openai: "amber",
   stub: "gray",
 };
+
+const VIA_LABEL: Record<string, string> = { sync: "Đơn lẻ", batch: "Batch AI" };
+const VIA_TONE: Record<string, BadgeTone> = { sync: "gray", batch: "blue" };
 
 /**
  * Lịch sử TỪNG lượt gọi AI toàn hệ thống (không chỉ theo 1 content job) — bấm 1
@@ -31,14 +33,16 @@ export function AiUsageHistory() {
   const [pageSize, setPageSize] = useState(20);
   const [provider, setProvider] = useState("");
   const [operation, setOperation] = useState("");
+  const [via, setVia] = useState("");
   const [viewing, setViewing] = useState<AiUsageLogRow | null>(null);
 
   const query = useQuery({
-    queryKey: ["ai-usage-logs", page, pageSize, provider, operation],
+    queryKey: ["ai-usage-logs", page, pageSize, provider, operation, via],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
       if (provider) params.set("provider", provider);
       if (operation) params.set("operation", operation);
+      if (via) params.set("via", via);
       return apiGet(`/content/ai-usage/logs?${params.toString()}`, listAiUsageLogsResponseSchema);
     },
   });
@@ -62,16 +66,20 @@ export function AiUsageHistory() {
     { key: "model", header: "Model", render: (r) => <span className="font-mono text-xs">{r.model}</span> },
     { key: "operation", header: "Tác vụ", render: (r) => <span className="font-mono text-xs">{r.operation}</span> },
     {
-      key: "tokens",
-      header: "Token vào/ra",
+      key: "via",
+      header: "Nguồn",
+      render: (r) => <Badge tone={VIA_TONE[r.via] ?? "gray"}>{VIA_LABEL[r.via] ?? r.via}</Badge>,
+    },
+    {
+      key: "tokensAndCost",
+      header: "Tokens (chi phí)",
       align: "right",
       render: (r) => (
         <span className="text-xs">
-          {r.inputTokens.toLocaleString("vi-VN")} / {r.outputTokens.toLocaleString("vi-VN")}
+          {formatTokensAndCost(r.inputTokens + r.outputTokens, r.costUsd)}
         </span>
       ),
     },
-    { key: "cost", header: "Chi phí", align: "right", render: (r) => usd(r.costUsd) },
     {
       key: "jobId",
       header: "Job",
@@ -123,6 +131,20 @@ export function AiUsageHistory() {
             ))}
           </Select>
         </label>
+        <label className="text-sm">
+          <span className="mb-1 block font-medium">Nguồn</span>
+          <Select
+            value={via}
+            onChange={(e) => {
+              setVia(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">Tất cả</option>
+            <option value="sync">Đơn lẻ</option>
+            <option value="batch">Batch AI</option>
+          </Select>
+        </label>
         {d && <span className="ml-auto text-xs text-zinc-500">{d.total} lượt gọi</span>}
       </div>
 
@@ -153,37 +175,5 @@ export function AiUsageHistory() {
 
       {viewing && <AiUsageLogDetailModal log={viewing} onClose={() => setViewing(null)} />}
     </div>
-  );
-}
-
-function AiUsageLogDetailModal({ log, onClose }: { log: AiUsageLogRow; onClose: () => void }) {
-  return (
-    <Modal open onClose={onClose} title={`${log.provider} · ${log.model} · ${log.operation}`}>
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-zinc-500 sm:grid-cols-4">
-          <span>Thời gian: {new Date(log.createdAt).toLocaleString("vi-VN")}</span>
-          <span>
-            Token: {log.inputTokens.toLocaleString("vi-VN")} vào / {log.outputTokens.toLocaleString("vi-VN")} ra
-          </span>
-          <span>Chi phí: {usd(log.costUsd)}</span>
-          <span>Độ trễ: {log.latencyMs.toLocaleString("vi-VN")} ms</span>
-        </div>
-        <PromptBlock title="Prompt đã gửi" text={log.promptText} defaultOpen />
-        <PromptBlock title="Response AI trả về" text={log.responseText} defaultOpen />
-      </div>
-    </Modal>
-  );
-}
-
-function PromptBlock({ title, text, defaultOpen }: { title: string; text: string | null; defaultOpen?: boolean }) {
-  return (
-    <details open={defaultOpen} className="rounded border border-zinc-200 dark:border-zinc-800">
-      <summary className="cursor-pointer select-none bg-zinc-50 px-3 py-2 text-sm font-medium dark:bg-zinc-900">
-        {title}
-      </summary>
-      <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300">
-        {text ?? "(không có)"}
-      </pre>
-    </details>
   );
 }

@@ -72,6 +72,7 @@ import { ContentOutlineBatchTaskHandler } from "./infrastructure/ai-providers/co
 import { ContentArticleBatchTaskHandler } from "./infrastructure/ai-providers/content-article-batch-task-handler";
 import { SubmitAiBatchUseCase } from "./application/use-cases/submit-ai-batch.usecase";
 import { CheckAiBatchUseCase } from "./application/use-cases/check-ai-batch.usecase";
+import { PreviewAiBatchPromptUseCase } from "./application/use-cases/preview-ai-batch-prompt.usecase";
 import { AiBatchController } from "./presentation/ai-batch.controller";
 import { AiBatchEntity } from "./infrastructure/entities/ai-batch.entity";
 import { AiBatchItemEntity } from "./infrastructure/entities/ai-batch-item.entity";
@@ -126,6 +127,7 @@ import { AiBatchItemEntity } from "./infrastructure/entities/ai-batch-item.entit
     ContentDraftPersister,
     SubmitAiBatchUseCase,
     CheckAiBatchUseCase,
+    PreviewAiBatchPromptUseCase,
     ContentOutlineBatchTaskHandler,
     ContentArticleBatchTaskHandler,
     { provide: AI_BATCH_REPOSITORY, useClass: TypeOrmAiBatchRepository },

@@ -61,7 +61,7 @@ export class ClusterPoiDiscoveryBatchTaskHandler implements BatchTaskHandler, On
     entityId: string,
     rawOutput: unknown,
     usage: AiCallUsage,
-    batchContext: { provider: AiProviderKey; model: string },
+    batchContext: { provider: AiProviderKey; model: string; batchItemId: string; requestText: string | null },
   ): Promise<void> {
     const all = await this.mirrorRepo.findAll();
     const cluster = this.findCluster(all, entityId);
@@ -71,8 +71,9 @@ export class ClusterPoiDiscoveryBatchTaskHandler implements BatchTaskHandler, On
       all,
       rawOutput,
       usage,
-      null,
+      batchContext.requestText,
       batchContext.model,
+      batchContext.batchItemId,
     );
     this.logger.log(`Batch cluster POI discovery cho ${entityId} — tìm được ${candidates.length} điểm ứng viên`);
   }

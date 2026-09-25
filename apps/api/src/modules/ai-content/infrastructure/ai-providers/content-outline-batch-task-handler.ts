@@ -73,7 +73,7 @@ export class ContentOutlineBatchTaskHandler implements BatchTaskHandler, OnModul
     entityId: string,
     rawOutput: unknown,
     usage: AiCallUsage,
-    batchContext: { provider: AiProviderKey; model: string },
+    batchContext: { provider: AiProviderKey; model: string; batchItemId: string; requestText: string | null },
   ): Promise<void> {
     const job = await this.jobs.findById(entityId);
     if (!job) throw new DomainRuleError(`Content job ${entityId} không tồn tại`);
@@ -92,9 +92,12 @@ export class ContentOutlineBatchTaskHandler implements BatchTaskHandler, OnModul
     await this.usage.record({
       ...usage,
       jobId: entityId,
+      batchItemId: batchContext.batchItemId,
       provider: batchContext.provider,
       model: batchContext.model,
       operation: "outline",
+      via: "batch",
+      promptText: batchContext.requestText,
       responseText: JSON.stringify(outline),
     });
     job.transitionTo("OutlineReady");

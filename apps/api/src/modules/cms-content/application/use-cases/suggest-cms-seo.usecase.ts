@@ -104,6 +104,7 @@ export class SuggestCmsSeoUseCase {
       provider: provider.key,
       model,
       operation: "cms-seo-description",
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(SYSTEM, prompt, cmsSeoSuggestionSchema),
       responseText: JSON.stringify(output),

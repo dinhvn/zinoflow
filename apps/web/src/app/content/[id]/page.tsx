@@ -28,6 +28,7 @@ import {
   type UpdateContentJobRequest,
 } from "@zinoflow/contracts";
 import { apiGet, apiSend, ApiError } from "@/shared/api-client";
+import { formatTokensAndCost } from "@/shared/format-usage";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { Input } from "@/shared/ui/input";
@@ -1193,10 +1194,11 @@ export default function JobDetailPage({
             <h3 className="font-medium">Lịch sử gọi AI</h3>
             {(usageLogsQuery.data ?? []).length > 0 && (
               <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                Tổng chi phí: $
-                {usageLogsQuery
-                  .data!.reduce((sum, log) => sum + log.costUsd, 0)
-                  .toFixed(4)}
+                Tổng chi phí:{" "}
+                {formatTokensAndCost(
+                  usageLogsQuery.data!.reduce((sum, log) => sum + log.inputTokens + log.outputTokens, 0),
+                  usageLogsQuery.data!.reduce((sum, log) => sum + log.costUsd, 0),
+                )}
               </span>
             )}
           </div>
@@ -1236,6 +1238,10 @@ export default function JobDetailPage({
                       (sum, log) => sum + log.costUsd,
                       0,
                     ),
+                    groupTokens: group.reduce(
+                      (sum, log) => sum + log.inputTokens + log.outputTokens,
+                      0,
+                    ),
                     outlinePrompt: describePromptVersion(
                       group.find((log) => log.operation === "outline"),
                       latestPromptVersions,
@@ -1252,6 +1258,7 @@ export default function JobDetailPage({
                   runNumber,
                   producedVersion,
                   groupCostUsd,
+                  groupTokens,
                   outlinePrompt,
                   contentPrompt,
                 }) => {
@@ -1267,7 +1274,7 @@ export default function JobDetailPage({
                           )}
                         </span>
                         <span className="text-zinc-500">
-                          ${groupCostUsd.toFixed(4)}
+                          {formatTokensAndCost(groupTokens, groupCostUsd)}
                         </span>
                         {producedVersion !== null ? (
                           <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
@@ -1332,8 +1339,13 @@ export default function JobDetailPage({
                                 <span className="text-zinc-500">
                                   {" "}
                                   · {log.provider}/{log.model} ·{" "}
-                                  {log.inputTokens + log.outputTokens} tokens ·{" "}
-                                  ${log.costUsd.toFixed(4)} · {log.latencyMs}ms
+                                  {formatTokensAndCost(log.inputTokens + log.outputTokens, log.costUsd)} ·{" "}
+                                  {log.latencyMs}ms
+                                  {log.via === "batch" && (
+                                    <Badge tone="blue" className="ml-1">
+                                      Batch AI
+                                    </Badge>
+                                  )}
                                   ·{" "}
                                   {new Date(log.createdAt).toLocaleString(
                                     "vi-VN",

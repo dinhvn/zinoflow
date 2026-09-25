@@ -262,6 +262,7 @@ export class GenerateContentUseCase {
       provider: provider.key,
       model,
       operation,
+      via: "sync",
       promptText: buildPromptLogText(request.system, request.prompt, schema),
       responseText: JSON.stringify(output),
       promptKey: request.promptTrace?.key ?? null,

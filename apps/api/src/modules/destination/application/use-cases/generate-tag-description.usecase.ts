@@ -103,6 +103,7 @@ export class GenerateTagDescriptionUseCase {
       provider: provider.key,
       model,
       operation: "generate-tag-description",
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(SYSTEM, prompt, generateTagDescriptionResponseSchema),
       responseText: JSON.stringify(output),

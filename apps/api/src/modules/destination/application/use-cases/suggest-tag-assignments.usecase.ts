@@ -82,6 +82,7 @@ export class SuggestTagAssignmentsUseCase {
       provider: provider.key,
       model,
       operation: "suggest-destination-tags",
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(TAG_SUGGEST_SYSTEM, prompt, aiTagSuggestionBatchSchema),
       responseText: JSON.stringify(output),

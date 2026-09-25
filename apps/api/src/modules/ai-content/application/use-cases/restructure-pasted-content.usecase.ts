@@ -125,6 +125,7 @@ export class RestructurePastedContentUseCase {
       provider: provider.key,
       model,
       operation: "restructure-paste",
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(SYSTEM, prompt, looseRestructureSchema),
       responseText: JSON.stringify(output),

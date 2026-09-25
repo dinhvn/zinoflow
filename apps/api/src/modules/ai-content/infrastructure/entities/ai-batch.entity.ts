@@ -30,6 +30,11 @@ export class AiBatchEntity {
   @Column({ name: "item_count", type: "int" })
   itemCount!: number;
 
+  /** Ghi chu tuy chon nguoi dung tu nhap luc gui batch — de phan biet nhieu
+   * batch cung taskType (vd "GSG cho cụm Đà Lạt đợt 2"). Cho phep rong. */
+  @Column({ type: "text", nullable: true })
+  note!: string | null;
+
   @Index()
   @Column({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;

@@ -65,14 +65,22 @@ export class DestinationGsgExtractionBatchTaskHandler implements BatchTaskHandle
     entityId: string,
     rawOutput: unknown,
     usage: AiCallUsage,
-    batchContext: { provider: AiProviderKey; model: string },
+    batchContext: { provider: AiProviderKey; model: string; batchItemId: string; requestText: string | null },
   ): Promise<void> {
     const all = await this.mirrorRepo.findAll();
     const destination = all.find((d) => d.slug === entityId);
     if (!destination) {
       throw new DomainRuleError(`Không tìm thấy điểm đến "${entityId}" trong mirror`);
     }
-    const result = await this.applier.apply(entityId, destination, rawOutput, usage, null, batchContext.model);
+    const result = await this.applier.apply(
+      entityId,
+      destination,
+      rawOutput,
+      usage,
+      batchContext.requestText,
+      batchContext.model,
+      batchContext.batchItemId,
+    );
     this.logger.log(
       `Batch GSG extraction cho ${entityId} — tìm được ${result.fields.filter((f) => f.found).length}/${result.fields.length} field`,
     );

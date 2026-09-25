@@ -8,13 +8,13 @@ import {
   type AiUsageOperationStat,
 } from "@zinoflow/contracts";
 import { apiGet } from "@/shared/api-client";
+import { formatTokensAndCost } from "@/shared/format-usage";
 import { Badge, type BadgeTone } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table";
 import { ErrorBox } from "@/shared/ui/error-box";
 import { Input } from "@/shared/ui/input";
 
-const usd = (n: number) => `$${n.toFixed(n < 1 ? 4 : 2)}`;
 const num = (n: number) => n.toLocaleString("vi-VN");
 
 const PROVIDER_TONE: Record<string, BadgeTone> = {
@@ -51,13 +51,13 @@ export function AiUsageDashboard() {
     },
     { key: "model", header: "Model", render: (r) => <span className="font-mono text-xs">{r.model}</span> },
     { key: "calls", header: "Lượt gọi", align: "right", render: (r) => num(r.calls) },
-    { key: "in", header: "Token vào", align: "right", render: (r) => num(r.inputTokens) },
-    { key: "out", header: "Token ra", align: "right", render: (r) => num(r.outputTokens) },
     {
-      key: "cost",
-      header: "Chi phí",
+      key: "tokensAndCost",
+      header: "Tokens (chi phí)",
       align: "right",
-      render: (r) => <span className="font-medium">{usd(r.costUsd)}</span>,
+      render: (r) => (
+        <span className="font-medium">{formatTokensAndCost(r.inputTokens + r.outputTokens, r.costUsd)}</span>
+      ),
     },
   ];
 
@@ -65,10 +65,12 @@ export function AiUsageDashboard() {
     { key: "operation", header: "Tác vụ", render: (r) => <span className="font-mono text-xs">{r.operation}</span> },
     { key: "calls", header: "Lượt gọi", align: "right", render: (r) => num(r.calls) },
     {
-      key: "cost",
-      header: "Chi phí",
+      key: "tokensAndCost",
+      header: "Tokens (chi phí)",
       align: "right",
-      render: (r) => <span className="font-medium">{usd(r.costUsd)}</span>,
+      render: (r) => (
+        <span className="font-medium">{formatTokensAndCost(r.inputTokens + r.outputTokens, r.costUsd)}</span>
+      ),
     },
   ];
 
@@ -112,10 +114,13 @@ export function AiUsageDashboard() {
       {d && (
         <>
           {/* The tong */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard label="Tổng chi phí" value={usd(d.totals.costUsd)} highlight />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <StatCard
+              label="Chi phí AI"
+              value={formatTokensAndCost(d.totals.inputTokens + d.totals.outputTokens, d.totals.costUsd)}
+              highlight
+            />
             <StatCard label="Lượt gọi AI" value={num(d.totals.calls)} />
-            <StatCard label="Token vào / ra" value={`${num(d.totals.inputTokens)} / ${num(d.totals.outputTokens)}`} />
             <StatCard label="Độ trễ TB" value={`${num(d.totals.avgLatencyMs)} ms`} />
           </div>
 
@@ -147,7 +152,9 @@ export function AiUsageDashboard() {
                             style={{ width: `${Math.max(2, (row.costUsd / maxDailyCost) * 100)}%` }}
                           />
                         </div>
-                        <span className="w-16 shrink-0 text-right font-medium">{usd(row.costUsd)}</span>
+                        <span className="w-36 shrink-0 text-right font-medium">
+                          {formatTokensAndCost(row.inputTokens + row.outputTokens, row.costUsd)}
+                        </span>
                       </div>
                     ))}
                   </div>

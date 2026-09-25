@@ -95,6 +95,7 @@ export class ExtractArticleInfoGsgUseCase {
       provider: provider.key,
       model: GSG_MODEL,
       operation: "extract-article-gsg",
+      via: "sync",
       ...usage,
       promptText: buildPromptLogText(promptRequest.system, promptRequest.prompt, gsgResponseSchema),
       responseText: JSON.stringify(output),
