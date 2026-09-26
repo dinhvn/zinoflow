@@ -346,6 +346,16 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   Audit thật xác nhận `v2.Destination` chỉ có 1 dòng (Thác Triệu Hải, Id=277),
   3 điểm còn lại chưa tồn tại; `v2.Hotel`/`v2.Tour`/`v2.Transport` trống.
 
+- **Chuyển DB website dichoithoi SQL Server → PostgreSQL (26/09/2026, CHƯA
+  BUILD)**: plan ở `dichoithoi-postgres-migration-plan.md`. Chốt: dichoithoi
+  đổi sang PG 18 (SmarterASP) trước go-live, khuyenmai giữ SQL Server. Không
+  chuyển dữ liệu điểm đến (v2.Destination chỉ 1 dòng, người dùng đồng ý xoá và
+  publish lại) — chỉ seed danh mục Province/Type/Tag/TypeGroup. Giai đoạn 0
+  (xuất metadata schema + danh mục từ LocalDB) PHẢI làm trên máy Windows trước
+  khi bỏ máy; Giai đoạn 1-5 làm trên Mac. Còn 4 quyết định Q1-Q4 chờ người
+  dùng chốt (snake_case, CMS cũ, dbo.Hotel trang chủ, timestamptz). Kèm việc
+  khẩn độc lập: đổi mật khẩu DB bị lộ trong `TestDbContext.cs`.
+
 - **SEO cho link affiliate (Hotel/Tour/Vé/Vé xe khách/Product) — CHƯA BUILD,
   ghi nhận 31/07/2026 sau khi thảo luận**: 2 việc cụ thể cần làm khi đụng lại
   các module affiliate:

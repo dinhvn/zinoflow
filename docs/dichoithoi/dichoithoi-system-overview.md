@@ -29,6 +29,10 @@ lại tracking trạng thái.
 2. `dichoithoi-seo-principles.md` — nguyên tắc SEO tối thượng, ĐỌC TRƯỚC KHI
    CODE bất kỳ tính năng/field hiển thị nào (ưu tiên cao nhất, ghi trong CLAUDE.md).
 3. `dichoithoi-database-redesign.md` — schema database mới (ưu tiên tốc độ).
+    3a. `dichoithoi-postgres-migration-plan.md` — plan CHƯA build (26/09/2026):
+    chuyển DB website từ SQL Server sang PostgreSQL trước go-live (EF Core
+    Migrations làm nguồn schema duy nhất + viết lại 5 adapter mssql zinoflow)
+    — đọc trước khi đụng vào schema v2 hoặc adapter `*-site-db`.
 4. `dichoithoi-destination-spec.md` — tính năng tạo/cập nhật bài điểm đến trong AI tool.
 5. `dichoithoi-content-seo-ux-plan.md` — mục tiêu sản phẩm, khung nội dung đầy đủ,
    chiến lược SEO + kiếm tiền (booking khách sạn/vé), thiết kế UI/UX trang detail.
