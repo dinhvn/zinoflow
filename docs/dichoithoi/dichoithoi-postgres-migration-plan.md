@@ -1,4 +1,31 @@
-# Dichoithoi — Chuyển DB website từ SQL Server sang PostgreSQL (CHƯA BUILD)
+# Dichoithoi — Chuyển DB website từ SQL Server sang PostgreSQL (ĐANG LÀM: GĐ0 xong, GĐ1-5 làm trên Mac)
+
+## Tiến độ
+
+| Giai đoạn | Trạng thái | Ghi chú |
+|---|---|---|
+| S — Đổi mật khẩu bị lộ | ⏸ Người dùng chọn GIỮ NGUYÊN (26/09/2026) | Quyết định của người dùng, không nhắc lại |
+| 0 — Xuất schema + danh mục | ✅ Xong 26/09/2026 | `dichoithoi/scripts/postgres-migration/sqlserver-export/` |
+| 1 — EF Core Migrations | ⬜ Chưa làm | Chờ chốt Q1-Q4 |
+| 2 — .NET chạy PG | ⬜ | |
+| 3 — 5 adapter zinoflow | ⬜ | |
+| 4 — Thử trên SmarterASP + docs | ⬜ | |
+| 5 — Gỡ SQL Server | ⬜ | |
+
+## Bắt đầu trên Mac (đọc mục này đầu tiên)
+
+1. Máy Mac đã khôi phục theo `migration-mac-2026-09-26/HUONG-DAN-KHOI-PHUC-TREN-MAC.md`
+   (Postgres zinoflow, `.env`, memory). **Không cần** Docker SQL Server: Giai đoạn 0 đã
+   xuất đủ những gì cần đọc từ SQL Server.
+2. `git pull` cả `zinoflow` (main) lẫn `dichoithoi` (develop).
+3. Mở Claude Code trong zinoflow, nói: *"tiếp tục plan chuyển dichoithoi sang Postgres"*.
+   Claude sẽ đọc file này qua memory `dichoithoi-postgres-migration-plan-open`.
+4. Chốt Q1-Q4 (mục bên dưới), rồi bắt đầu Giai đoạn 1.
+5. Cài thêm: .NET SDK 9 (`brew install --cask dotnet-sdk`) và `dotnet tool install --global dotnet-ef`.
+   Tạo DB trống: `createdb -U postgres dichoithoi_dev`. Nên dùng chung server PG với
+   zinoflow nhưng tách database, giữ đúng ranh giới "schema owned by dichoithoi".
+6. Trong lúc chưa xong Giai đoạn 1-3: zinoflow vẫn dùng bình thường, chỉ các thao tác publish sang
+   site bị lỗi kết nối. Website .NET chưa chạy được trên Mac. Chấp nhận được vì site chưa go-live.
 
 Ghi 26/09/2026. Bối cảnh: người dùng đổi máy dev sang Mac (không có SQL Server
 LocalDB) và hosting SmarterASP có PostgreSQL 18 (có remote connection). Sau khi
@@ -83,13 +110,31 @@ memory `dichoithoi-localdb-encoding-bug` (sẽ không còn áp dụng).
 
 ## Các giai đoạn
 
-### Giai đoạn S — Đổi mật khẩu DB bị lộ (độc lập, làm NGAY)
+### Giai đoạn S — Đổi mật khẩu DB bị lộ — ⏸ NGƯỜI DÙNG CHỌN GIỮ NGUYÊN (26/09/2026)
+
+Người dùng đã biết rủi ro và quyết định giữ mật khẩu hiện tại. Không tự sửa, không nhắc lại
+mỗi phiên. Vẫn giữ nội dung dưới đây để làm khi người dùng yêu cầu.
+
 - Đổi mật khẩu user `DB_A5DA02_dichoithoi_admin` trên SmarterASP.
 - Xoá `TestDbContext.cs`, hoặc bỏ `OnConfiguring` ghi cứng. Mật khẩu cũ vẫn nằm trong lịch sử git, nên đổi mật khẩu là bắt buộc, không thể thay bằng việc xoá file.
 - **Phụ thuộc:** không.
 - **DoD:** đăng nhập bằng mật khẩu cũ bị từ chối. `grep -r "Password=" --include=*.cs` trong repo dichoithoi ra 0 kết quả.
 
-### Giai đoạn 0 — Trích xuất những gì cần SQL Server (làm trên máy Windows, TRƯỚC khi bỏ máy)
+### Giai đoạn 0 — Trích xuất những gì cần SQL Server — ✅ XONG 26/09/2026
+
+**Kết quả:** script `dichoithoi/scripts/postgres-migration/export-sqlserver-schema.ps1`,
+output ở `sqlserver-export/`, đã commit trong repo dichoithoi (xem README cùng thư mục,
+có bảng chuyển kiểu SQL Server → PG).
+- Xuất TOÀN BỘ 26 bảng (không chỉ 21), để quyết định Q2/Q3 có đủ dữ liệu:
+  278 cột, 41 index, 13 FK, 0 check, 10 identity, 50 default.
+- Danh mục: Province 34, TypeGroup 4, Type 18, Tag 17. Đã kiểm tra tiếng Việt có dấu đúng.
+- Phát hiện thêm: filtered index `IX_v2Destination_Priority (Priority, Order) WHERE [Priority]<=(2)`
+  trên `v2.Destination`.
+  Phải tái tạo bằng partial index (`HasFilter`) ở Giai đoạn 1.
+- Các giá trị default gặp: `((0))`, `((1))`, `((3))`, `(getdate())`, `(sysutcdatetime())`,
+  `(N'')`, `('no-rule')`.
+
+Việc ban đầu (giữ để tham chiếu):
 - Xuất metadata schema của 19 bảng `v2` + `dbo.Hotel` + `dbo.HotelGroup` ra JSON:
   cột, kiểu, nullable, default, PK, FK, index, identity. Truy vấn từ `sys.*`.
 - Xuất dữ liệu danh mục ra JSON: `v2.Province`, `v2.DestinationTypeGroup`,
@@ -164,7 +209,7 @@ memory `dichoithoi-localdb-encoding-bug` (sẽ không còn áp dụng).
 
 ## Làm ở máy nào
 
-- **Giai đoạn S và Giai đoạn 0: trên máy Windows, trước khi bỏ máy.** Giai đoạn 0 là
+- **Giai đoạn 0: trên máy Windows (✅ đã xong 26/09/2026).** Giai đoạn 0 là
   việc duy nhất cần SQL Server để đọc schema. Làm xong thì Mac **không cần cài Docker SQL Server**.
 - **Giai đoạn 1-5: trên Mac.** Đó chính là môi trường đích (PG native). Không nên bắt đầu
   trên Windows rồi dừng giữa chừng lúc chuyển máy.
