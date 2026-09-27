@@ -9,8 +9,8 @@ Danh sach tai lieu:
 0. ai-content-delivery-plan.md — KE HOACH TONG (M1-M6), bat dau tu day
 1. ai-content-technical-spec.md — spec chinh, build truoc
 2. Toan bo tai lieu rieng cho dichoithoi.com (kien truc, database, noi dung/SEO/UX,
-   audit ky thuat) da chuyen sang thu muc `docs/dichoithoi/` — xem
-   `docs/dichoithoi/dichoithoi-system-overview.md` de biet thu tu doc.
+   audit ky thuat) da chuyen sang thu muc `mmo-workspace/docs/dichoithoi/` — xem
+   `mmo-workspace/docs/dichoithoi/dichoithoi-system-overview.md` de biet thu tu doc.
 3. image-tool-technical-spec.md — Phase 3
 4. roadmap-and-acceptance.md
 5. folder-structure.md

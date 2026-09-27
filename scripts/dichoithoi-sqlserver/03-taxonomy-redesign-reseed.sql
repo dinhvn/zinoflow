@@ -1,6 +1,6 @@
 /* =====================================================================
    Taxonomy redesign — xoá toàn bộ Nhóm/Type/Tag cũ, seed lại theo bản
-   chốt docs/dichoithoi/phan-tich/dichoithoi-taxonomy-chuan-hoa.md (24/07/2026).
+   chốt mmo-workspace/docs/dichoithoi/phan-tich/dichoithoi-taxonomy-chuan-hoa.md (24/07/2026).
 
    Quyết định của người dùng (24/07/2026): không giữ dữ liệu Nhóm/Type/Tag
    cũ, xoá sạch và seed lại theo thiết kế mới (4 Nhóm/18 Type/17 Tag) —

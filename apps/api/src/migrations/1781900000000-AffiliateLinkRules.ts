@@ -3,7 +3,7 @@ import type { MigrationInterface, QueryRunner } from "typeorm";
 /**
  * M4 (Phase 3) — bang affiliate_link_rules: nguon su that duy nhat cho co che
  * chuyen doi sourceUrl -> affiliateUrl dung chung cho ticketLinks/hotel/tour.
- * Spec: docs/dichoithoi/dichoithoi-affiliate-link-conversion-spec.md §2.
+ * Spec: mmo-workspace/docs/dichoithoi/dichoithoi-affiliate-link-conversion-spec.md §2.
  */
 export class AffiliateLinkRules1781900000000 implements MigrationInterface {
   name = "AffiliateLinkRules1781900000000";

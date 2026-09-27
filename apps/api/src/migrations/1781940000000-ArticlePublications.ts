@@ -4,7 +4,7 @@ import type { MigrationInterface, QueryRunner } from "typeorm";
  * M4 (Phase 8) — anh xa ContentJob (cam-nang) -> bai da publish o SQL Server.
  * KHONG luu RawContent (nguon that van la content_drafts) — chi theo doi
  * trang thai publish/refresh cho "Lam moi khoi dong" + batch refresh.
- * Spec: docs/dichoithoi/dichoithoi-article-spec.md §8.
+ * Spec: mmo-workspace/docs/dichoithoi/dichoithoi-article-spec.md §8.
  */
 export class ArticlePublications1781940000000 implements MigrationInterface {
   name = "ArticlePublications1781940000000";

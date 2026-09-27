@@ -5,7 +5,7 @@ import type { MigrationInterface, QueryRunner } from "typeorm";
  * AffiliateLinkItem[]) tren mirror dichoithoi_destinations. Du lieu cu (neu co)
  * duoc bao ton bang cach chuyen thanh 1 phan tu voi linkStatus='no-rule' —
  * nguoi dung can vao lai form de gan provider/rule dung (khong bia affiliateUrl).
- * Spec: docs/dichoithoi/dichoithoi-affiliate-link-conversion-spec.md.
+ * Spec: mmo-workspace/docs/dichoithoi/dichoithoi-affiliate-link-conversion-spec.md.
  */
 export class DestinationTicketLinks1781910000000 implements MigrationInterface {
   name = "DestinationTicketLinks1781910000000";

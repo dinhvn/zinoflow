@@ -1,6 +1,6 @@
 ﻿/*
   Dichoithoi — DAI TU SCHEMA (buoc 1/2): tao bang MOI trong schema [v2].
-  Theo docs/dichoithoi/dichoithoi-database-redesign.md §4.
+  Theo mmo-workspace/docs/dichoithoi/dichoithoi-database-redesign.md §4.
 
   - CHI TAO MOI, khong dung vao bang cu — website hien tai van chay binh thuong.
   - Chay TRUOC: backup toan bo DB.

@@ -8,7 +8,7 @@ import { qualityCheckSchema } from "../ai-content/quality";
 
 /**
  * Bai viet DIEM DEN du lich (articleType "guide-diem-den") —
- * spec docs/dichoithoi/dichoithoi-destination-spec.md §4.
+ * spec mmo-workspace/docs/dichoithoi/dichoithoi-destination-spec.md §4.
  * Output AI map THANG sang cot v2.DestinationContent (redesign doc §4.3):
  * quickFacts -> cot rieng, intro + sections + faq -> ContentHtml,
  * metadata -> MetaTitle/MetaDescription + Destination.ShortDescription/SearchKeyword.

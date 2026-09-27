@@ -11,22 +11,18 @@ generate articles with AI (human review required) and publish to WordPress
 Build order: AI Content Tool first, Image Tool (Remotion) later.
 Extension (M4 — prioritized 12/06/2026): travel destination articles for dichoithoi.com —
 published by direct UPSERT into that site's PostgreSQL DB (never wipe; schema owned by
-dichoithoi via EF Core Migrations, no migrations from this repo). See `docs/dichoithoi/dichoithoi-destination-spec.md`.
+dichoithoi via EF Core Migrations, no migrations from this repo).
+
+This repo is a git submodule at `repos/zinoflow` inside the parent workspace `mmo-workspace`.
+Cross-repo docs (business context, all dichoithoi specs/plans/backlog, SEO rules) and the
+dichoithoi skills live in the PARENT repo — paths written as `mmo-workspace/docs/...`
+resolve to `../../docs/...` from this repo root. For any dichoithoi work read
+`../../CLAUDE.md` (dichoithoi key docs, incl. the HIGHEST PRIORITY SEO principles).
 
 Key docs (read before making design decisions):
-- `docs/idea.md` — business context + final direction (11/06/2026)
+- `../../docs/workspace/idea.md` — business context + final direction (11/06/2026)
 - `docs/tech-recommendation-web-mvp.md` — tech decision record (frozen, do not re-litigate)
 - `docs/specs/ai-content-technical-spec.md` — main spec (state machine, quality gates, 8-block article framework)
-- `docs/dichoithoi/dichoithoi-seo-principles.md` — **HIGHEST PRIORITY for any dichoithoi work**:
-  mandatory SEO-owner mindset + 3-question checklist (useful to user? SEO-correct structure?
-  what extra signal increases SEO?) to run BEFORE designing/coding any dichoithoi feature or
-  displayed field. Overrides other dichoithoi specs on conflict.
-- `docs/dichoithoi/dichoithoi-google-seo-guidelines.md` — full compiled reference of Google's
-  official SEO policies (16 spam policies, structured data rules, sitemap `lastmod` accuracy,
-  Core Web Vitals ranking impact, duplicate content/canonical, helpful-content date-spam warning)
-  read directly from `developers.google.com/search/docs` 29/07/2026 — consult for exact quotes/
-  rules, companion to the mindset doc above.
-- `docs/dichoithoi/dichoithoi-destination-spec.md` — destination content for dichoithoi.com (M6)
 - `docs/specs/folder-structure.md` — monorepo layout
 - `docs/clean-architecture-playbook.md` — architecture rules
 
@@ -135,7 +131,7 @@ Giải thích tính năng ngay tại chỗ dùng (MANDATORY — user yêu cầu 
   đích chính không được ẩn.
 - Trang MỚI: bắt buộc có ngay từ khi tạo, không để "làm sau".
 - Trang ĐÃ CÓ (retrofit): không tự ý sửa hàng loạt khi không được yêu cầu —
-  ghi vào `docs/dichoithoi/dichoithoi-backlog.md` làm việc tồn đọng, bổ
+  ghi vào `mmo-workspace/docs/dichoithoi/dichoithoi-backlog.md` làm việc tồn đọng, bổ
   sung dần khi đụng lại từng trang, hoặc khi người dùng yêu cầu làm hàng
   loạt.
 

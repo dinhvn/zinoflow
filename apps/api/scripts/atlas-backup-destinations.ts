@@ -1,6 +1,6 @@
 /**
  * GD2 — Backup truoc dot lam moi du lieu theo Atlas (phuong an A wipe & restore,
- * docs/dichoithoi/chuan-hoa-du-lieu/plan-lam-moi-du-lieu-atlas.md).
+ * mmo-workspace/docs/dichoithoi/chuan-hoa-du-lieu/plan-lam-moi-du-lieu-atlas.md).
  *
  * Lam 4 viec, theo thu tu:
  * 1. Tao bang tam `dichoithoi_destinations_backup` = copy NGUYEN dong bang

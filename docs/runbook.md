@@ -125,7 +125,7 @@ Hoac chay tu dong: `node scripts/smoke.mjs gemini gemini-3.1-flash-lite`
 
 ## 8) DB website dichoithoi (PostgreSQL) + test tich hop
 
-Tu 27/09/2026 website dichoithoi dung PostgreSQL (plan: `docs/dichoithoi/dichoithoi-postgres-migration-plan.md`).
+Tu 27/09/2026 website dichoithoi dung PostgreSQL (plan: `mmo-workspace/docs/dichoithoi/dichoithoi-postgres-migration-plan.md`).
 Schema do repo dichoithoi so huu (EF Core Migrations) — repo nay chi doc/ghi du lieu.
 
 ```bash

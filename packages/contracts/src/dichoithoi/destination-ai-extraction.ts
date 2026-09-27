@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 /**
  * Contracts cho tinh nang Claude trich xuat thong tin diem den tu Google Maps + web
  * tham khao — skill ghi vao bang staging, CMS hien bang so sanh cu/moi cho nguoi dung
- * duyet (docs/dichoithoi/dichoithoi-destination-ai-extraction-plan.md §2).
+ * duyet (mmo-workspace/docs/dichoithoi/dichoithoi-destination-ai-extraction-plan.md §2).
  */
 
 /** Cac truong co the trich xuat — khop dung ten cot that tren dichoithoi_destinations */

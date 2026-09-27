@@ -168,8 +168,8 @@ import { ClusterPoiDiscoveryBatchTaskHandler } from "./infrastructure/batch-hand
 
 /**
  * Module Dichoithoi (M4) — AI tool dong vai CMS cho noi dung diem den.
- * Kien truc: docs/dichoithoi/dichoithoi-system-overview.md;
- * tinh nang: docs/dichoithoi/dichoithoi-destination-spec.md.
+ * Kien truc: mmo-workspace/docs/dichoithoi/dichoithoi-system-overview.md;
+ * tinh nang: mmo-workspace/docs/dichoithoi/dichoithoi-destination-spec.md.
  * Generate bai van di qua module ai-content — module nay KHONG goi AI provider.
  */
 @Module({

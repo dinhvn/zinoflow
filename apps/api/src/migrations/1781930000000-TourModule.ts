@@ -2,7 +2,7 @@ import type { MigrationInterface, QueryRunner } from "typeorm";
 
 /**
  * M4 (Phase 6) — bang tours + tour_destination_map (Postgres, nguon su that).
- * Spec: docs/dichoithoi/dichoithoi-tour-spec.md §3.
+ * Spec: mmo-workspace/docs/dichoithoi/dichoithoi-tour-spec.md §3.
  */
 export class TourModule1781930000000 implements MigrationInterface {
   name = "TourModule1781930000000";

@@ -2,7 +2,7 @@ import type { MigrationInterface, QueryRunner } from "typeorm";
 
 /**
  * M4 (Phase 5) — bang hotels + hotel_destination_map (Postgres, nguon su that).
- * Spec: docs/dichoithoi/dichoithoi-hotel-spec.md §3.
+ * Spec: mmo-workspace/docs/dichoithoi/dichoithoi-hotel-spec.md §3.
  */
 export class HotelModule1781920000000 implements MigrationInterface {
   name = "HotelModule1781920000000";

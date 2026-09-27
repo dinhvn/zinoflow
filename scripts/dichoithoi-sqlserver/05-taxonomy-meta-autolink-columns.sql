@@ -1,6 +1,6 @@
 /*
   Dichoithoi — them cot MetaDescription (4 bang danh muc) + DescriptionHtml (Type, Tag).
-  Ly do (24/07/2026, xem docs/dichoithoi/dichoithoi-content-seo-ux-plan.md):
+  Ly do (24/07/2026, xem mmo-workspace/docs/dichoithoi/dichoithoi-content-seo-ux-plan.md):
   - MetaDescription: tach khoi Description (giong Destination.MetaDescription da tach
     khoi ShortDescription, database-redesign §4.3) — meta khong bao gio duoc doc tu ban
     da auto-link (co the chua <a>), tranh markup lot vao the <meta>.

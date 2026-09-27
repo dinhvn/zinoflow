@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 /**
  * Contracts cho co che chuyen doi link goc -> link affiliate — dung CHUNG cho
  * ve diem den (ticketLinks[]), khach san, tour.
- * Spec: docs/dichoithoi/dichoithoi-affiliate-link-conversion-spec.md.
+ * Spec: mmo-workspace/docs/dichoithoi/dichoithoi-affiliate-link-conversion-spec.md.
  */
 
 /** '{url}' giu nguyen | '{url_enc}' URL-encode truoc khi thay vao template */

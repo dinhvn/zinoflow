@@ -9,3 +9,6 @@ Claude Code specific notes:
   of the shared instructions strictly (model IDs, adaptive thinking, no sampling params).
 - When updating coding rules, edit `.github/copilot-instructions.md` only —
   never add duplicate rules to this file.
+- This repo lives at `repos/zinoflow` in the parent workspace `mmo-workspace`. Shared docs
+  (`docs/dichoithoi/**`), dichoithoi skills and cross-repo rules are in `../../CLAUDE.md` —
+  open Claude Code at the workspace root for dichoithoi work so those skills load.

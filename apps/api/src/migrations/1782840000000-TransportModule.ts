@@ -4,7 +4,7 @@ import type { MigrationInterface, QueryRunner } from "typeorm";
  * Module Van chuyen (Ve xe khach mode=2, Ve may bay mode=1 du phong) — bang
  * transports + transport_stops (Postgres, nguon su that). Gan theo TUYEN co
  * diem dung (khong theo POI). Spec:
- * docs/dichoithoi/dichoithoi-transport-vexekhach-plan.md §2.
+ * mmo-workspace/docs/dichoithoi/dichoithoi-transport-vexekhach-plan.md §2.
  */
 export class TransportModule1782840000000 implements MigrationInterface {
   name = "TransportModule1782840000000";

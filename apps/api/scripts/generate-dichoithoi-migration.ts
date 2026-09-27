@@ -128,7 +128,7 @@ const sqlOut = `/*
 
   Yeu cau: da chay 01-create-new-schema.sql; DA BACKUP toan bo DB.
   Script chay trong 1 transaction — loi o dau rollback toan bo.
-  Theo docs/dichoithoi/dichoithoi-database-redesign.md §7.
+  Theo mmo-workspace/docs/dichoithoi/dichoithoi-database-redesign.md §7.
 */
 SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;

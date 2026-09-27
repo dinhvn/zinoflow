@@ -1,7 +1,7 @@
 /* ===== Van chuyen (Ve xe khach mode=2, Ve may bay mode=1 du phong) =====
    Gan theo TUYEN co diem dung (khong theo POI) — khac Hotel/Tour vi khong co
    toa do/khoang cach, ma co vai tro (Role) khac nhau tren tung diem.
-   Spec: docs/dichoithoi/dichoithoi-transport-vexekhach-plan.md §2. */
+   Spec: mmo-workspace/docs/dichoithoi/dichoithoi-transport-vexekhach-plan.md §2. */
 
 IF OBJECT_ID('v2.Transport') IS NULL
 CREATE TABLE v2.Transport (

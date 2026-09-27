@@ -5,7 +5,7 @@ import { destinationOpeningHoursSchema } from "./destination-ai-extraction";
 
 /**
  * Contracts cho khu Dichoithoi (M4) — mirror diem den + sync.
- * Schema DB dich (SQL Server) xem docs/dichoithoi/dichoithoi-database-redesign.md;
+ * Schema DB dich (SQL Server) xem mmo-workspace/docs/dichoithoi/dichoithoi-database-redesign.md;
  * mirror Postgres phan chieu metadata de UI list/filter + auto-link.
  */
 

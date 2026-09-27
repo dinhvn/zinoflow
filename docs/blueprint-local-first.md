@@ -2,7 +2,7 @@
 
 > **[SUPERSEDED - 11/06/2026]** Tai lieu nay theo huong .NET + SQL Server va da LOI THOI.
 > Quyet dinh moi: Node.js (NestJS + Next.js + TypeORM + PostgreSQL local, khong Docker, khong Redis).
-> Xem: docs/idea.md (dinh huong chot) va docs/tech-recommendation-web-mvp.md.
+> Xem: mmo-workspace/docs/workspace/idea.md (dinh huong chot) va docs/tech-recommendation-web-mvp.md.
 > Phan van con gia tri tham khao: workflow (muc 4), quality gates (muc 6), risks (muc 10).
 
 ## 1) Product Vision
