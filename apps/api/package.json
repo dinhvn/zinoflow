@@ -5,7 +5,7 @@
   "description": "ZinoFlow API - NestJS + TypeORM + pg-boss (clean architecture)",
   "scripts": {
     "dev": "pnpm kill-port && nest start --watch",
-    "kill-port": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/kill-port.ps1",
+    "kill-port": "node scripts/kill-port.mjs",
     "build": "nest build",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
