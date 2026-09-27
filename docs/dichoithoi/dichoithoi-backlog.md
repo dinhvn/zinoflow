@@ -346,15 +346,13 @@ trước khi vừa sửa doc vừa lên kế hoạch build, tránh sửa 2 lần
   Audit thật xác nhận `v2.Destination` chỉ có 1 dòng (Thác Triệu Hải, Id=277),
   3 điểm còn lại chưa tồn tại; `v2.Hotel`/`v2.Tour`/`v2.Transport` trống.
 
-- **Chuyển DB website dichoithoi SQL Server → PostgreSQL (26/09/2026, ĐANG
-  LÀM — GĐ0 xong, GĐ1-5 làm trên Mac)**: plan + bảng tiến độ + mục "Bắt đầu
-  trên Mac" ở `dichoithoi-postgres-migration-plan.md`. Chốt: dichoithoi đổi
-  sang PG 18 (SmarterASP) trước go-live, khuyenmai giữ SQL Server. Không
-  chuyển dữ liệu điểm đến (v2.Destination chỉ 1 dòng, người dùng đồng ý xoá và
-  publish lại) — chỉ seed danh mục. Schema + danh mục đã xuất ra
-  `dichoithoi/scripts/postgres-migration/sqlserver-export/`. Việc tiếp theo:
-  người dùng chốt Q1-Q4 (snake_case, CMS cũ, dbo.Hotel trang chủ,
-  timestamptz) rồi làm GĐ1. Mật khẩu lộ trong `TestDbContext.cs`: người dùng
+- **Chuyển DB website dichoithoi SQL Server → PostgreSQL (GĐ0-3 xong 27/09/2026,
+  GĐ4 + GĐ5 LÀM LÚC RELEASE)**: plan + bảng tiến độ ở `dichoithoi-postgres-migration-plan.md`.
+  Code local (zinoflow 5 adapter `pg-*` + website .NET EF Core Migrations) đã chạy hoàn toàn trên PG.
+  GĐ4 (tạo DB PG trên SmarterASP, đổi `appsettings.Release.json` + `DICHOITHOI_DATABASE_URL`,
+  `pg_dump`/`pg_restore`) đã ghi thành các bước **[PG]** trong `dichoithoi-release-checklist.md`.
+  Còn thiếu: chạy đầu-cuối qua UI cho tuyến xe + bài cẩm nang (làm lúc release/publish dữ liệu thật).
+  GĐ5 (gỡ SQL Server) sau khi site PG ổn định. Mật khẩu lộ trong `TestDbContext.cs`: người dùng
   chọn giữ nguyên, không nhắc lại.
 
 - **SEO cho link affiliate (Hotel/Tour/Vé/Vé xe khách/Product) — CHƯA BUILD,

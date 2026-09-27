@@ -1,3 +1,7 @@
+> **Cập nhật 27/09/2026:** DB website đã chuyển sang **PostgreSQL** (`dichoithoi-postgres-migration-plan.md`).
+> Mọi lệnh `sqlcmd` / script `scripts/dichoithoi-sqlserver/*.sql` trong file này **không còn áp dụng**.
+> Lúc release, làm theo `dichoithoi-release-checklist.md` (các bước đánh dấu [PG]).
+
 # Runbook Go-live cutover (Phase 10)
 
 **Cập nhật 07/2026 — chiến lược release đã đổi**: người dùng xác nhận sẽ

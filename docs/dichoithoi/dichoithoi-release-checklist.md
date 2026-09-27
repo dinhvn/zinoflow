@@ -5,6 +5,12 @@ Chiến lược release đã chốt (07/2026, xem `dichoithoi-golive-runbook.md`
 — KHÔNG migrate-tại-chỗ. Checklist này dùng CHO chiến lược đó, chạy theo thứ
 tự, không bỏ bước.
 
+> **Cập nhật 27/09/2026 — DB website mới là PostgreSQL, không còn là SQL Server.**
+> Code local (zinoflow + dichoithoi) đã chạy hoàn toàn trên PG. Việc dựng DB PG trên SmarterASP
+> (Giai đoạn 4 của `dichoithoi-postgres-migration-plan.md`) **làm ngay trong đợt release này**.
+> Các bước đánh dấu **[PG]** bên dưới. SQL Server production CŨ chỉ còn vai trò: backup trước khi
+> xoá + đối chiếu slug cũ để làm redirect.
+
 ## 1) Trước khi xoá production (chuẩn bị + lưới an toàn)
 
 - [ ] **Release gate bảo mật (bắt buộc trước cutover)** - ZinoFlow (`apps/api`, `apps/web`): chạy kiểm tra dependency
@@ -33,12 +39,27 @@ tự, không bỏ bước.
       `import_tour` vẫn ghi vào bảng v1; cờ `IsLegacyImportLocked` đã có sẵn
       trong code nếu cần khoá tạm trước khi xoá hẳn).
 - [ ] Chuẩn bị sẵn giá trị thật cho production trong `.env` (zinoflow
-      `apps/api/.env`) và `appsettings.*.json` (`DiChoiThoi.Web`): connection
-      string SQL Server thật (`sql5059.site4now.net`), `DICHOITHOI_FTP_*`,
+      `apps/api/.env`) và `appsettings.*.json` (`DiChoiThoi.Web`): **[PG]** connection
+      string PostgreSQL SmarterASP (xem mục "[PG] Tạo DB" ngay dưới — KHÔNG còn là
+      SQL Server `sql5059.site4now.net`), `DICHOITHOI_FTP_*`,
       `DICHOITHOI_SITE_BASE_URL`/`DICHOITHOI_IMAGE_BASE_URL` đổi từ
       `localhost` sang `https://dichoithoi.com` — dò lại TOÀN BỘ biến có tiền
       tố `DICHOITHOI_LOCAL_*`/`localhost` trong `.env`, đảm bảo không còn giá
       trị dev nào lọt lên production.
+- [ ] **[PG] Tạo DB PostgreSQL 18 trên SmarterASP + kiểm tra kết nối** (plan Postgres GĐ4):
+      1. Tạo database + user trên control panel SmarterASP. Ghi lại host/port/db/user/password,
+         lưu cùng chỗ với các secret khác (KHÔNG commit).
+      2. Từ Mac: `psql "postgresql://<user>:<pass>@<host>:5432/<db>" -c "select version()"`, xác nhận
+         kết nối từ xa được. Nếu bị từ chối vì SSL thì thêm `?sslmode=require` vào URL.
+      3. Hỏi/đọc giới hạn số kết nối của gói hosting. Website .NET (pool Npgsql mặc định 100) +
+         zinoflow (`POOL_MAX_CONNECTIONS = 5` trong
+         `apps/api/src/modules/shared/dichoithoi-site-db/dichoithoi-site-db.connection.ts`) phải nằm dưới
+         giới hạn. Nếu hosting giới hạn thấp, thêm `Maximum Pool Size=...` vào connection string .NET.
+      4. Chuẩn bị 3 chỗ cấu hình (chưa deploy):
+         - `DiChoiThoi.Web/appsettings.Release.json` và `CmsDiChoiThoi.Web/appsettings.Release.json`:
+           `"DiChoiThoiDb": "Host=<host>;Port=5432;Database=<db>;Username=<user>;Password=<pass>"`
+           (định dạng Npgsql. File hiện tại VẪN là chuỗi SQL Server, deploy nguyên trạng là website lỗi ngay khi khởi động).
+         - zinoflow `.env` production: `DICHOITHOI_DATABASE_URL=postgresql://<user>:<pass>@<host>:5432/<db>`.
 - [ ] Bảng v1 khác chưa audit trong phiên 07/2026 này — nếu vẫn còn dùng
       (Hotel/HotelGroup/DestinationGroup/DestinationReview/Province qua
       `HotelRepository` và các nơi khác), xác nhận có cần mang theo lên
@@ -59,7 +80,7 @@ tự, không bỏ bước.
 | Hệ thống     | Bắt buộc backup                                                                                                                                      | Ghi chú restore tối thiểu                                                                                             |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `zinoflow`   | PostgreSQL (toàn bộ schema app + pg-boss/job tables), file `.env` production của `apps/api` (lưu bản mã hoá), mọi config deploy liên quan domain/API | Có sẵn lệnh restore DB + checklist verify sau restore (đếm bảng chính, job queue còn nhất quán, API boot thành công). |
-| `dichoithoi` | SQL Server production (full backup + bản đối chiếu slug cũ), toàn bộ ảnh trên FTP production, `appsettings.*.json` production (lưu bản mã hoá)       | Có sẵn lệnh restore DB + quy trình restore ảnh FTP + smoke test URL/ảnh sau restore.                                  |
+| `dichoithoi` | SQL Server production CŨ (full backup `.bak` + bản đối chiếu slug cũ), `pg_dump -Fc` của `dichoithoi_dev` local (chính là DB sẽ đưa lên), toàn bộ ảnh trên FTP production, `appsettings.*.json` production (lưu bản mã hoá) | Có sẵn lệnh `pg_restore` DB mới + quy trình restore ảnh FTP + smoke test URL/ảnh sau restore. `.bak` cũ chỉ để lùi/đối chiếu. |
 
 - [ ] Chạy **1 lần diễn tập restore** trên môi trường không-production trước
       ngày release (ít nhất restore DB + verify app khởi động), ghi biên bản
@@ -69,8 +90,19 @@ tự, không bỏ bước.
 
 - [ ] Deploy `DiChoiThoi.Web` build Release (`dotnet publish -c Release`) lên
       hosting SmarterASP — không deploy bản Debug.
-- [ ] Đưa database mới (từ `dichoithoi_dev` local) lên SQL Server production
-      — restore/import nguyên schema v2 + dữ liệu.
+- [ ] **[PG] Đưa database mới (từ `dichoithoi_dev` local) lên PostgreSQL SmarterASP.** Bản dump
+      mang theo schema v2 + danh mục + dữ liệu đã publish + `__ef_migrations_history`:
+      ```bash
+      pg_dump -U postgres -Fc -f dichoithoi-release-$(date +%Y%m%d).dump dichoithoi_dev
+      pg_restore --no-owner --no-privileges -d "postgresql://<user>:<pass>@<host>:5432/<db>" dichoithoi-release-*.dump
+      DICHOITHOI_DATABASE_URL="postgresql://<user>:<pass>@<host>:5432/<db>" pnpm --filter @zinoflow/api check:dichoithoi
+      ```
+      `check:dichoithoi` phải in đủ 2 EF migration (`InitialPostgres`, `SeedCatalog`, cộng các migration mới hơn nếu có)
+      và danh mục 34 tỉnh / 18 loại / 17 tag, tiếng Việt có dấu đúng.
+      Về sau, khi repo dichoithoi thêm migration, chạy trên production:
+      `ConnectionStrings__DiChoiThoiDb="Host=...;Database=...;Username=...;Password=..." dotnet ef database update --context DiChoiThoiDbContext --project DiChoiThoi.Common --startup-project DiChoiThoi.Common`.
+- [ ] **[PG]** Deploy kèm `appsettings.Release.json` đã đổi sang PG ở bước 1 (cả `DiChoiThoi.Web`
+      lẫn `CmsDiChoiThoi.Web` nếu còn deploy CMS cũ).
 - [ ] Deploy `zinoflow/apps/api` với `.env` production đã chuẩn bị ở bước 1,
       restart API.
 - [ ] Đồng bộ ảnh: production dùng FTP thật (`DICHOITHOI_FTP_*`), khác cơ chế
@@ -94,6 +126,11 @@ tự, không bỏ bước.
       đến, xác nhận ghi thẳng lên site đúng và **cache tự purge** (đã sửa bug
       quên purge cache cho thumbnail/gallery 07/2026 — verify lại 1 lần trên
       production thật).
+- [ ] **[PG]** Từ zinoflow trỏ production: `POST /api/destinations/sync` → không có `editedOutside`/
+      `conflicts` (hash mirror phải khớp DB vừa restore). Publish thử 1 điểm đến + gắn 1 khách sạn,
+      1 tour, 1 tuyến xe, 1 bài cẩm nang (lượt kiểm tra đầu-cuối còn thiếu ở plan Postgres GĐ3), xác nhận trang hiển thị đúng.
+- [ ] **[PG]** Tìm kiếm trên website: "da lat", "ĐÀ LẠT", "đà lạt" ra cùng kết quả. Index tìm kiếm cache
+      trong RAM, nếu vừa publish mà chưa thấy thì gọi `/api/remove-cache/search_index`.
 - [ ] Sitemap.xml sinh đúng, không thiếu URL so với trước khi xoá.
 - [ ] robots.txt đúng cho production (không còn `Disallow: /` kiểu môi
       trường staging/dev).
