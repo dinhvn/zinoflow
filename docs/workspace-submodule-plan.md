@@ -1,9 +1,40 @@
-# Workspace cha + git submodule cho các repo MMO (CHƯA LÀM — làm trên Mac)
+# Workspace cha + git submodule cho các repo MMO (GĐ1 XONG 27/09/2026 — GĐ2, GĐ3 chưa làm)
 
 Ghi 26/09/2026. Người dùng muốn 1 "workspace cha" chứa doc và những thứ dùng chung,
 các repo ứng dụng (zinoflow, dichoithoi, khuyenmai...) là **git submodule** bên trong.
 Người dùng chọn làm **trên Mac, sau khi chuyển máy xong** (sau khi khôi phục theo
 `migration-mac-2026-09-26/HUONG-DAN-KHOI-PHUC-TREN-MAC.md`).
+
+## Trạng thái 27/09/2026 (trên Mac) — ĐỌC PHẦN NÀY TRƯỚC
+
+**Đã chốt với người dùng 27/09/2026** (thay cho phần "Cần hỏi" và "Quyết định" bên dưới, vốn viết cho Windows):
+1. Repo cha: **GitHub `dinhvn/mmo-workspace`**, do người dùng tự tạo. Thư mục local là
+   `/Users/dinhdv/Works/repositories/mmo/mmo-workspace` (**không** đặt tại thư mục `mmo/` như đề xuất cũ).
+   Các repo con nằm **bên trong** repo cha, doc dùng chung sau này cũng chuyển ra đây.
+2. Submodule: **cả 5 repo đang có trên Mac**. Trước khi gắn, zinora đã được commit
+   (chỉ đổi ký tự xuống dòng + package-lock). wordpress-theme, protool, Trading, dino-bee chưa clone trên Mac,
+   nên chưa gắn.
+3. Doc dùng chung (GĐ3): **để sau**.
+
+**GĐ1 đã làm (27/09/2026):**
+- Chuyển (`mv`, không clone lại) 5 repo từ `mmo/` vào `mmo/mmo-workspace/`, rồi `git submodule add -b <nhánh>`
+  cho từng repo. Git nhận repo có sẵn tại chỗ ("Adding existing repo"). Chuyển nguyên thư mục nên giữ
+  được commit chưa push, `.env`, `node_modules`.
+- Nhánh theo dõi ghi trong `.gitmodules`: zinoflow `main`, zinora `main`, dichoithoi `develop`,
+  **khuyenmai `master`**, **mmo-chrome-extension `main`** (bảng cũ bên dưới ghi `develop` là sai với thực tế).
+- Repo cha có: `.gitmodules`, `.gitignore` (loại `.env`, `migration-mac-*`, `*.bak`, `*.dump`, `*.zip`,
+  `obj/`, `bin/`, `node_modules/`), `README.md` (clone `--recursive`, chốt mốc, detached HEAD),
+  `mmo.code-workspace` (chuyển từ `mmo/`, đường dẫn tương đối nên vẫn đúng).
+- Sửa đường dẫn tuyệt đối: 3 biến `DICHOITHOI_LOCAL_*`/`DICHOITHOI_ATLAS_BACKUP_IMAGE_DIR` trong
+  `apps/api/.env` (không bị git theo dõi). Ngoài chúng, không file tracked nào ghi đường dẫn tuyệt đối.
+- Memory Claude Code: chép sang project key mới `-Users-dinhdv-Works-repositories-mmo-mmo-workspace-zinoflow`.
+  Từ nay mở Claude/VS Code tại `mmo-workspace/zinoflow` (hoặc `code mmo-workspace/mmo.code-workspace`).
+- **DoD chưa kiểm tra đủ:** chưa thử `git clone --recursive` sang thư mục tạm. Lý do: repo Azure DevOps
+  cần PAT (Mac chưa cấu hình), và dichoithoi/zinoflow còn commit chưa push. Làm lại bước này sau khi push
+  xong các repo con.
+
+**Việc tiếp theo:** GĐ2 (sửa skill `dichoithoi-commit-both-repos`: thêm bước chốt con trỏ ở repo cha khi cần),
+rồi GĐ3 (chuyển doc) khi người dùng yêu cầu.
 
 ## Hiện trạng (audit 26/09/2026)
 
