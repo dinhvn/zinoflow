@@ -1,26 +1,27 @@
 # ZinoFlow Runbook
 
-Muc tieu: setup tu dau va chay duoc trong 30 phut. Cap nhat 12/06/2026 (M3).
+Muc tieu: setup tu dau va chay duoc trong 30 phut. Cap nhat 12/06/2026 (M3); chuyen sang macOS 27/09/2026.
 
 ## 1) Yeu cau may
 
-- Windows (da test tren Win 11), Node >= 20, pnpm >= 8
-- PostgreSQL cai truc tiep (KHONG can Docker) — da test voi PG 17/18
+- macOS (tu 27/09/2026; truoc do Windows 11), Node >= 20, pnpm >= 8
+- PostgreSQL cai truc tiep (KHONG can Docker): Homebrew `postgresql@18`, port 5432 — da test voi PG 17/18
 - API key cua it nhat 1 AI provider (Gemini hoac Anthropic)
 
 ## 2) Setup tu dau
 
-```powershell
-# 1. Clone + cai dependencies
-git clone <repo> zinoflow && cd zinoflow
+```bash
+# 1. Clone (repo nay la submodule cua mmo-workspace) + cai dependencies
+git clone --recursive https://github.com/dinhvn/mmo-workspace.git && cd mmo-workspace/repos/zinoflow
 pnpm install
 
-# 2. Tao database (pgAdmin hoac psql)
-#    CREATE DATABASE zinoflow;
+# 2. Tao database
+brew services start postgresql@18
+createdb -U postgres zinoflow
 
 # 3. Cau hinh env
-copy apps\api\.env.example apps\api\.env
-#    Sua DATABASE_URL (chu y PORT Postgres cua may ban, vd 5432/54321)
+cp apps/api/.env.example apps/api/.env
+#    Sua DATABASE_URL (port Postgres mac dinh 5432)
 #    Dien GEMINI_API_KEY va/hoac ANTHROPIC_API_KEY
 
 # 4. Build contracts + chay migrations
@@ -47,7 +48,7 @@ Kiem tra: mo http://localhost:3000 — Dashboard phai hien `database: connected`
 
 ## 4) Lenh thuong dung
 
-```powershell
+```bash
 pnpm dev                  # chay web + api
 pnpm -r typecheck         # typecheck 3 packages
 pnpm --filter @zinoflow/api test          # unit tests
@@ -60,16 +61,16 @@ node scripts/smoke.mjs gemini gemini-3.1-flash-lite   # smoke voi AI that (~$0.0
 ## 5) Loi thuong gap
 
 ### Port 3001/3000 bi chiem ("EADDRINUSE")
-Tren Windows, dung dev server bang Ctrl+C doi khi de lai process node mo coi giu port:
-```powershell
-Get-NetTCPConnection -LocalPort 3001 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }
+Dung dev server bang Ctrl+C doi khi de lai process node mo coi giu port:
+```bash
+kill $(lsof -ti tcp:3001)      # tuong tu cho 3000; them -9 neu khong dung
 ```
 
 ### API bao "DATABASE_URL is required"
 Chua co apps/api/.env hoac thieu dong DATABASE_URL — xem muc 2 buoc 3.
 
 ### Health bao database: disconnected
-- Sai password/port trong DATABASE_URL (kiem tra service: `Get-Service *postgres*`)
+- Sai password/port trong DATABASE_URL (kiem tra service: `brew services list | grep postgres`, `pg_isready`)
 - Chua tao database `zinoflow`
 
 ### Job mai o trang thai Failed
@@ -92,9 +93,10 @@ Neu bang khong co row cho key do, he thong fallback ve prompt mac dinh trong cod
 ### Doi API key ma khong co tac dung
 Restart api — env chi doc luc khoi dong.
 
-### Tieng Viet bi mojibake (â€"...) khi sua file bang script PowerShell
-PS 5.1 doc UTF-8 khong BOM sai. Dung [System.IO.File]::ReadAllText/WriteAllText
-voi UTF8Encoding($false), KHONG dung Get-Content/Set-Content cho file co tieng Viet.
+### Tieng Viet bi mojibake (â€"...) khi sua file bang script
+Chi gap tren Windows PowerShell 5.1 (doc UTF-8 khong BOM sai). Tren macOS dung
+sed/perl/python binh thuong; neu phai dung PowerShell, dung
+[System.IO.File]::ReadAllText/WriteAllText voi UTF8Encoding($false).
 
 ### Approve bi 422 "con quality gate chua dat"
 Day la hanh vi dung: bai chi duyet duoc khi ca 4 gate pass. Chi tiet loi hien
@@ -105,12 +107,12 @@ chi bai AI that moi du dieu kien duyet.
 
 ## 6) Backup database local
 
-```powershell
+```bash
 # Backup (chay dinh ky truoc khi nang cap schema)
-& "C:\Program Files\PostgreSQL\17\bin\pg_dump.exe" -U postgres -d zinoflow -F c -f "zinoflow-$(Get-Date -Format 'yyyyMMdd').backup"
+pg_dump -U postgres -d zinoflow -F c -f "zinoflow-$(date +%Y%m%d).backup"
 
 # Restore
-& "C:\Program Files\PostgreSQL\17\bin\pg_restore.exe" -U postgres -d zinoflow --clean "zinoflow-YYYYMMDD.backup"
+pg_restore -U postgres -d zinoflow --clean "zinoflow-YYYYMMDD.backup"
 ```
 
 ## 7) Smoke flow thu cong (khi nghi ngo he thong)
