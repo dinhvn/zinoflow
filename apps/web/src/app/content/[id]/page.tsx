@@ -480,7 +480,7 @@ export default function JobDetailPage({
 
   const [publishResult, setPublishResult] =
     useState<PublishDestinationResult | null>(null);
-  // Gate thu cong thu 2 (Approve ≠ Publish): day bai da duyet xuong SQL Server dichoithoi
+  // Gate thu cong thu 2 (Approve ≠ Publish): day bai da duyet xuong DB PostgreSQL dichoithoi
   const publishDichoithoi = useMutation({
     mutationFn: async () =>
       publishDestinationResultSchema.parse(

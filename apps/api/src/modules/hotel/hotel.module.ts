@@ -17,7 +17,7 @@ import { HotelAffiliateReapplyService } from "./application/services/hotel-affil
 import { HOTEL_REPOSITORY } from "./application/ports/hotel.repository";
 import { HOTEL_SITE_DB } from "./application/ports/hotel-site-db.port";
 import { TypeOrmHotelRepository } from "./infrastructure/repositories/typeorm-hotel.repository";
-import { MssqlHotelSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-hotel-site-db.adapter";
+import { PgHotelSiteDbAdapter } from "./infrastructure/dichoithoi/pg-hotel-site-db.adapter";
 import { HotelAutoAssignWorker } from "./infrastructure/workers/hotel-auto-assign.worker";
 import { HotelImageIngestWorker } from "./infrastructure/workers/hotel-image-ingest.worker";
 import { HotelEntity } from "./infrastructure/entities/hotel.entity";
@@ -50,7 +50,7 @@ import { HotelDestinationMapEntity } from "./infrastructure/entities/hotel-desti
     HotelImageIngestWorker,
     HotelAffiliateReapplyService,
     { provide: HOTEL_REPOSITORY, useClass: TypeOrmHotelRepository },
-    { provide: HOTEL_SITE_DB, useClass: MssqlHotelSiteDbAdapter },
+    { provide: HOTEL_SITE_DB, useClass: PgHotelSiteDbAdapter },
   ],
   exports: [HOTEL_REPOSITORY],
 })

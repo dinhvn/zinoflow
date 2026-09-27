@@ -202,7 +202,7 @@ export interface SiteContentCoverageRow {
 }
 
 export interface DichoithoiSiteDb {
-  /** false khi thieu DICHOITHOI_DB_* trong env — UI hien huong dan cau hinh */
+  /** false khi thieu DICHOITHOI_DATABASE_URL trong env — UI hien huong dan cau hinh */
   isConfigured(): boolean;
   /** Doc toan bo diem den tu schema moi (kem content hash de phat hien sua tay) */
   fetchAllDestinations(): Promise<SiteDestinationRow[]>;

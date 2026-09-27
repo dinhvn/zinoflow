@@ -2,7 +2,7 @@ import type { Logger } from "@nestjs/common";
 
 /**
  * ZinoFlow chay local-first (khong co server dev/prod tach biet) — nhung mot
- * so tich hop ngoai (FTP anh dien den, SQL Server khuyenmai, WordPress) chua
+ * so tich hop ngoai (FTP anh dien den, SQL Server khuyenmai, WordPress, DB dichoithoi khi tro SmarterASP) chua
  * co ban sandbox rieng, nen .env dev van phai tro thang toi endpoint THAT
  * (dichoithoi-implementation-plan.md Phase 0 — "vi pham DoD nghia den du
  * khong lo vao git"). Canh bao ro luc khoi dong de khong ai quen dang thao
@@ -14,6 +14,7 @@ interface RemoteEndpointCheck {
 }
 
 const REMOTE_ENDPOINT_CHECKS: readonly RemoteEndpointCheck[] = [
+  { label: "PostgreSQL website dichoithoi", envKey: "DICHOITHOI_DATABASE_URL" },
   { label: "FTP ảnh điểm đến (site4now)", envKey: "DICHOITHOI_FTP_HOST" },
   { label: "SQL Server khuyến mãi laruki/dochoi3s (site4now)", envKey: "KHUYENMAI_DB_HOST" },
   { label: "WordPress laruki.com", envKey: "WP_LARUKI_URL" },

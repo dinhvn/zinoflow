@@ -16,7 +16,7 @@ import { TourAffiliateReapplyService } from "./application/services/tour-affilia
 import { TOUR_REPOSITORY } from "./application/ports/tour.repository";
 import { TOUR_SITE_DB } from "./application/ports/tour-site-db.port";
 import { TypeOrmTourRepository } from "./infrastructure/repositories/typeorm-tour.repository";
-import { MssqlTourSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-tour-site-db.adapter";
+import { PgTourSiteDbAdapter } from "./infrastructure/dichoithoi/pg-tour-site-db.adapter";
 import { TourImageIngestWorker } from "./infrastructure/workers/tour-image-ingest.worker";
 import { TourEntity } from "./infrastructure/entities/tour.entity";
 import { TourDestinationMapEntity } from "./infrastructure/entities/tour-destination-map.entity";
@@ -46,7 +46,7 @@ import { TourDestinationMapEntity } from "./infrastructure/entities/tour-destina
     TourImageIngestWorker,
     TourAffiliateReapplyService,
     { provide: TOUR_REPOSITORY, useClass: TypeOrmTourRepository },
-    { provide: TOUR_SITE_DB, useClass: MssqlTourSiteDbAdapter },
+    { provide: TOUR_SITE_DB, useClass: PgTourSiteDbAdapter },
   ],
   exports: [TOUR_REPOSITORY],
 })

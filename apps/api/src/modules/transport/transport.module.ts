@@ -12,7 +12,7 @@ import { RecomputeTransportCardsUseCase } from "./application/use-cases/recomput
 import { TRANSPORT_REPOSITORY } from "./application/ports/transport.repository";
 import { TRANSPORT_SITE_DB } from "./application/ports/transport-site-db.port";
 import { TypeOrmTransportRepository } from "./infrastructure/repositories/typeorm-transport.repository";
-import { MssqlTransportSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-transport-site-db.adapter";
+import { PgTransportSiteDbAdapter } from "./infrastructure/dichoithoi/pg-transport-site-db.adapter";
 import { TransportEntity } from "./infrastructure/entities/transport.entity";
 import { TransportStopEntity } from "./infrastructure/entities/transport-stop.entity";
 
@@ -36,7 +36,7 @@ import { TransportStopEntity } from "./infrastructure/entities/transport-stop.en
     DeleteTransportUseCase,
     RecomputeTransportCardsUseCase,
     { provide: TRANSPORT_REPOSITORY, useClass: TypeOrmTransportRepository },
-    { provide: TRANSPORT_SITE_DB, useClass: MssqlTransportSiteDbAdapter },
+    { provide: TRANSPORT_SITE_DB, useClass: PgTransportSiteDbAdapter },
   ],
   exports: [TRANSPORT_REPOSITORY],
 })

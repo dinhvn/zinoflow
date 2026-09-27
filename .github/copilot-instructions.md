@@ -10,8 +10,8 @@ generate articles with AI (human review required) and publish to WordPress
 (laruki.com, dochoi3s.com). Product data comes from an existing .NET CMS via API.
 Build order: AI Content Tool first, Image Tool (Remotion) later.
 Extension (M4 — prioritized 12/06/2026): travel destination articles for dichoithoi.com —
-published by direct UPSERT into that site's SQL Server DB (never wipe; schema owned by
-dichoithoi, no migrations from this repo). See `docs/dichoithoi/dichoithoi-destination-spec.md`.
+published by direct UPSERT into that site's PostgreSQL DB (never wipe; schema owned by
+dichoithoi via EF Core Migrations, no migrations from this repo). See `docs/dichoithoi/dichoithoi-destination-spec.md`.
 
 Key docs (read before making design decisions):
 - `docs/idea.md` — business context + final direction (11/06/2026)

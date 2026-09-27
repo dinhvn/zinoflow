@@ -122,3 +122,30 @@ chi bai AI that moi du dieu kien duyet.
 5. Kiem tra cost: bang `ai_usage_logs` co 2 record (outline + article)
 
 Hoac chay tu dong: `node scripts/smoke.mjs gemini gemini-3.1-flash-lite`
+
+## 8) DB website dichoithoi (PostgreSQL) + test tich hop
+
+Tu 27/09/2026 website dichoithoi dung PostgreSQL (plan: `docs/dichoithoi/dichoithoi-postgres-migration-plan.md`).
+Schema do repo dichoithoi so huu (EF Core Migrations) — repo nay chi doc/ghi du lieu.
+
+```bash
+# Tao DB dev (1 lan) — chay trong repo dichoithoi
+createdb -U postgres dichoithoi_dev
+dotnet ef database update --context DiChoiThoiDbContext --project DiChoiThoi.Common --startup-project DiChoiThoi.Common
+
+# apps/api/.env
+DICHOITHOI_DATABASE_URL=postgresql://postgres@localhost:5432/dichoithoi_dev
+pnpm --filter @zinoflow/api check:dichoithoi      # kiem tra ket noi + schema + tieng Viet
+```
+
+Test tich hop 5 adapter site DB (`*.integration.spec.ts`) can DB RIENG (ten phai co "test" — test TRUNCATE du lieu):
+
+```bash
+createdb -U postgres dichoithoi_test
+ConnectionStrings__DiChoiThoiDb="Host=localhost;Database=dichoithoi_test;Username=postgres" \
+  dotnet ef database update --context DiChoiThoiDbContext --project DiChoiThoi.Common --startup-project DiChoiThoi.Common
+# apps/api/.env: DICHOITHOI_TEST_DATABASE_URL=postgresql://postgres@localhost:5432/dichoithoi_test
+pnpm --filter @zinoflow/api test                   # khong dat bien -> 23 test tich hop tu skip
+```
+
+Sau khi repo dichoithoi them migration moi: chay lai `dotnet ef database update` cho CA 2 DB.

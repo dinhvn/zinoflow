@@ -11,7 +11,7 @@ type Store = { title: string; desc: string; tone: BadgeTone };
 
 const STORES: Store[] = [
   {
-    title: "SQL Server (website thật)",
+    title: "PostgreSQL (website thật)",
     desc: "Schema v2 do repo dichoithoi sở hữu. Tool chỉ UPSERT, không bao giờ wipe.",
     tone: "emerald",
   },
@@ -59,7 +59,7 @@ const STAGES: Stage[] = [
     trigger: "POST /destinations/sync",
     desc: (
       <>
-        Đọc 1 chiều từ SQL Server, upsert theo <Code>slug</Code> vào mirror. Domain{" "}
+        Đọc 1 chiều từ PostgreSQL website, upsert theo <Code>slug</Code> vào mirror. Domain{" "}
         <Code>decideSyncAction</Code> quyết định per-row và đánh cờ — <b>không tự xóa</b>.
       </>
     ),
@@ -70,7 +70,7 @@ const STAGES: Stage[] = [
       <><b>orphan</b> — biến mất bên site → gắn cờ, giữ nguyên</>,
     ],
     chips: [
-      { label: "đọc SQL Server", tone: "emerald" },
+      { label: "đọc PostgreSQL", tone: "emerald" },
       { label: "ghi mirror", tone: "indigo" },
     ],
   },
@@ -140,7 +140,7 @@ const STAGES: Stage[] = [
       </>
     ),
     branches: [
-      <><b>1.</b> Điểm mới (siteId=null) → INSERT shell xuống SQL Server lấy siteId</>,
+      <><b>1.</b> Điểm mới (siteId=null) → INSERT shell xuống PostgreSQL website lấy siteId</>,
       <><b>2.</b> Render thân bài → HTML sạch → <b>auto-link</b> tới điểm published khác (idempotent)</>,
       <><b>3.</b> 1 transaction <b>UPSERT không wipe</b>: Destination + DestinationContent + mentioned, ContentSource=1</>,
       <><b>4.</b> Ghi mentioned vào Postgres · markPublished (hash từ SQL)</>,
@@ -148,7 +148,7 @@ const STAGES: Stage[] = [
     ],
     chips: [
       { label: "gate ảnh", tone: "amber" },
-      { label: "UPSERT SQL Server", tone: "emerald" },
+      { label: "UPSERT PostgreSQL", tone: "emerald" },
       { label: "markPublished", tone: "indigo" },
     ],
   },
@@ -209,7 +209,7 @@ const DOORS: Door[] = [
     gateTone: "emerald",
     effect: (
       <>
-        Ghi <b>thẳng</b> SQL Server ngay (<Code>updateMetadata</Code>) — website phản ánh tức thì,
+        Ghi <b>thẳng</b> PostgreSQL website ngay (<Code>updateMetadata</Code>) — website phản ánh tức thì,
         không qua review/publish vì đây là dữ liệu cứng người nhập tay.
       </>
     ),
@@ -222,8 +222,8 @@ const RISKS: ReactNode[] = [
     pass/fail sai nếu cấu trúc hosting thật khác.
   </>,
   <>
-    <b>.env đang trỏ sandbox LocalDB</b>, không phải production. Go-live phải đổi DICHOITHOI_DB_*,
-    backup, chạy lại 2 script schema.
+    <b>.env đang trỏ DB PostgreSQL local (dichoithoi_dev)</b>, không phải production. Go-live phải
+    đổi DICHOITHOI_DATABASE_URL, chạy <code>dotnet ef database update</code> trên DB SmarterASP.
   </>,
   <>
     <b>RelatedJson &quot;cùng loại chính&quot; tạm thay bằng &quot;cùng tỉnh&quot;</b> — mirror chưa
@@ -305,7 +305,7 @@ function ArchitectureDiagram() {
         {/* Hub render + website */}
         <div className="grid items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr]">
           <ArchBox
-            title="SQL Server (site4now)"
+            title="PostgreSQL (SmarterASP)"
             role="Nguồn render production · chỉ bản đã duyệt"
             tone="emerald"
           />
@@ -358,7 +358,7 @@ export function DestinationProcessFlow() {
           Luồng hoạt động: từ điểm đến trống đến bài publish
         </h1>
         <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          AI viết bài điểm đến du lịch rồi publish thẳng vào SQL Server của dichoithoi.com — không
+          AI viết bài điểm đến du lịch rồi publish thẳng vào PostgreSQL của dichoithoi.com — không
           qua CMS cũ. Toàn bộ chuỗi neo trên <b>hai nguồn dữ liệu</b> và đi qua <b>hai cổng thủ
           công</b> (Duyệt ≠ Publish).
         </p>
@@ -407,7 +407,7 @@ export function DestinationProcessFlow() {
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
             <div className="mb-1.5">
-              <Badge tone="emerald">SQL Server — bản production</Badge>
+              <Badge tone="emerald">PostgreSQL — bản production</Badge>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Read-model website đọc để render: chỉ chứa bản <b>ĐÃ duyệt</b> (HTML cuối, quan hệ,
@@ -417,7 +417,7 @@ export function DestinationProcessFlow() {
         </div>
         <p className="mt-3 text-[13px] text-zinc-600 dark:text-zinc-300">
           Cột <Code>siteId</Code> trong mirror là cờ quyết định mọi nhánh: <b>null</b> = mới chỉ
-          sống trong tool (production chưa biết tới) · <b>có giá trị</b> = đã tồn tại bên SQL Server.
+          sống trong tool (production chưa biết tới) · <b>có giá trị</b> = đã tồn tại bên PostgreSQL website.
           Lần đầu publish một điểm <Code>siteId=null</Code> sẽ INSERT &quot;shell&quot; xuống SQL
           Server để lấy <Code>siteId</Code> rồi mới ghi nội dung.
         </p>
@@ -489,7 +489,7 @@ export function DestinationProcessFlow() {
           Ba cửa vào & tác động lên production
         </h3>
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Cùng một mirror nhưng ghi ra SQL Server theo 3 cách khác nhau — <Code>siteId</Code> và
+          Cùng một mirror nhưng ghi ra PostgreSQL website theo 3 cách khác nhau — <Code>siteId</Code> và
           &quot;có qua 2 cổng không&quot; quyết định.
         </p>
         <div className="mt-4 overflow-x-auto">
@@ -499,7 +499,7 @@ export function DestinationProcessFlow() {
                 <th className="py-2 pr-3 font-semibold">Cửa</th>
                 <th className="py-2 pr-3 font-semibold">siteId trước</th>
                 <th className="py-2 pr-3 font-semibold">Qua duyệt/publish?</th>
-                <th className="py-2 font-semibold">Tác động lên SQL Server</th>
+                <th className="py-2 font-semibold">Tác động lên PostgreSQL website</th>
               </tr>
             </thead>
             <tbody>

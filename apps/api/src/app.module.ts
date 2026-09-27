@@ -4,6 +4,7 @@ import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { HealthModule } from "./modules/shared/health/health.module";
 import { JobsModule } from "./modules/shared/jobs/jobs.module";
+import { DichoithoiSiteDbModule } from "./modules/shared/dichoithoi-site-db/dichoithoi-site-db.module";
 import { AiContentModule } from "./modules/ai-content/ai-content.module";
 import { DestinationModule } from "./modules/destination/destination.module";
 import { AffiliateModule } from "./modules/affiliate/affiliate.module";
@@ -34,6 +35,7 @@ import { ApiTokenGuard } from "./modules/shared/auth/api-token.guard";
       synchronize: false,
     }),
     JobsModule,
+    DichoithoiSiteDbModule,
     HealthModule,
     AiContentModule,
     AffiliateModule,

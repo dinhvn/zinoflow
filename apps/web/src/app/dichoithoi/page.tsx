@@ -1106,7 +1106,7 @@ function DichoithoiPageContent() {
         emptyMessage={
           <span>
             Chưa có điểm đến nào khớp bộ lọc. Bấm <strong>"Đồng bộ từ website"</strong> để nạp dữ
-            liệu lần đầu (cần chạy migration schema v2 trên SQL Server trước).
+            liệu lần đầu (cần chạy <code>dotnet ef database update</code> bên repo dichoithoi để tạo schema v2 trước).
           </span>
         }
       />

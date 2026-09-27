@@ -22,7 +22,7 @@ import { ExtractArticleInfoGsgUseCase } from "./application/use-cases/extract-ar
 import { ARTICLE_SITE_DB } from "./application/ports/article-site-db.port";
 import { ARTICLE_PUBLICATION_REPOSITORY } from "./application/ports/article-publication.repository";
 import { ARTICLE_AI_EXTRACTION_REPOSITORY } from "./application/ports/article-ai-extraction.repository";
-import { MssqlArticleSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-article-site-db.adapter";
+import { PgArticleSiteDbAdapter } from "./infrastructure/dichoithoi/pg-article-site-db.adapter";
 import { TypeOrmArticlePublicationRepository } from "./infrastructure/repositories/typeorm-article-publication.repository";
 import { TypeOrmArticleAiExtractionRepository } from "./infrastructure/repositories/typeorm-article-ai-extraction.repository";
 import { ArticlePublicationEntity } from "./infrastructure/entities/article-publication.entity";
@@ -57,7 +57,7 @@ import { ArticleAiExtractionEntity } from "./infrastructure/entities/article-ai-
     SetArticleCategoryUseCase,
     GetArticleAiExtractionUseCase,
     ExtractArticleInfoGsgUseCase,
-    { provide: ARTICLE_SITE_DB, useClass: MssqlArticleSiteDbAdapter },
+    { provide: ARTICLE_SITE_DB, useClass: PgArticleSiteDbAdapter },
     { provide: ARTICLE_PUBLICATION_REPOSITORY, useClass: TypeOrmArticlePublicationRepository },
     { provide: ARTICLE_AI_EXTRACTION_REPOSITORY, useClass: TypeOrmArticleAiExtractionRepository },
   ],

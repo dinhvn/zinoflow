@@ -25,7 +25,7 @@ export class ManageTaxonomyContentUseCase {
   async getContent(): Promise<TaxonomyContent> {
     if (!this.siteDb.isConfigured()) {
       throw new UpstreamApiError(
-        "Chưa cấu hình kết nối database dichoithoi (DICHOITHOI_DB_* trong .env)",
+        "Chưa cấu hình kết nối database dichoithoi (DICHOITHOI_DATABASE_URL trong .env)",
       );
     }
     return this.siteDb.fetchTaxonomyContent();

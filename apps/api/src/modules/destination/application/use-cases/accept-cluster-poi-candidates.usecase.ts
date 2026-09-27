@@ -18,7 +18,7 @@ import { classifyPoiAddress } from "../../domain/classify-poi-address";
  * Chap nhan cac ung vien da tick trong bang duyet tim diem con trong cum
  * (dichoithoi-cluster-poi-discovery-plan.md, giai doan 5) — theo matchType:
  * - "new": tao draft Postgres-only (siteId=null), Y HET luong tao tay "Thêm điểm
- *   đến mới" — KHONG dung MssqlSiteDbAdapter.createDestination() (publish thang,
+ *   đến mới" — KHONG dung PgSiteDbAdapter.createDestination() (publish thang,
  *   sai ngu canh cho diem chua qua content/quality gate). Dia chi AI tra ve da
  *   so phan lon la dang CU (truoc sap nhap don vi hanh chinh, nguoi dung phat
  *   hien 07/2026) — tu phan loai qua classify-poi-address.ts (doi chieu

@@ -151,7 +151,7 @@ import { DestinationGeocodeCandidateEntity } from "./infrastructure/entities/des
 import { AuditDestinationDuplicatesClusterFitUseCase } from "./application/use-cases/audit-destination-duplicates-cluster-fit.usecase";
 import { RecomputeGroupDistancesUseCase } from "./application/use-cases/recompute-group-distances.usecase";
 import { RecomputeNearbyDistancesUseCase } from "./application/use-cases/recompute-nearby-distances.usecase";
-import { MssqlSiteDbAdapter } from "./infrastructure/dichoithoi/mssql-site-db.adapter";
+import { PgSiteDbAdapter } from "./infrastructure/dichoithoi/pg-site-db.adapter";
 import { TypeOrmDestinationMirrorRepository } from "./infrastructure/repositories/typeorm-destination-mirror.repository";
 import { TypeOrmDestinationRelationRepository } from "./infrastructure/repositories/typeorm-destination-relation.repository";
 import { DestinationMirrorEntity } from "./infrastructure/entities/destination-mirror.entity";
@@ -300,7 +300,7 @@ import { ClusterPoiDiscoveryBatchTaskHandler } from "./infrastructure/batch-hand
     ClusterPoiResultApplier,
     DestinationGsgExtractionBatchTaskHandler,
     ClusterPoiDiscoveryBatchTaskHandler,
-    { provide: DICHOITHOI_SITE_DB, useClass: MssqlSiteDbAdapter },
+    { provide: DICHOITHOI_SITE_DB, useClass: PgSiteDbAdapter },
     { provide: CACHE_PURGE, useClass: HttpCachePurgeAdapter },
     { provide: REFERENCE_FETCHER, useClass: HttpReferenceFetcher },
     { provide: IMAGE_CHECKER, useClass: HttpImageChecker },
